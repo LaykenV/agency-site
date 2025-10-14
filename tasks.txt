@@ -1,0 +1,14 @@
+create onboarding form for users signing up
+vercel domains api setup to check for their domain and get / gen secondary options
+once we get all data, gen 3 options based on tiers
+payments (autumn, polar, stripe?)
+let users upload photos to be used / color scheme?
+resend email going out
+all backend complete and tested
+//theming
+
+build full ui 
+hero 
+about me
+our products
+pricing section
