@@ -9,6 +9,8 @@
  */
 
 import type * as agent from "../agent.js";
+import type * as config from "../config.js";
+import type * as profiles from "../profiles.js";
 
 import type {
   ApiFromModules,
@@ -26,6 +28,8 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   agent: typeof agent;
+  config: typeof config;
+  profiles: typeof profiles;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

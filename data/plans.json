@@ -1,0 +1,107 @@
+{
+  "tiers": [
+    {
+      "id": "starter",
+      "name": "Starter",
+      "priceLabel": "$1,000 setup + $99/mo",
+      "headline": "The quality of a creative agency, delivered in days.",
+      "summary": "Launch a beautiful, credible web presence with AI-assisted speed.",
+      "setupPrice": 1000,
+      "monthlyPrice": 99,
+      "idealFor": "New businesses needing a credible online presence.",
+      "delivery": "3 business days",
+      "outcomes": [
+        "Establish trust with a premium design that matches your brand.",
+        "Capture leads from day one with a guided contact experience.",
+        "Ship faster thanks to our AI-assisted intake and build process."
+      ],
+      "deliverables": [
+        "Up to 5 custom-designed pages",
+        "Free domain name",
+        "Mobile-first responsive design",
+        "Contact form and lead capture",
+        "Basic SEO setup"
+      ],
+      "subscriptionIncludes": [
+        "High-speed hosting",
+        "Security and backups",
+        "AI design editor access"
+      ],
+      "aiTouchpoints": [
+        "Smart brief turns your ideas into actionable design direction.",
+        "Instant tier recommendations generated from your project intake."
+      ]
+    },
+    {
+      "id": "professional",
+      "name": "Professional",
+      "priceLabel": "$2,500 setup + $149/mo",
+      "headline": "Scale your marketing machine with intelligent automation.",
+      "summary": "Everything in Starter plus the systems you need to generate and nurture demand.",
+      "setupPrice": 2500,
+      "monthlyPrice": 149,
+      "idealFor": "Businesses focused on lead generation and marketing.",
+      "delivery": "7 business days",
+      "outcomes": [
+        "Rank higher and reach more customers with an AI-aware content engine.",
+        "Turn visitors into meetings with advanced conversion flows.",
+        "Keep marketing agile with no-code, AI-guided site edits."
+      ],
+      "deliverables": [
+        "Everything in Starter",
+        "Up to 10 pages",
+        "Blog / CMS for ongoing content",
+        "Advanced lead generation (booking, scheduling, etc.)",
+        "Email marketing integration"
+      ],
+      "subscriptionIncludes": [
+        "High-speed hosting",
+        "Security and backups",
+        "AI design editor access",
+        "Priority support"
+      ],
+      "aiTouchpoints": [
+        "AI recommendations tailor each tier's messaging to your use case.",
+        "Automated domain alternatives when your first choice is taken."
+      ]
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise",
+      "priceLabel": "Starting at $5,000 setup + $249/mo",
+      "headline": "Your custom digital platform, engineered end-to-end.",
+      "summary": "A bespoke web application stack with AI-assisted collaboration and managed infrastructure, built on everything in Professional.",
+      "setupPrice": 5000,
+      "monthlyPrice": 249,
+      "setupPriceNotes": "Starting at $5,000",
+      "monthlyPriceNotes": "Starting at $249/mo",
+      "idealFor": "Businesses needing custom web applications and integrated operations.",
+      "delivery": "14-21 business days for MVP",
+      "outcomes": [
+        "Launch custom workflows, dashboards, or e-commerce experiences fast.",
+        "Securely manage user access, data, and transactions.",
+        "Rely on our team and AI tooling to iterate without compromising quality."
+      ],
+      "deliverables": [
+        "Everything in Professional",
+        "User accounts and authentication",
+        "Custom backend and database",
+        "E-commerce or client dashboards",
+        "Systems architecture aligned to your roadmap"
+      ],
+      "subscriptionIncludes": [
+        "High-speed hosting",
+        "Security and backups",
+        "AI design editor access",
+        "Priority support",
+        "Backend infrastructure management",
+        "Dedicated support channel"
+      ],
+      "aiTouchpoints": [
+        "AI-powered intake maps requirements into a technical delivery plan.",
+        "Ongoing AI-assisted content and UI updates post-launch."
+      ]
+    }
+  ]
+}
+

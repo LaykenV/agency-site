@@ -1,8 +1,23 @@
-create onboarding form for users signing up
+//create onboarding form for users signing up
+/schema and add post pay portal, project id, subscription?
+//rework onboarding forms
+
+review this shit
+
+ai call for tier gen
+auth
+payment links
+
+project page
+postpay portal
+
+
+get auth working and anon save + resume, one tap, google
 vercel domains api setup to check for their domain and get / gen secondary options
 once we get all data, gen 3 options based on tiers
 payments (autumn, polar, stripe?)
-let users upload photos to be used / color scheme?
+let users upload photos to be used / color scheme? 
+post pay portal, links to new page? /project/slug? to also display project data when launched
 resend email going out
 all backend complete and tested
 //theming

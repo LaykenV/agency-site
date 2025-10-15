@@ -1,0 +1,1366 @@
+Kibo UI
+
+
+Accordion
+Form
+Form
+Form with Plus Trigger
+Multi Level
+Multi-level
+Multi-level with Icon
+Multi-level with Plus Trigger
+Multi-level with Left Plus Trigger
+Standard
+Standard
+Standard with Left Chevron
+Standard with Plus Trigger
+Standard with Left Plus Trigger
+Icon
+Icon with Plus Trigger
+Full Featured
+Subtitle
+Subtitle
+Subtitle with Left Icon
+Subtitle with Plus Trigger
+Icon, Subtitle, and Chevron
+Tabs
+Tabs with Left Plus Trigger
+Tabs
+Tabs with Plus Trigger
+Tabs with Left Chevron
+Alert
+Error
+Error with Title
+Error with Title and Description
+Error with Title and Action
+Error with Title, Description, and Action
+Error with Everything
+Info
+Info with Title
+Info with Title and Description
+Info with Title and Action
+Info with Title, Description, and Action
+Info with Everything
+Standard
+Standard with Title
+Standard with Title and Description
+Standard with Title and Action
+Standard with Title, Description, and Action
+Standard with Everything
+Success
+Success with Title
+Success with Title and Description
+Success with Title and Action
+Success with Title, Description, and Action
+Success with Everything
+Warning
+Warning with Title
+Warning with Title and Description
+Warning with Title and Action
+Warning with Title, Description, and Action
+Warning with Everything
+Alert Dialog
+Confirmation
+Simple Confirmation Dialog
+Confirmation with Icon
+Confirmation with Detailed Description
+Confirmation with Custom Button Labels
+Confirmation with Short Content
+Confirmation with Centered Icon
+Custom Actions
+Actions with Icons
+Vertical Button Stack
+Mixed Button Styles
+Actions with Loading State
+Split Actions Layout
+Destructive
+Simple Delete Confirmation
+Delete Confirmation with Icon
+Destructive with Checkbox Confirmation
+Destructive with Consequence Details
+Destructive with Custom Styled Buttons
+Destructive with Warning Badge
+Destructive with Item Count
+Form
+Single Input Dialog
+Multiple Inputs Dialog
+Form with Select
+Form with Description
+Form with Validation State
+Form with Radio Group
+Form with Checkboxes
+Informational
+Simple Information Alert
+Information with Icon
+Information with Long Content
+Information with Action Button
+Information with Centered Icon
+Information with Status Badge
+Information with Highlighted Content
+Success
+Simple Success Message
+Success with Icon
+Success with Centered Icon
+Success with Next Steps
+Success with Summary Details
+Success with Multiple Actions
+Success with Celebration
+Aspect Ratio
+Standard
+16:9 Aspect Ratio (Widescreen)
+4:3 Aspect Ratio (Traditional)
+1:1 Aspect Ratio (Square)
+21:9 Aspect Ratio (Ultrawide)
+3:2 Aspect Ratio (Photography)
+9:16 Aspect Ratio (Vertical/Mobile)
+2:1 Aspect Ratio (Panoramic)
+Avatar
+Square
+Avatar
+Avatar with Placeholder Initials
+Avatar with Placeholder Icon
+Avatar with Online Indicator
+Avatar with Offline Indicator
+Avatar with Verification Check
+Avatar with Count Indicator
+Standard
+Avatar
+Avatar with Placeholder Initials
+Avatar with Placeholder Icon
+Avatar with Online Indicator
+Avatar with Offline Indicator
+Avatar with Verification Check
+Avatar with Count Indicator
+Badge
+Destructive
+Badge with Text
+Badge with Link
+Badge with Icon on Left
+Badge with Icon on Right
+Circular Badge with Count
+Outline
+Badge with Text
+Badge with Link
+Badge with Icon on Left
+Badge with Icon on Right
+Circular Badge with Count
+Secondary
+Badge with Text
+Badge with Link
+Badge with Icon on Left
+Badge with Icon on Right
+Circular Badge with Count
+Standard
+Badge with Text
+Badge with Link
+Badge with Icon on Left
+Badge with Icon on Right
+Circular Badge with Count
+Breadcrumb
+Home Icon
+Breadcrumb with Ellipsis
+Breadcrumb with Dropdown
+Breadcrumb with Icons
+Breadcrumb with Border
+Breadcrumb with Bullet Separator
+Breadcrumb with Slash Separator
+Breadcrumb with Select
+Standard
+Breadcrumb with Ellipsis
+Breadcrumb with Dropdown
+Breadcrumb with Icons
+Breadcrumb with Border
+Breadcrumb with Bullet Separator
+Breadcrumb with Slash Separator
+Breadcrumb with Select
+Button
+Destructive
+Button with Text
+Button with Left Icon
+Button with Right Icon
+Rounded Button
+Loading Button
+Button with Count
+Button with Kbd
+Link
+Button with Text
+Button with Left Icon
+Button with Right Icon
+Rounded Button
+Loading Button
+Button with Count
+Button with Kbd
+Outline
+Button with Text
+Button with Left Icon
+Button with Right Icon
+Rounded Button
+Loading Button
+Button with Count
+Button with Kbd
+Secondary
+Button with Text
+Button with Left Icon
+Button with Right Icon
+Rounded Button
+Loading Button
+Button with Count
+Button with Kbd
+Standard
+Button with Text
+Button with Left Icon
+Button with Right Icon
+Rounded Button
+Loading Button
+Button with Count
+Button with Kbd
+Button Group
+Actions
+Social Actions
+File Operations
+Bulk Actions
+Comment Actions
+Advanced
+Split Button with Dropdown
+Button Group with Select
+Stepper Button Group
+Rich Text Toolbar
+Badges
+Notifications Button
+Like with Count
+Cart Button
+Messages and Followers
+Display
+Chart Controls
+Map Controls
+Timeline Controls
+Density Controls
+Forms
+Date Selector
+Priority Selector
+Status Selector
+Quantity Picker
+Interactive
+View Switcher
+Sort Controls
+Filter Chips
+Segmented Control
+Media
+Player Controls
+Volume Controls
+Zoom Controls
+Playback Speed
+Navigation
+Pagination
+Carousel Controls
+Wizard Steps
+Patterns
+Overflow Menu
+Contextual Toolbar
+Loading States
+Keyboard Shortcuts
+Standard
+Basic Button Group
+Vertical Button Group
+Button Group Variants
+Nested Button Groups
+Calendar
+Dialog
+Calendar with Range in Dialog
+Calendar with Month and Year Selector in Dialog
+Calendar as Appointment Picker in Dialog
+Calendar with Date and Time in Dialog
+Calendar with Natural Language in Dialog
+Calendar with Disabled Dates in Dialog
+Calendar with Multiple Day Selection in Dialog
+Calendar with Custom Select Day Style in Dialog
+Standard
+Calendar with Range
+Calendar with Month and Year Selector
+Calendar as Appointment Picker
+Calendar with Date and Time
+Calendar with Natural Language
+Calendar with Disabled Dates
+Calendar with Multiple Day Selection
+Calendar with Custom Select Day Style
+Card
+Standard
+Standard Card
+Login Card
+Meeting Notes Card
+Image Card
+Carousel
+Standard
+Standard Carousel
+Carousel with Thumbnails
+Product Showcase Carousel
+Hero Carousel
+Chart
+Area
+An area chart with axes
+A simple area chart
+An area chart with gradient fill
+An area chart with icons
+An interactive area chart
+An area chart with a legend
+A linear area chart
+A stacked area chart with expand stacking
+A stacked area chart
+A step area chart
+Bar
+A bar chart with an active bar
+A bar chart
+A horizontal bar chart
+An interactive bar chart
+A bar chart with a custom label
+A bar chart with a label
+A mixed bar chart
+A multiple bar chart
+A bar chart with negative values
+A stacked bar chart with a legend
+Line
+A line chart
+A line chart with dots and colors
+A line chart with custom dots
+A line chart with dots
+An interactive line chart
+A line chart with a custom label
+A line chart with a label
+A linear line chart
+A multiple line chart
+A line chart with step
+Pie
+A donut chart with an active sector
+A donut chart with text
+A donut chart
+An interactive pie chart
+A pie chart with a custom label
+A pie chart with a label list
+A pie chart with a label
+A pie chart with a legend
+A pie chart with no separator
+A simple pie chart
+A pie chart with stacked sections
+Radar
+A radar chart
+A radar chart with dots
+A radar chart with a grid and circle fill
+A radar chart with a grid and circle fill (no lines)
+A radar chart with a grid and circle
+A radar chart with a custom grid
+A radar chart with a grid filled
+A radar chart with no grid
+A radar chart with icons
+A radar chart with a custom label
+A radar chart with a legend
+A radar chart with lines only
+A radar chart with multiple data
+A radar chart with a radius axis
+Radial
+A radial chart with a grid
+A radial chart with a label
+A radial chart with a custom shape
+A radial chart
+A radial chart with stacked sections
+A radial chart with text
+Tooltip
+Tooltip - Advanced
+Tooltip - Default
+Tooltip - Formatter
+Tooltip - Icons
+Tooltip - Line Indicator
+Tooltip - No Indicator
+Tooltip - Custom Label
+Tooltip - Label Formatter
+Tooltip - No Label
+Checkbox
+Standard
+Simple Checkbox
+With Description
+With Subtitle and Description
+Nested List
+Indeterminate Checkbox
+With Subtitle
+Disabled Checkbox
+Todo Style Checkbox
+Custom Indicator Checkbox
+Horizontal List Checkbox
+Vertical List Checkbox
+Right-Aligned Checkbox
+Collapsible
+Card
+Card Collapsible
+Card with Icon Header
+Nested Card Content
+Card with Badge
+Subtle Card Collapsible
+Faq
+FAQ Item
+FAQ with Icon
+FAQ Card Style
+Numbered FAQ
+FAQ with Badge
+Outline
+Outlined Collapsible
+Warning Outline
+Info Box Outline
+Dashed Outline
+Sidebar
+Nested Sidebar Items
+Settings Menu
+Sidebar with Counts
+Minimal Sidebar Group
+Standard
+Simple Collapsible
+Inline Trigger Collapsible
+Collapsible with Icon
+Text-only Collapsible
+Controlled Collapsible
+Combobox
+Custom Actions
+Create New Option Inline
+With Footer Actions
+Recent Selections Section
+Async/Dynamic Search
+With Quick Filters
+Keyboard Shortcuts Displayed
+Clear/Reset Button
+Grouped
+Multiple Groups with Labels
+Categories with Separators
+Nested/Hierarchical Groups
+Groups with Item Counts
+Collapsible Groups
+Recent vs All Items
+Favorites + All Items
+Multi Select
+Multiple Items with Badges
+With Select All Option
+With Item Count in Trigger
+With Checkboxes Visible
+With Clear All Functionality
+With Max Selections Limit
+Selected Items List Below
+Rich Content
+Items with Avatars
+Items with Descriptions
+Items with Status Indicators
+Items with Metadata
+Items with Icons and Descriptions
+Color-Coded Items
+Items with Action Buttons
+Standard
+Simple Single Select
+With Default Selected Value
+With Item Icons
+Small Size Variant
+Large Size Variant
+Disabled State
+Full Width Variant
+With States
+Loading State
+Error State with Retry
+Empty State with Action
+No Results Variation
+With Validation Feedback
+With Disabled Items
+Read-Only/View Mode
+Command
+Dialog
+Simple Command Dialog
+Command Dialog with Icons and Shortcuts
+Command Dialog with Separators
+Command Dialog with Badges
+Command Dialog with Descriptions
+Command Dialog Actions Menu
+Command Dialog with Status Indicators
+Popover
+Simple Command Popover
+Command Popover with Icons and Shortcuts
+Command Popover with Separators
+Command Popover with Badges
+Command Popover with Descriptions
+Command Popover Actions Menu
+Command Popover with Status Indicators
+Standard
+Simple Command Menu
+Command with Icons and Shortcuts
+Command with Separators
+Command with Badges
+Command with Descriptions
+Command Actions Menu
+Command with Status Indicators
+Context Menu
+Canvas
+Layer Arrange Menu
+Align and Distribute Menu
+Group and Lock Menu
+Layer Management Menu
+Transform Menu
+File
+File Operations Menu
+Copy and Move Menu
+Archive and Compress Menu
+Share and Export Menu
+File Properties Menu
+Standard
+Simple Context Menu
+Context Menu with Icons and Shortcuts
+Context Menu with Separators
+Context Menu with Labels
+Context Menu with Checkboxes
+Context Menu with Radio Items
+Context Menu with Submenus
+Table
+Table Sort Menu
+Table Filter Menu
+Table Export Menu
+Table Row Operations Menu
+Table Column Operations Menu
+Text
+Text Editing Menu
+Text Formatting Menu
+Text Alignment Menu
+Spell Check Menu
+Font and Style Menu
+Data Table
+Advanced
+Expandable Sub-Rows
+Numeric Pagination
+Resizable Columns
+Data Table with Actions
+Standard
+Basic Data Table with Checkboxes
+Data Table with Filters
+Data Table with Column Visibility
+Paginated Data Table
+Date Picker
+Standard
+Date Picker with Range
+Date Picker with Month and Year Selector
+Date Picker as Appointment Picker
+Date Picker with Date and Time
+Date Picker with Natural Language
+Date Picker with Disabled Dates
+Date Picker with Multiple Day Selection
+Date Picker with Custom Select Day Style
+Dialog
+Standard
+Standard
+Signup Form
+Signin Form
+Invite Team Members
+Card Details
+Checkout
+Plan Selection
+Edit Profile
+Onboarding
+Scrollable
+Scrollable with Sticky Header
+Terms and Conditions
+Delete Confirmation
+Newsletter
+Feedback
+Rating
+OTP Code
+Drawer
+Bottom
+Simple Bottom Drawer
+Bottom Drawer with Form
+Scrollable Bottom Drawer
+Bottom Drawer with Snap Points
+Nested Bottom Drawers
+Bottom Drawer No Scale Background
+Bottom Drawer Event Details
+Left
+Simple Left Drawer
+Left Drawer Navigation Menu
+Left Drawer with Nested Items
+Left Drawer with Search
+Left Drawer File Explorer
+Right
+Simple Right Drawer
+Right Drawer Filter Panel
+Right Drawer Settings Panel
+Right Drawer Shopping Cart
+Right Drawer Notifications
+Top
+Simple Top Drawer
+Top Drawer Search Bar
+Top Drawer Notification Banner
+Top Drawer Quick Actions
+Top Drawer Command Bar
+Dropdown Menu
+Actions
+File Actions Dropdown
+Table Row Actions
+Card Actions with Nested Share
+Batch Actions Dropdown
+Quick Actions Menu
+Editor
+Text Formatting Dropdown
+Block Type Selector
+Insert Options Dropdown
+Heading Selector
+Alignment Options
+Profile
+Profile Dropdown with Avatar
+Profile Dropdown with Status
+Account Settings Dropdown
+Multi-Account Switcher
+Profile with Preferences
+Settings
+Theme Selector
+Language Selector
+Preferences Dropdown
+Notification Settings
+View Options
+Standard
+Simple Dropdown with Icons
+Dropdown with Groups and Labels
+Dropdown with Shortcuts
+Dropdown with Checkboxes
+Dropdown with Radio Items
+Nested Dropdown
+Mixed Features Dropdown
+Support
+Support Dropdown
+Help Menu
+Resources Menu
+Empty
+Actions
+Empty with Single Action
+Empty with Multiple Actions
+Empty with Link Action
+Empty with Input Action
+Empty with Stacked Actions
+Data
+Empty Table
+Empty Chart
+No Notifications
+No Messages
+No Files
+Search
+No Search Results
+No Filter Results
+No Matches Found
+Try Different Keywords
+Clear Filters Suggestion
+Standard
+Simple Empty State
+Empty with Description
+Empty with Long Description
+Empty with Large Icon
+Empty with Multiple Paragraphs
+Empty without Icon
+Empty with Link in Description
+Field
+Advanced
+Simple Slider
+Range Slider
+Choice Cards
+Fieldset with Legend
+Field Group with Separator
+Complex Multi-Field Form
+Mixed Field Types with Separators
+Basic Inputs
+Simple Input with Label
+Input with Description Below
+Input with Description Above
+Multiple Inputs in Group
+Horizontal Layout Input
+Layouts
+Vertical Layout (Default)
+Horizontal Layout
+Responsive Layout
+Grid Layout
+Nested Fields
+Mixed Orientations
+Selects
+Simple Select
+Select with Description
+Select with Groups
+Multiple Selects
+Select with Helper Text Above
+Select in Horizontal Layout
+Select with Default Value
+Text Areas
+Simple Textarea
+Textarea with Description
+Textarea with Character Count
+Textarea with Helper Text Above
+Multiple Textareas - Different Sizes
+Textarea with Detailed Instructions
+Toggles
+Simple Checkbox
+Multiple Checkboxes
+Radio Buttons
+Radio with Descriptions
+Simple Switch
+Switch with Description
+Checkbox with Description
+Form
+Advanced
+Form with Select
+Form with Textarea
+Form with Checkbox
+Form with Radio Buttons
+Form with Switch
+Form with Multiple Selects
+Form with Mixed Controls
+Basic Forms
+Simple Text Input Form
+Email Input Form
+Password Input Form
+Number Input Form
+URL Input Form
+Phone Input Form
+Search Input Form
+Layouts
+Vertical Layout (Default)
+Horizontal Layout
+Grid Layout (2 Columns)
+Responsive Layout
+Inline Form
+Compact Form
+Spacious Form with Sections
+Multi Field
+Two Field Form
+Three Field Form
+Four Field Profile Form
+Mixed Input Types Form
+Form with Optional Fields
+Form with Field Groups
+Long Form with Many Fields
+Patterns
+Login Form
+Signup Form
+Profile Edit Form
+Contact Form
+Settings Form
+Checkout Form
+Search Filter Form
+Validation
+Required Field Validation
+Min/Max Length Validation
+Email Validation
+Password Strength Validation
+Conditional Validation
+Custom Validation Messages
+Real-time Validation
+Hover Card
+Info
+Simple Info Tooltip
+Info with Title
+Info with Icon and Badge
+Warning Info
+Technical Info
+Preview
+Link Preview
+Document Preview
+Image Preview
+Event Preview
+Product Preview
+Profile
+Simple Profile Hover Card
+Profile with Follow Button
+Profile with Badge
+Profile with Location
+Profile with Stats
+Stats
+Simple Stats
+Growth Stats
+User Stats
+Performance Stats
+Financial Stats
+Input
+Special
+File Upload with List
+Time Input
+Range Slider with Value
+Disabled Input
+Currency Input
+Standard
+Input with Label
+Input with Description
+Input with Helper Text
+Required Field
+Optional Field
+Input with Character Counter
+Inline Label
+Types
+Email Input
+Password with Toggle
+Number Input with Controls
+Search Input
+Date Input
+Phone Input
+URL Input
+Validation
+Error State
+Success State
+Warning State
+Multiple Validation Messages
+Real-time Validation
+Input Group
+AI
+AI Prompt Input
+Simple AI Prompt
+AI with Attachments
+AI with Voice
+Buttons
+Copy Button
+Multiple Action Buttons
+Search Button
+Password Actions
+Custom
+Textarea with Actions
+Textarea with Counter
+Textarea with Toolbar
+Textarea with Label
+Dropdown
+Dropdown Actions
+Search Filters
+URL Builder with Dropdown
+Textarea with Dropdown
+Icons
+Search with Icon
+Contact Fields with Icons
+Dual Icons
+Multiple Icons
+Label
+Inline Labels
+Label with Tooltip
+Block Labels
+Label with Counter
+Spinner
+Loading States
+Spinner with Text
+Animated Icon Spinner
+Textarea Loading
+Text
+Currency Input
+URL Builder
+Email with Domain
+Character Counter
+Textarea
+Code Editor
+Character Counter
+Rich Text Toolbar
+Chat Input
+Tooltip
+Password Requirements
+Help Tooltips
+API Key Info
+Input OTP
+Behavior
+Auto-submit OTP
+OTP with Enhanced Focus Management
+OTP with Paste Optimization
+OTP with Resend Flow
+Standard
+Standard OTP Input
+OTP with Pattern Validation
+OTP with Multiple Separators
+Controlled OTP Input
+OTP in Form with Validation
+States
+Disabled OTP Input
+OTP with Loading State
+OTP with Error State
+OTP with Success State
+Use Cases
+Email Verification Flow
+Two-Factor Authentication
+SMS Verification
+Transaction Confirmation
+Variants
+Numeric Only OTP
+Masked OTP Input
+Different Length OTP Variants
+Item
+Interactive
+Item as Link
+Item in Dropdown
+Layout
+Item Sizes
+Item Group
+Item with Header
+Media
+Item with Icon Media
+Item with Avatar
+Item with Image Media
+Standard
+Basic Item
+Item with Media and Icon
+Kbd
+Arrow Keys
+Arrow Keys Cross Pattern
+Arrow Keys Horizontal
+WASD Gaming Keys
+Vim Navigation Keys
+Function Keys
+F1 Help Key
+F12 DevTools Key
+Function Keys Row
+Special Keys
+Modifier Keys
+Editing Keys
+Platform Specific
+Mac Command Symbol
+Mac Option Symbol
+Windows Key
+Platform-Aware Shortcut
+Mac Control Symbol
+Pressed State
+Active State
+Disabled State
+Focus State
+Pressed Down
+Hover State
+Sequence
+Key Sequence with Then
+Key Sequence with Arrow
+Multi-Step Sequence
+Vim Command Sequence
+Shortcut
+Command Palette Shortcut
+Copy Shortcut
+Paste Shortcut
+Complex Shortcut
+Save Shortcut
+Sizes
+Small Kbd
+Default Kbd
+Large Kbd
+Inline with Text
+Extra Large Kbd
+With Icons
+Enter with Icon
+Delete with Icon
+Arrow Keys with Icons
+Command with Icon
+Unicode Symbols
+Label
+Standard
+Required Label
+Label with Description
+Label with Tooltip
+Label with Badge
+Label with Optional Indicator
+Label with Character Count
+Error Label
+Section Label
+Menubar
+Standard
+Simple Text Menubar
+Compact Menubar
+Menubar with Shortcuts
+Menubar with Icons
+Menubar with Checkboxes
+Menubar with Radio Groups
+Menubar with Submenu
+Menubar with Destructive Action
+Application Menubar
+Menubar with Sections
+Navigation Menu
+Complex
+Full Mega Menu
+Multi-level Nested Navigation
+Tabbed Mega Menu
+Dashboard-style with Stats
+Mixed Content Types
+Features
+Feature Cards with Icons
+Feature Grid Layout
+Feature Sections with Headers
+Features with Badges
+Feature Categories
+Marketing
+Product Showcase with CTA
+Pricing Tiers Preview
+Case Studies & Testimonials
+Resources with Lead Magnets
+Industry Solutions
+Standard
+Simple Navigation
+Navigation with Icons
+Navigation with Descriptions
+Navigation without Viewport
+Mixed Links and Dropdowns
+Pagination
+Advanced
+Start Ellipsis
+End Ellipsis
+Both Ellipsis
+Many Pages
+Disabled State
+Basic
+Simple Page Numbers
+Five Page Numbers
+With Previous and Next
+With Ellipsis
+Complete Pagination
+Navigation
+Previous and Next Only
+With Page Counter
+First and Last
+With First and Last
+Sizes
+Small Size
+Default Size
+Large Size
+Compact
+Spacious
+Popover
+Standard
+Simple Text Popover
+Popover with Footer
+Popover with Steps
+Notifications Popover
+Filter Popover
+Share Popover
+Feedback Popover
+Popover with Heading
+Popover with Actions
+Popover with Form
+Info Icon Popover
+Popover with List
+User Profile Popover
+Popover with Divider
+Compact Popover
+Progress
+Basic
+Empty Progress
+Quarter Progress
+Half Progress
+Three Quarters Progress
+Complete Progress
+Colored
+Success
+Warning
+Danger
+Info
+Gradient
+Sizes
+Extra Small
+Small
+Default
+Large
+Extra Large
+With Label
+With Percentage
+With Label Above
+With Label Below
+With Count
+Multi-line Label
+Radio Group
+Advanced
+RadioGroup with Icons
+RadioGroup with Custom Content
+Form
+RadioGroup in Form
+RadioGroup with Disabled States
+Layout
+Horizontal RadioGroup
+RadioGroup with Cards
+RadioGroup in Grid
+Standard
+Basic RadioGroup
+RadioGroup with Descriptions
+Scroll Area
+Advanced
+Both Orientations
+Dynamic Content
+With ResizableHandle
+Layout
+Fixed Height ScrollArea
+Scrollable Tags
+Chat Messages
+Standard
+Basic ScrollArea
+Horizontal ScrollArea
+Separator
+Basic
+Horizontal Separator
+Vertical Separator
+In Navigation
+Section Divider
+Simple Line
+Spacing
+Tight Spacing
+Default Spacing
+Wide Spacing
+With Margins
+Inset Separator
+Styled
+Thick Separator
+Dashed Separator
+Dotted Separator
+Gradient Separator
+Double Line
+With Text
+With Text Center
+With Text Left
+With Text Right
+Sheet
+Details
+Product Details Sheet
+User Profile View Sheet
+Order Details Sheet
+Article Preview Sheet
+Notification List Sheet
+Form
+Contact Form Sheet
+User Profile Edit Sheet
+Search and Filter Sheet
+Create New Item Sheet
+Multi-Step Form Sheet
+Multi Section
+Sheet with Header, Content, and Footer
+Sheet with Tabs
+Sheet with Scrollable Content
+Sheet with Action Buttons in Footer
+Sheet with Sticky Header and Footer
+Navigation
+Mobile Menu Sheet
+Sidebar Navigation Sheet
+Nested Navigation Menu Sheet
+Navigation with User Profile Sheet
+Navigation with Search Sheet
+Settings
+App Preferences Sheet
+Account Settings Sheet
+Notification Preferences Sheet
+Theme Settings Sheet
+Privacy Settings Sheet
+Standard
+Bottom-Sliding Sheet
+Sheet with Title and Description
+Left-Sided Sheet
+Top-Sliding Sheet
+Skeleton
+Card
+Simple Card with Image and Text
+Card with Avatar and Content
+Card with Badge and Tags
+Vertical Card Layout
+Horizontal Card Layout
+Content
+Article Preview
+Blog Post
+Comment Thread
+Detailed Article
+Content with Sidebar
+Form
+Input Fields
+Form with Labels
+Multi-column Form
+Form with Sections
+Search Form
+List
+Simple List Items
+List with Avatars
+List with Icons
+Multi-line List Items
+Hierarchical List Items
+Profile
+User Profile Header
+Profile Card
+Profile Settings Form
+Profile with Stats
+Team Member Card
+Table
+Simple Table Rows
+Table with Actions
+Table with Avatars
+Expandable Rows
+Table with Pagination
+Slider
+Interactive
+Synced with Input Field
+With Increment/Decrement Buttons
+With Preset Values
+With Reset Button
+With Live Preview
+Range
+Basic Range Slider
+Price Range Slider
+Range with Value Display
+Range with Constraints
+Percentage Range
+Settings
+Volume Control
+Brightness Control
+Temperature Control
+Speed Control
+Standard
+Simple Slider
+Slider with Label
+Slider with Value Display
+Slider with Min/Max Labels
+Slider with Step Indicators
+Styled
+Colored Slider
+With Tooltip
+Large/Thick Slider
+Minimal Style
+With Gradient Track
+Vertical
+Volume Control Style
+Height Selector
+Vertical with Labels
+Vertical Range
+Vertical with Indicators
+Sonner
+Content
+Toast with Description
+Toast with Custom Icon
+Toast with Custom Duration
+Toast with Multi-line Content
+Toast with Rich HTML Content
+Interactive
+Toast with Action Button
+Toast with Cancel Button
+Toast with Action and Cancel
+Non-Dismissible Toast
+Position
+Top Left Position
+Top Center Position
+Top Right Position
+Bottom Left Position
+Bottom Center Position
+Bottom Right Position
+Promise
+Basic Promise Toast
+Promise Toast with Data
+Promise Toast with Error
+Loading Toast
+Standard
+Default Toast
+Success Toast
+Error Toast
+Warning Toast
+Info Toast
+Spinner
+Applications
+Spinner in Item
+Spinner in Input Group
+Spinner in Empty State
+Button
+Loading Button
+Loading Outline Button
+Loading Icon Button
+Loading Secondary Button
+Loading Small Button
+Inline
+Inline with Text
+Spinner Before Text
+Spinner After Text
+Spinner in List Item
+Standard
+Default Spinner
+Small Spinner
+Large Spinner
+Primary Color Spinner
+Muted Spinner
+Switch
+Cards
+Settings Card
+Feature Card
+Settings List
+Switch in Item
+Icons
+Theme Toggle with Icons
+Icon with Label
+Volume Toggle
+Labeled
+Switch with Label
+Switch with On Label
+Switch with State Labels
+Switch with Description
+Square
+Square Switch
+Square Switch with Text
+Square Switch with Label
+Square Theme Toggle
+Standard
+Default Switch
+Checked Switch
+Small Switch
+Disabled Switch
+Table
+Advanced
+Table with Vertical Lines
+Dense Table
+Vertical Table
+Compatibility Table
+Standard
+Basic Table
+Table with Avatar
+Table Without Dividers
+Striped Table
+Tabs
+Advanced
+Tabs with Badge Counts
+Controlled Tabs
+Nested Tabs
+Content
+Tabs with Forms
+Tabs with Cards
+Tabs with Tables
+Layout
+Vertical Tabs
+Full Width Tabs
+Scrollable Tabs
+Standard
+Basic Tabs
+Tabs with Icons
+Textarea
+Form
+Required Textarea
+Textarea with Helper Text
+Textarea with Error
+Textarea with Hint
+Textarea with Character Count
+Labeled
+Textarea with Label
+Textarea with Description
+Textarea with Floating Label
+Textarea with Inline Label
+Standard
+Simple Textarea
+Disabled Textarea
+Read-only Textarea
+Short Textarea
+Toggle
+Sizes
+Small Toggle
+Default Size Toggle
+Large Toggle
+Standard
+Default Toggle
+Outline Toggle
+Disabled Toggle
+Toggle with Text
+Toggle Group
+Sizes
+Small Toggle Group
+Default Size Toggle Group
+Large Toggle Group
+Standard
+Default Toggle Group
+Outline Toggle Group
+Single Selection Toggle Group
+Disabled Toggle Group
+Tooltip
+Content
+Tooltip with Title and Description
+Tooltip with Icon
+Tooltip with Keyboard Shortcut
+Tooltip with Image
+Standard
+Simple Tooltip
+Tooltip Positions
+Tooltip with Longer Text
+Tooltip on Icon
