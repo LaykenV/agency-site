@@ -1,5 +1,23 @@
 ### **The Agency Build Blueprint (Upgrade Version)**
 
+**Relationship to Other Docs:**
+- This is the **high-level vision** and roadmap for the full agency site builder
+- `ONBOARDING-ARCHITECTURE.md` - **Detailed implementation guide** for Phase 1-4 (✅ Complete)
+- `upgradePlan.md` - **Specific upgrade** for simulated payment flow (✅ Implemented)
+
+**Current Status:**
+- ✅ Anonymous onboarding with autosave
+- ✅ Google OAuth + One Tap authentication
+- ✅ Session linking (anonymous → authenticated)
+- ✅ Simulated payment with projectId generation
+- ✅ Portal MVP with auth gates
+- 🚧 Real Stripe integration (structured for easy swap)
+- 🚧 AI plan generation (stubbed with placeholder data)
+- 🚧 Post-payment asset collection
+- 🚧 Email notifications
+
+---
+
 **I. Core Principles**
 
 1. **Frictionless Conversion** – The pre-pay journey removes every non-essential question so prospects reach checkout without resistance.

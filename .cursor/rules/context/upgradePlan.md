@@ -1,267 +1,167 @@
-Of course. This is the master blueprint.
+### Auth & Onboarding Flow Upgrade Plan
 
-This plan consolidates all of our strategic decisions into a single, actionable document. It covers the final data schema, the end-to-end architectural flow, and a detailed blueprint for the client portal. This is your roadmap to building and launching the agency.
+**Status**: ✅ IMPLEMENTED - October 15, 2025
 
----
+This upgrade plan has been fully implemented. See `ONBOARDING-ARCHITECTURE.md` for complete documentation of the implemented features.
 
-### **The Full Plan: Architecture, Schema, and Client Portal**
-
-#### **Part I: The Core Architectural Principles**
-
-Our architecture is designed for three things:
-
-1.  **Frictionless Conversion:** The pre-pay journey is ruthlessly optimized to get a prospect from landing page to checkout with zero mandatory sign-ins or unnecessary questions.
-2.  **Client Confidence:** The post-pay experience immediately provides the client with a professional, persistent "home" for their project, building trust and clarifying the next steps.
-3.  **Future Scalability:** The entire system is built on a data model that will seamlessly accommodate future features, most importantly the AI Editor and ongoing project management.
+#### Goals
+- Minimize friction pre-payment; authenticate only at high-intent moments.
+- Make signed-in and returning experiences predictable and fast.
+- Allow simulation of a successful payment by creating a project and redirecting to the portal.
 
 ---
 
-#### **Part II: The Data Foundation (Final Convex Schema)**
+### Current Direction (kept, refined)
+- Anonymous-first onboarding on `/onboarding` using `useOnboardingProfile` with localStorage-backed `sessionId`.
+- Save tier selection; at Checkout attempt Google One Tap; fallback to OAuth; link anonymous session; then proceed to payment.
+- Keep `expectAuth: false` in `components/ConvexClientProvider.tsx` to permit anonymous queries/mutations.
 
-This is the single source of truth for your entire application. The following schema is production-ready and includes all necessary fields for the full client lifecycle.
-
-**`convex/schema.ts`**
-
-```typescript
-import { defineSchema, defineTable } from "convex/server";
-import { v } from "convex/values";
-
-// Define reusable types for project status and AI proposal outputs
-const projectStatus = v.union(
-  v.literal("AWAITING_PAYMENT"),
-  v.literal("AWAITING_ASSETS"),
-  v.literal("IN_PROGRESS"),
-  v.literal("IN_REVIEW"),
-  v.literal("LIVE"),
-  v.literal("ARCHIVED")
-);
-
-const planRecommendation = v.object({
-  headline: v.string(),
-  summary: v.string(),
-  pages: v.array(v.string()),
-  features: v.array(v.string()),
-  aiEditorAccess: v.boolean(),
-  deliverableNotes: v.optional(v.string()),
-});
-
-export default defineSchema({
-  profiles: defineTable({
-    // --- Core Identifiers ---
-    projectId: v.optional(v.string()), // The unique, human-readable project ID for URLs. Generated post-payment.
-    sessionId: v.string(),
-    resumeToken: v.string(),
-    authUserId: v.optional(v.string()),
-
-    // --- Project State Machine ---
-    projectStatus: v.optional(projectStatus), // Explicit status for clean UI logic. The driver for the portal UI.
-
-    // --- Onboarding Data (Pre-Pay) ---
-    brief: v.object({
-      contactName: v.string(),
-      contactEmail: v.string(),
-      companyName: v.string(),
-      businessDescription: v.string(),
-      industry: v.string(),
-      primaryNeed: v.string(),
-      primaryAction: v.string(),
-      timeline: v.object({
-        option: v.string(),
-        date: v.union(v.string(), v.null()),
-      }),
-      additionalNotes: v.string(),
-      termsAccepted: v.boolean(),
-    }),
-
-    // --- Plan & Payment ---
-    plan: v.optional(v.object({
-      tierId: v.union(v.string(), v.null()),
-      recommendedOn: v.union(v.number(), v.null()),
-      aiProposal: v.optional(v.object({
-        generatedAt: v.number(),
-        promptVersion: v.string(),
-        tiers: v.object({
-          starter: planRecommendation,
-          professional: planRecommendation,
-          enterprise: planRecommendation,
-        }),
-      })),
-    })),
-    paymentStatus: v.optional(v.object({
-      status: v.string(), // e.g., 'pending', 'succeeded', 'failed'
-      providerIntentId: v.union(v.string(), v.null()),
-    })),
-
-    // --- Subscription Management (Synced from Stripe Webhooks) ---
-    subscription: v.optional(v.object({
-      stripeSubscriptionId: v.string(),
-      status: v.string(), // e.g., 'active', 'canceled', 'past_due'
-      currentPeriodEnd: v.number(), // Unix timestamp for renewal date
-    })),
-
-    // --- Post-Pay & Project Delivery Data ---
-    postPay: v.optional(v.object({
-      headline: v.union(v.string(), v.null()),
-      domainPreference: v.union(v.string(), v.null()),
-      inspirationLinks: v.array(v.string()),
-      functionalRequirements: v.union(v.string(), v.null()),
-      brand: v.object({
-        logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-        photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-        styleVibe: v.union(v.string(), v.null()),
-        logoUrl: v.optional(v.string()), // URL to the uploaded logo in Convex storage
-        imageUrls: v.optional(v.array(v.string())), // URLs to uploaded images
-      }),
-      brandAssetsUploaded: v.boolean(),
-    })),
-    
-    // --- Deployment Details ---
-    deployment: v.optional(v.object({
-      liveUrl: v.optional(v.string()),
-      stagingUrl: v.optional(v.string()),
-      vercelProjectId: v.optional(v.string()),
-    })),
-  })
-    .index("by_projectId", ["projectId"]) // CRITICAL: For fast portal lookups
-    .index("by_sessionId", ["sessionId"])
-    .index("by_resumeToken", ["resumeToken"])
-    .index("by_authUserId", ["authUserId"]),
-
-  events: defineTable({
-    sessionId: v.string(),
-    projectId: v.optional(v.string()), // Add projectId for better event tracking post-payment
-    kind: v.string(),
-    payload: v.optional(v.any()),
-  })
-    .index("by_projectId", ["projectId"])
-    .index("by_kind", ["kind"]),
-});
-```
+Key refinements in this plan:
+- Add global explicit “Sign in” (OAuth) CTA in header; use One Tap only contextually (after Checkout click).
+- If user is already authenticated on onboarding, skip One Tap and linking; go straight to simulated payment.
+- Replace Stripe placeholder logging with a simulated success path: persist `projectId` and status then redirect to portal.
 
 ---
 
-#### **Part III: The End-to-End Architectural Flow**
-
-This is the step-by-step journey from a user's first click to their final project portal.
-
-1.  **Step 1: Onboarding (`/onboarding`)**
-    *   On first visit we call `profiles.initSession`, creating a `profiles` record keyed by `sessionId` and `resumeToken`.
-    *   The pre-pay experience now has **four focused screens** only:
-        1.  **Contact basics** (name, email, company) → writes into `brief.contact*`.
-        2.  **Business snapshot** (one-line description, optional industry) → `brief.businessDescription`, `brief.industry`.
-        3.  **Needs & timing** (primary need, primary action, timeline) → maps to `brief.primaryNeed`, `brief.primaryAction`, `brief.timeline`.
-        4.  **Terms & context** (short free-text `additionalNotes`, terms checkbox) → ensures legal acceptance before plan reveal.
-    *   Logo readiness, photo readiness, and style vibe are **deferred to the post-pay portal** to reduce friction.
-    *   After the final screen, we trigger an internal action `generatePlanRecommendation` that:
-        *   Gathers the completed `brief` + any analytics context.
-        *   Calls our AI provider to produce tailored tier insights.
-        *   Stores the structured response under `profiles.plan.aiProposal`.
-    *   The plan selection view reads from `plan.aiProposal.tiers` and renders the AI crafted copy alongside the tier pricing placeholders.
-
-2.  **Step 2: Checkout (Stripe)**
-    *   Once a tier is chosen, we launch checkout (stub today, Stripe later).
-    *   On successful payment, Stripe redirects to `/payment/success`; the page polls `profiles.plan.tierId` and `paymentStatus`.
-
-3.  **Step 3: The Webhook Handler (The Backend Core)**
-    *   Stripe sends a `checkout.session.completed` webhook to a Convex `httpAction`.
-    *   The handler:
-        a. Verifies the Stripe signature.
-        b. Looks up the profile by `resumeToken`/`sessionId` from metadata.
-        c. Generates a human-readable `projectId` (e.g., `acme-widgets-2025`).
-        d. Updates the profile with payment + subscription data, persists the chosen tier, and sets `projectStatus` to `'AWAITING_ASSETS'`.
-        e. Logs the event and dispatches Resend emails.
-
-4.  **Step 4: The Redirect to the Portal**
-    *   `/payment/success` subscribes to the profile. When `projectId` and `paymentStatus.status === "succeeded"`, it redirects to `/portal/${projectId}`.
-
-5.  **Step 5: The Client Portal (`/portal/[projectId]`)**
-    *   The client sees their personalized portal. The kickoff tab now hosts the **post-pay asset form** (logo readiness, photo readiness, style vibe, asset uploads, domain preference, inspiration links, functional requirements).
-    *   Once assets are submitted we flip `postPay.brandAssetsUploaded` and advance the status to unlock build tracking.
+### One Tap vs OAuth Policy
+- Use OAuth for explicit CTAs (header "Sign in", fallback button on Checkout).
+- Use One Tap only post-Checkout click (high-intent, opportunistic).
+- Both One Tap and OAuth map to the same Google identity in Better Auth; treat them interchangeably for sign-in and linking.
 
 ---
 
-#### **Part IV: The Client Portal Blueprint**
+### User Journeys (updated)
 
-**URL Structure:** `/portal/[projectId]`
+1) New, anonymous visitor → Get started → Onboarding
+- Initialize anon session via `api.profiles.initSession` (stored in localStorage).
+- Autosave brief on change via `api.profiles.updateProfileBySession`.
+- On Checkout click:
+  - Save tier via `api.profiles.setPlanSelection`.
+  - Try `authClient.oneTap(...)`.
+    - On success: `handoffAnonymousSession(api.auth.linkAnonymousSession)`.
+    - If blocked/dismissed: show OAuth fallback and link after callback.
+  - Then simulate payment (see Simulated Payment) → redirect to portal.
 
-**Layout:** A persistent layout containing the client's company name/logo and a clear tabbed navigation.
+2) Signed-in user hits Get started → Onboarding
+- Load/edit by `authUserId` (prefer profile by auth over session).
+- If a stray anon session exists in localStorage, link/merge once and clear it.
+- Checkout → simulate payment immediately (no One Tap/linking needed).
 
-**Tabs & Functionality:**
+3) Returning signed-in user
+- Header “Portal” nav goes to `/portal` which redirects to `/portal/[projectId]` if one project exists.
+- If no project yet, route to `/onboarding` to resume in-progress brief.
 
-*   **Tab 1: Project Kickoff (Initial View)**
-    *   **State:** This is the default view as long as `projectStatus` is `AWAITING_ASSETS`.
-    *   **Content:** A welcome message and the Post-Pay Form.
-        *   **Form Fields:** Logo Upload, Image Upload, Homepage Headline, Domain Preference, etc.
-    *   **Action:** The "Submit Assets" button at the bottom triggers a Convex mutation that:
-        1.  Saves the asset URLs and form data to the `postPay` object.
-        2.  Updates `projectStatus` to `'IN_PROGRESS'`.
-        3.  Sends you a notification that the client is ready for you to start building.
-    *   After submission, this tab becomes a read-only view of the submitted assets.
-
-*   **Tab 2: Project Hub (Default View Post-Kickoff)**
-    *   **State:** This becomes the default view for all statuses *after* `AWAITING_ASSETS`.
-    *   **Content:** A dashboard providing a clear overview of the project.
-        *   **Project Status Tracker:** A visual component (e.g., a stepper) that highlights the current `projectStatus` (`In Progress`, `In Review`, `Live`).
-        *   **Important Links:** Displays the `stagingUrl` and `liveUrl` from the `deployment` object once they are available.
-        *   **Communication Log:** A simple read-only feed of key project updates you can add from a separate admin view.
-
-*   **Tab 3: AI Editor (The Future)**
-    *   **State:** Always visible, but functionality is gated by subscription status.
-    *   **Initial Content:** A beautifully designed "Coming Soon" page. "The AI Editor is under construction. Soon, you'll be able to make instant design changes to your live site right here."
-    *   **Future Content:** This will house the full AI editor interface, which will read from and write to the client's codebase.
-
-*   **Tab 4: Account & Billing**
-    *   **State:** Always visible.
-    *   **Content:** A simple interface for subscription management.
-    *   **Action:** A "Manage Subscription" button that redirects the user to their Stripe Customer Portal. This is a secure, pre-built page hosted by Stripe where they can update their card, view invoices, and cancel their plan. This saves you an enormous amount of development time.
+4) Returning anonymous user on same device
+- Resumes via localStorage `sessionId` into `/onboarding`.
+- Optional inline CTA: “Sign in to sync progress across devices” (OAuth). On success, link and continue.
 
 ---
 
-#### **Part V: AI-Driven Plan Generation & Data Model Updates**
-
-- **Objective:** Produce tailored plan copy per tier for every prospect while preserving the handcrafted placeholder copy as a baseline. We call OpenAI (or Anthropic) with the user's onboarding brief and receive structured JSON describing deliverables for Starter, Professional, and Enterprise.
-- **Storage:** Results live in `profiles.plan.aiProposal`. Each tier stores:
-  - `headline`: hero copy for the tier card.
-  - `summary`: 1–2 sentence contextual pitch.
-  - `pages`: array of page names we commit to delivering.
-  - `features`: bullet list of included capabilities (contact form, scheduler, CMS, etc.).
-  - `aiEditorAccess`: boolean; determines whether messaging references the editor.
-  - `deliverableNotes` (optional) for extra nuance (e.g., “Includes Calendly integration if you provide credentials”).
-- **Versioning:** `promptVersion` tracks prompt iterations. `generatedAt` is a unix timestamp for cache invalidation + analytics.
-- **Regeneration:** Allow manual re-run (internal action) without overwriting hand edits. When we regenerate we store event logs in `events` with kind `plan.ai_regenerated`.
-- **Rendering:**
-  - The onboarding plan step hydrates from `plan.aiProposal.tiers`. We merge AI copy into the existing `PLAN_TIERS` structure on the client. Missing fields gracefully fallback to defaults.
-  - The portal `Project Hub` tab can surface the accepted proposal for reference.
-- **Analytics:** Append an `events` record each time we generate or serve an AI plan for instrumentation.
+### Routing & Redirect Rules
+- Header "Sign in" (OAuth):
+  - If user has a `projectId` → go to `/portal/[projectId]`.
+  - Else → go to `/onboarding` to resume.
+- `/onboarding` while authenticated:
+  - If `projectId` present → redirect to `/portal/[projectId]`.
+  - Else continue editing the onboarding profile keyed by `authUserId`.
+- Preserve `postAuthRedirect` for OAuth callbacks and One Tap success to finish pending actions (e.g., Checkout).
 
 ---
 
-#### **Part VI: File-by-File Upgrade Checklist**
+### Simulated Payment (replace Stripe placeholder)
+Objective: On Checkout, instead of logging, persist a project and redirect to the portal as if payment succeeded.
 
-- `types/profile.ts`
-  - Update `OnboardingBrief` to remove `logoReadiness`, `photosReadiness`, `styleVibe` from pre-pay.
-  - Add strong types for `PlanRecommendation`, `AiProposal`, and new `PostPayBrand` object.
-  - Adjust `defaultProfile` to match trimmed pre-pay fields.
-- `convex/schema.ts`
-  - Apply schema shown above, including `plan.aiProposal` and nested `postPay.brand`.
-- `convex/profiles.ts`
-  - Update validators to match schema changes.
-  - Add `generatePlanRecommendation` internal action (Node runtime) that collects brief data, calls AI, validates JSON, stores in `plan.aiProposal` and logs events.
-  - Update `initSession`, `updateProfileBySession`, and any admin queries to respect new field layout.
-- `convex/config.ts`
-  - Once `convex/profiles.ts` is updated, deprecate duplicate logic or re-export shared validators from a common module to avoid drift.
-- `lib/convex/useOnboardingProfile.ts`
-  - Ensure autosave logic handles removed fields; purge state mutations for style/brand readiness.
-  - Expose a `regeneratePlan` helper if we want client-triggered refresh (optional future).
-- `components/onboarding/steps.tsx`
-  - Reduce to four steps: Contact, Needs, Actions/Timeline, Terms & Notes.
-  - Remove summary step, move notes + terms into final screen.
-  - Keep plan card layout but hydrate AI copy by reading from `state.plan` (or `useOnboardingProfile` extension).
-  - Post-pay brand readiness UI migrates to a new portal component.
-- `app/onboarding/page.tsx`
-  - Update step order and navigation logic (no summary step, new gating for final CTA).
-  - Trigger plan generation after terms acceptance (via mutation calling the internal action). Show loading state if AI plan pending.
-- `components/onboarding/ui/autosave-status.tsx`
-  - No functional change, but verify copy still makes sense once plan generation delay is introduced.
-- `.cursor/rules/context/ob-form.md` & `.cursor/rules/context/project-plan.md`
-  - Sync narrative descriptions to mention the streamlined four-step pre-pay brief and AI proposal pipeline.
+Proposed server additions in `convex/profiles.ts`:
+- `confirmCheckoutForSession` (mutation)
+  - Args: `{ sessionId?: string, tierId?: string }` (either session-bound or pull current `plan.tierId`).
+  - Behavior:
+    - Resolve the active profile: if authenticated, prefer `authUserId`; otherwise use `sessionId`.
+    - Require `plan.tierId` to be set; if not, throw a friendly error.
+    - If user is not authenticated, require linking to be completed first (One Tap/OAuth).
+    - Generate a human-friendly `projectId` (slug from `companyName` + year). Ensure uniqueness (index `by_projectId`).
+    - Update profile:
+      - `projectId`
+      - `projectStatus = "AWAITING_ASSETS"`
+      - `paymentStatus = { status: "succeeded", providerIntentId: null }`
+    - Log events: `payment.succeeded`, `project.created`.
+    - Return `{ projectId }`.
+
+Client flow on Checkout (in `app/onboarding/page.tsx`):
+1. `setPlanSelection({ sessionId, tierId })`.
+2. Attempt One Tap → on success link; on failure show OAuth button.
+3. Call `confirmCheckoutForSession`.
+4. `router.push("/portal/" + projectId)`.
+
+Note: When user is already authenticated on onboarding, skip One Tap & linking; go straight to step 3.
+
+---
+
+### Portal MVP (simple)
+Create minimal but polished pages:
+- `app/portal/page.tsx`
+  - Auth gate using `Authenticated`/`Unauthenticated`/`AuthLoading`.
+  - If the authenticated profile has `projectId`, redirect to `/portal/[projectId]`.
+  - Otherwise, show a helpful message with a CTA to `/onboarding`.
+
+- `app/portal/[projectId]/page.tsx`
+  - Authenticated only. Load profile via a new query (see below) or by `authUserId` and match `projectId`.
+  - Show: greeting with `brief.contactName`, company, selected tier, `projectStatus`, and simple next steps list (placeholder for post-pay assets).
+
+Convex queries:
+- Add `getProfileByProjectId({ projectId })` to `convex/profiles.ts` to support direct portal hydration.
+- Keep existing `api.auth.getProfileByAuthUserId` for default portal redirect logic.
+
+Navigation:
+- Global header shows "Sign in" (OAuth) when signed out; shows "Portal" when signed in.
+
+---
+
+### Data Model & Indexes (confirm/extend)
+- `profiles` (existing): ensure indexes `by_projectId`, `by_sessionId`, `by_authUserId` exist as planned.
+- `events`: continue logging `auth.session_linked`, `payment.succeeded`, `project.created`.
+
+---
+
+### Edge Cases to Handle
+- Stale localStorage: If `sessionId` exists but profile is null and user is authenticated, clear localStorage and continue by `authUserId`.
+- Double linking: `linkAnonymousSession` remains idempotent.
+- Returning signed-in user clicking "Get started": Route to onboarding if no `projectId`, else to portal.
+
+---
+
+### Acceptance Criteria
+- Anonymous onboarding works with autosave and no auth errors.
+- Checkout flow:
+  - One Tap success → links session → `confirmCheckoutForSession` → redirects to `/portal/[projectId]`.
+  - One Tap unavailable → OAuth fallback → links → confirms → redirects.
+  - Already signed-in on onboarding → confirms → redirects (no One Tap shown).
+- Header "Sign in" (OAuth) sends users to portal if `projectId` exists, else onboarding.
+- Portal MVP renders key profile details and `projectStatus` for authenticated users; unauthenticated users see a sign-in prompt.
+- Events are recorded for plan selection, session linking, and simulated payment.
+
+---
+
+### Testing Checklist
+- Anonymous onboarding persistence and duplicate prevention in React StrictMode.
+- One Tap prompt on Checkout; OAuth fallback path.
+- Linking sets `authUserId` and clears localStorage.
+- `confirmCheckoutForSession` sets `projectId`, status, events, and returns `projectId`.
+- Authenticated onboarding skips One Tap and linking.
+- Header sign-in/out and Portal navigation behave as specified.
+
+---
+
+### Rollout Plan
+1) ✅ Implement `confirmCheckoutForSession` + `getProfileByProjectId` in `convex/profiles.ts`.
+2) ✅ Update Checkout handler in `app/onboarding/page.tsx` to invoke confirmation and redirect.
+3) ✅ Add header auth controls (OAuth sign-in, Portal link when signed in).
+4) ✅ Create Portal MVP pages under `app/portal`.
+5) ⏳ QA per checklist across One Tap, OAuth, and already-signed-in scenarios.
+
+---
+
+### Notes
+- Keep One Tap scoped to Checkout for best UX and lower surprise factor.
+- Always prefer authenticated profile when available (source of truth) and clean up stale anon session state.
+
+

@@ -12,12 +12,21 @@ import {
 
 type UseOnboardingProfileOptions = {
   onError?: () => void;
+  authStatusLoaded?: boolean;
 };
 
 type DirtySet = Set<OnboardingField>;
 
+const SESSION_STORAGE_KEY = "onboarding_session";
+
+type StoredSession = {
+  sessionId: string;
+  resumeToken: string;
+};
+
 export function useOnboardingProfile({
   onError,
+  authStatusLoaded = true,
 }: UseOnboardingProfileOptions = {}) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [state, setState] = useState<OnboardingBrief>(defaultProfile);
@@ -27,6 +36,8 @@ export function useOnboardingProfile({
   const [isHydrated, setIsHydrated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const initializingRef = useRef(false);
+  const hasCheckedProfile = useRef(false);
   const fieldVersionsRef = useRef<Record<OnboardingField, number>>(
     Object.keys(defaultProfile).reduce(
       (acc, key) => {
@@ -45,32 +56,115 @@ export function useOnboardingProfile({
     sessionId ? { sessionId } : "skip"
   );
 
+  // Get current authenticated user's profile if they're signed in
+  const authProfile = useQuery(
+    api.auth.getCurrentUserProfile
+  );
+
+  useEffect(() => {
+    if (!authStatusLoaded) return;
+    if (!authProfile) return;
+    if (authProfile === undefined || authProfile === null) return;
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+  }, [authStatusLoaded, authProfile]);
+
+  // Initialize session from localStorage or create new one
   useEffect(() => {
     const initialise = async () => {
-      if (sessionId) return;
+      if (!authStatusLoaded) return;
+      if (authProfile) return; // Skip if user is already authenticated with a profile
+      if (sessionId || initializingRef.current) return;
+
+      initializingRef.current = true;
+
       try {
+        // Try to restore from localStorage first
+        const stored = localStorage.getItem(SESSION_STORAGE_KEY);
+        if (stored) {
+          try {
+            const parsed: StoredSession = JSON.parse(stored);
+            setSessionId(parsed.sessionId);
+            return;
+          } catch (error) {
+            console.error("Failed to parse session from localStorage:", error);
+            localStorage.removeItem(SESSION_STORAGE_KEY);
+          }
+        }
+
+        // Create new session if none exists
         const result = await initSession({});
         setSessionId(result.sessionId);
-      } catch {
+        
+        // Persist to localStorage
+        const sessionData: StoredSession = {
+          sessionId: result.sessionId,
+          resumeToken: result.resumeToken,
+        };
+        localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(sessionData));
+      } catch (error) {
+        console.error("Failed to initialize session:", error);
         onError?.();
+      } finally {
+        initializingRef.current = false;
       }
     };
     void initialise();
-  }, [initSession, onError, sessionId]);
+  }, [authProfile, authStatusLoaded, initSession, onError, sessionId]);
 
   useEffect(() => {
-    if (!profile) return;
+    if (!authStatusLoaded) return;
+    if (authProfile === undefined) return; // Still loading
+    if (authProfile === null) return; // Not authenticated or no profile yet
 
+    // User is authenticated and has a profile - hydrate from it
+    setSessionId(authProfile.sessionId);
     if (!isHydrated) {
+      setState({
+        ...defaultProfile,
+        ...authProfile.brief,
+      } as OnboardingBrief);
+      setIsHydrated(true);
+    } else {
+      setState((prev) => ({
+        ...prev,
+        ...authProfile.brief,
+      } as OnboardingBrief));
+    }
+    setPlan(authProfile.plan as PlanState | undefined);
+    hasCheckedProfile.current = true;
+  }, [authProfile, authStatusLoaded, isHydrated]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+
+    // Wait for initial query to complete
+    if (profile === undefined) return; // Still loading
+
+    // Handle stale localStorage: profile deleted but sessionId persists
+    if (!authProfile && profile === null && !hasCheckedProfile.current) {
+      console.warn("Stale session detected, clearing and reinitializing");
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+      setSessionId(null); // Trigger reinitialization
+      hasCheckedProfile.current = true;
+      return;
+    }
+
+    // Hydrate state from profile (only for anonymous sessions)
+    if (profile && !isHydrated && !authProfile) {
       setState({
         ...defaultProfile,
         ...profile.brief,
       } as OnboardingBrief);
       setIsHydrated(true);
+      hasCheckedProfile.current = true;
     }
 
-    setPlan(profile.plan as PlanState | undefined);
-  }, [profile, isHydrated]);
+    // Update plan state (only for anonymous sessions)
+    if (profile && !authProfile) {
+      setPlan(profile.plan as PlanState | undefined);
+    }
+  }, [profile, isHydrated, sessionId, authProfile]);
 
   useEffect(() => {
     if (!dirtyFields.size || !sessionId) return;

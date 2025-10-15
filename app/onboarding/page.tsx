@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useMutation, useQuery } from "convex/react";
 import { useOnboardingProfile } from "@/lib/convex/useOnboardingProfile";
 import { cn } from "@/lib/utils";
 import {
@@ -11,10 +13,27 @@ import {
 } from "@/components/onboarding/steps";
 import { AutosaveStatus } from "@/components/onboarding/ui/autosave-status";
 import { OnboardingField, PlanTierOption, orderedSteps } from "@/types/profile";
+import { api } from "@/convex/_generated/api";
+import { authClient } from "@/lib/auth-client";
+import { handoffAnonymousSession } from "@/lib/auth/session-handoff";
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [showAuthFallback, setShowAuthFallback] = useState(true);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const setPlanSelection = useMutation(api.profiles.setPlanSelection);
+  const linkSession = useMutation(api.auth.linkAnonymousSession);
+  const confirmCheckout = useMutation(api.profiles.confirmCheckoutForSession);
+  const currentUser = useQuery(api.auth.getCurrentUser);
+  const isAuthenticated = Boolean(currentUser);
+  
+  // Fetch profile to check if user already has a projectId
+  const userProfile = useQuery(api.auth.getCurrentUserProfile);
+  
   const {
     sessionId,
     state,
@@ -29,7 +48,56 @@ export default function Onboarding() {
     onError: () => {
       setError("We hit a snag saving your progress. Changes are local only.");
     },
+    authStatusLoaded: currentUser !== undefined,
   });
+
+  // Redirect authenticated users who already have a projectId
+  useEffect(() => {
+    // Skip if still loading user or profile data
+    if (currentUser === undefined || userProfile === undefined) {
+      return;
+    }
+    
+    // If user is authenticated and has a projectId, redirect to portal
+    if (isAuthenticated && userProfile?.projectId) {
+      console.log("User already has project, redirecting to portal...");
+      router.push(`/portal/${userProfile.projectId}`);
+    }
+  }, [currentUser, userProfile, isAuthenticated, router]);
+
+  // Handle OAuth callback from fallback auth flow
+  useEffect(() => {
+    const checkoutPending = searchParams.get("checkout");
+    
+    if (checkoutPending === "pending" && isAuthenticated && sessionId) {
+      // User just returned from OAuth flow, link the session and complete checkout
+      const completeCheckout = async () => {
+        try {
+          setIsCheckingOut(true);
+          await handoffAnonymousSession(linkSession);
+          console.log("Session successfully linked after OAuth callback");
+          
+          // Confirm checkout with simulated payment
+          const result = await confirmCheckout({ sessionId });
+          console.log("Checkout confirmed, projectId:", result.projectId);
+          
+          // TODO: Replace simulated payment with real Stripe checkout:
+          // const checkoutUrl = await createStripeCheckout({ tierId: plan?.tierId, sessionId });
+          // window.location.href = checkoutUrl;
+          
+          // Redirect to portal
+          router.push(`/portal/${result.projectId}`);
+        } catch (err) {
+          console.error("Failed to complete checkout after OAuth:", err);
+          setError("Failed to complete checkout. Please try again or contact support.");
+        } finally {
+          setIsCheckingOut(false);
+        }
+      };
+      
+      void completeCheckout();
+    }
+  }, [searchParams, isAuthenticated, sessionId, linkSession, confirmCheckout, router]);
 
   const stepMeta = useMemo(() => orderedSteps[step], [step]);
 
@@ -63,11 +131,122 @@ export default function Onboarding() {
     nextStep();
   };
 
-  const handleCheckout = (tierId: PlanTierOption) => {
-    console.log("Checkout clicked", {
-      tierId,
-      sessionId,
-    });
+  const handleCheckout = async (tierId: PlanTierOption) => {
+    if (!sessionId) {
+      setError("Session not initialized. Please refresh the page.");
+      return;
+    }
+
+    try {
+      setIsCheckingOut(true);
+      setError(null);
+      setShowAuthFallback(false);
+
+      // 1. Save tier selection
+      await setPlanSelection({ sessionId, tierId });
+      console.log("Tier selected:", tierId);
+
+      // If user is already authenticated, skip One Tap and go straight to checkout
+      if (isAuthenticated) {
+        console.log("User already authenticated, confirming checkout...");
+        const result = await confirmCheckout({ sessionId, tierId });
+        console.log("Checkout confirmed, projectId:", result.projectId);
+        
+        // TODO: Replace simulated payment with real Stripe checkout:
+        // const checkoutUrl = await createStripeCheckout({ tierId, sessionId });
+        // window.location.href = checkoutUrl;
+        
+        router.push(`/portal/${result.projectId}`);
+        return;
+      }
+
+      // 2. Trigger Google One Tap for anonymous users
+      await authClient.oneTap({
+        fetchOptions: {
+          onSuccess: async () => {
+            try {
+              // 3. Link anonymous session to authenticated user
+              await handoffAnonymousSession(linkSession);
+              console.log("Session successfully linked to authenticated user");
+
+              // 4. Confirm checkout with simulated payment
+              const result = await confirmCheckout({ sessionId, tierId });
+              console.log("Checkout confirmed, projectId:", result.projectId);
+              
+              // TODO: Replace simulated payment with real Stripe checkout:
+              // const checkoutUrl = await createStripeCheckout({ tierId, sessionId });
+              // window.location.href = checkoutUrl;
+              
+              // Redirect to portal
+              router.push(`/portal/${result.projectId}`);
+            } catch (linkError) {
+              console.error("Failed to link session or confirm checkout:", linkError);
+              setError("Failed to complete checkout. Please contact support.");
+            } finally {
+              setIsCheckingOut(false);
+            }
+          },
+          onError: (error) => {
+            console.error("One Tap sign-in failed:", error);
+            setError("Sign-in failed. Please try again.");
+            setShowAuthFallback(true);
+            setIsCheckingOut(false);
+          },
+        },
+        onPromptNotification: (notification) => {
+          console.warn("One Tap prompt notification:", notification);
+
+          if (
+            notification.isNotDisplayed() ||
+            notification.isSkippedMoment() ||
+            notification.isDismissedMoment()
+          ) {
+            setShowAuthFallback(true);
+            setIsCheckingOut(false);
+            return;
+          }
+
+          if ((notification as { reason?: string | null }).reason === "secure-context-required") {
+            setError(
+              "Google Sign-In needs HTTPS or localhost. Try disabling extensions or switching to Chrome with cookies allowed."
+            );
+            setShowAuthFallback(true);
+            setIsCheckingOut(false);
+          }
+        },
+      });
+    } catch (err) {
+      console.error("Checkout error:", err);
+      setError("Failed to initiate checkout. Please try again.");
+      setShowAuthFallback(true);
+      setIsCheckingOut(false);
+    } finally {
+      if (isAuthenticated) {
+        setIsCheckingOut(false);
+      }
+    }
+  };
+
+  const handleFallbackAuth = async () => {
+    try {
+      setIsCheckingOut(true);
+      setError(null);
+
+      // Trigger standard Google OAuth flow
+      await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/onboarding?checkout=pending",
+      });
+    } catch (err) {
+      console.error("Fallback auth error:", err);
+      setError("Failed to sign in. Please try again.");
+      setShowAuthFallback(true);
+      setIsCheckingOut(false);
+    } finally {
+      // If navigation didn’t happen (popup blocked, etc.), ensure fallback stays visible
+      setShowAuthFallback(true);
+      setIsCheckingOut(false);
+    }
   };
 
   if (!isHydrated) {
@@ -126,7 +305,16 @@ export default function Onboarding() {
                     />
                   );
                 case "summary":
-                  return <BriefSummaryStep value={state} plan={plan} onCheckout={handleCheckout} />;
+                  return (
+                    <BriefSummaryStep 
+                      value={state} 
+                      plan={plan} 
+                      onCheckout={handleCheckout}
+                      isCheckingOut={isCheckingOut}
+                    showAuthFallback={showAuthFallback && !isAuthenticated}
+                    onFallbackAuth={isAuthenticated ? undefined : handleFallbackAuth}
+                    />
+                  );
                 default:
                   return null;
               }

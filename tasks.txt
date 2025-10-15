@@ -3,9 +3,14 @@
 //rework onboarding forms
 
 review this shit
+auth
+
+deploy to test one tap
+go to correct page on load
+show auth in onboarding, redirect to project page if project id exists
+redirect from / if authed and add sign in button
 
 ai call for tier gen
-auth
 payment links
 
 project page
