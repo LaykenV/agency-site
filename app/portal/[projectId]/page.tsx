@@ -3,6 +3,7 @@
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 
@@ -86,12 +87,12 @@ function ProjectPortalContent() {
             </p>
           </div>
 
-          <a
+          <Link
             href="/portal"
             className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
             Go to Portal Home
-          </a>
+          </Link>
         </div>
       </div>
     );
