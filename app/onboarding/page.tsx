@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect } from "react";
+import { Suspense, useMemo, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useOnboardingProfile } from "@/lib/convex/useOnboardingProfile";
@@ -18,6 +18,25 @@ import { authClient } from "@/lib/auth-client";
 import { handoffAnonymousSession } from "@/lib/auth/session-handoff";
 
 export default function Onboarding() {
+  return (
+    <Suspense fallback={<OnboardingLoading />}>
+      <OnboardingContent />
+    </Suspense>
+  );
+}
+
+function OnboardingLoading() {
+  return (
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
+        <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+        <p>Loading onboarding…</p>
+      </div>
+    </div>
+  );
+}
+
+function OnboardingContent() {
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [showAuthFallback, setShowAuthFallback] = useState(true);
