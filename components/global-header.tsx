@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
@@ -9,6 +9,7 @@ import { AnimatedThemeToggler } from "@/components/animated-theme-toggler";
 
 export function GlobalHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const currentUser = useQuery(api.auth.getCurrentUser);
   const isAuthenticated = Boolean(currentUser);
   
@@ -17,9 +18,12 @@ export function GlobalHeader() {
 
 
   const handleSignIn = async () => {
+    const defaultCallback = pathname === "/onboarding" ? "/onboarding" : "/";
     await authClient.signIn.social({
       provider: "google",
-      callbackURL: profile?.projectId ? `/portal/${profile.projectId}` : "/onboarding",
+      callbackURL: profile?.projectId
+        ? `/portal/${profile.projectId}`
+        : defaultCallback,
     });
   };
 

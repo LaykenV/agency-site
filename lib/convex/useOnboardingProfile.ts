@@ -73,13 +73,13 @@ export function useOnboardingProfile({
   useEffect(() => {
     const initialise = async () => {
       if (!authStatusLoaded) return;
-      if (authProfile) return; // Skip if user is already authenticated with a profile
+      if (authProfile === undefined) return;
+      if (authProfile) return;
       if (sessionId || initializingRef.current) return;
 
       initializingRef.current = true;
 
       try {
-        // Try to restore from localStorage first
         const stored = localStorage.getItem(SESSION_STORAGE_KEY);
         if (stored) {
           try {
@@ -92,11 +92,9 @@ export function useOnboardingProfile({
           }
         }
 
-        // Create new session if none exists
         const result = await initSession({});
         setSessionId(result.sessionId);
-        
-        // Persist to localStorage
+
         const sessionData: StoredSession = {
           sessionId: result.sessionId,
           resumeToken: result.resumeToken,

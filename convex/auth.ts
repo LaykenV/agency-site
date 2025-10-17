@@ -4,7 +4,6 @@ import { components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
 import { betterAuth } from "better-auth";
-import { oneTap } from "better-auth/plugins";
 import { v } from "convex/values";
 
 const siteUrl = process.env.SITE_URL!;
@@ -44,8 +43,6 @@ export const createAuth = (
     plugins: [
       // The Convex plugin is required for Convex compatibility
       convex(),
-      // One Tap server plugin for Google One Tap functionality
-      oneTap(),
     ],
   });
 };
@@ -75,7 +72,7 @@ export const getCurrentUser = query({
  * - If already linked to same user: noop
  * - If already linked to different user: throws error
  * 
- * Called from client after successful Google/One Tap sign-in.
+ * Called from client after successful Google OAuth sign-in.
  */
 export const linkAnonymousSession = mutation({
   args: {

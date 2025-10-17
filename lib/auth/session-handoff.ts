@@ -4,7 +4,7 @@
  * Phase 5: Anonymous → Authenticated Profile Handoff
  * 
  * These utilities handle the transition from anonymous onboarding to authenticated portal access.
- * After a user signs in via Google/One Tap, we link their anonymous session to their auth user ID.
+ * After a user signs in via Google OAuth, we link their anonymous session to their auth user ID.
  */
 
 import { FunctionReference } from "convex/server";
@@ -19,7 +19,7 @@ interface StoredSession {
 /**
  * Links the current anonymous session to the authenticated user.
  * 
- * Call this immediately after successful Google/One Tap sign-in.
+ * Call this immediately after successful Google OAuth sign-in.
  * It will:
  * 1. Read the sessionId from localStorage
  * 2. Call the linkAnonymousSession mutation

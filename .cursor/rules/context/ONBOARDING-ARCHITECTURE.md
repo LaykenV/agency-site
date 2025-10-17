@@ -30,13 +30,13 @@ A complete anonymous-to-authenticated conversion funnel featuring:
 - **4-step smart onboarding** that captures leads without requiring authentication
 - **Session persistence** via localStorage (survives page refresh)
 - **AI-powered plan generation** (currently stubbed with placeholder data)
-- **Google One Tap authentication** with OAuth fallback
+- **Google OAuth authentication**
 - **Seamless session linking** from anonymous → authenticated user
 - **Autosave functionality** with dirty field tracking
 
 **Key Features:**
 - ✅ Anonymous onboarding (no auth required)
-- ✅ Google OAuth sign-in + One Tap
+- ✅ Google OAuth sign-in
 - ✅ Session linking (anonymous → authenticated)
 - ✅ Protected portal queries
 - ✅ Server-side auth helpers
@@ -81,14 +81,12 @@ if (profile?.projectId) {
 #### Phase 2: Authentication Infrastructure
 - [x] Better Auth + Convex integration
 - [x] Google OAuth configured
-- [x] Google One Tap with exponential backoff
 - [x] Session linking mutation (idempotent)
 - [x] Protected queries for portal
 
 #### Phase 3: Checkout Flow
 - [x] Tier selection and storage
-- [x] One Tap trigger on checkout
-- [x] Fallback OAuth button
+- [x] OAuth modal trigger on checkout
 - [x] OAuth callback handling
 - [x] Error handling and loading states
 
@@ -264,20 +262,11 @@ SITE_URL=http://localhost:3000
 └─────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────┐
-│ 6a. Google One Tap (Happy Path)                         │
-│    → Google One Tap prompt appears                      │
-│    → User selects account                               │
+│ 6. Google OAuth Sign-In                                  │
+│    → OAuth modal opens                                   │
+│    → User selects account                                │
 │    → Better Auth creates/loads session                  │
-│    → Proceeds to session linking                        │
-└─────────────────────────────────────────────────────────┘
-                            ↓
-┌─────────────────────────────────────────────────────────┐
-│ 6b. OAuth Fallback (One Tap Blocked)                    │
-│    → One Tap dismissed/blocked                          │
-│    → Fallback card appears                              │
-│    → User clicks "Continue with Google"                 │
-│    → Redirects to Google OAuth consent                  │
-│    → Returns to /onboarding?checkout=pending            │
+│    → Proceeds to session linking                         │
 └─────────────────────────────────────────────────────────┘
                             ↓
 ┌─────────────────────────────────────────────────────────┐
@@ -523,7 +512,7 @@ project-root/
 
 ## Usage Examples
 
-### 1. One Tap Sign-In on Checkout (Implemented)
+### 1. OAuth Sign-In on Checkout (Implemented)
 
 See `app/onboarding/page.tsx` for the complete implementation.
 
@@ -532,32 +521,22 @@ const handleCheckout = async (tierId: PlanTierOption) => {
   // 1. Save tier selection
   await setPlanSelection({ sessionId, tierId });
 
-  // 2. Trigger Google One Tap
-  await authClient.oneTap({
-    fetchOptions: {
-      onSuccess: async () => {
-        // 3. Link anonymous session
-        await handoffAnonymousSession(linkSession);
-        // 4. Redirect to Stripe (TODO)
-        router.push("/onboarding");
-      },
-    },
-    onPromptNotification: (notification) => {
-      // One Tap unavailable - show fallback
-      setShowAuthFallback(true);
-    },
+  // 2. Trigger Google OAuth modal for sign-in
+  await authClient.signIn.social({
+    provider: "google",
+    callbackURL: `/onboarding?checkout=pending&tier=${tierId}`,
   });
 };
 ```
 
-### 2. Fallback OAuth Sign-In
+### 2. OAuth Sign-In from Header
 
 ```tsx
 const handleFallbackAuth = async () => {
-  // Trigger standard Google OAuth flow
+  // Trigger Google OAuth from global header
   await authClient.signIn.social({
     provider: "google",
-    callbackURL: "/onboarding?checkout=pending",
+    callbackURL: "/onboarding",
   });
 };
 ```
@@ -673,16 +652,15 @@ export default async function ProfilePage() {
 - [ ] Autosave triggers after field changes
 - [ ] Plan generation completes
 - [ ] Google OAuth sign-in works
-- [ ] One Tap displays and signs in
-- [ ] Fallback OAuth works when One Tap dismissed
+- [ ] OAuth modal displays and completes sign-in
 - [ ] Session linking succeeds
 - [ ] localStorage cleared after linking
 - [ ] Profile has authUserId set
 - [ ] `auth.session_linked` event logged
 
 **Simulated Payment & Portal:**
-- [ ] Anonymous checkout → One Tap → confirm → redirect to portal
-- [ ] OAuth fallback → confirm → redirect to portal
+- [ ] Anonymous checkout → OAuth → confirm → redirect to portal
+- [ ] Authenticated checkout → confirm → redirect to portal
 - [ ] Already signed-in → confirm → redirect (no auth flow)
 - [ ] Project ID generation is unique
 - [ ] Payment status and project status set correctly
@@ -771,7 +749,7 @@ localStorage.getItem('onboarding_session')
 6. ✅ Check Convex → profiles → plan.aiProposal exists
 ```
 
-### Test 6: One Tap Success Flow
+### Test 6: OAuth Checkout Flow
 
 ```bash
 # Prerequisites: Google OAuth configured
@@ -780,33 +758,14 @@ localStorage.getItem('onboarding_session')
 2. Visit http://localhost:3000/onboarding
 3. Complete steps 1-3
 4. Click any "Checkout – [Tier]" button
-5. ✅ Google One Tap should appear
-6. Select account and sign in
-7. ✅ Should redirect to /onboarding
-8. ✅ Check console: "Session successfully linked"
+5. ✅ Google OAuth modal should appear
+6. Complete sign-in and return to onboarding
+7. ✅ Should finish linking profile
+8. ✅ Should redirect to portal after simulated payment
 9. ✅ Check Convex dashboard:
    - Profile has authUserId set
    - Event logged: auth.session_linked
    - localStorage cleared
-```
-
-### Test 7: Fallback OAuth Flow
-
-```bash
-# Test in incognito or with One Tap blocked
-
-1. Clear localStorage: localStorage.clear()
-2. Visit http://localhost:3000/onboarding
-3. Complete steps 1-3
-4. Click any "Checkout – [Tier]" button
-5. Dismiss One Tap or wait if blocked
-6. ✅ Fallback card appears
-7. Click "Continue with Google"
-8. ✅ Redirected to Google OAuth
-9. Approve and return
-10. ✅ Should see "Processing..." briefly
-11. ✅ Redirected to /onboarding
-12. ✅ Check same verifications as Test 6
 ```
 
 ### Test 8: Portal Access & Redirects
@@ -865,29 +824,23 @@ localStorage.getItem('onboarding_session')
 **Solution**: Session data stored in localStorage  
 **Status**: Fixed
 
-### Issue: One Tap Not Showing
+### Issue: OAuth Modal Not Showing
 
-**Symptoms**: One Tap popup doesn't appear
+**Symptoms**: OAuth modal doesn't appear after clicking checkout
 
 **Possible Causes:**
 1. `NEXT_PUBLIC_GOOGLE_CLIENT_ID` not set
-2. Browser blocking (ITP, tracking prevention)
+2. Popup blocked by browser settings
 3. Authorized origins not configured
-4. Already signed in recently
 
 **Solutions:**
 ```bash
 # 1. Verify client ID
 echo $NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
-# 2. Test in incognito mode
-# Open private/incognito window
+# 2. Disable popup blockers or allow popups for localhost
 
-# 3. Check console for errors
-# Look for Google Identity Services messages
-
-# 4. Verify Google Console
-# Ensure http://localhost:3000 in authorized origins
+# 3. Verify Google Console settings for redirect URI
 ```
 
 ### Error: "redirect_uri_mismatch"
@@ -1124,23 +1077,9 @@ confirmCheckoutForSession({
 
 ### Client Functions
 
-#### `authClient.oneTap()`
-
-Triggers Google One Tap sign-in.
-
-```typescript
-authClient.oneTap({
-  fetchOptions?: {
-    onSuccess?: () => void;
-  };
-  callbackURL?: string;
-  onPromptNotification?: (notification: any) => void;
-})
-```
-
 #### `authClient.signIn.social()`
 
-Triggers standard OAuth sign-in.
+Triggers Google OAuth sign-in.
 
 ```typescript
 authClient.signIn.social({
@@ -1237,19 +1176,13 @@ getToken(): Promise<string>
 3. Scheduled via mutation (tracked in events)
 4. Doesn't block UI
 
-### Why Google One Tap + OAuth Fallback?
+### Why OAuth-only?
 
-**One Tap:**
-- ✅ Fastest auth (1-click)
-- ✅ Best UX for returning users
-- ❌ Blocked by some browsers
-
-**OAuth Fallback:**
-- ✅ Works everywhere
-- ✅ User controls permissions
-- ❌ Slower (redirect flow)
-
-**Both**: Best of both worlds
+**Reasons:**
+1. Consistent UX across browsers
+2. Fewer edge cases (popup blockers vs embedded prompts)
+3. Simpler code path and error handling
+4. Clearer analytics on explicit sign-in intent
 
 ### Why `getCurrentUserProfile` Instead of Passing User IDs?
 
@@ -1288,10 +1221,10 @@ const profile = useQuery(api.auth.getCurrentUserProfile);
 ### Performance
 
 **Current Metrics:**
-- Time to show One Tap: ~200ms
+- OAuth modal launch: ~200ms
 - Session linking: ~100ms
 - Total checkout init: ~300ms
-- Fallback OAuth roundtrip: ~2-3s
+- OAuth roundtrip: ~2-3s
 - Debounced saves reduce server load
 - Query skipping when sessionId null
 - Plan generation doesn't block UI
@@ -1417,7 +1350,7 @@ npx convex env set GOOGLE_CLIENT_SECRET=<prod-client-secret> --prod
 - **Better Auth Docs**: https://better-auth.dev
 - **Convex + Better Auth**: https://docs.convex.dev/auth/better-auth
 - **Google OAuth Setup**: https://developers.google.com/identity/protocols/oauth2
-- **Google One Tap**: https://developers.google.com/identity/gsi/web
+- **Google OAuth Sign-In**: https://developers.google.com/identity/protocols/oauth2
 - **Convex Best Practices**: https://docs.convex.dev/
 
 ---
@@ -1427,7 +1360,7 @@ npx convex env set GOOGLE_CLIENT_SECRET=<prod-client-secret> --prod
 **What We Built:**
 - ✅ Complete anonymous-to-authenticated funnel
 - ✅ Session persistence with localStorage
-- ✅ Google One Tap + OAuth fallback
+- ✅ Google OAuth sign-in
 - ✅ Idempotent session linking
 - ✅ Autosave with dirty tracking
 - ✅ AI plan generation workflow (stubbed)
