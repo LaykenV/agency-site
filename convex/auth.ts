@@ -2,14 +2,12 @@ import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
-import { mutation, query } from "./_generated/server";
+import { query } from "./_generated/server";
 import { betterAuth } from "better-auth";
 import { v } from "convex/values";
 
 const siteUrl = process.env.SITE_URL!;
 
-// The component client has methods needed for integrating Convex with Better Auth,
-// as well as helper methods for general use.
 export const authComponent = createClient<DataModel>(components.betterAuth);
 
 export const createAuth = (
@@ -17,135 +15,44 @@ export const createAuth = (
   { optionsOnly } = { optionsOnly: false },
 ) => {
   return betterAuth({
-    // Disable logging when createAuth is called just to generate options.
-    // This is not required, but there's a lot of noise in logs without it.
     logger: {
       disabled: optionsOnly,
     },
     baseURL: siteUrl,
     database: authComponent.adapter(ctx),
-    // Disable email/password authentication per Phase 2 requirements
     emailAndPassword: {
       enabled: false,
     },
-    // Configure Google OAuth with minimal scopes
     socialProviders: {
       google: {
         enabled: true,
         clientId: process.env.GOOGLE_CLIENT_ID!,
         clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        // Minimal scopes: email and profile only
         scope: ["email", "profile"],
-        // Prompt for account selection on every sign-in
         prompt: "select_account",
       },
     },
-    plugins: [
-      // The Convex plugin is required for Convex compatibility
-      convex(),
-    ],
+    plugins: [convex()],
   });
 };
 
-// Example function for getting the current user
-// Feel free to edit, omit, etc.
 export const getCurrentUser = query({
   args: {},
-  returns: v.union(v.any(), v.null()), // Can return user or null if not authenticated
+  returns: v.union(v.any(), v.null()),
   handler: async (ctx) => {
     try {
       return await authComponent.getAuthUser(ctx);
     } catch {
-      // Return null if user is not authenticated (expected for anonymous users)
       return null;
     }
   },
 });
 
-/**
- * Links an anonymous onboarding session to an authenticated user.
- * 
- * Phase 5: Anonymous → Authenticated Profile Handoff
- * 
- * This mutation is idempotent and race-safe:
- * - If profile not linked yet: links to current authenticated user
- * - If already linked to same user: noop
- * - If already linked to different user: throws error
- * 
- * Called from client after successful Google OAuth sign-in.
- */
-export const linkAnonymousSession = mutation({
-  args: {
-    sessionId: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    // Require authenticated user
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      throw new Error("Not authenticated");
-    }
-
-    // Get authUserId from the token identity
-    // Better Auth stores user ID in the tokenIdentifier or subject
-    const authUserId = identity.subject || identity.tokenIdentifier;
-
-    // Load profile by sessionId
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
-      .unique();
-
-    if (!profile) {
-      throw new Error("Profile not found for session");
-    }
-
-    // Idempotent behavior
-    if (profile.authUserId) {
-      if (profile.authUserId === authUserId) {
-        // Already linked to the same user - noop
-        return null;
-      } else {
-        // Already linked to a different user - error
-        throw new Error(
-          "This session is already linked to a different user account"
-        );
-      }
-    }
-
-    // Link the profile to the authenticated user
-    await ctx.db.patch(profile._id, {
-      authUserId,
-    });
-
-    // Log the session linking event
-    await ctx.db.insert("events", {
-      sessionId: args.sessionId,
-      projectId: profile.projectId,
-      kind: "auth.session_linked",
-      payload: {
-        sessionId: args.sessionId,
-        authUserId,
-        linkedAt: Date.now(),
-      },
-    });
-
-    return null;
-  },
-});
-
-/**
- * Retrieves the current authenticated user's profile.
- * 
- * Phase 7: Portal AuthN/AuthZ Patterns
- * 
- * Used in the client portal to hydrate user data after authentication.
- * Queries the by_authUserId index for efficient lookups.
- */
 export const getCurrentUserProfile = query({
   args: {},
   returns: v.union(
     v.object({
+      onboardingSessionId: v.id("onboarding_sessions"),
       sessionId: v.string(),
       resumeToken: v.string(),
       projectId: v.optional(v.string()),
@@ -166,84 +73,97 @@ export const getCurrentUserProfile = query({
       }),
       plan: v.optional(
         v.object({
-          tierId: v.union(v.string(), v.null()),
-          recommendedOn: v.union(v.number(), v.null()),
-          aiProposal: v.optional(
-            v.object({
-              generatedAt: v.number(),
-              promptVersion: v.string(),
-              tiers: v.object({
-                starter: v.object({
-                  headline: v.string(),
-                  summary: v.string(),
-                  price: v.string(),
-                  pages: v.array(v.string()),
-                  features: v.array(v.string()),
-                  aiEditorAccess: v.boolean(),
-                  deliverableNotes: v.optional(v.string()),
-                }),
-                professional: v.object({
-                  headline: v.string(),
-                  summary: v.string(),
-                  price: v.string(),
-                  pages: v.array(v.string()),
-                  features: v.array(v.string()),
-                  aiEditorAccess: v.boolean(),
-                  deliverableNotes: v.optional(v.string()),
-                }),
-                enterprise: v.object({
-                  headline: v.string(),
-                  summary: v.string(),
-                  price: v.string(),
-                  pages: v.array(v.string()),
-                  features: v.array(v.string()),
-                  aiEditorAccess: v.boolean(),
-                  deliverableNotes: v.optional(v.string()),
-                }),
-              }),
-            }),
+          generatedAt: v.number(),
+          promptVersion: v.string(),
+          recommendedTier: v.union(
+            v.literal("starter"),
+            v.literal("professional"),
+            v.literal("enterprise"),
+            v.null(),
           ),
+          tiers: v.object({
+            starter: v.object({
+              headline: v.string(),
+              tierSummary: v.string(),
+              summary: v.string(),
+              pages: v.array(v.string()),
+              features: v.array(v.string()),
+              deliverableNotes: v.string(),
+            }),
+            professional: v.object({
+              headline: v.string(),
+              tierSummary: v.string(),
+              summary: v.string(),
+              pages: v.array(v.string()),
+              features: v.array(v.string()),
+              deliverableNotes: v.string(),
+            }),
+            enterprise: v.object({
+              headline: v.string(),
+              tierSummary: v.string(),
+              summary: v.string(),
+              pages: v.array(v.string()),
+              features: v.array(v.string()),
+              deliverableNotes: v.string(),
+            }),
+          }),
         }),
-      ),
-      projectStatus: v.optional(
-        v.union(
-          v.literal("AWAITING_PAYMENT"),
-          v.literal("AWAITING_ASSETS"),
-          v.literal("IN_PROGRESS"),
-          v.literal("IN_REVIEW"),
-          v.literal("LIVE"),
-          v.literal("ARCHIVED"),
-        ),
       ),
     }),
     v.null(),
   ),
   handler: async (ctx) => {
-    // Get the authenticated user's identity
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      return null; // User not authenticated
-    }
-
-    // Get authUserId from the token identity (same as linkAnonymousSession)
-    const authUserId = identity.subject || identity.tokenIdentifier;
-
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))
-      .unique();
-
-    if (!profile) {
       return null;
     }
 
+    const authUserId = identity.subject || identity.tokenIdentifier;
+
+    const project = await ctx.db
+      .query("projects")
+      .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))
+      .unique();
+
+    if (!project) {
+      return null;
+    }
+
+    if (!project.onboardingSessionId) {
+      return {
+        onboardingSessionId: project.onboardingSessionId ?? (undefined as never),
+        sessionId: "",
+        resumeToken: "",
+        projectId: project.projectId,
+        brief: {
+          contactName: "",
+          contactEmail: "",
+          companyName: "",
+          businessDescription: "",
+          industry: "",
+          primaryNeed: "simple_site",
+          primaryAction: "contact",
+          timeline: { option: "asap", date: null },
+          additionalNotes: "",
+          termsAccepted: false,
+        },
+        plan: undefined,
+      };
+    }
+
+    const session = await ctx.db.get(project.onboardingSessionId);
+    if (!session) {
+      throw new Error("Linked onboarding session missing");
+    }
+
     return {
-      sessionId: profile.sessionId,
-      resumeToken: profile.resumeToken,
-      projectId: profile.projectId,
-      brief: profile.brief,
-      plan: profile.plan,
-      projectStatus: profile.projectStatus,
+      onboardingSessionId: session._id,
+      sessionId: session.sessionId,
+      resumeToken: session.resumeToken,
+      projectId: project.projectId,
+      brief: session.brief,
+      plan: session.plan ?? undefined,
     };
   },
 });
+

@@ -1,6 +1,60 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
+const planTierOption = v.union(
+  v.literal("starter"),
+  v.literal("professional"),
+  v.literal("enterprise"),
+);
+
+const planTierDetails = v.object({
+  headline: v.string(),
+  tierSummary: v.string(),
+  summary: v.string(),
+  pages: v.array(v.string()),
+  features: v.array(v.string()),
+  deliverableNotes: v.string(),
+});
+
+const planProposal = v.object({
+  generatedAt: v.number(),
+  promptVersion: v.string(),
+  recommendedTier: v.union(planTierOption, v.null()),
+  tiers: v.object({
+    starter: planTierDetails,
+    professional: planTierDetails,
+    enterprise: planTierDetails,
+  }),
+});
+
+const timeline = v.object({
+  option: v.union(v.literal("asap"), v.literal("date")),
+  date: v.union(v.string(), v.null()),
+});
+
+const onboardingBrief = v.object({
+  contactName: v.string(),
+  contactEmail: v.string(),
+  companyName: v.string(),
+  businessDescription: v.string(),
+  industry: v.string(),
+  primaryNeed: v.union(
+    v.literal("simple_site"),
+    v.literal("lead_generation"),
+    v.literal("blog_cms"),
+    v.literal("ecommerce"),
+    v.literal("custom"),
+  ),
+  primaryAction: v.union(
+    v.literal("contact"),
+    v.literal("book_call"),
+    v.literal("not_sure"),
+  ),
+  timeline,
+  additionalNotes: v.string(),
+  termsAccepted: v.boolean(),
+});
+
 const projectStatus = v.union(
   v.literal("AWAITING_PAYMENT"),
   v.literal("AWAITING_ASSETS"),
@@ -10,103 +64,57 @@ const projectStatus = v.union(
   v.literal("ARCHIVED"),
 );
 
-const planRecommendation = v.object({
-  headline: v.string(),
-  summary: v.string(),
-  price: v.string(),
-  pages: v.array(v.string()),
-  features: v.array(v.string()),
-  aiEditorAccess: v.boolean(),
-  deliverableNotes: v.optional(v.string()),
+const paymentStatus = v.object({
+  status: v.string(),
+  providerIntentId: v.union(v.string(), v.null()),
+});
+
+const postPay = v.object({
+  headline: v.union(v.string(), v.null()),
+  domainPreference: v.union(v.string(), v.null()),
+  inspirationLinks: v.array(v.string()),
+  functionalRequirements: v.union(v.string(), v.null()),
+  brand: v.object({
+    logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
+    photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
+    styleVibe: v.union(v.string(), v.null()),
+    logoUrl: v.optional(v.string()),
+    imageUrls: v.optional(v.array(v.string())),
+  }),
+  brandAssetsUploaded: v.boolean(),
+});
+
+const deployment = v.object({
+  liveUrl: v.optional(v.string()),
+  stagingUrl: v.optional(v.string()),
+  vercelProjectId: v.optional(v.string()),
 });
 
 export default defineSchema({
-  profiles: defineTable({
-    projectId: v.optional(v.string()),
+  onboarding_sessions: defineTable({
     sessionId: v.string(),
     resumeToken: v.string(),
-    authUserId: v.optional(v.string()),
-    projectStatus: v.optional(projectStatus),
-    brief: v.object({
-      contactName: v.string(),
-      contactEmail: v.string(),
-      companyName: v.string(),
-      businessDescription: v.string(),
-      industry: v.string(),
-      primaryNeed: v.string(),
-      primaryAction: v.string(),
-      timeline: v.object({
-        option: v.string(),
-        date: v.union(v.string(), v.null()),
-      }),
-      additionalNotes: v.string(),
-      termsAccepted: v.boolean(),
-    }),
-    plan: v.optional(
-      v.object({
-        tierId: v.union(v.string(), v.null()),
-        recommendedOn: v.union(v.number(), v.null()),
-        aiProposal: v.optional(
-          v.object({
-            generatedAt: v.number(),
-            promptVersion: v.string(),
-            tiers: v.object({
-              starter: planRecommendation,
-              professional: planRecommendation,
-              enterprise: planRecommendation,
-            }),
-          }),
-        ),
-      }),
-    ),
-    paymentStatus: v.optional(
-      v.object({
-        status: v.string(),
-        providerIntentId: v.union(v.string(), v.null()),
-      }),
-    ),
-    subscription: v.optional(
-      v.object({
-        stripeSubscriptionId: v.string(),
-        status: v.string(),
-        currentPeriodEnd: v.number(),
-      }),
-    ),
-    postPay: v.optional(
-      v.object({
-        headline: v.union(v.string(), v.null()),
-        domainPreference: v.union(v.string(), v.null()),
-        inspirationLinks: v.array(v.string()),
-        functionalRequirements: v.union(v.string(), v.null()),
-        brand: v.object({
-          logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-          photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-          styleVibe: v.union(v.string(), v.null()),
-          logoUrl: v.optional(v.string()),
-          imageUrls: v.optional(v.array(v.string())),
-        }),
-        brandAssetsUploaded: v.boolean(),
-      }),
-    ),
-    deployment: v.optional(
-      v.object({
-        liveUrl: v.optional(v.string()),
-        stagingUrl: v.optional(v.string()),
-        vercelProjectId: v.optional(v.string()),
-      }),
-    ),
+    brief: onboardingBrief,
+    plan: v.optional(planProposal),
+    selectedTier: v.union(planTierOption, v.null()),
+    recommendedTier: v.union(planTierOption, v.null()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
   })
-    .index("by_projectId", ["projectId"])
     .index("by_sessionId", ["sessionId"])
-    .index("by_resumeToken", ["resumeToken"])
-    .index("by_authUserId", ["authUserId"]),
+    .index("by_resumeToken", ["resumeToken"]),
 
-  events: defineTable({
-    sessionId: v.string(),
-    projectId: v.optional(v.string()),
-    kind: v.string(),
-    payload: v.optional(v.any()),
+  projects: defineTable({
+    authUserId: v.string(),
+    projectId: v.string(),
+    onboardingSessionId: v.optional(v.id("onboarding_sessions")),
+    planTier: v.union(planTierOption, v.null()),
+    planProposal: v.optional(planProposal),
+    projectStatus: v.optional(projectStatus),
+    paymentStatus: v.optional(paymentStatus),
+    postPay: v.optional(postPay),
+    deployment: v.optional(deployment),
   })
-    .index("by_projectId", ["projectId"])
-    .index("by_kind", ["kind"]),
+    .index("by_authUserId", ["authUserId"])
+    .index("by_projectId", ["projectId"]),
 });

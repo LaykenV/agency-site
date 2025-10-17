@@ -5,26 +5,25 @@
 //review this shit
 //auth
 
-deploy to test one tap
+//deploy to test one tap
 //go to correct page on load
 
 //show auth in onboarding, redirect to project page if project id exists
 //redirect from / if authed and add sign in button
 
 ai call for tier gen
-payment links
 
 project page
+domain search
 postpay portal
 
+payment links
 
-get auth working and anon save + resume, one tap, google
-vercel domains api setup to check for their domain and get / gen secondary options
-once we get all data, gen 3 options based on tiers
-payments (autumn, polar, stripe?)
+
 let users upload photos to be used / color scheme? 
-post pay portal, links to new page? /project/slug? to also display project data when launched
 resend email going out
+
+review all code
 all backend complete and tested
 //theming
 

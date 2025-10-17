@@ -9,7 +9,7 @@ import {
 } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
-import { useOnboardingProfile } from "@/lib/convex/useOnboardingProfile";
+import { useOnboardingSession } from "@/lib/convex/useOnboardingSession";
 import { cn } from "@/lib/utils";
 import {
   BriefContactStep,
@@ -49,9 +49,9 @@ function OnboardingContent() {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const setPlanSelection = useMutation(api.profiles.setPlanSelection);
-  const linkSession = useMutation(api.auth.linkAnonymousSession);
-  const confirmCheckout = useMutation(api.profiles.confirmCheckoutForSession);
+  const setSelectedTier = useMutation(api.onboarding_sessions.setSelectedTier);
+  const linkSession = useMutation(api.projects.linkAnonymousSession);
+  const confirmCheckout = useMutation(api.projects.confirmCheckout);
   const currentUser = useQuery(api.auth.getCurrentUser);
   const isAuthenticated = Boolean(currentUser);
 
@@ -59,15 +59,15 @@ function OnboardingContent() {
 
   const {
     sessionId,
-    state,
+    brief,
+    plan,
     dirtyFields,
     write,
     isHydrated,
     isSaving,
     isGeneratingPlan,
-    plan,
     regeneratePlan,
-  } = useOnboardingProfile({
+  } = useOnboardingSession({
     onError: () => {
       setError("We hit a snag saving your progress. Changes are local only.");
     },
@@ -159,7 +159,7 @@ function OnboardingContent() {
     setStep((prev) => Math.min(prev + 1, orderedSteps.length - 1));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
 
-  const isNextEnabled = stepMeta.nextEnabled(state);
+  const isNextEnabled = stepMeta.nextEnabled(brief);
   const isPrevVisible = step > 0;
   const isLastStep = stepMeta.id === "summary";
 
@@ -170,9 +170,7 @@ function OnboardingContent() {
 
     if (stepMeta.id === "notes") {
       void (async () => {
-        if (regeneratePlan) {
-          await regeneratePlan();
-        }
+        await regeneratePlan();
         nextStep();
       })();
       return;
@@ -191,10 +189,10 @@ function OnboardingContent() {
       setIsCheckingOut(true);
       setError(null);
 
-      await setPlanSelection({ sessionId, tierId });
+      await setSelectedTier({ sessionId, tier: tierId });
 
       if (isAuthenticated) {
-        const result = await confirmCheckout({ sessionId, tierId });
+        const result = await confirmCheckout({ sessionId, tier: tierId });
 
         router.push(`/portal/${result.projectId}`);
         return;
@@ -248,28 +246,28 @@ function OnboardingContent() {
                   case "contact":
                     return (
                       <BriefContactStep
-                        value={state}
+                        value={brief}
                         onChange={handleFieldChange}
                       />
                     );
                   case "needs":
                     return (
                       <BriefNeedsStep
-                        value={state}
+                        value={brief}
                         onChange={handleFieldChange}
                       />
                     );
                   case "notes":
                     return (
                       <BriefNotesStep
-                        value={state}
+                        value={brief}
                         onChange={handleFieldChange}
                       />
                     );
                   case "summary":
                     return (
                       <BriefSummaryStep
-                        value={state}
+                        value={brief}
                         plan={plan}
                         onCheckout={handleCheckout}
                         isCheckingOut={isCheckingOut}

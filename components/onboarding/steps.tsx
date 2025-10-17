@@ -7,11 +7,12 @@ import {
   OnboardingBrief,
   OnboardingField,
   PRIMARY_ACTION_OPTIONS,
-  PlanState,
+  PlanProposal,
   PlanTierOption,
 } from "@/types/profile";
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { ALL_TIERS_INCLUDED, AFTER_PAYMENT_COPY } from "./constants";
 
 type StepProps = {
   value: OnboardingBrief;
@@ -267,7 +268,7 @@ export function BriefSummaryStep({
   isCheckingOut,
 }: {
   value: OnboardingBrief;
-  plan?: PlanState;
+  plan?: PlanProposal;
   onCheckout?: (tierId: PlanTierOption) => void;
   isCheckingOut?: boolean;
 }) {
@@ -322,11 +323,34 @@ export function BriefSummaryStep({
             Pick the path that matches your momentum. You&apos;ll sign in with Google to proceed to checkout.
           </p>
         </div>
-        <PlanSummaryInline 
-          plan={plan} 
-          onCheckout={onCheckout} 
+        <div className="rounded-3xl border border-[var(--border)] bg-[var(--muted)]/20 p-6">
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">
+            Included with every plan
+          </h3>
+          <ul className="mt-3 grid gap-2 text-sm text-[var(--secondary)] md:grid-cols-2">
+            {ALL_TIERS_INCLUDED.map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <span className="mt-1 inline-flex h-1.5 w-1.5 rounded-full bg-[var(--primary)]" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <PlanSummaryInline
+          plan={plan}
+          onCheckout={onCheckout}
           isCheckingOut={isCheckingOut}
         />
+        <div className="rounded-3xl border border-[var(--border)] bg-[var(--background)] p-6">
+          <h3 className="text-sm font-semibold text-[var(--foreground)]">
+            After payment — what happens next
+          </h3>
+          <ul className="mt-3 space-y-2 text-sm text-[var(--secondary)]">
+            {AFTER_PAYMENT_COPY.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </div>
       </section>
     </div>
   );
@@ -355,31 +379,49 @@ function SummaryCard({ title, items }: SummaryCardProps) {
 function PlanSummary({
   tierId,
   headline,
+  tierSummary,
   summary,
-  price,
   pages,
   features,
+  deliverableNotes,
   onCheckout,
   isCheckingOut,
+  isRecommended,
 }: {
   tierId: PlanTierOption;
   headline: string;
+  tierSummary: string;
   summary: string;
-  price: string;
   pages: Array<string>;
   features: Array<string>;
+  deliverableNotes: string;
   onCheckout?: (tierId: PlanTierOption) => void;
   isCheckingOut?: boolean;
+  isRecommended: boolean;
 }) {
   return (
     <div className="flex flex-col gap-5 rounded-3xl border border-[var(--border)] bg-[var(--background)]/60 p-6">
       <div className="flex flex-col gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-[var(--secondary)]">
-          Recommended focus
-        </span>
-        <h3 className="text-xl font-semibold text-[var(--foreground)]">{headline}</h3>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold uppercase tracking-wide text-[var(--secondary)]">
+              {tierId === "starter"
+                ? "Starter"
+                : tierId === "professional"
+                  ? "Professional"
+                  : "Enterprise"}
+            </span>
+            <h3 className="text-xl font-semibold text-[var(--foreground)]">{headline}</h3>
+          </div>
+          {isRecommended && (
+            <span className="rounded-full bg-[var(--primary)] px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">
+              Recommended
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-[var(--secondary)]">{tierSummary}</p>
         <p className="text-sm text-[var(--secondary)]">{summary}</p>
-        <p className="text-base font-semibold text-[var(--foreground)]">{price}</p>
+        <p className="text-xs text-[var(--secondary)]">{deliverableNotes}</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <div>
@@ -409,7 +451,7 @@ function PlanSummary({
         disabled={isCheckingOut}
         className={cn(
           "inline-flex items-center justify-center rounded-full bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--background)] transition hover:opacity-90",
-          isCheckingOut && "pointer-events-none opacity-60"
+          isCheckingOut && "pointer-events-none opacity-60",
         )}
       >
         {isCheckingOut ? "Processing..." : `Checkout – ${headline}`}
@@ -423,11 +465,11 @@ export function PlanSummaryInline({
   onCheckout,
   isCheckingOut,
 }: {
-  plan?: PlanState;
+  plan?: PlanProposal;
   onCheckout?: (tierId: PlanTierOption) => void;
   isCheckingOut?: boolean;
 }) {
-  if (!plan?.aiProposal) {
+  if (!plan) {
     return (
       <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--background)]/40 p-6 text-sm text-[var(--secondary)]">
         We&#39;ll surface your AI-generated recommendations here once ready.
@@ -435,24 +477,25 @@ export function PlanSummaryInline({
     );
   }
 
-  const { tiers } = plan.aiProposal;
   const tierOrder: Array<PlanTierOption> = ["starter", "professional", "enterprise"];
 
   return (
     <div className="grid gap-4">
       {tierOrder.map((tierId) => {
-        const tier = tiers[tierId];
+        const tier = plan.tiers[tierId];
         return (
           <PlanSummary
             key={tierId}
             tierId={tierId}
             headline={tier.headline}
+            tierSummary={tier.tierSummary}
             summary={tier.summary}
-            price={tier.price}
             pages={tier.pages}
             features={tier.features}
+            deliverableNotes={tier.deliverableNotes}
             onCheckout={onCheckout}
             isCheckingOut={isCheckingOut}
+            isRecommended={plan.recommendedTier === tierId}
           />
         );
       })}

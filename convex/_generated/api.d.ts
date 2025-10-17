@@ -12,7 +12,9 @@ import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
 import type * as config from "../config.js";
 import type * as http from "../http.js";
-import type * as profiles from "../profiles.js";
+import type * as onboarding_sessions from "../onboarding_sessions.js";
+import type * as plans from "../plans.js";
+import type * as projects from "../projects.js";
 
 import type {
   ApiFromModules,
@@ -33,7 +35,9 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   config: typeof config;
   http: typeof http;
-  profiles: typeof profiles;
+  onboarding_sessions: typeof onboarding_sessions;
+  plans: typeof plans;
+  projects: typeof projects;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

@@ -15,6 +15,11 @@ export const regeneratePlan = mutation({
         sessionId: args.sessionId,
       },
     );
+
+    console.log("[plans] regenerate scheduled", {
+      sessionId: args.sessionId,
+    });
+
     return null;
   },
 });
