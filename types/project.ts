@@ -1,10 +1,11 @@
+import type { Id } from "@/convex/_generated/dataModel";
 import type { PlanProposal, PlanTierOption } from "./profile";
 import type { ProjectStatus } from "./types";
 
 export type Project = {
   authUserId: string;
   projectId: string;
-  onboardingSessionId?: string;
+  onboardingSessionId?: Id<"onboarding_sessions">;
   planTier: PlanTierOption | null;
   planProposal?: PlanProposal;
   projectStatus?: ProjectStatus;

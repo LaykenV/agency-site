@@ -121,10 +121,10 @@ function OnboardingContent() {
         setIsCheckingOut(true);
         await handoffAnonymousSession(linkSession);
 
-        if (checkoutPending === "pending") {
+        if (checkoutPending === "pending" && checkoutTier) {
           const result = await confirmCheckout({
             sessionId,
-            tierId: checkoutTier ?? undefined,
+            tier: checkoutTier as PlanTierOption,
           });
 
           router.push(`/portal/${result.projectId}`);
@@ -271,6 +271,7 @@ function OnboardingContent() {
                         plan={plan}
                         onCheckout={handleCheckout}
                         isCheckingOut={isCheckingOut}
+                        isGeneratingPlan={isGeneratingPlan}
                       />
                     );
                   default:

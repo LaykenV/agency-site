@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
+import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
 import {
   OnboardingBrief,
@@ -24,6 +25,7 @@ type UseOnboardingSessionOptions = {
 };
 
 type SessionState = {
+  sessionDocId: Id<"onboarding_sessions"> | null;
   sessionId: string | null;
   resumeToken: string | null;
   brief: OnboardingBrief;
@@ -37,6 +39,7 @@ export function useOnboardingSession({
   authStatusLoaded = true,
 }: UseOnboardingSessionOptions = {}) {
   const [sessionState, setSessionState] = useState<SessionState>({
+    sessionDocId: null,
     sessionId: null,
     resumeToken: null,
     brief: defaultBrief,
@@ -67,7 +70,11 @@ export function useOnboardingSession({
     if (currentUserProfile === undefined) return;
 
     if (currentUserProfile && currentUserProfile.sessionId) {
+      const planTierFromProfile = currentUserProfile.planTier ?? null;
+      const recommendedTierFromProfile = currentUserProfile.plan?.recommendedTier ?? null;
+
       setSessionState({
+        sessionDocId: currentUserProfile.onboardingSessionId,
         sessionId: currentUserProfile.sessionId,
         resumeToken: currentUserProfile.resumeToken,
         brief: {
@@ -75,8 +82,8 @@ export function useOnboardingSession({
           ...currentUserProfile.brief,
         },
         plan: currentUserProfile.plan,
-        selectedTier: currentUserProfile.planTier ?? null,
-        recommendedTier: currentUserProfile.plan?.recommendedTier ?? null,
+        selectedTier: planTierFromProfile,
+        recommendedTier: recommendedTierFromProfile,
       });
       setIsHydrated(true);
       if (typeof window !== "undefined") {
@@ -98,6 +105,7 @@ export function useOnboardingSession({
 
     setSessionState((prev) => ({
       ...prev,
+      sessionDocId: currentUserProfile?.onboardingSessionId ?? prev.sessionDocId,
       sessionId: sessionQuery.sessionId,
       resumeToken: sessionQuery.resumeToken,
       brief: {
@@ -227,6 +235,7 @@ export function useOnboardingSession({
         const parsed: StoredSession = JSON.parse(stored);
         setSessionState((prev) => ({
           ...prev,
+          sessionDocId: null,
           sessionId: parsed.sessionId,
           resumeToken: parsed.resumeToken,
         }));
@@ -236,6 +245,7 @@ export function useOnboardingSession({
       const result = await initSession({});
       setSessionState((prev) => ({
         ...prev,
+        sessionDocId: null,
         sessionId: result.sessionId,
         resumeToken: result.resumeToken,
       }));
@@ -256,6 +266,7 @@ export function useOnboardingSession({
 
   return {
     sessionId: session?.sessionId ?? null,
+    sessionDocId: sessionState.sessionDocId,
     session,
     brief: sessionState.brief,
     plan: sessionState.plan,

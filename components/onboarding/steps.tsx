@@ -266,11 +266,13 @@ export function BriefSummaryStep({
   plan,
   onCheckout,
   isCheckingOut,
+  isGeneratingPlan,
 }: {
   value: OnboardingBrief;
   plan?: PlanProposal;
   onCheckout?: (tierId: PlanTierOption) => void;
   isCheckingOut?: boolean;
+  isGeneratingPlan?: boolean;
 }) {
   const timelineLabel =
     value.timeline.option === "asap"
@@ -340,6 +342,7 @@ export function BriefSummaryStep({
           plan={plan}
           onCheckout={onCheckout}
           isCheckingOut={isCheckingOut}
+          isLoading={Boolean(isGeneratingPlan || !plan)}
         />
         <div className="rounded-3xl border border-[var(--border)] bg-[var(--background)] p-6">
           <h3 className="text-sm font-semibold text-[var(--foreground)]">
@@ -464,11 +467,17 @@ export function PlanSummaryInline({
   plan,
   onCheckout,
   isCheckingOut,
+  isLoading,
 }: {
   plan?: PlanProposal;
   onCheckout?: (tierId: PlanTierOption) => void;
   isCheckingOut?: boolean;
+  isLoading?: boolean;
 }) {
+  if (isLoading) {
+    return <PlanLoadingState />;
+  }
+
   if (!plan) {
     return (
       <div className="rounded-3xl border border-dashed border-[var(--border)] bg-[var(--background)]/40 p-6 text-sm text-[var(--secondary)]">
@@ -499,6 +508,21 @@ export function PlanSummaryInline({
           />
         );
       })}
+    </div>
+  );
+}
+
+
+function PlanLoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-[var(--border)] bg-[var(--background)]/40 p-6 text-center">
+      <span className="inline-flex h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+      <p className="text-sm font-semibold text-[var(--foreground)]">
+        Crafting your custom offer
+      </p>
+      <p className="text-sm text-[var(--secondary)]">
+        Give us a moment while we tailor your plan.
+      </p>
     </div>
   );
 }

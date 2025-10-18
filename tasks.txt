@@ -11,16 +11,24 @@
 //show auth in onboarding, redirect to project page if project id exists
 //redirect from / if authed and add sign in button
 
-ai call for tier gen
+//ai call for tier gen
+
+if already has token in localstorage and try to load onboarding
+//payment status of project 
+//confirm checkout missing tier
+//loading state for plan gen / when box is checked?
+
+//update profile fetch to include brief
+test and read all
+deploy
+
 
 project page
 domain search
 postpay portal
+let users upload photos to be used / color scheme? 
 
 payment links
-
-
-let users upload photos to be used / color scheme? 
 resend email going out
 
 review all code

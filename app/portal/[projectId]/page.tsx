@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
+import type { Id } from "@/convex/_generated/dataModel";
 import { defaultBrief, PlanProposal, PlanTierOption } from "@/types/profile";
 
 export default function ProjectPortalPage() {
@@ -65,11 +66,10 @@ function ProjectPortalContent() {
   const projectId = params.projectId as string;
 
   const project = useQuery(api.projects.getProjectById, { projectId });
+  const sessionDocId = project?.onboardingSessionId as Id<"onboarding_sessions"> | undefined;
   const sessionData = useQuery(
-    api.onboarding_sessions.getSession,
-    project?.onboardingSessionId
-      ? { sessionId: project.onboardingSessionId }
-      : "skip",
+    api.onboarding_sessions.getSessionByDocId,
+    sessionDocId ? { sessionDocId } : "skip",
   );
 
   if (project === undefined) {

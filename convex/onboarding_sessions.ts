@@ -186,6 +186,39 @@ export const getSession = query({
   },
 });
 
+export const getSessionByDocId = query({
+  args: {
+    sessionDocId: v.id("onboarding_sessions"),
+  },
+  returns: v.union(
+    v.object({
+      sessionId: v.string(),
+      resumeToken: v.string(),
+      brief: briefValidator,
+      plan: v.optional(planValidator),
+      selectedTier: v.union(planTierOption, v.null()),
+      recommendedTier: v.union(planTierOption, v.null()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionDocId);
+
+    if (!session) {
+      return null;
+    }
+
+    return {
+      sessionId: session.sessionId,
+      resumeToken: session.resumeToken,
+      brief: session.brief,
+      plan: session.plan ?? undefined,
+      selectedTier: session.selectedTier,
+      recommendedTier: session.recommendedTier,
+    };
+  },
+});
+
 export const updateBrief = mutation({
   args: {
     sessionId: v.string(),

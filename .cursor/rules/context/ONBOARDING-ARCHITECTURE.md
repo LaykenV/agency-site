@@ -1,133 +1,147 @@
-# Onboarding, Auth & Checkout Architecture (Updated Oct 2025)
+# Onboarding, Auth & Checkout Architecture (Updated Oct 18, 2025)
 
-**Status**: ✅ Anonymous → Auth flow using onboarding sessions + projects tables
-**Last Updated**: October 17, 2025
+**Status**: ✅ Anonymous brief → AI plan → Authenticated checkout → Project portal is live
+**Last Updated**: October 18, 2025
 
 ---
 
 ## Overview
 
-Anonymous briefs now live in the `onboarding_sessions` table, while authenticated projects move to `projects`. The flow remains: anonymous brief → AI plan → sign in → checkout, but the persistence model matches the upgrade plan:
+The onboarding experience bridges anonymous visitors and authenticated customers without losing their brief. An anonymous visitor can draft a project brief, receive AI-generated recommendations, then authenticate and complete checkout. Once they sign in, we link the anonymous work to their account and hydrate the portal with the same plan data.
 
-- `onboarding_sessions`: sessionId + resumeToken, brief fields, normalized plan proposal (`PlanProposal`), selected tier, recommended tier
-- `projects`: tied to authenticated users (`authUserId`), references onboarding session, stores plan tier/proposal, project + payment status
+At a high level the flow works like this:
 
-AI plans are generated via `internal.onboarding_sessions.generatePlanRecommendation`, which calls `internal.agent.generateProjectPlans` (Groq) and stores normalized tiers with summaries, deliverable notes, and recommended tier. Actions + mutations follow Convex best practices (new function syntax, validators, index usage).
+1. **Anonymous session is created** – We generate a session + resume token and persist initial brief data in `onboarding_sessions`.
+2. **Client collects brief inputs** – The browser autosaves changes to Convex and can regenerate AI plans on demand.
+3. **AI plan generation** – A scheduler kicks off `generatePlanRecommendation`, which calls our Groq-backed agent, normalizes the response, and stores the plan.
+4. **Checkout handoff** – When the visitor wants to buy, we mark their chosen tier, trigger Google OAuth, and either link the anonymous session or reuse their existing project record.
+5. **Authenticated project management** – `projects` holds the canonical record for logged-in users, including selected tier, plan proposal, and status. Portal pages read directly from this table while still being able to reference the originating session.
 
-The onboarding UI consumes the new `PlanProposal` shape, renders "Included with every plan" and "After payment" constants, and shows a "Recommended for you" chip based on AI output.
-
----
-
-## Database Schema
-
-### `onboarding_sessions`
-
-```ts
-{
-  sessionId: string;
-  resumeToken: string;
-  brief: OnboardingBrief;
-  plan?: PlanProposal;        // normalized tiers, recommendedTier
-  selectedTier: PlanTierOption | null;
-  recommendedTier: PlanTierOption | null;
-  createdAt: number;
-  updatedAt: number;
-}
-```
-
-Indexes:
-- `by_sessionId` (sessionId)
-- `by_resumeToken` (resumeToken)
-
-### `projects`
-
-```ts
-{
-  authUserId: string;         // Better Auth subject/token identifier
-  projectId: string;          // slug-based unique id
-  onboardingSessionId?: Id<"onboarding_sessions">;
-  planTier: PlanTierOption | null;
-  planProposal?: PlanProposal;
-  projectStatus?: ProjectStatus;
-  paymentStatus?: { status: string; providerIntentId: string | null };
-  postPay?: PostPaymentDetails;
-  deployment?: DeploymentDetails;
-}
-```
-
-Indexes:
-- `by_authUserId`
-- `by_projectId`
+This document captures the moving pieces, why they exist, and how they interact so you can confidently change any part of the pipeline.
 
 ---
 
-## Convex Modules
+## Flow Walkthrough
+
+1. **Entry (`app/onboarding/page.tsx`)**
+   - Server-side route checks for an authenticated profile. If the user already owns a project, it immediately redirects them to `/portal/[projectId]`. Otherwise it renders the client onboarding flow.
+
+2. **Client experience (`OnboardingClient`)**
+   - The client component orchestrates steps, error states, checkout, and tier selection. It relies on `useOnboardingSession` for data hydration, autosave, and plan regeneration. Authenticated users are redirected to the portal as soon as a project exists.
+
+3. **Session setup (`useOnboardingSession`)**
+   - On first load, the hook calls `onboarding_sessions.initSession` (or rehydrates from localStorage) to obtain a session/resume token pair. Brief edits debounce into `updateBrief`, and plan regeneration invokes `plans.regeneratePlan`.
+
+4. **Autosave & UI feedback**
+   - `AutosaveStatus` reflects whether the current brief is dirty, being saved, or generating a plan so the user understands what’s happening under the hood.
+
+5. **Plan presentation (`BriefSummaryStep`)**
+   - Pulls the plan tiers from state, displays baseline constants, highlights the recommended tier, and routes checkout requests through `handleCheckout`. If the visitor is anonymous, the client stores the intended tier in the URL so the post-login redirect can finish checkout automatically.
+
+6. **AI plan pipeline (`convex/plans.ts` + `convex/onboarding_sessions.ts`)**
+   - `plans.regeneratePlan` schedules `internal.onboarding_sessions.generatePlanRecommendation`. The action reloads the latest brief, calls the Groq agent, normalizes tier data, and persists it via `savePlan`. Failures fall back to curated baselines so the UI always has a plan to show.
+
+7. **Checkout & project creation (`convex/projects.ts`)**
+   - `linkAnonymousSession` runs immediately after OAuth to bind the anonymous session to the authenticated user (if they don’t already have a project). `confirmCheckout` records the selected tier, creates or updates the project document, patches the session, and returns the slug so the UI can redirect.
+
+8. **Portal hydration**
+   - Portal pages hit `projects.getProjectById` or `projects.getCurrentProject`, and if they need the original brief they can use `onboarding_sessions.getSessionByDocId`. This keeps the onboarding and portal data consistent without duplicating copies of the brief.
+
+---
+
+## Data Model Snapshot
+
+- **`onboarding_sessions`**
+  - Stores the anonymous lifecycle: session identifiers, full brief, optional plan proposal, selected/recommended tiers, timestamps.
+  - Indexed by `sessionId` and `resumeToken` for fast lookup during autosave and resume flows.
+
+- **`projects`**
+  - Represents authenticated ownership: user identifier, slugified `projectId`, link back to the session, chosen plan tier, stored plan proposal, project/payment status, plus placeholders for post-payment details and deployment metadata.
+  - Indexed by `authUserId` (unique project per user) and `projectId` (portal routing).
+
+`types/profile.ts` and `types/project.ts` mirror these shapes on the client so React components and hooks stay type-safe.
+
+---
+
+## File Reference
+
+### `app/onboarding/page.tsx`
+- Server component that gates access to the onboarding flow. Fetches the current user profile using a Convex query and redirects authenticated users with existing projects to the portal. Ensures anonymous visitors always see the onboarding client.
+
+### `app/onboarding/OnboardingClient.tsx`
+- Client composition root for onboarding. Manages step navigation, error states, and checkout logic.
+- Calls `useOnboardingSession` to hydrate brief/plan data and to handle autosave/regeneration.
+- Triggers `plans.regeneratePlan` after the notes step, handles Google OAuth sign-in via `authClient`, and coordinates the final checkout call chain (`setSelectedTier` → `confirmCheckout`).
+
+### `components/onboarding/ui/autosave-status.tsx`
+- Pure presentational component that reflects autosave/regeneration state. It uses simple conditions to show "Generating", "Saving", "Unsaved changes", or "Saved", helping users trust the autosave pipeline.
+
+### `components/onboarding/constants.ts`
+- Shared copy blocks for plan marketing sections. Keeps the "Included with every plan" and "After payment" lists centralized so they remain consistent across the experience.
+
+### `components/onboarding/steps.tsx`
+- Contains the step-specific UI building blocks:
+  - `BriefContactStep`, `BriefNeedsStep`, `BriefNotesStep` collect brief fields and call back to `onChange` for autosave.
+  - `BriefSummaryStep` composes recap cards, plan presentation (`PlanSummaryInline`), and checkout buttons.
+  - Utility components (`PlanSummary`, `PlanLoadingState`, etc.) render tier cards with recommended chip highlighting.
+- Imports tier copy constants and profile types so the UI stays aligned with server expectations.
 
 ### `convex/onboarding_sessions.ts`
-- `initSession` mutation: creates onboarding session with default brief; idempotent when existing sessionId provided
-- `getSession` query: fetches by sessionId via index, returns brief + plan proposal + tiers
-- `updateBrief` mutation: merges partial updates, logs via `console.log`
-- `setSelectedTier` mutation: patches selected tier for CTA interactions
-- `savePlan` internal mutation: stores normalized `PlanProposal`
-- `generatePlanRecommendation` internal action: loads session, calls Groq agent, normalizes tiers, persists via `savePlan`
-
-### `convex/projects.ts`
-- `linkAnonymousSession` mutation: links session to authenticated user, creates project with status `AWAITING_PAYMENT`
-- `confirmCheckout` mutation: marks project as paid (`AWAITING_ASSETS`), ensures tier recorded, updates session selection
-- `getProjectById` query: portal hydration, ensures authenticated ownership
-- `getCurrentProject` query: returns current user project summary for portal landing
+- Convex entry point for anonymous session lifecycle:
+  - `initSession`, `getSession`, `getSessionByDocId` manage creation and hydration.
+  - `updateBrief`, `setSelectedTier` handle autosave and selection writes with validators.
+  - `savePlan`, `generatePlanRecommendation` orchestrate AI plan creation, normalization, and persistence (fallback included).
+  - Internal validators ensure the stored data matches the shape consumed by the client-side types.
 
 ### `convex/plans.ts`
-- `regeneratePlan` mutation: schedules plan generation through onboarding sessions action (no duplicate API)
+- Public mutation `regeneratePlan` that queues AI plan generation via the scheduler. Keeps the client API surface minimal while leveraging Convex background work.
 
-### `convex/agent.ts`
-- Prompt enforces plain language, banned term replacements, deliverable notes with timelines, recommended tier
-- Returns normalized tiers with `headline`, `tierSummary`, `summary`, `pages`, `features`, `deliverableNotes`
-- Fallback uses baselines matching the new contract
+### `convex/projects.ts`
+- Handles the authenticated half of the flow:
+  - `linkAnonymousSession` binds the session to the authenticated user once they log in.
+  - `confirmCheckout` finalizes or updates a project, records payment status, ensures the onboarding session reflects the chosen tier, and returns the slug for navigation.
+  - `getProjectById` and `getCurrentProject` power the portal and dashboard, enforcing ownership checks with `ctx.auth`.
+  - `generateUniqueProjectId` consistently slugs company names while avoiding collisions.
 
----
+### `convex/schema.ts`
+- Defines both tables and all validators. Mirrors the runtime validators used inside the Convex functions, guaranteeing consistent data shapes across the stack.
+- Includes optional structures for post-payment forms and deployment metadata even if they are not populated yet.
 
-## Types & Constants
+### `lib/auth/session-handoff.ts`
+- Browser + server helpers that move anonymous sessions across the auth boundary. Reads/writes localStorage (`SESSION_STORAGE_KEY`), invokes `linkAnonymousSession`, and exposes a server-action-friendly variant for future usage.
+- Provides clear logging and error surfaces so onboarding can retry if linking fails.
 
-- `types/profile.ts`: defines `PlanProposal`, `PlanTierDetails`, `OnboardingSession`, `Project`, plus default brief and options
-- `types/project.ts`: `Project` domain types (post-pay, deployment)
-- `components/onboarding/constants.ts`: `ALL_TIERS_INCLUDED`, `AFTER_PAYMENT_COPY`
+### `lib/convex/useOnboardingSession.ts`
+- Core client hook that everything else leans on:
+  - Initializes anonymous sessions (or rehydrates from the authenticated profile).
+  - Tracks `isHydrated`, `isSaving`, `isGeneratingPlan`, and `dirtyFields` to drive UI state.
+  - Debounces updates into `onboarding_sessions.updateBrief` and exposes helpers (`write`, `regeneratePlan`, `selectTier`) consumed by the onboarding steps.
+  - Manages localStorage for resume tokens and clears it once the user becomes authenticated.
 
----
+### `types/project.ts`
+- Defines the portal-facing `Project` domain object, plus `PaymentStatus`, `PostPaymentDetails`, and `DeploymentDetails`. Keeps Convex data aligned with Next.js render expectations.
 
-## UI Updates
-
-- `useOnboardingSession` hook (replaces legacy profile hook) handles session init, autosave, plan regeneration, tier selection
-- `BriefSummaryStep` renders:
-  1. Included with every plan
-  2. AI tier cards with `tierSummary` + "Recommended" chip when `PlanProposal.recommendedTier` matches
-  3. After payment copy
-- Portal `[projectId]` page loads project + associated session, shows brief, plan recommendation, next steps
-
----
-
-## Flow Summary
-
-1. Anonymous visitor hits onboarding → `initSession` stores default brief
-2. Autosave updates via `updateBrief`
-3. On "See my tailored plan", UI calls `plans.regeneratePlan` → action generates AI tiers → `savePlan`
-4. Tier cards show recommended chip; user selects tier → `setSelectedTier`
-5. Checkout triggers Google OAuth. After sign in, `projects.linkAnonymousSession` or existing project ensures handoff
-6. `projects.confirmCheckout` marks project ready, updates statuses, reuses plan proposal
-7. Portal fetches project + session to show plan + brief
+### `types/profile.ts`
+- Central source of truth for onboarding domain types:
+  - Enumerations (`PlanTierOption`, `NeedOption`, etc.).
+  - `PlanTierDetails`, `PlanProposal`, and `OnboardingBrief` shapes used both client and server side.
+  - Default brief values and step metadata (`BRIEF_STEPS`, `orderedSteps`) that drive the onboarding UI sequencing.
+  - Baseline tier copy (`PLAN_TIER_BASELINES`) used for AI fallbacks and to fill any missing agent fields.
 
 ---
 
-## Logging & Observability
+## Key Integration Notes
 
-- `console.log` statements replace `events` table for key milestones: session init, brief updates, plan saved, plan generation start/complete
-- Cron (future) can clean up unused sessions by age
+- The AI agent lives in `convex/agent.ts` (not listed above) and is invoked via `generatePlanRecommendation`. Any changes here should keep the normalized tier shape consistent with `PlanProposal`.
+- Checkout currently assumes success (`paymentStatus.status = "succeeded"`). Replace that stub once the Stripe integration lands.
+- Autosave relies on debouncing in `useOnboardingSession`; if you change debounce settings or brief shape, update both the validator and hook.
+- Logging is intentionally minimal (`console.log`). If we adopt structured logging or analytics, add it in the Convex mutations/actions to maintain a single source of truth for lifecycle events.
 
 ---
 
-## Next Steps
+## Future Enhancements
 
-- Integrate Stripe checkout (replace simulated `confirmCheckout`)
-- Add cron to prune stale onboarding sessions
-- Extend portal to show post-pay fields once populated
-- Analytics/log forwarding for console statements if needed
+- Stripe (or other provider) integration to replace the optimistic payment flow.
+- Cron job to expire stale anonymous sessions using Convex `cronJobs` once metrics confirm volume.
+- Portal surfaces for `postPay` and `deployment` data once those flows are implemented.
+- Optional analytics/log forwarding to centralize onboarding funnel metrics.
