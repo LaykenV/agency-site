@@ -1,42 +1,53 @@
-//create onboarding form for users signing up
-/schema and add post pay portal, project id, subscription?
-//rework onboarding forms
+//update schema and onboarding form
+//add schedule call link with new cal link // landing page and onboarding
+//ai gen single tier, make it better
 
-//review this shit
-//auth
+update to prospects
 
-//deploy to test one tap
-//go to correct page on load
+read and test // ensure project is clean and organized
 
-//show auth in onboarding, redirect to project page if project id exists
-//redirect from / if authed and add sign in button
+admin page to view and create prospects
+'send contract' with docusign integration
+create contract // example first
+docusign webhook with project creation
+ba magic link setup
 
-//ai call for tier gen
+stripe paywall
 
-if already has token in localstorage and try to load onboarding
-//payment status of project 
-//confirm checkout missing tier
-//loading state for plan gen / when box is checked?
+portal welcome page
+portal page with steps
+assets -> kickoff call -> build -> review -> live
+request edits form
 
-//update profile fetch to include brief
-test and read all
-deploy
-
-
-project page
-domain search
-postpay portal
-let users upload photos to be used / color scheme? 
-
-payment links
-resend email going out
+ux improvements
 
 review all code
 all backend complete and tested
-//theming
 
 build full ui 
 hero 
 about me
 our products
 pricing section
+
+marketing // use atlas outbound, get them to sign up
+
+
+
+
+onboarding form creates 'prospect'
+manual prospect creation in /admin
+cal webhook creates prospect or finds matching email and then adds call data
+
+automated contract send button
+on successful contract sign, create project and send welcome email with magic link
+on magic link success link project and user and create stripe customer then redirect to portal
+gate portal with payment, on successful payment handle webhook and give access to portal
+asset upload -> kickoff call schedule -> cal webhook for call data -> build -> review call schedule and hook -> go live
+once live, request edits form, report issues form
+
+tables 
+prospects - sessionid resumetoken, plan, details, contractSigned
+projects - copy details - authid - projectId - prospectId - build details - project status - deployment - stripeCustomerId - kickoffCall - reviewCall
+subscriptions
+

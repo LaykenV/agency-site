@@ -1,27 +1,15 @@
 "use client";
 
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
-import { useOnboardingSession } from "@/lib/convex/useOnboardingSession";
-import { cn } from "@/lib/utils";
-import {
-  BriefContactStep,
-  BriefNeedsStep,
-  BriefNotesStep,
-  BriefSummaryStep,
-} from "@/components/onboarding/steps";
-import { AutosaveStatus } from "@/components/onboarding/ui/autosave-status";
-import { OnboardingField, PlanTierOption, orderedSteps } from "@/types/profile";
-import { api } from "@/convex/_generated/api";
-import { authClient } from "@/lib/auth-client";
-import { handoffAnonymousSession } from "@/lib/auth/session-handoff";
+import { Suspense, useMemo, useState } from "react";
+import Link from "next/link";
+import { useOnboardingSession } from "@/lib/onboarding/useOnboardingSession";
+import { PlanPreview } from "@/components/onboarding/PlanPreview";
+import type { OnboardingField } from "@/types/onboarding";
+import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 
 export function OnboardingClient() {
   return (
@@ -43,19 +31,8 @@ function OnboardingLoading() {
 }
 
 function OnboardingContent() {
-  const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
-
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const setSelectedTier = useMutation(api.onboarding_sessions.setSelectedTier);
-  const linkSession = useMutation(api.projects.linkAnonymousSession);
-  const confirmCheckout = useMutation(api.projects.confirmCheckout);
-  const currentUser = useQuery(api.auth.getCurrentUser);
-  const isAuthenticated = Boolean(currentUser);
-
-  const userProfile = useQuery(api.auth.getCurrentUserProfile);
+  const [planRequested, setPlanRequested] = useState(false);
 
   const {
     sessionId,
@@ -64,147 +41,70 @@ function OnboardingContent() {
     dirtyFields,
     write,
     isHydrated,
-    isSaving,
     isGeneratingPlan,
-    regeneratePlan,
+    generatePlan,
   } = useOnboardingSession({
     onError: () => {
       setError("We hit a snag saving your progress. Changes are local only.");
     },
-    authStatusLoaded: currentUser !== undefined,
   });
-
-  useEffect(() => {
-    if (currentUser === undefined || userProfile === undefined) {
-      return;
-    }
-
-    if (isAuthenticated && userProfile?.projectId) {
-      console.log("User already has project, redirecting to portal...");
-      router.push(`/portal/${userProfile.projectId}`);
-    }
-  }, [currentUser, userProfile, isAuthenticated, router]);
-
-  const handleSignIn = useCallback(
-    async (callbackURL: string) => {
-      setIsCheckingOut(true);
-      setError(null);
-
-      try {
-        await authClient.signIn.social({
-          provider: "google",
-          callbackURL,
-        });
-      } catch (err) {
-        console.error("Sign-in error:", err);
-        setError("Failed to sign in. Please try again.");
-        setIsCheckingOut(false);
-      }
-    },
-    [],
-  );
-
-  useEffect(() => {
-    if (!isAuthenticated) {
-      return;
-    }
-
-    const checkoutPending = searchParams.get("checkout");
-    const checkoutTier = searchParams.get("tier");
-
-    const completeCheckoutIfPending = async () => {
-      if (!sessionId) {
-        return;
-      }
-
-      try {
-        setIsCheckingOut(true);
-        await handoffAnonymousSession(linkSession);
-
-        if (checkoutPending === "pending" && checkoutTier) {
-          const result = await confirmCheckout({
-            sessionId,
-            tier: checkoutTier as PlanTierOption,
-          });
-
-          router.push(`/portal/${result.projectId}`);
-        } else {
-          router.replace("/onboarding");
-        }
-      } catch (err) {
-        console.error("Failed to complete post-sign-in flow:", err);
-        setError("We couldn't finish linking your profile. Please try again.");
-      } finally {
-        setIsCheckingOut(false);
-      }
-    };
-
-    void completeCheckoutIfPending();
-  }, [
-    isAuthenticated,
-    searchParams,
-    sessionId,
-    linkSession,
-    confirmCheckout,
-    router,
-  ]);
-
-  const stepMeta = useMemo(() => orderedSteps[step], [step]);
 
   const handleFieldChange = (field: OnboardingField, value: unknown) => {
     write(field, value as never);
   };
 
-  const nextStep = () =>
-    setStep((prev) => Math.min(prev + 1, orderedSteps.length - 1));
-  const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
+  const canGeneratePlan = useMemo(() => {
+    return (
+      Boolean(brief.contactName.trim()) &&
+      Boolean(brief.contactEmail.trim()) &&
+      Boolean(brief.companyName.trim()) &&
+      Boolean(brief.businessDescription.trim())
+    );
+  }, [brief]);
 
-  const isNextEnabled = stepMeta.nextEnabled(brief);
-  const isPrevVisible = step > 0;
-  const isLastStep = stepMeta.id === "summary";
-
-  const handleNext = () => {
-    if (!isNextEnabled) {
-      return;
+  const hasGeneratedPlan = Boolean(plan && plan.generatedAt);
+  const hasUnsavedChanges = dirtyFields.size > 0;
+  const buttonLabel = useMemo(() => {
+    if (isGeneratingPlan) {
+      return "Generating your plan…";
     }
-
-    if (stepMeta.id === "notes") {
-      void (async () => {
-        await regeneratePlan();
-        nextStep();
-      })();
-      return;
+    if (hasGeneratedPlan && hasUnsavedChanges) {
+      return "Regenerate plan";
     }
+    if (hasGeneratedPlan) {
+      return "Plan up to date";
+    }
+    return "See tailored plan";
+  }, [isGeneratingPlan, hasGeneratedPlan, hasUnsavedChanges]);
 
-    nextStep();
-  };
+  const buttonDisabled = useMemo(() => {
+    if (!canGeneratePlan) return true;
+    if (isGeneratingPlan) return true;
+    if (hasGeneratedPlan && !hasUnsavedChanges) {
+      return true;
+    }
+    return false;
+  }, [canGeneratePlan, hasGeneratedPlan, hasUnsavedChanges, isGeneratingPlan]);
 
-  const handleCheckout = async (tierId: PlanTierOption) => {
+  const handleGeneratePlan = async () => {
     if (!sessionId) {
       setError("Session not initialized. Please refresh the page.");
       return;
     }
 
+    if (!canGeneratePlan) {
+      setError("Please fill out your name, email, company, and business overview first.");
+      return;
+    }
+
+    setError(null);
+    setPlanRequested(true);
+
     try {
-      setIsCheckingOut(true);
-      setError(null);
-
-      await setSelectedTier({ sessionId, tier: tierId });
-
-      if (isAuthenticated) {
-        const result = await confirmCheckout({ sessionId, tier: tierId });
-
-        router.push(`/portal/${result.projectId}`);
-        return;
-      }
-
-      const params = new URLSearchParams({ checkout: "pending", tier: tierId });
-      const callbackURL = `/onboarding?${params.toString()}`;
-      await handleSignIn(callbackURL);
+      await generatePlan();
     } catch (err) {
-      console.error("Checkout error:", err);
-      setError("Failed to initiate checkout. Please try again.");
-      setIsCheckingOut(false);
+      console.error("Plan generation error:", err);
+      setError("Failed to generate your plan. Please try again.");
     }
   };
 
@@ -222,111 +122,177 @@ function OnboardingContent() {
   return (
     <>
       <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-        <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 px-6 py-10 md:px-10 md:py-16">
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10 md:px-10 md:py-16">
           <header className="flex flex-col gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--secondary)]">
-              Step {stepMeta.position} of {orderedSteps.length}
-            </p>
-            <h1 className="text-3xl font-semibold md:text-4xl">{stepMeta.title}</h1>
+            <h1 className="text-3xl font-semibold md:text-4xl">
+              Let’s map out your website plan
+            </h1>
             <p className="text-sm text-[var(--secondary)] md:text-base">
-              {stepMeta.caption}
+              Share a few details so we can craft the plan and help you schedule a call.
             </p>
-            <div className="mt-4 h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
-              <div
-                className="h-full rounded-full bg-[var(--primary)] transition-all"
-                style={{ width: `${(stepMeta.position / orderedSteps.length) * 100}%` }}
-              />
-            </div>
           </header>
 
           <section className="rounded-3xl border border-[var(--border)] bg-[var(--background)] px-6 py-8 shadow-lg shadow-black/5 md:px-10 md:py-12">
             <div className="flex flex-col gap-8">
-              {(() => {
-                switch (stepMeta.id) {
-                  case "contact":
-                    return (
-                      <BriefContactStep
-                        value={brief}
-                        onChange={handleFieldChange}
-                      />
-                    );
-                  case "needs":
-                    return (
-                      <BriefNeedsStep
-                        value={brief}
-                        onChange={handleFieldChange}
-                      />
-                    );
-                  case "notes":
-                    return (
-                      <BriefNotesStep
-                        value={brief}
-                        onChange={handleFieldChange}
-                      />
-                    );
-                  case "summary":
-                    return (
-                      <BriefSummaryStep
-                        value={brief}
-                        plan={plan}
-                        onCheckout={handleCheckout}
-                        isCheckingOut={isCheckingOut}
-                        isGeneratingPlan={isGeneratingPlan}
-                      />
-                    );
-                  default:
-                    return null;
-                }
-              })()}
-              <div className="flex flex-col-reverse gap-3 border-t border-[var(--border)] pt-6 md:flex-row md:items-center md:justify-between">
-                <div className="flex items-center gap-3 text-xs text-[var(--secondary)]">
-                  <AutosaveStatus
-                    isSaving={isSaving}
-                    dirty={dirtyFields.size > 0}
-                    isGeneratingPlan={isGeneratingPlan}
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="flex flex-col gap-2 text-sm">
+                  <Label className="font-medium text-[var(--foreground)]" htmlFor="contactName">
+                    Your name
+                  </Label>
+                  <Input
+                    id="contactName"
+                    value={brief.contactName}
+                    onChange={(event) => handleFieldChange("contactName", event.target.value)}
+                    required
+                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
                   />
-                  {error && <span className="text-[var(--accent)]">{error}</span>}
                 </div>
-                {!isLastStep && (
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center">
-                    {isPrevVisible && (
-                      <button
-                        type="button"
-                        onClick={prevStep}
-                        className="rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--muted)]"
-                      >
-                        Back
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={handleNext}
-                      className={cn(
-                        "rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white transition",
-                        (!isNextEnabled || (stepMeta.id === "notes" && isGeneratingPlan)) &&
-                          "pointer-events-none opacity-60",
-                      )}
-                    >
-                      {stepMeta.id === "notes"
-                        ? isGeneratingPlan
-                          ? "Generating plan…"
-                          : "See my tailored plan"
-                        : "Next"}
-                    </button>
+                <div className="flex flex-col gap-2 text-sm">
+                  <Label className="font-medium text-[var(--foreground)]" htmlFor="contactEmail">
+                    Email
+                  </Label>
+                  <Input
+                    id="contactEmail"
+                    type="email"
+                    value={brief.contactEmail}
+                    onChange={(event) => handleFieldChange("contactEmail", event.target.value)}
+                    required
+                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 text-sm">
+                  <Label className="font-medium text-[var(--foreground)]" htmlFor="companyName">
+                    Company
+                  </Label>
+                  <Input
+                    id="companyName"
+                    value={brief.companyName}
+                    onChange={(event) => handleFieldChange("companyName", event.target.value)}
+                    required
+                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  />
+                </div>
+                <div className="flex flex-col gap-2 text-sm">
+                  <Label className="font-medium text-[var(--foreground)]" htmlFor="phone">
+                    Phone
+                  </Label>
+                  <Input
+                    id="phone"
+                    value={brief.phone}
+                    onChange={(event) => handleFieldChange("phone", event.target.value)}
+                    placeholder="Optional"
+                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2 text-sm">
+                <Label className="font-medium text-[var(--foreground)]" htmlFor="currentWebsite">
+                  Current website
+                </Label>
+                <Input
+                  id="currentWebsite"
+                  value={brief.currentWebsite}
+                  onChange={(event) => handleFieldChange("currentWebsite", event.target.value)}
+                  placeholder="Paste a link if you have one"
+                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 text-sm">
+                <Label className="font-medium text-[var(--foreground)]" htmlFor="businessDescription">
+                  What should we know about your business?
+                </Label>
+                <Textarea
+                  id="businessDescription"
+                  value={brief.businessDescription}
+                  onChange={(event) => handleFieldChange("businessDescription", event.target.value)}
+                  required
+                  rows={4}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 text-sm">
+                <Label className="font-medium text-[var(--foreground)]" htmlFor="goals">
+                  What are you hoping your new site will do for you?
+                </Label>
+                <Textarea
+                  id="goals"
+                  value={brief.goals}
+                  onChange={(event) => handleFieldChange("goals", event.target.value)}
+                  placeholder="Example: book more consultations, showcase testimonials, streamline updates"
+                  rows={4}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 text-sm">
+                <Label className="font-medium text-[var(--foreground)]" htmlFor="notes">
+                  Anything else we should keep in mind?
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={brief.notes}
+                  onChange={(event) => handleFieldChange("notes", event.target.value)}
+                  placeholder="Optional context, inspiration links, requirements, etc."
+                  rows={4}
+                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                />
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <Button
+                  type="button"
+                  onClick={handleGeneratePlan}
+                  className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                  disabled={buttonDisabled}
+                >
+                  {buttonLabel}
+                </Button>
+                {error && <span className="text-sm text-[var(--accent)]">{error}</span>}
+                {dirtyFields.size > 0 && !isGeneratingPlan && (
+                  <div className="inline-flex items-center gap-2 text-[var(--secondary)]">
+                    <span className="inline-flex h-2 w-2">
+                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
+                    </span>
+                    <span className="text-xs font-medium">Unsaved changes</span>
                   </div>
                 )}
-                {isLastStep && isPrevVisible && (
-                  <button
-                    type="button"
-                    onClick={prevStep}
-                    className="self-start rounded-full border border-[var(--border)] px-5 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:bg-[var(--muted)]"
-                  >
-                    Back
-                  </button>
-                )}
               </div>
+
+              {plan && (
+                <PlanPreview
+                  headline={plan.headline}
+                  summary={plan.summary}
+                  highlights={plan.highlights}
+                  nextSteps={plan.nextSteps}
+                />
+              )}
+
+              {!plan && planRequested && !isGeneratingPlan && (
+                <p className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)] p-4 text-sm text-[var(--secondary)]">
+                  We couldn&apos;t generate a plan just yet. Check your connection and try again.
+                </p>
+              )}
             </div>
           </section>
+
+          {plan && (
+            <footer className="flex flex-col items-start gap-3 text-sm text-[var(--secondary)]">
+              <p>
+                Ready to talk through the details? Book a call with us and we’ll align on timeline and deliverables.
+              </p>
+              <Link
+                href={ONBOARDING_CAL_LINK}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-full border border-[var(--primary)] bg-[var(--background)] px-5 py-3 text-sm font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)] hover:text-white"
+              >
+                Schedule a call
+              </Link>
+            </footer>
+          )}
         </div>
       </div>
     </>

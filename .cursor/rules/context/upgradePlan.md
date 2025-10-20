@@ -1,288 +1,995 @@
-## Onboarding Upgrade Plan — Architecture + UX Simplification (Oct 2025)
+# Onboarding Refactoring Plan
 
-### Why
-Prospects should glide from “tell us about your project” to “here’s your tailored plan” without wrestling with heavy persistence logic or duplicated state. Our current `profiles` table and events log keep the flow robust, but they also add friction when iterating on copy, AI prompts, and checkout. This plan keeps our Groq agent thread experience, removes unnecessary tables, clarifies the data model, and folds the upgrade copy/UX changes into a cleaner architecture.
+**Status:** Ready to implement  
+**Last Updated:** October 19, 2025  
+**Priority:** High - Foundation for future maintainability
 
-### Goals
-- Make the anonymous brief → AI plan → checkout path as simple as possible while complying with Convex best practices.
-- Preserve the Agent wrapper + thread creation for AI generation.
-- Replace the `events` table with lightweight `console.log` tracing.
-- Split anonymous onboarding data from authenticated project data.
-- Update copy, prompts, and UI to match the plain-language requirements from October 2025.
-- Ship a plan that explicitly lists the files to touch and how to implement each change safely.
+## Overview
 
----
-
-## Convex Best-Practice Checklist
-- Use `defineSchema`, `defineTable`, and `v` validators for every column in `convex/schema.ts`; name indexes after every indexed field (e.g., `by_sessionId`, `by_authUserId`, `by_projectId`).
-- Register public functions with `query`/`mutation` and internal helpers with `internalQuery`/`internalMutation`/`internalAction`. Always include `args` and `returns` validators—even for `v.null()`.
-- Actions must not call `ctx.db`; they should leverage `ctx.runQuery`/`ctx.runMutation` with `api`/`internal` references from `_generated/api.ts`.
-- When cross-calling Convex functions, specify the function reference (e.g., `internal.onboardingSessions.savePlan`) instead of importing the implementation directly.
-- Keep all new/updated files ASCII-only and preserve existing TypeScript strictness.
+This plan addresses three critical architectural improvements to the onboarding system:
+1. **DRY up validators** - Eliminate duplication across schema, functions, and types
+2. **Decompose the hook** - Split `useOnboardingSession` into focused, testable pieces
+3. **Type safety** - Leverage Convex's generated types for single source of truth
 
 ---
 
-## Architecture Updates
+## Task 1: Extract Validators to Shared File
 
-### 1. Schema Restructure
-- **Remove tables:** `profiles`, `events`.
-- **Add table:** `onboarding_sessions`
-  - Fields: `sessionId` (`v.string()`), `resumeToken` (`v.string()`), `brief` (object matching `OnboardingBrief`), `plan` (object with normalized tiers + metadata), `createdAt`/`updatedAt` numbers if needed.
-  - Indexes: `by_sessionId` on `sessionId` (and `by_resumeToken` if we keep magic links).
-- **Add table:** `projects`
-  - Fields: `authUserId` (`v.string()`), `projectId` (`v.string()`), `planTier` (`v.union(v.literal(...))`), `planProposal` (optional, same shape as `plan` above), `projectStatus`, `paymentStatus`, `postPay`, `deployment`.
-  - Indexes: `by_authUserId`, `by_projectId`.
-- Update `convex/schema.ts` accordingly using the new function syntax. (Actions remain unchanged.)
+### Problem
+Validators are duplicated in three places:
+- `convex/schema.ts` - Schema definition
+- `convex/onboarding/sessions.ts` - Function args validation
+- `types/onboarding.ts` - TypeScript types (manual)
 
-### 2. Types & Shared Constants
-- Update `types/profile.ts` (or split into dedicated modules):
-  - Define `OnboardingBrief`, `PlanTierOption`, `PlanRecommendation`, `PlanProposal`, `OnboardingSession`, and `Project` types to match the new schema.
-  - Add `recommendedTier?: PlanTierOption` and `tierSummary: string` to `PlanRecommendation`.
-  - Move portal-only fields (post-payment state) into `types/project.ts` to keep onboarding concerns lightweight.
-- Create `types/plan.ts` (or `components/onboarding/constants.ts`) with:
-  - `ALL_TIERS_INCLUDED` array (global bullet list rendered on Step 4, not provided by AI).
-  - `AFTER_PAYMENT_COPY` block used both in onboarding Step 4 and portal welcome.
-- Ensure TypeScript stays strict—use `as const` for tier literals and `PlanTierOption` unions.
+This creates maintenance burden and risk of drift.
 
-### 3. Convex Modules
+### Solution
+Create a single canonical validator file and import it everywhere.
 
-#### 3.1 `convex/onboarding_sessions.ts` (new file)
-- `initSession` mutation: create session document if it doesn’t exist. Return `{ sessionId, resumeToken }`. Log actions with `console.log` instead of writing to `events`.
-- `getSession` query: lookup by `sessionId` using `withIndex("by_sessionId", ...)` and return the brief + plan.
-- `updateBrief` mutation: patch `brief` using `ctx.db.patch`, merging only provided keys. Console log updates.
-- `savePlan` internal mutation: `args` include `PlanProposal`. Store normalized plan JSON (only the tiers we render plus `recommendedTier`, `recommendedOn`).
-- Validators follow `convex_rules`—no `filter` scans, always use indexes.
+### Implementation Steps
 
-#### 3.2 `convex/projects.ts` (new file)
-- `linkAnonymousSession` mutation: convert an `onboarding_session` onto a `project` when the user authenticates.
-- `confirmCheckout` mutation: ensure `ctx.auth.getUserIdentity()` returns a user, generate unique `projectId`, update `projects`, and `console.log` success.
-- `getProjectById` query: confirm the caller owns the project via `authUserId` match.
-- `getCurrentProject` query (optional): return the project tied to the authenticated user for quick hydration.
+#### 1.1 Create Validator File
+**File:** `convex/onboarding/validators.ts`
 
-#### 3.3 `convex/plans.ts` (rename from `profiles` plan section)
-- Public `regeneratePlan` mutation schedules the internal action.
-- Internal action `generatePlanRecommendation`:
-  - Load brief via `ctx.runQuery(internal.onboardingSessions.getSession, ...)`.
-  - Call `internal.agent.generateProjectPlans` (Agent + thread preserved).
-  - Normalize tiers and persist via `ctx.runMutation(internal.onboardingSessions.savePlan, ...)`.
-  - Wrap with `console.log` statements for observability.
-- Remove redundant normalization helpers if storing UI-ready data.
+```typescript
+import { v } from "convex/values";
 
-### 4. AI Prompt & Contract
-- File: `convex/agent.ts`
-  - Keep Agent wrapper and thread creation.
-  - Add plain-language instructions, banned term replacements, delivery time requirements, and tier summaries.
-  - Enforce new validator shape with `v.object({ recommendedTier: ... })` etc.
-  - Ensure fallback (`fallbackPlanFromBaselines`) still returns tier summaries + deliverable notes.
+export const briefValidator = v.object({
+  contactName: v.string(),
+  contactEmail: v.string(),
+  companyName: v.string(),
+  phone: v.string(),
+  currentWebsite: v.string(),
+  businessDescription: v.string(),
+  goals: v.string(),
+  notes: v.string(),
+});
 
-### 5. Client Hook & Utilities
-- Refactor `lib/convex/useOnboardingProfile.ts` into a smaller hook backed by new APIs.
-  - Add `lib/onboarding/sessionStorage.ts` for localStorage helpers (`loadSession`, `saveSession`, `clearSession`).
-  - Extract a shared `useDebouncedMutation` or inline 500 ms debounce with less state juggling.
-  - Query `api.onboardingSessions.getSession` and mutate via `api.onboardingSessions.updateBrief`.
-  - Plan generation triggers `api.plans.regeneratePlan`.
-  - Authenticated users hydrate from `api.projects.getCurrentProject`.
+export const planValidator = v.object({
+  generatedAt: v.number(),
+  promptVersion: v.string(),
+  headline: v.string(),
+  summary: v.string(),
+  highlights: v.array(v.string()),
+  nextSteps: v.array(v.string()),
+});
 
-### 6. UI Updates (Step 4)
-- File: `components/onboarding/constants.ts` (new)
-  - Export `ALL_TIERS_INCLUDED` and `AFTER_PAYMENT_COPY`.
-- File: `components/onboarding/steps.tsx`
-  - Render after-payment explainer above plan cards.
-  - Add global inclusions box via constant.
-  - Show `tierSummary`, delivery line under price, and “Planning call included” for Pro/Enterprise.
-  - Add “Recommended for you” chip when `plan.recommendedTier === tierId`.
-- File: `components/onboarding/PlanSummaryInline.tsx`
-  - Accept normalized plan structure with `tierSummary`, `deliverableNotes`.
-- File: `app/onboarding/page.tsx`
-  - Keep redirect logic; ensure new queries/hook output match props.
+// Add constants while we're at it
+export const PLAN_GENERATION_THROTTLE_MS = 15_000; // 15 seconds
+export const PLAN_TEXT_MAX_LENGTH = 280;
+export const SESSION_EXPIRY_DAYS = 30;
+```
 
-### 7. Cleanup
-- Remove `events` table references and replace calls with `console.log` (e.g., `console.log("[onboarding] plan generated", { sessionId })`).
-- Delete unused helpers from `convex/profiles.ts` once responsibilities move.
-- Update imports to point at new modules (`onboarding_sessions`, `projects`, `plans`).
+#### 1.2 Update Schema
+**File:** `convex/schema.ts`
 
-### 8. Documentation
-- Update `.cursor/rules/context/ONBOARDING-ARCHITECTURE.md` to reflect new tables, flow, and logging approach.
-- Link back to this plan for copy/prompt expectations.
+```typescript
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+import { briefValidator, planValidator } from "./onboarding/validators";
 
----
+// Remove the local definitions:
+// const onboardingBrief = v.object({...}); ❌ DELETE
+// const onboardingPlan = v.object({...}); ❌ DELETE
 
-## Plain-Language Copy & Prompt Rules
+export default defineSchema({
+  onboarding_sessions: defineTable({
+    sessionId: v.string(),
+    resumeToken: v.string(),
+    brief: briefValidator, // ✅ Import from validators
+    plan: v.optional(planValidator), // ✅ Import from validators
+    contactEmail: v.optional(v.string()),
+    lastPlanRequestedAt: v.optional(v.number()),
+    planGenerationInProgress: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_resumeToken", ["resumeToken"])
+    .index("by_contactEmail", ["contactEmail"])
+    .index("by_updatedAt", ["updatedAt"]),
 
-### Avoid These Terms
-- CMS → “Blog you can update yourself”
-- Role-based access / RBAC → “Sign-in area for your team or clients”
-- SEO → “Shows up well on Google”
-- KPI → “Key goals” or omit entirely
+  projects: defineTable({
+    authUserId: v.string(),
+    projectId: v.string(),
+    onboardingSessionId: v.optional(v.id("onboarding_sessions")),
+    planTier: v.union(v.string(), v.null()),
+    planProposal: v.optional(planValidator), // ✅ Reuse here too
+    projectStatus: v.optional(projectStatus),
+    paymentStatus: v.optional(paymentStatus),
+    postPay: v.optional(postPay),
+    deployment: v.optional(deployment),
+  })
+    .index("by_authUserId", ["authUserId"])
+    .index("by_projectId", ["projectId"]),
+});
+```
 
-### Tone
-- Positive, outcome-focused, and concise.
-- Plain English for non-technical business owners.
-- Emphasize benefits and next steps.
+#### 1.3 Update Sessions Functions
+**File:** `convex/onboarding/sessions.ts`
 
----
+```typescript
+import { internalAction, internalMutation, mutation, query } from "../_generated/server";
+import { v } from "convex/values";
+import { api, internal } from "../_generated/api";
+import type { OnboardingPlan } from "../../types/onboarding";
+import { generatePlanWithAgent } from "./agent";
+import type { ActionCtx } from "../_generated/server";
+import { 
+  briefValidator, 
+  planValidator, 
+  PLAN_GENERATION_THROTTLE_MS 
+} from "./validators"; // ✅ Import validators
 
-## Plan Section Structure (Step 4)
-Render three blocks in order:
-1. Included with every plan (hardcoded).
-2. AI-assisted tier cards.
-3. After payment — what happens next (hardcoded).
+// Remove local definitions:
+// const briefValidator = v.object({...}); ❌ DELETE
+// const planValidator = v.object({...}); ❌ DELETE
 
-### Included with Every Plan (constant)
-- Custom domain (yourname.com) included.
-- Looks great on phones and desktops.
-- Shows up well on Google.
-- Built-in writing assistant (AI editor access).
-- Hosted and cared for (no setup on your side).
+// ... rest of file stays the same
 
-Implementation notes:
-- Use `ALL_TIERS_INCLUDED` constant and render it once above tier cards.
-- Remove these bullets from AI prompts and baseline features.
+// In generatePlan mutation, replace magic number:
+export const generatePlan = mutation({
+  args: {
+    sessionId: v.string(),
+    resumeToken: v.string(),
+    brief: briefValidator,
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    // ... existing validation
 
-### Tier Baselines (fallback & prompt context)
-- **Starter – “Basic info site” (48 hours)**
-  - Headline: “Launch a confident website fast.”
-- Summary: “A clean, professional site that clearly explains what you do.”
-  - Pages: Home, About, Services, Contact, Legal.
-  - Features: Contact form that emails you.
-  - Delivery notes: `Delivery: 48 hours.`
-- **Professional – “Info site + one custom feature” (~1 week)**
-  - Headline: “Turn visitors into booked calls or inquiries.”
-- Summary: “Everything in Starter plus one custom feature your business needs.”
-  - Pages: Home, About, Services, Case Studies, Blog, Contact.
-  - Features: Calendar booking or inquiry flow; Blog you can update yourself; Connect your mailing list; One custom feature (we help you choose).
-  - Delivery notes: `Delivery: ~1 week. Planning call included.`
-- **Enterprise – “Custom website & tools” (2–3 weeks+)**
-  - Headline: “Custom website and tools tailored to your workflow.”
-- Summary: “We design and build what you need, with room to grow.”
-  - Pages: Home, Solutions, Pricing, Resources, Client Area, Contact.
-  - Features: Sign-in area for your team or clients; Connect to the tools you already use; Ongoing hosting and care.
-  - Delivery notes: `Delivery: 2–3 weeks+. Planning call included.`
+    const now = Date.now();
 
-### After Payment Copy (Step 4 + Portal)
-- After checkout, we’ll ask for:
-  - Your headline and what you want visitors to do.
-  - Any must-have features or requirements.
-  - Inspiration links (sites you like).
-  - Brand details (logo, photos, style).
-- “This keeps onboarding light now and lets you share details once you’re ready.”
+    if (session.planGenerationInProgress) {
+      return null;
+    }
+    
+    // ✅ Use constant instead of magic number
+    if (typeof session.lastPlanRequestedAt === "number" && 
+        now - session.lastPlanRequestedAt < PLAN_GENERATION_THROTTLE_MS) {
+      throw new Error("Plan generation is throttled. Please wait before trying again.");
+    }
 
----
+    // ... rest of handler
+  },
+});
+```
 
-## AI Generation Contract
-- Prompt requirements:
-  - Use plain language for non-technical owners.
-  - Never output banned terms directly.
-  - Omit global inclusions; emphasize tier-specific value.
-  - Include delivery timeline inside `deliverableNotes`.
-  - Return `recommendedTier` (enum) and `tierSummary` (1–2 sentences).
-  - Professional tier must say “one custom feature.”
-  - Enterprise tier should emphasize outcomes over implementation.
-- Output JSON contract:
+#### 1.4 Update Agent File
+**File:** `convex/onboarding/agent.ts`
 
-```json
-{
-  "promptVersion": "string",
-  "recommendedTier": "starter" | "professional" | "enterprise",
-  "tiers": {
-    "starter": {
-      "headline": "string",
-      "tierSummary": "string",
-      "summary": "string",
-      "pages": ["Home", ...],
-      "features": ["Contact form that emails you", ...],
-      "deliverableNotes": "Delivery: 48 hours."
-    },
-    "professional": {
-      "headline": "string",
-      "tierSummary": "string",
-      "summary": "string",
-      "pages": [ ... ],
-      "features": ["One custom feature", ...],
-      "deliverableNotes": "Delivery: ~1 week. Planning call included."
-    },
-    "enterprise": {
-      "headline": "string",
-      "tierSummary": "string",
-      "summary": "string",
-      "pages": [ ... ],
-      "features": ["Sign-in area for team or clients", ...],
-      "deliverableNotes": "Delivery: 2–3 weeks+. Planning call included."
+```typescript
+import { groq } from "@ai-sdk/groq";
+import { Agent } from "@convex-dev/agent";
+import { v } from "convex/values";
+import { internalAction } from "../_generated/server";
+import type { ActionCtx } from "../_generated/server";
+import { components } from "../_generated/api";
+import type { OnboardingBrief, OnboardingPlanCore } from "../../types/onboarding";
+import { briefValidator, PLAN_TEXT_MAX_LENGTH } from "./validators"; // ✅ Import
+
+// Update action args to use shared validator:
+export const generateOnboardingPlan = internalAction({
+  args: {
+    brief: briefValidator, // ✅ Use shared validator
+  },
+  returns: v.object({
+    promptVersion: v.string(),
+    headline: v.string(),
+    summary: v.string(),
+    highlights: v.array(v.string()),
+    nextSteps: v.array(v.string()),
+  }),
+  handler: async (ctx, args) => {
+    return await generatePlanWithAgent(ctx as ActionCtx, args.brief);
+  },
+});
+
+// In sanitizeString, use constant:
+function sanitizeString(value: unknown, fallback: string): string {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length > 0) {
+      return trimmed.slice(0, PLAN_TEXT_MAX_LENGTH); // ✅ Use constant
     }
   }
+  return fallback;
 }
 ```
 
-- Fallback heuristic (if `recommendedTier` missing):
-  - `simple_site` + ASAP → `starter`.
-  - `lead_generation` or `blog_cms` → `professional`.
-  - `ecommerce` or `custom` → `enterprise`.
-  - If timeline very short and scope simple → `starter`, otherwise `professional`.
+#### 1.5 Verification Steps
+- [ ] Run `npx convex dev` to ensure schema compiles
+- [ ] Check that all imports resolve correctly
+- [ ] Test form submission to verify validators work
+- [ ] Test plan generation to ensure throttling still works
 
 ---
 
-## File-by-File Implementation Plan
+## Task 2: Split useOnboardingSession into Smaller Hooks
 
-- `convex/schema.ts`
-  - Drop `profiles`/`events`; add `onboarding_sessions` and `projects` with validators and indexes (`by_sessionId`, `by_authUserId`, `by_projectId`).
-- `convex/onboarding_sessions.ts`
-  - Implement `initSession`, `getSession`, `updateBrief`, `savePlan` using new function syntax and index-backed lookups; replace event inserts with `console.log`.
-- `convex/projects.ts`
-  - Handle linking authenticated users, checkout confirmation, and authenticated queries for project data.
-- `convex/plans.ts`
-  - Expose public `regeneratePlan` mutation and internal action that uses Agent to generate + persist normalized plans.
-- `convex/agent.ts`
-  - Update instructions/validators to match new contract while keeping Agent threads.
-- `types/profile.ts` / `types/project.ts`
-  - Reflect new data shapes and optional `recommendedTier`.
-- `components/onboarding/constants.ts`
-  - Export `ALL_TIERS_INCLUDED`, `AFTER_PAYMENT_COPY`, timeline strings.
-- `components/onboarding/steps.tsx`
-  - Render inclusions, after-payment copy, tier summaries, delivery lines, and recommendation chip.
-- `components/onboarding/PlanSummaryInline.tsx`
-  - Consume normalized plan data (`tierSummary`, `deliverableNotes`).
-- `lib/onboarding/sessionStorage.ts`
-  - Local storage helpers for anonymous sessions.
-- `lib/convex/useOnboardingProfile.ts`
-  - Refactor to use new APIs, smaller state surface, and debounced updates.
-- `app/onboarding/page.tsx`
-  - Continue redirect logic using new queries/hook output.
-- `.cursor/rules/context/ONBOARDING-ARCHITECTURE.md`
-  - Document schema changes, removal of events, and simplified flow.
+### Problem
+`useOnboardingSession` has 260 lines and handles 8 different concerns:
+- Session initialization & localStorage
+- Remote data fetching & hydration
+- Debounced autosave logic
+- Dirty field tracking
+- Plan generation orchestration
+- Error handling
+- Multiple useEffect chains with complex dependencies
+
+This makes it:
+- Hard to understand
+- Hard to test
+- Hard to debug
+- Hard to reuse parts in isolation
+
+### Solution
+Decompose into 4 focused hooks with clear responsibilities:
+1. `useSessionInit` - Handle session creation & persistence
+2. `useSessionData` - Fetch & hydrate remote data
+3. `useAutosave` - Debounced saving logic
+4. `usePlanGenerator` - Plan generation orchestration
+5. `useOnboardingSession` - Compose everything together
+
+### Implementation Steps
+
+#### 2.1 Create Session Initialization Hook
+**File:** `lib/convex/onboarding/hooks/useSessionInit.ts`
+
+```typescript
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+const SESSION_STORAGE_KEY = "onboarding_session";
+
+type StoredSession = {
+  sessionId: string;
+  resumeToken: string;
+};
+
+type UseSessionInitResult = {
+  sessionId: string | null;
+  resumeToken: string | null;
+  isInitializing: boolean;
+  error: Error | null;
+};
+
+export function useSessionInit(): UseSessionInitResult {
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [resumeToken, setResumeToken] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const initializingRef = useRef(false);
+
+  const initSession = useMutation(api.onboarding.sessions.initSession);
+
+  const initializeSession = useCallback(async () => {
+    if (initializingRef.current) return;
+
+    initializingRef.current = true;
+    setIsInitializing(true);
+
+    try {
+      // Check localStorage first
+      const stored = typeof window !== "undefined" 
+        ? localStorage.getItem(SESSION_STORAGE_KEY) 
+        : null;
+
+      if (stored) {
+        const parsed: StoredSession = JSON.parse(stored);
+        setSessionId(parsed.sessionId);
+        setResumeToken(parsed.resumeToken);
+        setIsInitializing(false);
+        return;
+      }
+
+      // Create new session
+      const result = await initSession({});
+      setSessionId(result.sessionId);
+      setResumeToken(result.resumeToken);
+
+      // Persist to localStorage
+      if (typeof window !== "undefined") {
+        localStorage.setItem(
+          SESSION_STORAGE_KEY,
+          JSON.stringify({ 
+            sessionId: result.sessionId, 
+            resumeToken: result.resumeToken 
+          })
+        );
+      }
+    } catch (err) {
+      console.error("Failed to initialize session", err);
+      setError(err instanceof Error ? err : new Error("Session init failed"));
+    } finally {
+      setIsInitializing(false);
+      initializingRef.current = false;
+    }
+  }, [initSession]);
+
+  useEffect(() => {
+    if (!sessionId && !initializingRef.current) {
+      initializeSession();
+    }
+  }, [sessionId, initializeSession]);
+
+  return {
+    sessionId,
+    resumeToken,
+    isInitializing,
+    error,
+  };
+}
+```
+
+#### 2.2 Create Session Data Hook
+**File:** `lib/convex/onboarding/hooks/useSessionData.ts`
+
+```typescript
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { OnboardingBrief, OnboardingPlan, defaultBrief } from "@/types/onboarding";
+
+type UseSessionDataOptions = {
+  sessionId: string | null;
+  localBrief: OnboardingBrief;
+};
+
+type UseSessionDataResult = {
+  remoteBrief: OnboardingBrief;
+  remotePlan: OnboardingPlan | undefined;
+  isHydrated: boolean;
+};
+
+export function useSessionData({ 
+  sessionId, 
+  localBrief 
+}: UseSessionDataOptions): UseSessionDataResult {
+  const [isHydrated, setIsHydrated] = useState(false);
+  const [remoteBrief, setRemoteBrief] = useState<OnboardingBrief>(defaultBrief);
+  const [remotePlan, setRemotePlan] = useState<OnboardingPlan | undefined>(undefined);
+
+  const sessionQuery = useQuery(
+    api.onboarding.sessions.getSession,
+    sessionId ? { sessionId } : "skip"
+  );
+
+  useEffect(() => {
+    if (sessionQuery === undefined) return;
+    if (!sessionQuery) return;
+
+    // On first hydration, use server data
+    if (!isHydrated) {
+      setRemoteBrief({
+        ...defaultBrief,
+        ...sessionQuery.brief,
+      });
+      setIsHydrated(true);
+    }
+
+    // Always sync plan from server
+    if (sessionQuery.plan) {
+      setRemotePlan(sessionQuery.plan);
+    }
+  }, [sessionQuery, isHydrated]);
+
+  return {
+    remoteBrief: isHydrated ? remoteBrief : localBrief,
+    remotePlan,
+    isHydrated,
+  };
+}
+```
+
+#### 2.3 Create Autosave Hook
+**File:** `lib/convex/onboarding/hooks/useAutosave.ts`
+
+```typescript
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { OnboardingBrief, OnboardingField } from "@/types/onboarding";
+
+type UseAutosaveOptions = {
+  sessionId: string | null;
+  resumeToken: string | null;
+  brief: OnboardingBrief;
+  dirtyFields: Set<OnboardingField>;
+  onClearDirty: () => void;
+  onError?: () => void;
+};
+
+type UseAutosaveResult = {
+  isSaving: boolean;
+  forceSave: () => Promise<void>;
+};
+
+const DEBOUNCE_MS = 500;
+
+export function useAutosave({
+  sessionId,
+  resumeToken,
+  brief,
+  dirtyFields,
+  onClearDirty,
+  onError,
+}: UseAutosaveOptions): UseAutosaveResult {
+  const [isSaving, setIsSaving] = useState(false);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const updateBrief = useMutation(api.onboarding.sessions.updateBrief);
+
+  // Autosave on field changes
+  useEffect(() => {
+    if (!dirtyFields.size || !sessionId || !resumeToken) return;
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+
+    debounceRef.current = setTimeout(async () => {
+      try {
+        setIsSaving(true);
+        await updateBrief({
+          sessionId,
+          resumeToken,
+          brief,
+        });
+        onClearDirty();
+      } catch (error) {
+        console.error("Failed to update brief", error);
+        onError?.();
+      } finally {
+        setIsSaving(false);
+      }
+    }, DEBOUNCE_MS);
+
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, [dirtyFields.size, sessionId, resumeToken, brief, updateBrief, onClearDirty, onError]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
+
+  // Force immediate save (useful before plan generation)
+  const forceSave = async () => {
+    if (!sessionId || !resumeToken || !dirtyFields.size) return;
+
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+
+    try {
+      setIsSaving(true);
+      await updateBrief({
+        sessionId,
+        resumeToken,
+        brief,
+      });
+      onClearDirty();
+    } catch (error) {
+      console.error("Failed to force save brief", error);
+      onError?.();
+      throw error;
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return {
+    isSaving,
+    forceSave,
+  };
+}
+```
+
+#### 2.4 Create Plan Generator Hook
+**File:** `lib/convex/onboarding/hooks/usePlanGenerator.ts`
+
+```typescript
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { OnboardingBrief, OnboardingPlan } from "@/types/onboarding";
+
+type UsePlanGeneratorOptions = {
+  sessionId: string | null;
+  resumeToken: string | null;
+  brief: OnboardingBrief;
+  remotePlan: OnboardingPlan | undefined;
+  onError?: () => void;
+};
+
+type UsePlanGeneratorResult = {
+  isGenerating: boolean;
+  generate: () => Promise<void>;
+};
+
+export function usePlanGenerator({
+  sessionId,
+  resumeToken,
+  brief,
+  remotePlan,
+  onError,
+}: UsePlanGeneratorOptions): UsePlanGeneratorResult {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const latestPlanTimestampRef = useRef<number | null>(null);
+
+  const generatePlanMutation = useMutation(api.onboarding.sessions.generatePlan);
+
+  // Watch for plan updates to stop spinner
+  useEffect(() => {
+    const planTimestamp = remotePlan?.generatedAt ?? null;
+    if (planTimestamp !== latestPlanTimestampRef.current) {
+      latestPlanTimestampRef.current = planTimestamp;
+      setIsGenerating(false);
+    }
+  }, [remotePlan]);
+
+  const generate = useCallback(async () => {
+    if (!sessionId || !resumeToken) {
+      throw new Error("Session not initialized");
+    }
+
+    try {
+      setIsGenerating(true);
+      await generatePlanMutation({
+        sessionId,
+        resumeToken,
+        brief,
+      });
+    } catch (error) {
+      console.error("Failed to generate plan", error);
+      setIsGenerating(false);
+      onError?.();
+      throw error;
+    }
+  }, [sessionId, resumeToken, brief, generatePlanMutation, onError]);
+
+  return {
+    isGenerating,
+    generate,
+  };
+}
+```
+
+#### 2.5 Refactor Main Hook
+**File:** `lib/convex/onboarding/useOnboardingSession.ts`
+
+```typescript
+"use client";
+
+import { useCallback, useState } from "react";
+import { OnboardingBrief, OnboardingField, defaultBrief } from "@/types/onboarding";
+import { useSessionInit } from "./hooks/useSessionInit";
+import { useSessionData } from "./hooks/useSessionData";
+import { useAutosave } from "./hooks/useAutosave";
+import { usePlanGenerator } from "./hooks/usePlanGenerator";
+
+type UseOnboardingSessionOptions = {
+  onError?: () => void;
+};
+
+export function useOnboardingSession({ 
+  onError 
+}: UseOnboardingSessionOptions = {}) {
+  // Local state for optimistic updates
+  const [localBrief, setLocalBrief] = useState<OnboardingBrief>(defaultBrief);
+  const [dirtyFields, setDirtyFields] = useState<Set<OnboardingField>>(new Set());
+
+  // Session initialization
+  const { sessionId, resumeToken, isInitializing } = useSessionInit();
+
+  // Remote data sync
+  const { remoteBrief, remotePlan, isHydrated } = useSessionData({
+    sessionId,
+    localBrief,
+  });
+
+  // Use remote brief if hydrated, otherwise local
+  const brief = isHydrated ? localBrief : remoteBrief;
+
+  // Autosave
+  const { isSaving, forceSave } = useAutosave({
+    sessionId,
+    resumeToken,
+    brief: localBrief,
+    dirtyFields,
+    onClearDirty: () => setDirtyFields(new Set()),
+    onError,
+  });
+
+  // Plan generation
+  const { isGenerating, generate } = usePlanGenerator({
+    sessionId,
+    resumeToken,
+    brief: localBrief,
+    remotePlan,
+    onError,
+  });
+
+  // Field update handler
+  const write = useCallback(
+    <K extends OnboardingField>(field: K, value: OnboardingBrief[K]) => {
+      setLocalBrief((prev) => ({
+        ...prev,
+        [field]: value,
+      }));
+      setDirtyFields((prev) => {
+        const next = new Set(prev);
+        next.add(field);
+        return next;
+      });
+    },
+    []
+  );
+
+  // Plan generation with force save
+  const generatePlan = useCallback(async () => {
+    if (!sessionId) {
+      throw new Error("Session not initialized");
+    }
+
+    // Force save any pending changes first
+    if (dirtyFields.size > 0) {
+      await forceSave();
+    }
+
+    await generate();
+  }, [sessionId, dirtyFields.size, forceSave, generate]);
+
+  return {
+    sessionId,
+    brief,
+    plan: remotePlan,
+    dirtyFields,
+    write,
+    isHydrated,
+    isSaving,
+    isGeneratingPlan: isGenerating,
+    generatePlan,
+  } as const;
+}
+```
+
+#### 2.6 Create Hooks Index
+**File:** `lib/convex/onboarding/hooks/index.ts`
+
+```typescript
+export { useSessionInit } from "./useSessionInit";
+export { useSessionData } from "./useSessionData";
+export { useAutosave } from "./useAutosave";
+export { usePlanGenerator } from "./usePlanGenerator";
+```
+
+#### 2.7 Update Component Import
+**File:** `app/onboarding/OnboardingClient.tsx`
+
+```typescript
+// No changes needed! Hook signature stays the same
+import { useOnboardingSession } from "@/lib/convex/onboarding/useOnboardingSession";
+
+// Everything else stays the same
+```
+
+#### 2.8 Verification Steps
+- [ ] Create the four new hook files
+- [ ] Update the main `useOnboardingSession.ts` to compose them
+- [ ] Test session initialization works
+- [ ] Test form autosave still works
+- [ ] Test plan generation still works
+- [ ] Verify no functionality regression
 
 ---
 
-## Acceptance Criteria
-- Step 4 renders “Included with every plan,” tier cards with summaries/delivery timelines, and the after-payment explainer in order.
-- Exactly one tier shows the “Recommended for you” chip (AI or heuristic).
-- Anonymous data lives in `onboarding_sessions`; authenticated data lives in `projects`.
-- AI output and baselines avoid banned jargon; global inclusions appear once.
-- All Convex functions use validators, indexes, and the new function syntax; actions interact with the DB via `ctx.runQuery`/`ctx.runMutation`.
-- `events` table removed; console logs provide traceability.
+## Task 3: Use Convex Generated Types
+
+### Problem
+Types are manually defined in `types/onboarding.ts` and can drift from the actual Convex schema. This creates:
+- Maintenance burden (updating types in two places)
+- Type safety gaps (schema changes don't break TypeScript)
+- Confusion about which fields are internal vs public
+
+### Solution
+Use Convex's generated `Doc<"table_name">` types as the source of truth, and derive client-facing types from them.
+
+### Implementation Steps
+
+#### 3.1 Update Types File
+**File:** `types/onboarding.ts`
+
+```typescript
+import type { Doc } from "@/convex/_generated/dataModel";
+
+// ✅ Use Convex generated doc type as base
+type OnboardingSessionDoc = Doc<"onboarding_sessions">;
+
+// Brief is a nested field in the doc
+export type OnboardingBrief = OnboardingSessionDoc["brief"];
+
+// Plan is also nested
+export type OnboardingPlan = NonNullable<OnboardingSessionDoc["plan"]>;
+
+// Core plan payload generated by AI (without server timestamp)
+export type OnboardingPlanCore = Omit<OnboardingPlan, "generatedAt">;
+
+// Legacy alias for compatibility
+export type PlanProposal = OnboardingPlan;
+
+// Plan tier option (this is still custom for UI)
+export type PlanTierOption = {
+  id: string;
+  label: string;
+  price: string;
+  description: string;
+};
+
+// Field names for form handling
+export type OnboardingField = keyof OnboardingBrief;
+
+// Public-facing session (subset of full doc)
+export type OnboardingSession = Pick<
+  OnboardingSessionDoc,
+  "sessionId" | "resumeToken" | "brief" | "plan" | "createdAt" | "updatedAt"
+>;
+
+// Default brief for initialization
+export const defaultBrief: OnboardingBrief = {
+  contactName: "",
+  contactEmail: "",
+  companyName: "",
+  phone: "",
+  currentWebsite: "",
+  businessDescription: "",
+  goals: "",
+  notes: "",
+};
+```
+
+#### 3.2 Update Agent to Use Convex Validator Types
+**File:** `convex/onboarding/agent.ts`
+
+```typescript
+import { groq } from "@ai-sdk/groq";
+import { Agent } from "@convex-dev/agent";
+import { v } from "convex/values";
+import { internalAction } from "../_generated/server";
+import type { ActionCtx } from "../_generated/server";
+import { components } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel"; // ✅ Import Doc type
+import { briefValidator, PLAN_TEXT_MAX_LENGTH } from "./validators";
+
+// ✅ Derive types from Convex schema
+type OnboardingBrief = Doc<"onboarding_sessions">["brief"];
+type OnboardingPlan = NonNullable<Doc<"onboarding_sessions">["plan"]>;
+type OnboardingPlanCore = Omit<OnboardingPlan, "generatedAt">;
+
+// ... rest of file stays the same, but now we're using generated types
+```
+
+#### 3.3 Update Sessions to Use Convex Types
+**File:** `convex/onboarding/sessions.ts`
+
+```typescript
+import { internalAction, internalMutation, mutation, query } from "../_generated/server";
+import { v } from "convex/values";
+import { api, internal } from "../_generated/api";
+import type { Doc } from "../_generated/dataModel"; // ✅ Import Doc
+import { generatePlanWithAgent } from "./agent";
+import type { ActionCtx } from "../_generated/server";
+import { 
+  briefValidator, 
+  planValidator, 
+  PLAN_GENERATION_THROTTLE_MS 
+} from "./validators";
+
+// ✅ Derive types from schema
+type OnboardingPlan = NonNullable<Doc<"onboarding_sessions">["plan"]>;
+
+// Remove manual type import:
+// import type { OnboardingPlan } from "../../types/onboarding"; ❌
+
+// ... rest of file stays the same
+```
+
+#### 3.4 Update Hook to Use Convex Types
+**File:** `lib/convex/onboarding/hooks/useSessionData.ts`
+
+```typescript
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Doc } from "@/convex/_generated/dataModel"; // ✅ Import
+
+// ✅ Derive from Convex
+type OnboardingBrief = Doc<"onboarding_sessions">["brief"];
+type OnboardingPlan = NonNullable<Doc<"onboarding_sessions">["plan"]>;
+
+// Or import from types file (which now derives from Convex):
+// import { OnboardingBrief, OnboardingPlan } from "@/types/onboarding";
+
+// ... rest of hook
+```
+
+#### 3.5 Add Type Helper Utilities
+**File:** `convex/onboarding/types.ts`
+
+```typescript
+import type { Doc } from "../_generated/dataModel";
+
+// Helper to extract nested types from Convex docs
+export type OnboardingSessionDoc = Doc<"onboarding_sessions">;
+export type OnboardingBrief = OnboardingSessionDoc["brief"];
+export type OnboardingPlan = NonNullable<OnboardingSessionDoc["plan"]>;
+export type OnboardingPlanCore = Omit<OnboardingPlan, "generatedAt">;
+
+// Project types
+export type ProjectDoc = Doc<"projects">;
+export type ProjectStatus = NonNullable<ProjectDoc["projectStatus"]>;
+export type PaymentStatus = NonNullable<ProjectDoc["paymentStatus"]>;
+export type PostPay = NonNullable<ProjectDoc["postPay"]>;
+export type Deployment = NonNullable<ProjectDoc["deployment"]>;
+```
+
+#### 3.6 Update All Imports Project-Wide
+
+Files to update:
+- `types/onboarding.ts` - Already done in 3.1
+- `convex/onboarding/agent.ts` - Already done in 3.2
+- `convex/onboarding/sessions.ts` - Already done in 3.3
+- `lib/convex/onboarding/hooks/useSessionData.ts` - Already done in 3.4
+- `lib/convex/onboarding/hooks/usePlanGenerator.ts` - Update imports
+- `lib/convex/onboarding/useOnboardingSession.ts` - Update imports
+- `app/onboarding/OnboardingClient.tsx` - Update imports
+
+For each file:
+```typescript
+// ❌ Remove manual types:
+// import type { OnboardingBrief, OnboardingPlan } from "@/types/onboarding";
+
+// ✅ Use types that derive from Convex:
+import { OnboardingBrief, OnboardingPlan } from "@/types/onboarding";
+// (which now internally use Doc<"onboarding_sessions">)
+```
+
+#### 3.7 Verification Steps
+- [ ] Run `npx convex dev` to regenerate types
+- [ ] Search for all manual type definitions and replace with Convex-derived ones
+- [ ] Fix any TypeScript errors that surface (these are good - they show drift!)
+- [ ] Test that changing the schema now breaks TypeScript (proof of type safety)
+- [ ] Verify all components still compile and work
 
 ---
 
-## Test Plan
-1. Anonymous onboarding: session initializes, autosave logs console messages, plan generates, Step 4 shows all new sections.
-2. Authenticated handoff: anonymous brief links to authenticated user, project created with recommended tier persisting.
-3. Recommendation logic: adjust brief inputs to confirm `recommendedTier` changes and UI chip updates.
-4. Copy audit: verify Step 4 and plan data contain no banned terms and global inclusions appear only once.
-5. Portal hydration: authenticated project loads from `projects`, after-payment copy visible.
-6. Regression: autosave, redirects, and checkout still work with new APIs.
+## Testing Checklist
+
+After implementing all three tasks:
+
+### Functional Tests
+- [ ] Visit `/onboarding` and form loads
+- [ ] Fill out form fields and see autosave status
+- [ ] Leave page and return - data persists
+- [ ] Generate plan - spinner shows, plan appears
+- [ ] Change form fields after plan - button says "Regenerate plan"
+- [ ] Click "Schedule a call" link - Cal.com opens
+- [ ] Check browser console - no errors
+- [ ] Open dev tools Network tab - verify mutation timing
+
+### Code Quality Tests
+- [ ] Run TypeScript check: `npx tsc --noEmit`
+- [ ] Run linter: `npm run lint` or `npx eslint .`
+- [ ] Search for `v.object({` duplication - should only be in validators.ts
+- [ ] Search for magic numbers (15000, 280, etc.) - should only be in constants
+- [ ] Check that hooks are < 100 lines each
+- [ ] Verify imports resolve correctly
+
+### Type Safety Tests
+- [ ] Change a field in `convex/schema.ts` (add `newField: v.string()`)
+- [ ] Run `npx convex dev` to regenerate types
+- [ ] Verify TypeScript errors appear in components (proof types are connected)
+- [ ] Revert the change
 
 ---
 
-## Out of Scope
-- Real Stripe or payment provider integration.
-- Additional analytics for the removed `events` table (console logging only).
-- Automated filtering of banned terms beyond prompts and baselines.
+## Rollback Plan
+
+If something goes wrong:
+
+### Task 1 Rollback (Validators)
+```bash
+# Restore old files
+git checkout convex/schema.ts
+git checkout convex/onboarding/sessions.ts
+git checkout convex/onboarding/agent.ts
+
+# Delete new file
+rm convex/onboarding/validators.ts
+```
+
+### Task 2 Rollback (Hook Split)
+```bash
+# Restore old hook
+git checkout lib/convex/onboarding/useOnboardingSession.ts
+
+# Delete new hooks
+rm -rf lib/convex/onboarding/hooks/
+```
+
+### Task 3 Rollback (Types)
+```bash
+# Restore old types
+git checkout types/onboarding.ts
+
+# Restore any files that imported the old types
+git checkout convex/onboarding/agent.ts
+git checkout convex/onboarding/sessions.ts
+```
 
 ---
 
-## Rollout Notes
-- Apply schema changes first (Convex deployment) and update backend modules before removing legacy code paths.
-- Update backend modules and regenerate `_generated/api.ts` (`npx convex dev` or similar).
-- Refactor client hook and UI after backend stabilizes.
-- Run manual tests; rely on console logs for verification post-events removal.
+## Success Criteria
 
+You'll know the refactor is successful when:
+
+1. ✅ **No duplication** - Validators exist in one place only
+2. ✅ **Hook clarity** - Each hook under 100 lines, single responsibility
+3. ✅ **Type safety** - Schema changes break TypeScript (in a good way)
+4. ✅ **Tests pass** - All functional tests work as before
+5. ✅ **No regressions** - Onboarding flow works identically to users
+6. ✅ **Better DX** - Easier to add new fields, easier to test, easier to debug
+
+---
+
+## Timeline Estimate
+
+- **Task 1 (Validators):** 30-45 minutes
+- **Task 2 (Hook Split):** 90-120 minutes
+- **Task 3 (Types):** 45-60 minutes
+- **Testing & Verification:** 30-45 minutes
+
+**Total:** 3-5 hours for all three tasks
+
+---
+
+## Notes & Context
+
+### Why These Three?
+These are foundational refactors that make **all future work easier**:
+- Adding new form fields becomes trivial (one place to update validators)
+- Testing becomes possible (small hooks are testable)
+- Type safety catches bugs at compile time instead of runtime
+
+### Order Matters
+Do these in sequence (1 → 2 → 3) because:
+- Task 1 creates the shared validators that Task 2's hooks will use
+- Task 3 relies on stable schema from Task 1
+
+### Future Tasks Enabled
+After these refactors, you can easily:
+- Add session cleanup cron (uses the validators)
+- Add form field validation (small hook to test)
+- Add new fields to brief (type safety catches all usage)
+- Add request ID tracking for plan generation (usePlanGenerator is isolated)
+- Write unit tests for each hook (now possible!)
 

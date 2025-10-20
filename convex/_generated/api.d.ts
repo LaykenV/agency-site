@@ -8,13 +8,11 @@
  * @module
  */
 
-import type * as agent from "../agent.js";
 import type * as auth from "../auth.js";
-import type * as config from "../config.js";
 import type * as http from "../http.js";
-import type * as onboarding_sessions from "../onboarding_sessions.js";
-import type * as plans from "../plans.js";
-import type * as projects from "../projects.js";
+import type * as onboarding_agent from "../onboarding/agent.js";
+import type * as onboarding_sessions from "../onboarding/sessions.js";
+import type * as validators from "../validators.js";
 
 import type {
   ApiFromModules,
@@ -31,13 +29,11 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
-  agent: typeof agent;
   auth: typeof auth;
-  config: typeof config;
   http: typeof http;
-  onboarding_sessions: typeof onboarding_sessions;
-  plans: typeof plans;
-  projects: typeof projects;
+  "onboarding/agent": typeof onboarding_agent;
+  "onboarding/sessions": typeof onboarding_sessions;
+  validators: typeof validators;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
 

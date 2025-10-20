@@ -1,11 +1,10 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { components } from "./_generated/api";
-import { DataModel, type Doc } from "./_generated/dataModel";
+import { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
 import { betterAuth } from "better-auth";
 import { v } from "convex/values";
-import type { PlanProposal, PlanTierOption, OnboardingBrief } from "../types/profile";
 
 const siteUrl = process.env.SITE_URL!;
 
@@ -46,149 +45,6 @@ export const getCurrentUser = query({
     } catch {
       return null;
     }
-  },
-});
-
-export const getCurrentUserProfile = query({
-  args: {},
-  returns: v.union(
-    v.object({
-      onboardingSessionId: v.id("onboarding_sessions"),
-      sessionId: v.string(),
-      resumeToken: v.string(),
-      projectId: v.optional(v.string()),
-      brief: v.object({
-        contactName: v.string(),
-        contactEmail: v.string(),
-        companyName: v.string(),
-        businessDescription: v.string(),
-        industry: v.string(),
-        primaryNeed: v.union(
-          v.literal("simple_site"),
-          v.literal("lead_generation"),
-          v.literal("blog_cms"),
-          v.literal("ecommerce"),
-          v.literal("custom"),
-        ),
-        primaryAction: v.union(
-          v.literal("contact"),
-          v.literal("book_call"),
-          v.literal("not_sure"),
-        ),
-        timeline: v.object({
-          option: v.union(v.literal("asap"), v.literal("date")),
-          date: v.union(v.string(), v.null()),
-        }),
-        additionalNotes: v.string(),
-        termsAccepted: v.boolean(),
-      }),
-      plan: v.optional(
-        v.object({
-          generatedAt: v.number(),
-          promptVersion: v.string(),
-          recommendedTier: v.union(
-            v.literal("starter"),
-            v.literal("professional"),
-            v.literal("enterprise"),
-            v.null(),
-          ),
-          tiers: v.object({
-            starter: v.object({
-              headline: v.string(),
-              tierSummary: v.string(),
-              summary: v.string(),
-              pages: v.array(v.string()),
-              features: v.array(v.string()),
-              deliverableNotes: v.string(),
-            }),
-            professional: v.object({
-              headline: v.string(),
-              tierSummary: v.string(),
-              summary: v.string(),
-              pages: v.array(v.string()),
-              features: v.array(v.string()),
-              deliverableNotes: v.string(),
-            }),
-            enterprise: v.object({
-              headline: v.string(),
-              tierSummary: v.string(),
-              summary: v.string(),
-              pages: v.array(v.string()),
-              features: v.array(v.string()),
-              deliverableNotes: v.string(),
-            }),
-          }),
-        }),
-      ),
-      planTier: v.union(
-        v.literal("starter"),
-        v.literal("professional"),
-        v.literal("enterprise"),
-        v.null(),
-      ),
-    }),
-    v.null(),
-  ),
-  handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) {
-      return null;
-    }
-
-    const authUserId = identity.subject || identity.tokenIdentifier;
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))
-      .unique();
-
-    if (!project) {
-      return null;
-    }
-
-    const defaultBrief: OnboardingBrief = {
-      contactName: "",
-      contactEmail: "",
-      companyName: "",
-      businessDescription: "",
-      industry: "",
-      primaryNeed: "simple_site",
-      primaryAction: "contact",
-      timeline: { option: "asap", date: null },
-      additionalNotes: "",
-      termsAccepted: false,
-    };
-
-    if (!project.onboardingSessionId) {
-      return {
-        onboardingSessionId: project.onboardingSessionId ?? (undefined as never),
-        sessionId: "",
-        resumeToken: "",
-        projectId: project.projectId,
-        brief: defaultBrief,
-        plan: undefined,
-        planTier: project.planTier ?? null,
-      };
-    }
-
-    const sessionDoc = await ctx.db.get(project.onboardingSessionId);
-    if (!sessionDoc) {
-      throw new Error("Linked onboarding session missing");
-    }
-
-    const session = sessionDoc as Doc<"onboarding_sessions">;
-    const brief: OnboardingBrief = session.brief;
-    const plan: PlanProposal | undefined = session.plan ?? undefined;
-
-    return {
-      onboardingSessionId: session._id,
-      sessionId: session.sessionId,
-      resumeToken: session.resumeToken,
-      projectId: project.projectId,
-      brief,
-      plan,
-      planTier: project.planTier ?? null,
-    };
   },
 });
 
