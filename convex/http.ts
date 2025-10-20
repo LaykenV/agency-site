@@ -1,22 +1,45 @@
 import { httpRouter } from "convex/server";
+import { httpAction } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
-import { calWebhook } from "./calWebhook";
+import { api } from "./_generated/api";
 
 const http = httpRouter();
 
-// Register Better Auth route handlers on the Convex deployment
-// Phase 3: HTTP Handlers & Next Proxy
-// This enables auth endpoints like /api/auth/sign-in, /api/auth/sign-out, etc.
 authComponent.registerRoutes(http, createAuth, {
-  // Enable CORS for auth endpoints
-  // This allows requests from your Next.js frontend
   cors: true,
 });
 
 http.route({
   path: "/cal-webhook",
   method: "POST",
-  handler: calWebhook,
+  handler: httpAction(async (ctx, req) => {
+    try {
+      const signature = req.headers.get("x-cal-signature-256");
+      if (!signature) {
+        return new Response("Unauthorized", { status: 401 });
+      }
+      const secret = process.env.CAL_WEBHOOK_SECRET;
+      if (!secret) {
+        return new Response("Missing CAL_WEBHOOK_SECRET", { status: 500 });
+      }
+      const body = await req.text();
+
+      const result = await ctx.runAction(api.calWebhook.processCalWebhook, {
+        signature,
+        secret,
+        body,
+      });
+
+      if (result.success) {
+        return new Response("OK", { status: 200 });
+      } else {
+        return new Response("Error processing webhook", { status: 500 });
+      }
+    } catch (error) {
+      console.error(error);
+      return new Response("Error", { status: 500 });
+    }
+  }),
 });
 
 export default http;
