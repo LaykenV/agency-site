@@ -5,11 +5,15 @@ import { internalAction } from "../_generated/server";
 import type { ActionCtx } from "../_generated/server";
 import { components } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
-import { briefValidator, PLAN_TEXT_MAX_LENGTH } from "../validators";
+import {
+  PLAN_TEXT_MAX_LENGTH,
+  aiGeneratedPlanValidator,
+  prospectDetailsValidator,
+} from "../validators";
 
-type OnboardingBrief = Doc<"onboarding_sessions">["brief"];
-type OnboardingPlan = NonNullable<Doc<"onboarding_sessions">["plan"]>;
-type OnboardingPlanCore = Omit<OnboardingPlan, "generatedAt">;
+type ProspectDetails = Doc<"prospects">["details"];
+type ProspectPlan = NonNullable<Doc<"prospects">["aiGeneratedPlan"]>;
+type ProspectPlanCore = Omit<ProspectPlan, "generatedAt">;
 
 const onboardingAgentGroq = new Agent(components.agent, {
   name: "onboarding-agent-groq",
@@ -22,27 +26,27 @@ const onboardingAgentGroq = new Agent(components.agent, {
   ].join(" "),
 });
 
-function buildPrompt(brief: OnboardingBrief) {
+function buildPrompt(details: ProspectDetails) {
   const intro = [
-    `Contact: ${brief.contactName || "Prospect"}`,
-    `Email: ${brief.contactEmail || "Unavailable"}`,
-    `Company: ${brief.companyName || "Unknown"}`,
+    `Contact: ${details.contactName || "Prospect"}`,
+    `Email: ${details.contactEmail || "Unavailable"}`,
+    `Company: ${details.companyName || "Unknown"}`,
   ];
 
   const optionalLines = [
-    brief.phone ? `Phone: ${brief.phone}` : null,
-    brief.currentWebsite ? `Current site: ${brief.currentWebsite}` : null,
+    details.phone ? `Phone: ${details.phone}` : null,
+    details.currentWebsite ? `Current site: ${details.currentWebsite}` : null,
   ].filter(Boolean);
 
-  const briefLines = `Client brief:\n${[...intro, ...optionalLines,
-    `Business description: ${brief.businessDescription || "Not provided"}`,
-    `Primary goals: ${brief.goals || "Not provided"}`,
-    `Additional notes: ${brief.notes || "None"}`,
+  const summaryLines = `Client brief:\n${[...intro, ...optionalLines,
+    `Business description: ${details.businessDescription || "Not provided"}`,
+    `Primary goals: ${details.goals || "Not provided"}`,
+    `Additional notes: ${details.notes || "None"}`,
   ].join("\n")}`;
 
   return `You are devising a single website proposal for our All-Inclusive Plan ($199 per month, $0 down).
 
-${briefLines}
+${summaryLines}
 
 Create a persuasive yet practical recommendation that covers:
 - headline: one short sentence describing the experience/outcome we will deliver.
@@ -66,7 +70,7 @@ JSON only.`;
 
 export const generateOnboardingPlan = internalAction({
   args: {
-    brief: briefValidator,
+    details: prospectDetailsValidator,
   },
   returns: v.object({
     promptVersion: v.string(),
@@ -76,26 +80,26 @@ export const generateOnboardingPlan = internalAction({
     nextSteps: v.array(v.string()),
   }),
   handler: async (ctx, args) => {
-    return await generatePlanWithAgent(ctx as ActionCtx, args.brief);
+    return await generatePlanWithAgent(ctx as ActionCtx, args.details);
   },
 });
 
 export async function generatePlanWithAgent(
   ctx: ActionCtx,
-  brief: OnboardingBrief,
-): Promise<OnboardingPlanCore> {
-  const prompt = buildPrompt(brief);
+  details: ProspectDetails,
+): Promise<ProspectPlanCore> {
+  const prompt = buildPrompt(details);
 
   const thread = await onboardingAgentGroq.createThread(ctx, {
-    title: `Onboarding plan for ${brief.companyName || "prospect"}`,
-    summary: brief.businessDescription.slice(0, 200),
+    title: `Onboarding plan for ${details.companyName || "prospect"}`,
+    summary: details.businessDescription.slice(0, 200),
   });
 
   const response = await onboardingAgentGroq.generateText(ctx, thread, {
     prompt,
   });
 
-  let parsed: OnboardingPlanCore | null = null;
+  let parsed: ProspectPlanCore | null = null;
   try {
     parsed = JSON.parse(response.text ?? "");
   } catch (error) {
@@ -113,7 +117,7 @@ export async function generatePlanWithAgent(
     headline: sanitizeString(parsed.headline, "Launch a site that works as hard as you do"),
     summary: sanitizeString(
       parsed.summary,
-      "We’ll design, build, host, and maintain a high-performing site so you can stay focused on the business."
+      "We&apos;ll design, build, host, and maintain a high-performing site so you can stay focused on the business."
     ),
     highlights: sanitizeList(parsed.highlights, [
       "Custom-designed Next.js site tailored to your brand",
@@ -123,9 +127,9 @@ export async function generatePlanWithAgent(
     nextSteps: sanitizeList(parsed.nextSteps, [
       "Book a 15-minute call to confirm fit",
       "Share brand assets or inspiration",
-      "We’ll align on launch timeline and kickoff",
+      "We&apos;ll align on launch timeline and kickoff",
     ]),
-  } satisfies OnboardingPlanCore;
+  } satisfies ProspectPlanCore;
 }
 function sanitizeString(value: unknown, fallback: string): string {
   if (typeof value === "string") {
@@ -150,12 +154,12 @@ function sanitizeList(value: unknown, fallback: Array<string>): Array<string> {
   return fallback;
 }
 
-export function fallbackPlan(): OnboardingPlanCore {
+export function fallbackPlan(): ProspectPlanCore {
   return {
     promptVersion: "fallback.v1",
     headline: "Launch a confident website with an on-call web team",
     summary:
-      "We’ll design, build, host, and iterate on your site so you get a polished online presence without juggling freelancers or DIY builders.",
+      "We&apos;ll design, build, host, and iterate on your site so you get a polished online presence without juggling freelancers or DIY builders.",
     highlights: [
       "Custom Next.js site tailored to your services",
       "Unlimited copy and design updates",
@@ -164,7 +168,7 @@ export function fallbackPlan(): OnboardingPlanCore {
     nextSteps: [
       "Schedule a 15-minute fit call",
       "Share any brand assets or inspiration",
-      "We’ll confirm goals and align launch timeline",
+      "We&apos;ll confirm goals and align launch timeline",
     ],
-  } satisfies OnboardingPlanCore;
+  } satisfies ProspectPlanCore;
 }

@@ -3,13 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { OnboardingBrief, OnboardingPlan } from "@/types/onboarding";
+import { ProspectDetails, ProspectPlan } from "@/types/prospect";
 
 type UsePlanGeneratorOptions = {
   sessionId: string | null;
   resumeToken: string | null;
-  brief: OnboardingBrief;
-  remotePlan: OnboardingPlan | undefined;
+  details: ProspectDetails;
+  remotePlan: ProspectPlan | undefined;
   onError?: () => void;
 };
 
@@ -21,7 +21,7 @@ type UsePlanGeneratorResult = {
 export function usePlanGenerator({
   sessionId,
   resumeToken,
-  brief,
+  details,
   remotePlan,
   onError,
 }: UsePlanGeneratorOptions): UsePlanGeneratorResult {
@@ -48,7 +48,7 @@ export function usePlanGenerator({
       await generatePlanMutation({
         sessionId,
         resumeToken,
-        brief,
+        details,
       });
     } catch (error) {
       console.error("Failed to generate plan", error);
@@ -56,7 +56,7 @@ export function usePlanGenerator({
       onError?.();
       throw error;
     }
-  }, [sessionId, resumeToken, brief, generatePlanMutation, onError]);
+  }, [sessionId, resumeToken, details, generatePlanMutation, onError]);
 
   return {
     isGenerating,

@@ -4,9 +4,14 @@ import { api, internal } from "../_generated/api";
 import type { Doc } from "../_generated/dataModel";
 import type { ActionCtx, MutationCtx } from "../_generated/server";
 import { generatePlanWithAgent } from "./agent";
-import { briefValidator, planValidator, PLAN_GENERATION_THROTTLE_MS } from "../validators";
+import {
+  aiGeneratedPlanValidator,
+  PLAN_GENERATION_THROTTLE_MS,
+  prospectDetailsValidator,
+} from "../validators";
 
-type OnboardingPlan = NonNullable<Doc<"onboarding_sessions">["plan"]>;
+type ProspectPlan = NonNullable<Doc<"prospects">["aiGeneratedPlan"]>;
+type ProspectDoc = Doc<"prospects">;
 
 export const initSession = mutation({
   args: {
@@ -19,7 +24,7 @@ export const initSession = mutation({
   handler: async (ctx, args) => {
     if (args.existingSessionId) {
       const existing = await ctx.db
-        .query("onboarding_sessions")
+        .query("prospects")
         .withIndex("by_sessionId", (q) => q.eq("sessionId", args.existingSessionId!))
         .unique();
 
@@ -35,10 +40,10 @@ export const initSession = mutation({
     const resumeToken = crypto.randomUUID();
     const now = Date.now();
 
-    await ctx.db.insert("onboarding_sessions", {
+    await ctx.db.insert("prospects", {
       sessionId,
       resumeToken,
-      brief: {
+      details: {
         contactName: "",
         contactEmail: "",
         companyName: "",
@@ -48,8 +53,7 @@ export const initSession = mutation({
         goals: "",
         notes: "",
       },
-      plan: undefined,
-      contactEmail: "",
+      aiGeneratedPlan: undefined,
       lastPlanRequestedAt: undefined,
       planGenerationInProgress: false,
       createdAt: now,
@@ -70,14 +74,14 @@ export const getSession = query({
     v.object({
       sessionId: v.string(),
       resumeToken: v.string(),
-      brief: briefValidator,
-      plan: v.optional(planValidator),
+      details: prospectDetailsValidator,
+      plan: v.optional(aiGeneratedPlanValidator),
     }),
     v.null(),
   ),
   handler: async (ctx, args) => {
     const session = await ctx.db
-      .query("onboarding_sessions")
+      .query("prospects")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .unique();
 
@@ -88,21 +92,21 @@ export const getSession = query({
     return {
       sessionId: session.sessionId,
       resumeToken: session.resumeToken,
-      brief: session.brief,
-      plan: session.plan ?? undefined,
+      details: session.details,
+      plan: session.aiGeneratedPlan ?? undefined,
     };
   },
 });
 
-export const updateBrief = mutation({
+export const updateDetails = mutation({
   args: {
     sessionId: v.string(),
     resumeToken: v.string(),
-    brief: briefValidator,
+    details: prospectDetailsValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await saveBriefInternal(ctx, args.sessionId, args.resumeToken, args.brief);
+    await saveDetailsInternal(ctx, args.sessionId, args.resumeToken, args.details);
     return null;
   },
 });
@@ -111,11 +115,11 @@ export const generatePlan = mutation({
   args: {
     sessionId: v.string(),
     resumeToken: v.string(),
-    brief: briefValidator,
+    details: prospectDetailsValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const session = await saveBriefInternal(ctx, args.sessionId, args.resumeToken, args.brief);
+    const session = await saveDetailsInternal(ctx, args.sessionId, args.resumeToken, args.details);
 
     const now = Date.now();
 
@@ -148,16 +152,14 @@ export const generatePlan = mutation({
   },
 });
 
-type OnboardingSessionDoc = Doc<"onboarding_sessions">;
-
-async function saveBriefInternal(
+async function saveDetailsInternal(
   ctx: MutationCtx,
   sessionId: string,
   resumeToken: string,
-  brief: OnboardingSessionDoc["brief"],
-): Promise<OnboardingSessionDoc> {
+  details: ProspectDoc["details"],
+): Promise<ProspectDoc> {
   const session = await ctx.db
-    .query("onboarding_sessions")
+    .query("prospects")
     .withIndex("by_sessionId", (q) => q.eq("sessionId", sessionId))
     .unique();
 
@@ -169,18 +171,19 @@ async function saveBriefInternal(
     throw new Error("Unauthorized session update");
   }
 
-  const updatedBrief = { ...brief };
-  const normalizedEmail = updatedBrief.contactEmail.trim().toLowerCase();
+  const updatedDetails = { ...details };
+  const normalizedEmail = updatedDetails.contactEmail.trim().toLowerCase();
+
+  updatedDetails.contactEmail = normalizedEmail;
 
   await ctx.db.patch(session._id, {
-    brief: updatedBrief,
-    contactEmail: normalizedEmail || undefined,
+    details: updatedDetails,
     updatedAt: Date.now(),
   });
 
-  console.log("[onboarding] brief updated", {
+  console.log("[onboarding] details updated", {
     sessionId: session.sessionId,
-    fields: Object.keys(brief),
+    fields: Object.keys(details),
   });
 
   return session;
@@ -207,16 +210,16 @@ export const generatePlanAction = internalAction({
         throw new Error("Session not found while generating plan");
       }
 
-      const aiPlan = await generatePlanWithAgent(ctx as ActionCtx, session.brief);
+      const aiPlan = await generatePlanWithAgent(ctx as ActionCtx, session.details);
 
-      const generatedPlan: OnboardingPlan = {
+      const generatedPlan: ProspectPlan = {
         generatedAt: now,
         promptVersion: aiPlan.promptVersion,
         headline: aiPlan.headline,
         summary: aiPlan.summary,
         highlights: aiPlan.highlights,
         nextSteps: aiPlan.nextSteps,
-      } satisfies OnboardingPlan;
+      } satisfies ProspectPlan;
 
       await ctx.runMutation(internal.onboarding.sessions.savePlan, {
         sessionId: args.sessionId,
@@ -245,12 +248,12 @@ export const generatePlanAction = internalAction({
 export const savePlan = internalMutation({
   args: {
     sessionId: v.string(),
-    plan: planValidator,
+    plan: aiGeneratedPlanValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const session = await ctx.db
-      .query("onboarding_sessions")
+      .query("prospects")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .unique();
 
@@ -259,7 +262,7 @@ export const savePlan = internalMutation({
     }
 
     await ctx.db.patch(session._id, {
-      plan: args.plan,
+      aiGeneratedPlan: args.plan,
       planGenerationInProgress: false,
       updatedAt: Date.now(),
     });
@@ -275,7 +278,7 @@ export const resetPlanGenerationState = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const session = await ctx.db
-      .query("onboarding_sessions")
+      .query("prospects")
       .withIndex("by_sessionId", (q) => q.eq("sessionId", args.sessionId))
       .unique();
 

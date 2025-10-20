@@ -51,7 +51,7 @@ import { getToken as getTokenNextjs } from "@convex-dev/better-auth/nextjs";
  *     { token }
  *   );
  *   
- *   return <div>{profile?.brief.contactName}</div>;
+ *   return <div>{profile?.details.contactName}</div>;
  * }
  * ```
  */

@@ -4,7 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useOnboardingSession } from "@/lib/onboarding/useOnboardingSession";
 import { PlanPreview } from "@/components/onboarding/PlanPreview";
-import type { OnboardingField } from "@/types/onboarding";
+import type { ProspectField } from "@/types/prospect";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,6 @@ function OnboardingLoading() {
     <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
       <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
         <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
-        <p>Loading onboarding…</p>
       </div>
     </div>
   );
@@ -36,7 +35,7 @@ function OnboardingContent() {
 
   const {
     sessionId,
-    brief,
+    details,
     plan,
     dirtyFields,
     write,
@@ -49,18 +48,18 @@ function OnboardingContent() {
     },
   });
 
-  const handleFieldChange = (field: OnboardingField, value: unknown) => {
+  const handleFieldChange = (field: ProspectField, value: unknown) => {
     write(field, value as never);
   };
 
   const canGeneratePlan = useMemo(() => {
     return (
-      Boolean(brief.contactName.trim()) &&
-      Boolean(brief.contactEmail.trim()) &&
-      Boolean(brief.companyName.trim()) &&
-      Boolean(brief.businessDescription.trim())
+      Boolean(details.contactName.trim()) &&
+      Boolean(details.contactEmail.trim()) &&
+      Boolean(details.companyName.trim()) &&
+      Boolean(details.businessDescription.trim())
     );
-  }, [brief]);
+  }, [details]);
 
   const hasGeneratedPlan = Boolean(plan && plan.generatedAt);
   const hasUnsavedChanges = dirtyFields.size > 0;
@@ -113,7 +112,6 @@ function OnboardingContent() {
       <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
           <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
-          <p>Setting up your smart brief…</p>
         </div>
       </div>
     );
@@ -125,7 +123,7 @@ function OnboardingContent() {
         <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10 md:px-10 md:py-16">
           <header className="flex flex-col gap-2">
             <h1 className="text-3xl font-semibold md:text-4xl">
-              Let’s map out your website plan
+              Let&apos;s map out your website plan
             </h1>
             <p className="text-sm text-[var(--secondary)] md:text-base">
               Share a few details so we can craft the plan and help you schedule a call.
@@ -141,7 +139,7 @@ function OnboardingContent() {
                   </Label>
                   <Input
                     id="contactName"
-                    value={brief.contactName}
+                    value={details.contactName}
                     onChange={(event) => handleFieldChange("contactName", event.target.value)}
                     required
                     className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
@@ -154,7 +152,7 @@ function OnboardingContent() {
                   <Input
                     id="contactEmail"
                     type="email"
-                    value={brief.contactEmail}
+                    value={details.contactEmail}
                     onChange={(event) => handleFieldChange("contactEmail", event.target.value)}
                     required
                     className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
@@ -166,7 +164,7 @@ function OnboardingContent() {
                   </Label>
                   <Input
                     id="companyName"
-                    value={brief.companyName}
+                    value={details.companyName}
                     onChange={(event) => handleFieldChange("companyName", event.target.value)}
                     required
                     className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
@@ -178,7 +176,7 @@ function OnboardingContent() {
                   </Label>
                   <Input
                     id="phone"
-                    value={brief.phone}
+                    value={details.phone}
                     onChange={(event) => handleFieldChange("phone", event.target.value)}
                     placeholder="Optional"
                     className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
@@ -192,7 +190,7 @@ function OnboardingContent() {
                 </Label>
                 <Input
                   id="currentWebsite"
-                  value={brief.currentWebsite}
+                  value={details.currentWebsite}
                   onChange={(event) => handleFieldChange("currentWebsite", event.target.value)}
                   placeholder="Paste a link if you have one"
                   className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
@@ -205,7 +203,7 @@ function OnboardingContent() {
                 </Label>
                 <Textarea
                   id="businessDescription"
-                  value={brief.businessDescription}
+                  value={details.businessDescription}
                   onChange={(event) => handleFieldChange("businessDescription", event.target.value)}
                   required
                   rows={4}
@@ -219,7 +217,7 @@ function OnboardingContent() {
                 </Label>
                 <Textarea
                   id="goals"
-                  value={brief.goals}
+                  value={details.goals}
                   onChange={(event) => handleFieldChange("goals", event.target.value)}
                   placeholder="Example: book more consultations, showcase testimonials, streamline updates"
                   rows={4}
@@ -233,7 +231,7 @@ function OnboardingContent() {
                 </Label>
                 <Textarea
                   id="notes"
-                  value={brief.notes}
+                  value={details.notes}
                   onChange={(event) => handleFieldChange("notes", event.target.value)}
                   placeholder="Optional context, inspiration links, requirements, etc."
                   rows={4}
@@ -281,7 +279,7 @@ function OnboardingContent() {
           {plan && (
             <footer className="flex flex-col items-start gap-3 text-sm text-[var(--secondary)]">
               <p>
-                Ready to talk through the details? Book a call with us and we’ll align on timeline and deliverables.
+                Ready to talk through the details? Book a call with us and we&apos;ll align on timeline and deliverables.
               </p>
               <Link
                 href={ONBOARDING_CAL_LINK}

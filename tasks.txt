@@ -2,11 +2,13 @@
 //add schedule call link with new cal link // landing page and onboarding
 //ai gen single tier, make it better
 
-update to prospects
+//update to prospects
+//rename everything
 
-read and test // ensure project is clean and organized
+//read and test // ensure project is clean and organized
 
-admin page to view and create prospects
+//admin page to view and create prospects
+cal webhook
 'send contract' with docusign integration
 create contract // example first
 docusign webhook with project creation

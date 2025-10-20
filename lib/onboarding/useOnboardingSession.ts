@@ -3,7 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { OnboardingBrief, OnboardingField, defaultBrief } from "@/types/onboarding";
+import {
+  type ProspectDetails,
+  type ProspectField,
+  defaultProspectDetails,
+} from "@/types/prospect";
 import { useSessionInit, useSessionData, usePlanGenerator } from "./hooks";
 
 type UseOnboardingSessionOptions = {
@@ -11,41 +15,41 @@ type UseOnboardingSessionOptions = {
 };
 
 export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = {}) {
-  const [localBrief, setLocalBrief] = useState<OnboardingBrief>(defaultBrief);
-  const [dirtyFields, setDirtyFields] = useState<Set<OnboardingField>>(new Set());
+  const [localDetails, setLocalDetails] = useState<ProspectDetails>(defaultProspectDetails);
+  const [dirtyFields, setDirtyFields] = useState<Set<ProspectField>>(new Set());
 
   const { sessionId, resumeToken, isInitializing, error: initError } = useSessionInit();
 
-  const { remoteBrief, remotePlan, isHydrated } = useSessionData({
+  const { remoteDetails, remotePlan, isHydrated } = useSessionData({
     sessionId,
-    localBrief,
+    localDetails,
   });
 
   const hasSyncedInitialDataRef = useRef(false);
 
   useEffect(() => {
     if (!hasSyncedInitialDataRef.current && isHydrated) {
-      setLocalBrief(remoteBrief);
+      setLocalDetails(remoteDetails);
       setDirtyFields(new Set());
       hasSyncedInitialDataRef.current = true;
     }
-  }, [isHydrated, remoteBrief]);
+  }, [isHydrated, remoteDetails]);
 
-  const brief = localBrief;
+  const details = localDetails;
 
-  const updateBriefMutation = useMutation(api.onboarding.sessions.updateBrief);
+  const updateDetailsMutation = useMutation(api.onboarding.sessions.updateDetails);
 
   const { isGenerating, generate } = usePlanGenerator({
     sessionId,
     resumeToken,
-    brief: localBrief,
+    details: localDetails,
     remotePlan,
     onError,
   });
 
   const write = useCallback(
-    <K extends OnboardingField>(field: K, value: OnboardingBrief[K]) => {
-      setLocalBrief((prev) => ({
+    <K extends ProspectField>(field: K, value: ProspectDetails[K]) => {
+      setLocalDetails((prev) => ({
         ...prev,
         [field]: value,
       }));
@@ -58,7 +62,7 @@ export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = 
     [],
   );
 
-  const saveBrief = useCallback(async () => {
+  const saveDetails = useCallback(async () => {
     if (!sessionId || !resumeToken) {
       throw new Error("Session not initialized");
     }
@@ -68,28 +72,28 @@ export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = 
     }
 
     try {
-      await updateBriefMutation({
+      await updateDetailsMutation({
         sessionId,
         resumeToken,
-        brief: localBrief,
+        details: localDetails,
       });
       setDirtyFields(new Set());
     } catch (error) {
-      console.error("Failed to save onboarding brief", error);
+      console.error("Failed to save prospect details", error);
       onError?.();
       throw error;
     }
-  }, [sessionId, resumeToken, dirtyFields.size, updateBriefMutation, localBrief, onError]);
+  }, [sessionId, resumeToken, dirtyFields.size, updateDetailsMutation, localDetails, onError]);
 
   const generatePlan = useCallback(async () => {
     if (!sessionId) {
       throw new Error("Session not initialized");
     }
 
-    await saveBrief();
+    await saveDetails();
 
     await generate();
-  }, [sessionId, saveBrief, generate]);
+  }, [sessionId, saveDetails, generate]);
 
   const session = useMemo(() => {
     if (!sessionId) return null;
@@ -97,15 +101,15 @@ export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = 
     return {
       sessionId,
       resumeToken,
-      brief: localBrief,
+      details: localDetails,
       plan: remotePlan,
     };
-  }, [sessionId, resumeToken, localBrief, remotePlan]);
+  }, [sessionId, resumeToken, localDetails, remotePlan]);
 
   return {
     sessionId,
     session,
-    brief,
+    details,
     plan: remotePlan,
     isHydrated: isHydrated && !isInitializing,
     isGeneratingPlan: isGenerating,

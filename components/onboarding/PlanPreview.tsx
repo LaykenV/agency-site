@@ -19,7 +19,7 @@ export function PlanPreview({ headline, summary, highlights, nextSteps }: PlanPr
       </div>
 
       <div className="flex flex-col gap-4">
-        <h3 className="text-sm font-semibold text-[var(--foreground)]">What’s included</h3>
+        <h3 className="text-sm font-semibold text-[var(--foreground)]">What&apos;s included</h3>
         <ul className="flex flex-col gap-2 text-sm text-[var(--foreground)]">
           {highlights.map((item, index) => (
             <li key={`highlight-${index}`} className="flex items-start gap-2">

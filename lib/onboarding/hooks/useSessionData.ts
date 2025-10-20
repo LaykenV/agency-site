@@ -3,23 +3,27 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { OnboardingBrief, OnboardingPlan, defaultBrief } from "@/types/onboarding";
+import {
+  ProspectDetails,
+  ProspectPlan,
+  defaultProspectDetails,
+} from "@/types/prospect";
 
 type UseSessionDataOptions = {
   sessionId: string | null;
-  localBrief: OnboardingBrief;
+  localDetails: ProspectDetails;
 };
 
 type UseSessionDataResult = {
-  remoteBrief: OnboardingBrief;
-  remotePlan: OnboardingPlan | undefined;
+  remoteDetails: ProspectDetails;
+  remotePlan: ProspectPlan | undefined;
   isHydrated: boolean;
 };
 
-export function useSessionData({ sessionId, localBrief }: UseSessionDataOptions): UseSessionDataResult {
+export function useSessionData({ sessionId, localDetails }: UseSessionDataOptions): UseSessionDataResult {
   const [isHydrated, setIsHydrated] = useState(false);
-  const [remoteBrief, setRemoteBrief] = useState<OnboardingBrief>(defaultBrief);
-  const [remotePlan, setRemotePlan] = useState<OnboardingPlan | undefined>(undefined);
+  const [remoteDetails, setRemoteDetails] = useState<ProspectDetails>(defaultProspectDetails);
+  const [remotePlan, setRemotePlan] = useState<ProspectPlan | undefined>(undefined);
 
   const sessionQuery = useQuery(
     api.onboarding.sessions.getSession,
@@ -29,9 +33,9 @@ export function useSessionData({ sessionId, localBrief }: UseSessionDataOptions)
   useEffect(() => {
     if (sessionQuery === undefined || !sessionQuery) return;
 
-    setRemoteBrief({
-      ...defaultBrief,
-      ...sessionQuery.brief,
+    setRemoteDetails({
+      ...defaultProspectDetails,
+      ...sessionQuery.details,
     });
 
     setRemotePlan(sessionQuery.plan ?? undefined);
@@ -42,7 +46,7 @@ export function useSessionData({ sessionId, localBrief }: UseSessionDataOptions)
   }, [sessionQuery, isHydrated]);
 
   return {
-    remoteBrief: isHydrated ? remoteBrief : localBrief,
+    remoteDetails: isHydrated ? remoteDetails : localDetails,
     remotePlan,
     isHydrated,
   };
