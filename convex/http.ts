@@ -1,5 +1,6 @@
 import { httpRouter } from "convex/server";
 import { authComponent, createAuth } from "./auth";
+import { calWebhook } from "./calWebhook";
 
 const http = httpRouter();
 
@@ -10,6 +11,12 @@ authComponent.registerRoutes(http, createAuth, {
   // Enable CORS for auth endpoints
   // This allows requests from your Next.js frontend
   cors: true,
+});
+
+http.route({
+  path: "/cal-webhook",
+  method: "POST",
+  handler: calWebhook,
 });
 
 export default http;

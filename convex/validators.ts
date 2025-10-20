@@ -54,6 +54,12 @@ export const calBookingValidator = v.object({
   scheduledAt: v.number(),
   meetingUrl: v.optional(v.string()),
   notes: v.optional(v.string()),
+  calEventId: v.optional(v.string()),
+  attendeeMetadata: v.optional(v.object({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  })),
 });
 
 export const prospectValidator = v.object({
