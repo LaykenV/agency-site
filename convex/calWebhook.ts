@@ -108,6 +108,7 @@ export const processCalWebhook = action({
       }
 
       const parsedBody: CalPayload = JSON.parse(args.body);
+      console.log("[cal-webhook] parsed body", parsedBody);
       const { triggerEvent, payload } = parsedBody;
 
       if (!payload) {
