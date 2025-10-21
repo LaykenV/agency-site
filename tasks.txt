@@ -8,6 +8,10 @@
 //update webhook func
 //backfill activity_log
 
+test
+
+scheduled call doesnt have prospect id
+
 send welcome email button in admin
 resend email
 magic link working and redirect to /agreement
@@ -31,6 +35,8 @@ then schedule review call button
 live page
 
 ux improvements
+
+'what are you hoping' to myNotes field
 
 review all code
 all backend complete and tested

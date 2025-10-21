@@ -291,6 +291,29 @@ export const processCalWebhook = action({
         // Calculate endTime if not provided
         const endTime = data.endTime ?? (data.startTime + (data.durationMinutes ?? 15) * 60 * 1000);
 
+        // For confirmation calls, ensure prospect exists first
+        if (callType === "confirmation" && triggerEvent !== "BOOKING_CANCELED" && !prospectId) {
+          prospectId = await ctx.runMutation(internal.cal.upsertProspectFromBooking, {
+            email: data.primaryEmail,
+            name: data.primaryName,
+            phone: data.phone,
+            booking: {
+              scheduledAt: data.startTime,
+              endTime,
+              title: data.title,
+              meetingUrl: data.meetingUrl,
+              notes: data.notes,
+              calEventId: data.calEventId,
+              iCalUID: data.iCalUID,
+              attendeeMetadata: data.attendeeMetadata,
+              status: data.status,
+              eventTypeKey: data.eventTypeKey,
+              durationMinutes: data.durationMinutes,
+              externalBookingId: data.externalBookingId,
+            },
+          });
+        }
+
         // Upsert scheduled_calls entry
         await ctx.runMutation(internal.cal.upsertScheduledCall, {
           projectId,
@@ -313,28 +336,7 @@ export const processCalWebhook = action({
 
         // Update snapshot fields based on call type
         if (triggerEvent !== "BOOKING_CANCELED") {
-          if (callType === "confirmation") {
-            // Update prospects.calProspectBooking
-            await ctx.runMutation(internal.cal.upsertProspectFromBooking, {
-              email: data.primaryEmail,
-              name: data.primaryName,
-              phone: data.phone,
-              booking: {
-                scheduledAt: data.startTime,
-                endTime,
-                title: data.title,
-                meetingUrl: data.meetingUrl,
-                notes: data.notes,
-                calEventId: data.calEventId,
-                iCalUID: data.iCalUID,
-                attendeeMetadata: data.attendeeMetadata,
-                status: data.status,
-                eventTypeKey: data.eventTypeKey,
-                durationMinutes: data.durationMinutes,
-                externalBookingId: data.externalBookingId,
-              },
-            });
-          } else if (callType === "kickoff" && projectId) {
+          if (callType === "kickoff" && projectId) {
             // Update projects.calKickoffBooking
             await ctx.runMutation(internal.cal.updateProjectBooking, {
               projectId,

@@ -42,7 +42,7 @@ export const upsertProspectFromBooking = internalMutation({
       externalBookingId: v.optional(v.string()),
     }),
   },
-  returns: v.null(),
+  returns: v.id("prospects"),
   handler: async (ctx, args) => {
     const normalizedEmail = normalizeEmail(args.email);
     const now = Date.now();
@@ -155,7 +155,7 @@ export const upsertProspectFromBooking = internalMutation({
         calEventId: booking.calEventId,
       });
 
-      return null;
+      return existingProspect._id;
     }
 
     const sessionId = crypto.randomUUID();
@@ -164,7 +164,7 @@ export const upsertProspectFromBooking = internalMutation({
     const normalizedName = normalizeString(args.name ?? undefined) ?? "";
     const normalizedPhone = normalizeString(args.phone ?? undefined) ?? "";
 
-    await ctx.db.insert("prospects", {
+    const prospectId = await ctx.db.insert("prospects", {
       sessionId,
       resumeToken,
       details: {
@@ -188,7 +188,7 @@ export const upsertProspectFromBooking = internalMutation({
       calEventId: booking.calEventId,
     });
 
-    return null;
+    return prospectId;
   },
 });
 
