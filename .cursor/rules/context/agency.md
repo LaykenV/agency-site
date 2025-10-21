@@ -113,7 +113,7 @@ VI. Application Architecture
   - /portal/welcome (optional linking route)
   - /legal/terms (versioned, hashable)
 - Webhooks:
-  - /api/polar-webhook (billing events)
+  - /polar/events (billing events via Polar component)
   - /api/cal-webhook (scheduling events)
 - Emails:
   - Welcome Agreement Link
@@ -122,7 +122,7 @@ VI. Application Architecture
   - Dunning and failed payment notices
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements and subscriptions tables; activity_log for auditability.
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, and scheduled_calls tables; no subscriptions table.
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -136,7 +136,6 @@ import {
   prospectDetailsValidator,
   agreementValidator,
   activityLogValidator,
-  subscriptionValidator,
   scheduledCallValidator,
 } from "./validators";
 
@@ -146,7 +145,6 @@ export default defineSchema({
     resumeToken: v.string(),
     details: prospectDetailsValidator,
     aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
-    contractSignedTimestamp: v.optional(v.number()),
     calProspectBooking: v.optional(calBookingValidator),
     lastPlanRequestedAt: v.optional(v.number()),
     planGenerationInProgress: v.boolean(),
@@ -163,9 +161,6 @@ export default defineSchema({
     projectId: v.string(), // human-readable slug
     prospectId: v.optional(v.id("prospects")),
     projectStatus: v.optional(projectStatusValidator),
-    // Billing (provider-agnostic)
-    billingProvider: v.optional(v.string()), // 'polar'
-    billingCustomerId: v.optional(v.string()),
     buildDetails: v.optional(buildDetailsValidator),
     deployment: v.optional(deploymentValidator),
     calKickoffBooking: v.optional(calBookingValidator),
@@ -194,26 +189,7 @@ export default defineSchema({
     .index("by_authUserId", ["authUserId"])
     .index("by_acceptedAt", ["acceptedAt"]),
 
-  subscriptions: defineTable({
-    projectId: v.id("projects"),
-    provider: v.literal("polar"),
-    providerCustomerId: v.string(),
-    providerSubscriptionId: v.string(),
-    priceId: v.optional(v.string()),
-    status: v.string(), // 'active' | 'trialing' | 'past_due' | 'canceled' | etc.
-    currentPeriodStart: v.optional(v.number()),
-    currentPeriodEnd: v.optional(v.number()),
-    cancelAt: v.optional(v.number()),
-    latestInvoiceId: v.optional(v.string()),
-    checkoutId: v.optional(v.string()),
-    metadata: v.optional(v.object({})),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_projectId", ["projectId"])
-    .index("by_subscriptionId", ["providerSubscriptionId"])
-    .index("by_customerId", ["providerCustomerId"])
-    .index("by_status", ["status"]),
+  // No local subscriptions table; use Polar component for subscription state
 
   activity_log: defineTable(activityLogValidator)
     .index("by_projectId", ["projectId"])
@@ -310,23 +286,6 @@ export const agreementValidator = v.object({
   snapshotUrl: v.optional(v.string()),
 });
 
-export const subscriptionValidator = v.object({
-  projectId: v.id("projects"),
-  provider: v.literal("polar"),
-  providerCustomerId: v.string(),
-  providerSubscriptionId: v.string(),
-  priceId: v.optional(v.string()),
-  status: v.string(),
-  currentPeriodStart: v.optional(v.number()),
-  currentPeriodEnd: v.optional(v.number()),
-  cancelAt: v.optional(v.number()),
-  latestInvoiceId: v.optional(v.string()),
-  checkoutId: v.optional(v.string()),
-  metadata: v.optional(v.object({})),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-});
-
 export const activityLogValidator = v.object({
   projectId: v.optional(v.id("projects")),
   prospectId: v.optional(v.id("prospects")),
@@ -364,7 +323,6 @@ export const prospectValidator = v.object({
   resumeToken: v.string(),
   details: prospectDetailsValidator,
   aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
-  contractSignedTimestamp: v.optional(v.number()),
   calProspectBooking: v.optional(calBookingValidator),
   lastPlanRequestedAt: v.optional(v.number()),
   planGenerationInProgress: v.boolean(),
@@ -394,22 +352,21 @@ Polar checkout
 - Create a Polar Checkout for a subscription product/price.
 - Include metadata: { projectId, prospectId, agreementId, termsVersion }.
 - Success/cancel URLs back to your app.
-- Persist the returned checkoutId; also store providerCustomerId when available.
+- No local persistence required for subscription/customer IDs; rely on Polar; optionally log an activity entry.
 
 Webhook (Polar)
 - Verify signature.
 - Handle:
-  - checkout.completed (or equivalent): store checkoutId, customerId; log payment.intent.
+  - checkout.completed (or equivalent): append `activity_log` entry (payment.intent) including relevant metadata.
   - subscription.created/activated or invoice.paid (first successful payment):
-    - Upsert subscriptions.
     - Update projectStatus → AWAITING_ASSETS.
-    - Send “Welcome Aboard” and redirect user to /portal (they’re already authenticated).
-  - payment_failed, subscription.canceled: update subscriptions; set projectStatus as needed; trigger dunning or support outreach.
-- Idempotency: use providerSubscriptionId as the unique key; guard project creation/updates by projectId.
+    - Append `activity_log` entry (payment.subscription_activated).
+  - payment_failed, subscription.canceled: append `activity_log` entry; do not mutate projectStatus; restrict portal features at read-time based on Polar status.
+- Idempotency: use Polar event IDs or provider IDs when writing `activity_log`; guard updates by `projectId` from metadata.
 
 Portal guardrails
 - Don’t allow self-serve cancellation in months 1–12; route to support. Apply your early termination policy operationally.
-- Show billing status and renewal date read-only.
+- Show billing status and renewal date read-only (derived from Polar’s subscription at read-time).
 - Surface a timeline based on activity_log.
 
 Scheduling
@@ -431,7 +388,7 @@ IX. Admin and Ops
 - Dunning (via Polar + email):
   - Day 0 fail: notify client
   - Day 3 fail: second attempt and email
-  - Day 7 fail: set projectStatus = PAUSED/PAST_DUE; restrict portal features
+  - Day 7 fail: restrict portal features based on Polar status (no projectStatus mutation); log activity entries
 - Archival:
   - Projects stuck in AWAITING_AGREEMENT or AWAITING_PAYMENT > 30–60 days → ARCHIVED
 - Analytics:

@@ -21,6 +21,7 @@ export const aiGeneratedPlanValidator = v.object({
 });
 
 export const projectStatusValidator = v.union(
+  v.literal("AWAITING_AGREEMENT"),
   v.literal("AWAITING_PAYMENT"),
   v.literal("AWAITING_ASSETS"),
   v.literal("IN_PROGRESS"),
@@ -66,6 +67,54 @@ export const calBookingValidator = v.object({
   externalBookingId: v.optional(v.string()),
 });
 
+export const agreementValidator = v.object({
+  projectId: v.id("projects"),
+  prospectId: v.optional(v.id("prospects")),
+  authUserId: v.string(),
+  method: v.literal("clickwrap"),
+  source: v.literal("portal"),
+  termsVersion: v.string(),
+  termsHash: v.string(),
+  acceptedAt: v.number(),
+  ip: v.optional(v.string()),
+  userAgent: v.optional(v.string()),
+  snapshotUrl: v.optional(v.string()),
+});
+
+export const activityLogValidator = v.object({
+  projectId: v.optional(v.id("projects")),
+  prospectId: v.optional(v.id("prospects")),
+  actor: v.union(
+    v.literal("system"),
+    v.literal("user"),
+    v.literal("admin"),
+  ),
+  kind: v.string(),
+  payload: v.optional(v.object({})),
+  createdAt: v.number(),
+});
+
+export const scheduledCallValidator = v.object({
+  projectId: v.optional(v.id("projects")),
+  prospectId: v.optional(v.id("prospects")),
+  type: v.union(
+    v.literal("confirmation"),
+    v.literal("kickoff"),
+    v.literal("review"),
+    v.literal("support"),
+  ),
+  startTime: v.number(),
+  endTime: v.number(),
+  status: v.string(),
+  location: v.optional(v.string()),
+  externalId: v.optional(v.string()),
+  attendeeMetadata: v.optional(v.object({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  })),
+});
+
 export const prospectValidator = v.object({
   _id: v.id("prospects"),
   _creationTime: v.number(),
@@ -73,7 +122,6 @@ export const prospectValidator = v.object({
   resumeToken: v.string(),
   details: prospectDetailsValidator,
   aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
-  contractSignedTimestamp: v.optional(v.number()),
   calProspectBooking: v.optional(calBookingValidator),
   lastPlanRequestedAt: v.optional(v.number()),
   planGenerationInProgress: v.boolean(),

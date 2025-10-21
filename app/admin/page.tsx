@@ -366,14 +366,6 @@ export default function AdminPage() {
                     <p className="font-semibold">Updated</p>
                     <p>{new Date(prospect.updatedAt).toLocaleDateString()}</p>
                   </div>
-                  {prospect.contractSignedTimestamp && (
-                    <div>
-                      <p className="font-semibold">Contract Signed</p>
-                      <p>
-                        {new Date(prospect.contractSignedTimestamp).toLocaleDateString()}
-                      </p>
-                    </div>
-                  )}
                   {prospect.calProspectBooking && (
                     <div>
                       <p className="font-semibold">Booking</p>

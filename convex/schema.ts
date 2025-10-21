@@ -1,12 +1,15 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
+  activityLogValidator,
+  agreementValidator,
   aiGeneratedPlanValidator,
   buildDetailsValidator,
   calBookingValidator,
   deploymentValidator,
   projectStatusValidator,
   prospectDetailsValidator,
+  scheduledCallValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -15,7 +18,6 @@ export default defineSchema({
     resumeToken: v.string(),
     details: prospectDetailsValidator,
     aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
-    contractSignedTimestamp: v.optional(v.number()),
     calProspectBooking: v.optional(calBookingValidator),
     lastPlanRequestedAt: v.optional(v.number()),
     planGenerationInProgress: v.boolean(),
@@ -32,16 +34,29 @@ export default defineSchema({
     projectId: v.string(),
     prospectId: v.optional(v.id("prospects")),
     projectStatus: v.optional(projectStatusValidator),
-    stripeCustomerId: v.optional(v.string()),
     buildDetails: v.optional(buildDetailsValidator),
     deployment: v.optional(deploymentValidator),
     calKickoffBooking: v.optional(calBookingValidator),
     calReviewBooking: v.optional(calBookingValidator),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_authUserId", ["authUserId"])
     .index("by_projectId", ["projectId"]),
 
-  //subscriptions
-  //editRequests
-  //errorReports
+  agreements: defineTable(agreementValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_authUserId", ["authUserId"])
+    .index("by_acceptedAt", ["acceptedAt"]),
+
+  activity_log: defineTable(activityLogValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_createdAt", ["createdAt"]),
+
+  scheduled_calls: defineTable(scheduledCallValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_startTime", ["startTime"]),
 });
