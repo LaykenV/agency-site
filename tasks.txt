@@ -1,25 +1,25 @@
-//update schema and onboarding form
-//add schedule call link with new cal link // landing page and onboarding
-//ai gen single tier, make it better
 
-//update to prospects
-//rename everything
+//onboarding form creates 'prospect'
+//manual prospect creation in /admin
+//cal webhook creates prospect or finds matching email and then adds call data
 
-//read and test // ensure project is clean and organized
-
-//admin page to view and create prospects
-cal webhook
-'send contract' with docusign integration
-create contract // example first
-docusign webhook with project creation
-ba magic link setup
-
-stripe paywall
-
-portal welcome page
-portal page with steps
-assets -> kickoff call -> build -> review -> live
-request edits form
+send welcome email button in admin
+magic link working and redirect to /agreement
+project creation on /agreement
+/portal email input if not authed and if auth no project /agreement
+terms page and agreement page
+payment page
+webhook? 
+after paid, always redirect to /portal/projectId
+stepped form
+domain search
+form
+kickoff call
+build step 
+render projects in /admin
+build finished button
+then schedule review call button
+live page
 
 ux improvements
 
@@ -36,24 +36,3 @@ marketing // use atlas outbound, get them to sign up
 
 
 
-
-onboarding form creates 'prospect'
-manual prospect creation in /admin
-cal webhook creates prospect or finds matching email and then adds call data
-
-automated contract send button
-on successful contract sign, create project and send welcome email with magic link
-on magic link success link project and user and create stripe customer then redirect to portal
-gate portal with payment, on successful payment handle webhook and give access to portal
-asset upload -> kickoff call schedule -> cal webhook for call data -> build -> review call schedule and hook -> go live
-once live, request edits form, report issues form
-
-tables 
-prospects - sessionid resumetoken, plan, details, contractSigned
-projects - copy details - authid - projectId - prospectId - build details - project status - deployment - stripeCustomerId - kickoffCall - reviewCall
-subscriptions
-
-
-send magic link from admin with redirect to /portal
-gate portal with contract, then payment
-on succesful payment, /portal/payment/sucess to sync and create project, then redirect to /portal/projectId

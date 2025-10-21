@@ -1,136 +1,464 @@
-### **The Agency Blueprint: Website-as-a-Service (WaaS) Edition**
+The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-**Document Version:** 2.0
-**Last Updated:** October 19, 2025
+Document Version: 2.1
+Last Updated: October 21, 2025
 
-#### **I. Business Positioning & Vision**
+I. Business Positioning & Vision
+Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
+Positioning: We sell peace of mind: a high-performance website plus unlimited support. The website is the proof of an ongoing relationship.
 
-**Our Vision:** To be the default web partner for small, service-based businesses by offering a seamless, all-inclusive "Website-as-a-Service" (WaaS) that eliminates the friction, complexity, and high upfront costs typically associated with getting a professional online presence.
+II. The Plan Catalog (One-Offer Model)
+- Plan: The All-Inclusive Plan
+- Pricing: $0 Down, $199 per Month (12-month minimum term)
+- Headline: Your Professional Website & Personal Web Team for One Simple Price.
+- Promise: We handle design, development, hosting, maintenance, and unlimited edits so clients can focus on their business.
+- Core Features:
+  - Custom Next.js website up to 7 pages (Home, About, Services, Reviews, Contact, etc.)
+  - Elite performance (aim 95+ PageSpeed)
+  - Google Reviews widget
+  - Standard contact form with email notifications
+  - Managed hosting and SSL on Vercel
+  - Unlimited edits & support via email
+  - Domain included and managed while subscribed
+  - Monthly analytics summary
 
-**Our Positioning:** We are not just a website builder; we are a client's personal web team. Our core product is **peace of mind**, delivered through a high-performance website and unlimited support. We sell a relationship, and the website is the tangible proof of our commitment.
+III. Marketing & Sales Strategy
+Target: Local, service-based businesses with good reviews and weak/old sites (painters, plumbers, landscapers, consultants, etc.).
 
----
+Lead Generation: Pre-qualified cold calling
+- Identify a niche in one city (e.g., “Landscapers in Austin”).
+- Build lead list via Google Maps/Yelp.
+- Qualify:
+  - Call: No site, basic builder site, or slow site; must have recent positive reviews.
+  - Don’t call: Currently with an agency, mature/professional site, bad/hostile reviews.
 
-#### **II. The Plan Catalog (The "One-Offer" Model)**
+Sales Call: Authentic consultant
+- Opener: “Hi, I’m [Name], local web dev. I saw your great reviews and a few website issues I can fix.”
+- Cost: Lead with “$0 down, $199/mo, 12-month minimum.”
+- Educate:
+  - “I hand-code in Next.js for instant load speeds; Google prioritizes fast, mobile-first sites.”
+  - “It’s a service. You get me as your on-call web team. Email changes anytime.”
+- Close: “I’ll email a link to accept the terms and start your subscription. It takes 2 minutes.”
 
-To maximize clarity and sales velocity, we will launch with a single, all-inclusive plan.
+IV. The Golden Path (End-to-End Client Journey)
+1) First Contact
+- Inbound: Prospect submits a short form → creates a prospect session (prospects row).
+- Outbound: You create a prospect in Admin while on a call.
 
-*   **Plan Name:** The All-Inclusive Plan
-*   **Pricing:** **$0 Down, $199 per Month** (Requires a 12-month minimum service agreement)
-*   **Headline:** Your Professional Website & Personal Web Team for One Simple Price.
-*   **Promise:** We handle everything—from design and development to hosting, maintenance, and unlimited edits—so you can focus on running your business.
-*   **Core Features:**
-    *   **Custom-Designed Website:** A professionally designed, mobile-first website of up to 7 core pages (e.g., Home, About, Services, Reviews, Contact).
-    *   **High-Performance Code:** Hand-coded using Next.js for elite page speeds (95+ on Google PageSpeed Insights), which is crucial for SEO and user experience.
-    *   **Google Reviews Widget:** Automatically display your latest positive reviews to build trust.
-    *   **Standard Contact Form:** With email notifications sent directly to you.
-    *   **Managed Hosting & Security:** Hosted on Vercel's global network with an SSL certificate included.
-    *   **Unlimited Edits & Support:** Need to change text, update photos, or add an event? Just email us. We are your on-call web team.
-    *   **Domain Name Included:** We purchase and manage your custom domain name for as long as you're a client.
-    *   **Monthly Analytics Report:** A simple, easy-to-understand report on your website's traffic.
+2) 15-Min Confirmation Call
+- Build rapport, confirm fit, get verbal yes.
+- End with: “I’m sending a link now—accept terms and start the subscription.”
 
----
+3) Welcome Email & Auth
+- From Admin: “Send Welcome Email” triggers a better-auth magic link to /portal/agreement?sid=SESSION_ID.
+- On landing, auto-create a Project stub if one doesn’t exist:
+  - projectStatus = AWAITING_AGREEMENT
+  - Link to prospect (prospectId)
 
-#### **III. Marketing & Sales Strategy**
+4) Agreement (Clickwrap)
+- /portal/agreement shows:
+  - Short order summary: $199/mo, 12-month minimum, early termination policy, recurring billing consent.
+  - Link to /terms (versioned), checkbox "I agree…".
+- On submit:
+  - Create agreements row (clickwrap evidence: termsVersion/hash, acceptedAt, ip, ua, userId, projectId, prospectId).
+  - Log activity (contract.accepted).
+  - Update projectStatus = AWAITING_PAYMENT.
 
-Our strategy is built on proactive, targeted outreach and establishing trust through authenticity.
+5) Payment (Polar)
+- Create a Polar Checkout (subscription) server-side with metadata (projectId, prospectId, agreementId).
+- Redirect to Polar’s hosted checkout.
+- Success/cancel return to your app.
 
-*   **Target Audience:** Local, service-based businesses (e.g., painters, plumbers, electricians, landscapers, consultants) who have an outdated/poor website or no website at all, but have positive customer reviews.
-*   **Lead Generation: Pre-Qualified Cold Calling**
-    1.  **Identify a Market:** Choose a specific industry in a specific geographic area (e.g., "Landscapers in Austin, TX").
-    2.  **Build a Lead List:** Use Google Maps and Yelp to find businesses.
-    3.  **Qualify/Disqualify:**
-        *   **Call:** Businesses with no site, a basic `.business.site` or GoDaddy builder site, or a site with poor page speed scores. They must have recent, positive reviews.
-        *   **Do NOT Call:** Businesses already working with a marketing agency, those with a large, professional website, or those with consistently bad reviews or a poor attitude in their responses.
-*   **The Sales Call: The "Authentic Consultant" Pitch**
-    1.  **Humanizing Opener:** "Hi, is this [Business Name]? My name is [Your Name], I'm a local web developer... I found you on Google, saw your great reviews, and noticed a few things on your website I thought I could help with."
-    2.  **Lead with the Low-Risk Offer:** When asked about cost, immediately present the "$0 Down, $199/month" model. This disarms them and generates curiosity.
-    3.  **Educate, Don't "Sell":** When asked "Why are you better?", explain the tangible value in simple terms:
-        *   "I custom-code every site, which is why they load instantly. Google heavily favors fast mobile sites, and my sites score near-perfectly, helping you rank higher over time than competitors using slow builders."
-        *   "It's more than just a site; it's a service. You get me as your personal point of contact. Need an edit? Just call or email. I handle it so you don't have to."
-    4.  **Let Them Lead:** Frame it as a conversation. Answer their questions honestly. Your goal is to be a helpful expert, not a pushy salesperson.
+6) Webhook (Master Conductor)
+- /api/polar-webhook handles:
+  - Checkout/session completed (store checkoutId, customerId).
+  - Subscription created/active or first invoice paid:
+    - Upsert subscriptions row.
+    - Update projectStatus → AWAITING_ASSETS.
+    - Send “Welcome Aboard” and route user to the portal (they’re already logged in via magic link).
+  - Payment failures/ canceled subscriptions update subscriptions and projectStatus (e.g., PAUSED) and trigger dunning.
 
----
+7) Inside the Client Portal
+- Clear CTAs:
+  - Schedule 45-min Kickoff
+  - Upload brand assets (logo, photos, copy, requirements)
 
-#### **IV. The "Golden Path": End-to-End Client Journey & Application Flow**
+8) Kickoff Call
+- Deep dive into brand, target audience, content, and assets.
 
-This is the precise, automated flow from first contact to live website.
+9) Build & Review
+- Build on staging (Vercel); schedule 30-min review; collect edits.
 
-1.  **First Contact (Two Entry Points):**
-    *   **Inbound:** A prospect fills out the onboarding form on the website, which generates an `onboarding_session`. The final step prompts them to schedule the "15-Min Confirmation Call."
-    *   **Outbound:** You conduct a cold call. If they are interested, you use your Admin Dashboard to create an `onboarding_session` for them while on the phone, unifying the data model.
+10) Go Live
+- Connect domain, launch, and send launch email.
 
-2.  **The 15-Min Confirmation Call:** The goal is to build rapport, review the project scope, confirm they are a good fit, and get a verbal "Yes." End the call with, "Great, I'm sending over the service agreement for you to e-sign right now."
+V. Legal & Policy (MVP)
+- Use in-app clickwrap (checkbox + link to Terms). This is widely enforceable in B2B if logged.
+- Make minimum term and early termination conspicuous in both the agreement step and the Terms header.
+- Email a copy/snapshot of the Terms and order summary after acceptance.
+- When you form the LLC and have traction, have counsel review:
+  - Minimum term and early termination language
+  - Recurring billing authorization
+  - IP/ownership, domain transfer conditions
+  - Liability cap, warranty disclaimer
+  - Governing law/venue
+  - Auto-renewal notice rules applicable to B2B in your state
+- Optional later: add an e-sign vendor (Dropbox Sign/SignWell) if customers ask or to further reduce disputes; your schema accommodates this via agreements table.
 
-3.  **The Service Agreement (E-Signature):** Using your Admin Dashboard, you trigger a templated email that sends a unique DocuSign/Adobe Sign link to the client. This is a mandatory step before any payment.
+VI. Application Architecture
+- Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Polar (subscriptions), Convex (DB + functions), Cal.com (scheduling).
+- Routing highlights:
+  - /portal/agreement (gated first step)
+  - /portal (dashboard)
+  - /portal/welcome (optional linking route)
+  - /legal/terms (versioned, hashable)
+- Webhooks:
+  - /api/polar-webhook (billing events)
+  - /api/cal-webhook (scheduling events)
+- Emails:
+  - Welcome Agreement Link
+  - Payment Success + Terms copy
+  - Kickoff reminder
+  - Dunning and failed payment notices
 
-4.  **Stripe Payment & Project Creation (The Core Automation):**
-    *   Upon contract signature, you (or a future automated trigger) send a "Welcome Aboard" email containing a Stripe Payment Link.
-    *   This link includes the `sessionId` as a `client_reference_id`.
-    *   The client pays the first $199.
-    *   The Stripe Webhook fires. This is the **Master Conductor.**
+VII. Data Model (Convex) — Updated Schema
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements and subscriptions tables; activity_log for auditability.
 
-5.  **The Welcome Email & Auth Flow:**
-    *   The webhook creates the `project` record in the database.
-    *   It immediately calls `better-auth`'s `signInMagicLink` function, embedding the new `projectId` into the `newUserCallbackURL`.
-    *   The client receives **one single email** containing the secure magic link to access their portal.
+Schema (schema.ts)
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+import {
+  aiGeneratedPlanValidator,
+  buildDetailsValidator,
+  calBookingValidator,
+  deploymentValidator,
+  projectStatusValidator,
+  prospectDetailsValidator,
+  agreementValidator,
+  activityLogValidator,
+  subscriptionValidator,
+  scheduledCallValidator,
+} from "./validators";
 
-6.  **Account Creation & Portal Access:**
-    *   Client clicks the magic link.
-    *   `better-auth` creates the `user` record and redirects them to a special `/portal/welcome` route.
-    *   This route invisibly links the `userId` to the `projectId` in the database.
-    *   The client is then instantly redirected to their main `/portal` dashboard, fully logged in.
+export default defineSchema({
+  prospects: defineTable({
+    sessionId: v.string(),
+    resumeToken: v.string(),
+    details: prospectDetailsValidator,
+    aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
+    contractSignedTimestamp: v.optional(v.number()),
+    calProspectBooking: v.optional(calBookingValidator),
+    lastPlanRequestedAt: v.optional(v.number()),
+    planGenerationInProgress: v.boolean(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_sessionId", ["sessionId"])
+    .index("by_resumeToken", ["resumeToken"])
+    .index("by_contactEmail", ["details.contactEmail"])
+    .index("by_updatedAt", ["updatedAt"]),
 
-7.  **Inside the Client Portal:** The first thing the client sees is a clear call-to-action to:
-    *   **Schedule the 45-Min Project Kickoff Call.**
-    *   **Complete the Brand Asset Upload Form.**
+  projects: defineTable({
+    authUserId: v.string(),
+    projectId: v.string(), // human-readable slug
+    prospectId: v.optional(v.id("prospects")),
+    projectStatus: v.optional(projectStatusValidator),
+    // Billing (provider-agnostic)
+    billingProvider: v.optional(v.string()), // 'polar'
+    billingCustomerId: v.optional(v.string()),
+    buildDetails: v.optional(buildDetailsValidator),
+    deployment: v.optional(deploymentValidator),
+    calKickoffBooking: v.optional(calBookingValidator),
+    calReviewBooking: v.optional(calBookingValidator),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
+  })
+    .index("by_authUserId", ["authUserId"])
+    .index("by_projectId", ["projectId"]),
 
-8.  **The 45-Min Kickoff Call:** This is the deep dive. You discuss their brand, target audience, content, and review the assets they've uploaded.
+  agreements: defineTable({
+    projectId: v.id("projects"),
+    prospectId: v.optional(v.id("prospects")),
+    authUserId: v.string(),
+    method: v.literal("clickwrap"),
+    source: v.literal("portal"),
+    termsVersion: v.string(),
+    termsHash: v.string(),
+    acceptedAt: v.number(),
+    ip: v.optional(v.string()),
+    userAgent: v.optional(v.string()),
+    snapshotUrl: v.optional(v.string()), // optional: store rendered HTML/PDF
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_authUserId", ["authUserId"])
+    .index("by_acceptedAt", ["acceptedAt"]),
 
-9.  **Build & Review:** You build the site. You then schedule a "30-Min Review Call" where you present the completed site on a Vercel staging URL.
+  subscriptions: defineTable({
+    projectId: v.id("projects"),
+    provider: v.literal("polar"),
+    providerCustomerId: v.string(),
+    providerSubscriptionId: v.string(),
+    priceId: v.optional(v.string()),
+    status: v.string(), // 'active' | 'trialing' | 'past_due' | 'canceled' | etc.
+    currentPeriodStart: v.optional(v.number()),
+    currentPeriodEnd: v.optional(v.number()),
+    cancelAt: v.optional(v.number()),
+    latestInvoiceId: v.optional(v.string()),
+    checkoutId: v.optional(v.string()),
+    metadata: v.optional(v.object({})),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_subscriptionId", ["providerSubscriptionId"])
+    .index("by_customerId", ["providerCustomerId"])
+    .index("by_status", ["status"]),
 
-10. **Go Live:** After final approval, you connect their custom domain and launch the site.
+  activity_log: defineTable(activityLogValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_createdAt", ["createdAt"]),
 
----
+  scheduled_calls: defineTable(scheduledCallValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
+    .index("by_startTime", ["startTime"]),
+});
 
-#### **V. Application Architecture & Data Model**
+Validators (validators.ts)
+import { v } from "convex/values";
 
-*   **Tech Stack:** Next.js, Vercel, Stripe (Subscriptions & Invoicing), `better-auth` (Magic Links), Resend (Transactional Emails), a SQL/NoSQL Database (e.g., Convex, Supabase).
-*   **Database Tables:**
-    *   **`onboarding_sessions`** – Canonical record for every lead.
-        *   Identifiers: `sessionId` (PK), `resumeToken`, `createdAt`, `updatedAt`.
-        *   Lifecycle: `status` (`pending_call` | `pending_contract` | `pending_payment` | `complete` | `archived`), `leadSource`, `assignedRep`.
-        *   `brief`: trimmed intake (`contactName`, `contactEmail`, `companyName`, `phone`, `businessDescription`, `currentWebsite`, optional `notes`).
-        *   `plan`: stored AI proposal + selected tier snapshot to keep pricing aligned when the project is created.
-        *   `contract`: DocuSign metadata (`envelopeId`, `sentAt`, `status`, `completedAt`, `documentUrl`).
-        *   `payment`: Stripe handoff data (`paymentLinkId`, `clientReferenceId`, `lastEmailSentAt`).
-        *   `scheduling`: latest confirmation-call booking (`calBookingId`, `startTime`, `endTime`, `status`).
-        *   Indexes on `sessionId`, `resumeToken`, `brief.contactEmail`, `status`.
-    *   **`projects`** – Active client accounts linked to authenticated users.
-        *   Identifiers: `projectId` (slug, PK), `sessionId` (FK), `authUserId` (FK to `users`), `createdAt`.
-        *   `projectStatus`: (`awaiting_assets` | `in_progress` | `in_review` | `live` | `paused` | `archived`) with optional `statusReason` and timestamps.
-        *   `briefSnapshot`: immutable copy of the onboarding brief and tier at time of creation.
-        *   `postPay`: structure for kick-off tasks (`brand` { `styleVibe`, `logoUrl`, `palette` }, `copy`, `inspirationLinks`, `functionalRequirements`, upload metadata).
-        *   `deployment`: environment info (`stagingUrl`, `liveUrl`, `vercelProjectId`, `domainStatus`).
-        *   `team`: array of secondary contacts (`name`, `email`, `role`, `invitedAt`, `authUserId?`).
-        *   Indexes on `authUserId`, `sessionId`, `projectStatus`.
-    *   **`subscriptions`** – Stripe contract tracking (1:1 with projects).
-        *   `subscriptionId` (PK), `projectId` (FK), `customerId`, `priceId`, `status`, `currentPeriodStart`, `currentPeriodEnd`, `cancelAt`, `latestInvoiceId`.
-        *   Store unpaid invoices and charge attempts for churn automation.
-    *   **`scheduled_calls`** – Unified calendar view from Cal.com webhooks.
-        *   `callId` (PK), `externalId` (Cal booking ID), `projectId?`, `sessionId?`, `type` (`confirmation` | `kickoff` | `review` | `support`), `startTime`, `endTime`, `status`, `location`, raw attendee metadata.
-        *   Reschedule/cancel events update the same row for auditability.
-    *   **`activity_log`** – Immutable event stream for analytics and support.
-        *   `logId`, `projectId?`, `sessionId?`, `actor` (`system` | `user` | `admin`), `kind` (`contract.sent`, `contract.completed`, `payment.succeeded`, `call.booked`, `portal.asset_submitted`, etc.), `payload` JSON, `createdAt`.
-        *   Drives portal timelines, admin dashboards, and dispute resolution.
-    *   **`support_requests`** *(future enhancement)* – Tracks unlimited edit requests or tickets once clients are live. Fields: `requestId`, `projectId`, `submittedBy`, `category`, `description`, `status`, `resolutionNotes`.
-    *   **`users`** – Managed by `better-auth`; mirror `id`, `email`, `name`, `role`, `createdAt`, plus link to the current `projectId` when applicable.
+export const prospectDetailsValidator = v.object({
+  contactName: v.string(),
+  contactEmail: v.string(),
+  companyName: v.string(),
+  phone: v.string(),
+  currentWebsite: v.string(),
+  businessDescription: v.string(),
+  goals: v.string(),
+  notes: v.string(),
+});
 
-*   **Data Captured (Updated):**
-    *   **Onboarding Form (Pre-Call):** Keep it lean (contact basics, company, high-level description, current site). Align with `onboarding_sessions.brief` shape for autosave.
-    *   **Contract Stage:** DocuSign envelope metadata and call scheduling status ensure the admin can nudge prospects without leaving the dashboard.
-    *   **Payment Stage:** Stripe payment-link status, last emailed timestamp, and webhook receipts live in `onboarding_sessions.payment` until the project is created.
-    *   **Post-Pay Asset Form (In Portal):** Detailed brand assets, copy blocks, and functional requirements hydrate `projects.postPay` and generate `activity_log` entries when clients complete tasks.
-    *   **Lifecycle & Support:** `scheduled_calls`, `subscriptions`, and `support_requests` keep the long-term relationship visible, informing renewal, upsell, and service SLAs.
+export const aiGeneratedPlanValidator = v.object({
+  generatedAt: v.number(),
+  promptVersion: v.string(),
+  headline: v.string(),
+  summary: v.string(),
+  highlights: v.array(v.string()),
+  nextSteps: v.array(v.string()),
+});
 
-*   **Core Automation Logic:** The `/api/stripe-webhook` endpoint is the heart of the application. It orchestrates subscription updates, project creation, and `better-auth` magic links; Cal.com and DocuSign webhooks feed `scheduled_calls` and `activity_log`, giving ops a single source of truth for every client milestone.
+export const projectStatusValidator = v.union(
+  v.literal("AWAITING_AGREEMENT"),
+  v.literal("AWAITING_PAYMENT"),
+  v.literal("AWAITING_ASSETS"),
+  v.literal("IN_PROGRESS"),
+  v.literal("IN_REVIEW"),
+  v.literal("LIVE"),
+  v.literal("ARCHIVED"),
+);
+
+export const buildDetailsValidator = v.object({
+  headline: v.union(v.string(), v.null()),
+  domainPreference: v.union(v.string(), v.null()),
+  inspirationLinks: v.array(v.string()),
+  functionalRequirements: v.union(v.string(), v.null()),
+  brand: v.object({
+    logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
+    photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
+    styleVibe: v.union(v.string(), v.null()),
+    logoUrl: v.optional(v.string()),
+    imageUrls: v.optional(v.array(v.string())),
+  }),
+  brandAssetsUploaded: v.boolean(),
+});
+
+export const deploymentValidator = v.object({
+  liveUrl: v.optional(v.string()),
+  stagingUrl: v.optional(v.string()),
+  vercelProjectId: v.optional(v.string()),
+});
+
+export const calBookingValidator = v.object({
+  scheduledAt: v.number(),
+  meetingUrl: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  calEventId: v.optional(v.string()),
+  attendeeMetadata: v.optional(v.object({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  })),
+  status: v.optional(v.string()),
+  eventTypeKey: v.optional(v.string()),
+  durationMinutes: v.optional(v.number()),
+  externalBookingId: v.optional(v.string()),
+});
+
+export const agreementValidator = v.object({
+  projectId: v.id("projects"),
+  prospectId: v.optional(v.id("prospects")),
+  authUserId: v.string(),
+  method: v.literal("clickwrap"),
+  source: v.literal("portal"),
+  termsVersion: v.string(),
+  termsHash: v.string(),
+  acceptedAt: v.number(),
+  ip: v.optional(v.string()),
+  userAgent: v.optional(v.string()),
+  snapshotUrl: v.optional(v.string()),
+});
+
+export const subscriptionValidator = v.object({
+  projectId: v.id("projects"),
+  provider: v.literal("polar"),
+  providerCustomerId: v.string(),
+  providerSubscriptionId: v.string(),
+  priceId: v.optional(v.string()),
+  status: v.string(),
+  currentPeriodStart: v.optional(v.number()),
+  currentPeriodEnd: v.optional(v.number()),
+  cancelAt: v.optional(v.number()),
+  latestInvoiceId: v.optional(v.string()),
+  checkoutId: v.optional(v.string()),
+  metadata: v.optional(v.object({})),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const activityLogValidator = v.object({
+  projectId: v.optional(v.id("projects")),
+  prospectId: v.optional(v.id("prospects")),
+  actor: v.union(v.literal("system"), v.literal("user"), v.literal("admin")),
+  kind: v.string(), // e.g., 'contract.accepted', 'payment.succeeded', 'call.booked'
+  payload: v.optional(v.object({})),
+  createdAt: v.number(),
+});
+
+export const scheduledCallValidator = v.object({
+  projectId: v.optional(v.id("projects")),
+  prospectId: v.optional(v.id("prospects")),
+  type: v.union(
+    v.literal("confirmation"),
+    v.literal("kickoff"),
+    v.literal("review"),
+    v.literal("support"),
+  ),
+  startTime: v.number(),
+  endTime: v.number(),
+  status: v.string(),
+  location: v.optional(v.string()),
+  externalId: v.optional(v.string()), // Cal.com booking id
+  attendeeMetadata: v.optional(v.object({
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    phone: v.optional(v.string()),
+  })),
+});
+
+export const prospectValidator = v.object({
+  _id: v.id("prospects"),
+  _creationTime: v.number(),
+  sessionId: v.string(),
+  resumeToken: v.string(),
+  details: prospectDetailsValidator,
+  aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
+  contractSignedTimestamp: v.optional(v.number()),
+  calProspectBooking: v.optional(calBookingValidator),
+  lastPlanRequestedAt: v.optional(v.number()),
+  planGenerationInProgress: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const PLAN_GENERATION_THROTTLE_MS = 15_000;
+export const PLAN_TEXT_MAX_LENGTH = 280;
+export const SESSION_EXPIRY_DAYS = 30;
+
+VIII. Flow Details and Implementation Notes
+Create project on agreement landing
+- Yes. On magic-link landing at /portal/agreement:
+  - Find or create a project stub linked to the prospect (projectStatus = AWAITING_AGREEMENT).
+  - Pro: simplifies linking agreement, payment, and user. Con: may create abandoned projects; mitigate by auto-archiving if no payment in 30–60 days.
+
+Agreement capture (clickwrap)
+- UI: Checkbox + link to /legal/terms; show a short conspicuous summary (price, 12-month term, early termination, recurring billing).
+- On submit:
+  - Compute SHA-256 hash of the current Terms HTML.
+  - Insert agreements row and activity_log (contract.accepted).
+  - Update projectStatus → AWAITING_PAYMENT.
+  - Email a copy of terms/order summary.
+
+Polar checkout
+- Create a Polar Checkout for a subscription product/price.
+- Include metadata: { projectId, prospectId, agreementId, termsVersion }.
+- Success/cancel URLs back to your app.
+- Persist the returned checkoutId; also store providerCustomerId when available.
+
+Webhook (Polar)
+- Verify signature.
+- Handle:
+  - checkout.completed (or equivalent): store checkoutId, customerId; log payment.intent.
+  - subscription.created/activated or invoice.paid (first successful payment):
+    - Upsert subscriptions.
+    - Update projectStatus → AWAITING_ASSETS.
+    - Send “Welcome Aboard” and redirect user to /portal (they’re already authenticated).
+  - payment_failed, subscription.canceled: update subscriptions; set projectStatus as needed; trigger dunning or support outreach.
+- Idempotency: use providerSubscriptionId as the unique key; guard project creation/updates by projectId.
+
+Portal guardrails
+- Don’t allow self-serve cancellation in months 1–12; route to support. Apply your early termination policy operationally.
+- Show billing status and renewal date read-only.
+- Surface a timeline based on activity_log.
+
+Scheduling
+- Cal.com webhooks write into scheduled_calls and update projects.calKickoffBooking, calReviewBooking as snapshots for convenience.
+
+Terms of Service essentials (MVP outline)
+- Term: 12-month minimum commitment at $199/mo; renews monthly thereafter until canceled.
+- Early termination: either all remaining months due or a defined early termination fee (choose one and be clear).
+- Scope of “unlimited edits”: non-material, reasonable use; examples included.
+- IP/ownership: You own original content; we license the implementation during the term; domain transfer conditions on account good standing.
+- Recurring billing authorization: charge the saved payment method monthly until canceled per terms.
+- Disclaimers and liability cap (e.g., fees paid in the prior 3 months).
+- Governing law/venue; notices via email.
+- Versioning and “last updated” date.
+
+IX. Admin and Ops
+- Admin actions:
+  - Create prospect, send welcome email, resend agreement link, create Polar checkout (server-triggered after agreement), manual status overrides.
+- Dunning (via Polar + email):
+  - Day 0 fail: notify client
+  - Day 3 fail: second attempt and email
+  - Day 7 fail: set projectStatus = PAUSED/PAST_DUE; restrict portal features
+- Archival:
+  - Projects stuck in AWAITING_AGREEMENT or AWAITING_PAYMENT > 30–60 days → ARCHIVED
+- Analytics:
+  - Build dashboards from activity_log (conversion rates, time-in-stage, payment health)
+
+X. Security and Compliance
+- Store IP and user agent for agreement acceptance. Hash terms content and keep version numbers.
+- Sign webhook payloads and enforce replay protection.
+- Minimize PII; never store raw payment details (Polar handles it).
+- Log all user-facing state changes in activity_log.
+
+XI. Roadmap
+- V1: In-app clickwrap + Polar subscription + webhook-driven automation.
+- V1.1: Add domain purchase/management workflow; portal ticketing for edits.
+- V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
+- V1.3: Self-serve asset library and change history; auto-generated monthly reports.
+
+Example high-level flow (pseudo)
+- GET /portal/agreement
+  - Auth via better-auth magic link
+  - Find or create project { projectStatus: AWAITING_AGREEMENT }
+- POST /portal/agreement
+  - Validate checkbox; compute termsHash; insert agreements row; activity_log
+  - Update project -> AWAITING_PAYMENT
+  - Create Polar Checkout (metadata: projectId, prospectId, agreementId); redirect to checkout.url
+- POST /api/polar-webhook
+  - On subscription activated or first invoice paid:
+    - Upsert subscriptions; update project -> AWAITING_ASSETS
+    - Email welcome; redirect signed-in user to /portal with success UI
+
