@@ -17,8 +17,8 @@ export const sendWelcomeEmail = internalMutation({
 
     await resend.sendEmail(ctx, {
       from: "Me <test@mydomain.com>",
-      to: "delivered@resend.dev",
-      subject: "Hi there",
+      to: "laykenv@gmail.com",
+      subject: "Welcome to the agency",
       html: "This is a test email",
     });
     return null;
