@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { useState } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 
@@ -21,6 +21,7 @@ export default function AdminPage() {
   const prospects = useQuery(api.admin.getProspects);
   const createProspect = useMutation(api.admin.createProspect);
   const updateProspect = useMutation(api.admin.updateProspectDetails);
+  const triggerWelcomeEmail = useAction(api.admin.triggerWelcomeEmail);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProspectId, setEditingProspectId] = useState<string | null>(null);
@@ -244,10 +245,10 @@ export default function AdminPage() {
                   </div>
                   <div className="text-right flex gap-2 justify-end">
                     <button
-                      onClick={() => console.log("docusign webhook")}
+                      onClick={() => triggerWelcomeEmail({ prospectId: prospect._id as Id<"prospects"> })}
                       className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition"
                     >
-                      Send Contract
+                      Send Welcome Email
                     </button>
                     <button
                       onClick={() => handleEdit(prospect)}
