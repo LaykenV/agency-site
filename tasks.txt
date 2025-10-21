@@ -53,3 +53,7 @@ prospects - sessionid resumetoken, plan, details, contractSigned
 projects - copy details - authid - projectId - prospectId - build details - project status - deployment - stripeCustomerId - kickoffCall - reviewCall
 subscriptions
 
+
+send magic link from admin with redirect to /portal
+gate portal with contract, then payment
+on succesful payment, /portal/payment/sucess to sync and create project, then redirect to /portal/projectId
