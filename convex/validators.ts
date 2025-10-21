@@ -60,6 +60,10 @@ export const calBookingValidator = v.object({
     email: v.optional(v.string()),
     phone: v.optional(v.string()),
   })),
+  status: v.optional(v.string()),
+  eventTypeKey: v.optional(v.string()),
+  durationMinutes: v.optional(v.number()),
+  externalBookingId: v.optional(v.string()),
 });
 
 export const prospectValidator = v.object({

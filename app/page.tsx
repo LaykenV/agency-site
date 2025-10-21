@@ -14,6 +14,8 @@ export default function Home() {
           </Link>
           <Link
             href={ONBOARDING_CAL_LINK}
+            target="_blank"
+            rel="noreferrer"
             className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90"
           >
             Schedule a call

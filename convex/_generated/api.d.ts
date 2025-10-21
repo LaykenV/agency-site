@@ -10,6 +10,7 @@
 
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
+import type * as cal from "../cal.js";
 import type * as calWebhook from "../calWebhook.js";
 import type * as http from "../http.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
@@ -33,6 +34,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   auth: typeof auth;
+  cal: typeof cal;
   calWebhook: typeof calWebhook;
   http: typeof http;
   "onboarding/agent": typeof onboarding_agent;

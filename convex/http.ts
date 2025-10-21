@@ -31,10 +31,12 @@ http.route({
       });
 
       if (result.success) {
-        return new Response("OK", { status: 200 });
-      } else {
-        return new Response("Error processing webhook", { status: 500 });
+        return new Response("OK", { status: result.status ?? 200 });
       }
+
+      const status = result.status ?? 500;
+      const message = status === 401 ? "Unauthorized" : "Error processing webhook";
+      return new Response(message, { status });
     } catch (error) {
       console.error(error);
       return new Response("Error", { status: 500 });
