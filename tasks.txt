@@ -8,9 +8,9 @@
 //update webhook func
 //backfill activity_log
 
-test
+//test
 
-scheduled call doesnt have prospect id
+//scheduled call doesnt have prospect id
 
 send welcome email button in admin
 resend email
@@ -37,6 +37,7 @@ live page
 ux improvements
 
 'what are you hoping' to myNotes field
+gate admin
 
 review all code
 all backend complete and tested
