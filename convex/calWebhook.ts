@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import crypto from "crypto";
 import { internal } from "./_generated/api";
+import { Id } from "./_generated/dataModel";
 
 type CalPayload = {
   triggerEvent?: string;
@@ -12,14 +13,18 @@ type CalPayload = {
     bookingId?: string | number;
     status?: string;
     length?: number;
+    title?: string;
     startTime?: string;
+    endTime?: string;
     additionalNotes?: string;
     location?: string | null;
+    iCalUID?: string;
     attendees?: Array<{
       email?: string | null;
       name?: string | null;
     }>;
     responses?: Record<string, { answer?: unknown }>;
+    metadata?: Record<string, unknown>;
   } & Record<string, unknown>;
 };
 
@@ -75,6 +80,131 @@ const parseSignature = (signature: string): Buffer | null => {
   }
 };
 
+const mapEventTypeToCallType = (eventTypeKey?: string): "confirmation" | "kickoff" | "review" | "support" => {
+  if (eventTypeKey === "agency-prospect") return "confirmation";
+  if (eventTypeKey === "agency-kickoff") return "kickoff";
+  if (eventTypeKey === "agency-review") return "review";
+  return "support";
+};
+
+interface ParsedBookingData {
+  primaryEmail?: string;
+  primaryName?: string;
+  phone?: string;
+  meetingUrl?: string;
+  notes?: string;
+  startTime?: number;
+  endTime?: number;
+  title?: string;
+  calEventId?: string;
+  iCalUID?: string;
+  externalBookingId?: string;
+  status?: string;
+  eventTypeKey?: string;
+  durationMinutes?: number;
+  location?: string;
+  attendeeMetadata?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
+  projectIdFromMetadata?: string;
+}
+
+const parseCalBookingPayload = (payload: CalPayload["payload"]): ParsedBookingData => {
+  if (!payload) {
+    return {};
+  }
+
+  const responses = payload.responses as CalPayload["payload"] extends { responses?: infer R }
+    ? R
+    : Record<string, { answer?: unknown }> | undefined;
+
+  const primaryEmail = normalizeEmail(
+    extractResponseString(responses, "email") ?? payload.attendees?.[0]?.email ?? undefined,
+  );
+
+  const primaryName = normalizeString(
+    extractResponseString(responses, "name") ?? payload.attendees?.[0]?.name ?? undefined,
+  );
+
+  const responsePhone = extractResponseString(responses, "attendeePhoneNumber");
+  let phone = normalizeString(responsePhone);
+  let meetingUrl: string | undefined;
+
+  const location = normalizeString(payload.location ?? undefined);
+  if (location) {
+    if (looksLikeUrl(location)) {
+      meetingUrl = location;
+    } else if (!phone && looksLikePhone(location)) {
+      phone = location;
+    }
+  }
+
+  const notes = normalizeString(payload.additionalNotes) ?? extractResponseString(responses, "notes");
+  const scheduledAtRaw = normalizeString(payload.startTime);
+  const endTimeRaw = normalizeString(payload.endTime);
+
+  let startTime: number | undefined;
+  let endTime: number | undefined;
+
+  if (scheduledAtRaw) {
+    const parsedStartTime = Date.parse(scheduledAtRaw);
+    if (!Number.isNaN(parsedStartTime)) {
+      startTime = parsedStartTime;
+    }
+  }
+
+  if (endTimeRaw) {
+    const parsedEndTime = Date.parse(endTimeRaw);
+    if (!Number.isNaN(parsedEndTime)) {
+      endTime = parsedEndTime;
+    }
+  } else if (startTime && typeof payload.length === "number") {
+    // Calculate endTime from startTime + duration
+    endTime = startTime + payload.length * 60 * 1000;
+  }
+
+  const uid = normalizeString(payload.uid);
+  const iCalUID = normalizeString(payload.iCalUID);
+  const title = normalizeString(payload.title);
+  const status = normalizeString(payload.status);
+  const eventTypeKey = normalizeString(payload.type);
+
+  const durationMinutes = typeof payload.length === "number" ? payload.length : undefined;
+
+  const externalBookingId =
+    payload.bookingId !== undefined && payload.bookingId !== null ? String(payload.bookingId) : undefined;
+
+  const attendeeMetadata = {
+    name: primaryName,
+    email: primaryEmail,
+    phone,
+  };
+
+  const projectIdFromMetadata = normalizeString(payload.metadata?.projectId);
+
+  return {
+    primaryEmail,
+    primaryName,
+    phone,
+    meetingUrl,
+    notes,
+    startTime,
+    endTime,
+    title,
+    calEventId: uid,
+    iCalUID,
+    externalBookingId,
+    status,
+    eventTypeKey,
+    durationMinutes,
+    location,
+    attendeeMetadata,
+    projectIdFromMetadata,
+  };
+};
+
 export const processCalWebhook = action({
   args: {
     signature: v.string(),
@@ -116,84 +246,170 @@ export const processCalWebhook = action({
         return { success: true };
       }
 
-      if (triggerEvent === "BOOKING_CREATED" && payload.type === "agency-prospect") {
-        const responses = payload.responses as CalPayload["payload"] extends { responses?: infer R }
-          ? R
-          : Record<string, { answer?: unknown }> | undefined;
+      // Handle all three booking event types
+      if (
+        triggerEvent === "BOOKING_CREATED" ||
+        triggerEvent === "BOOKING_RESCHEDULED" ||
+        triggerEvent === "BOOKING_CANCELED"
+      ) {
+        const data = parseCalBookingPayload(payload);
 
-        const primaryEmail = normalizeEmail(
-          extractResponseString(responses, "email") ?? payload.attendees?.[0]?.email ?? undefined,
-        );
-
-        if (!primaryEmail) {
-          throw new Error("Booking payload missing attendee email");
+        if (!data.primaryEmail) {
+          console.warn("[cal-webhook] missing attendee email", { triggerEvent });
+          return { success: true };
         }
 
-        const primaryName = normalizeString(
-          extractResponseString(responses, "name") ?? payload.attendees?.[0]?.name ?? undefined,
-        );
-        const responsePhone = extractResponseString(responses, "attendeePhoneNumber");
+        if (!data.startTime) {
+          console.warn("[cal-webhook] missing or invalid startTime", { triggerEvent });
+          return { success: true };
+        }
 
-        let meetingUrl: string | undefined;
-        let phone = normalizeString(responsePhone);
+        if (!data.calEventId) {
+          console.warn("[cal-webhook] missing uid", { triggerEvent });
+          return { success: true };
+        }
 
-        const location = normalizeString(payload.location ?? undefined);
-        if (location) {
-          if (looksLikeUrl(location)) {
-            meetingUrl = location;
-          } else if (!phone && looksLikePhone(location)) {
-            phone = location;
+        // Determine projectId and prospectId
+        let projectId: Id<"projects"> | undefined;
+        let prospectId: Id<"prospects"> | undefined;
+
+        if (data.projectIdFromMetadata) {
+          // Validate that it's a valid project ID
+          projectId = data.projectIdFromMetadata as Id<"projects">;
+        } else {
+          // Look up prospect by email
+          const prospect = await ctx.runQuery(internal.cal.findProspectByEmail, {
+            email: data.primaryEmail,
+          });
+          if (prospect) {
+            prospectId = prospect._id;
           }
         }
 
-        const notes = normalizeString(payload.additionalNotes) ?? extractResponseString(responses, "notes");
-        const scheduledAtRaw = normalizeString(payload.startTime);
+        const callType = mapEventTypeToCallType(data.eventTypeKey);
 
-        if (!scheduledAtRaw) {
-          throw new Error("Booking payload missing startTime");
+        // Calculate endTime if not provided
+        const endTime = data.endTime ?? (data.startTime + (data.durationMinutes ?? 15) * 60 * 1000);
+
+        // Upsert scheduled_calls entry
+        await ctx.runMutation(internal.cal.upsertScheduledCall, {
+          projectId,
+          prospectId,
+          type: callType,
+          title: data.title,
+          startTime: data.startTime,
+          endTime,
+          status: data.status ?? "UNKNOWN",
+          meetingUrl: data.meetingUrl,
+          location: data.location,
+          notes: data.notes,
+          calEventId: data.calEventId,
+          iCalUID: data.iCalUID,
+          eventTypeKey: data.eventTypeKey,
+          durationMinutes: data.durationMinutes,
+          externalBookingId: data.externalBookingId,
+          attendeeMetadata: data.attendeeMetadata,
+        });
+
+        // Update snapshot fields based on call type
+        if (triggerEvent !== "BOOKING_CANCELED") {
+          if (callType === "confirmation") {
+            // Update prospects.calProspectBooking
+            await ctx.runMutation(internal.cal.upsertProspectFromBooking, {
+              email: data.primaryEmail,
+              name: data.primaryName,
+              phone: data.phone,
+              booking: {
+                scheduledAt: data.startTime,
+                endTime,
+                title: data.title,
+                meetingUrl: data.meetingUrl,
+                notes: data.notes,
+                calEventId: data.calEventId,
+                iCalUID: data.iCalUID,
+                attendeeMetadata: data.attendeeMetadata,
+                status: data.status,
+                eventTypeKey: data.eventTypeKey,
+                durationMinutes: data.durationMinutes,
+                externalBookingId: data.externalBookingId,
+              },
+            });
+          } else if (callType === "kickoff" && projectId) {
+            // Update projects.calKickoffBooking
+            await ctx.runMutation(internal.cal.updateProjectBooking, {
+              projectId,
+              bookingType: "kickoff",
+              booking: {
+                scheduledAt: data.startTime,
+                endTime,
+                title: data.title,
+                meetingUrl: data.meetingUrl,
+                notes: data.notes,
+                calEventId: data.calEventId,
+                iCalUID: data.iCalUID,
+                attendeeMetadata: data.attendeeMetadata,
+                status: data.status,
+                eventTypeKey: data.eventTypeKey,
+                durationMinutes: data.durationMinutes,
+                externalBookingId: data.externalBookingId,
+              },
+            });
+          } else if (callType === "review" && projectId) {
+            // Update projects.calReviewBooking
+            await ctx.runMutation(internal.cal.updateProjectBooking, {
+              projectId,
+              bookingType: "review",
+              booking: {
+                scheduledAt: data.startTime,
+                endTime,
+                title: data.title,
+                meetingUrl: data.meetingUrl,
+                notes: data.notes,
+                calEventId: data.calEventId,
+                iCalUID: data.iCalUID,
+                attendeeMetadata: data.attendeeMetadata,
+                status: data.status,
+                eventTypeKey: data.eventTypeKey,
+                durationMinutes: data.durationMinutes,
+                externalBookingId: data.externalBookingId,
+              },
+            });
+          }
         }
 
-        const scheduledAt = Date.parse(scheduledAtRaw);
-        if (Number.isNaN(scheduledAt)) {
-          throw new Error("Invalid booking startTime");
-        }
+        // Log activity
+        const activityKind =
+          triggerEvent === "BOOKING_CREATED"
+            ? "call.booked"
+            : triggerEvent === "BOOKING_RESCHEDULED"
+              ? "call.rescheduled"
+              : "call.canceled";
 
-        const uid = normalizeString(payload.uid);
-        if (!uid) {
-          throw new Error("Booking payload missing uid");
-        }
-
-        const attendeeMetadata = {
-          name: primaryName,
-          email: primaryEmail,
-          phone,
-        };
-
-        await ctx.runMutation(internal.cal.upsertProspectFromBooking, {
-          email: primaryEmail,
-          name: primaryName,
-          phone,
-          booking: {
-            scheduledAt,
-            meetingUrl,
-            notes,
-            calEventId: uid,
-            attendeeMetadata,
-            status: normalizeString(payload.status),
-            eventTypeKey: normalizeString(payload.type),
-            durationMinutes: typeof payload.length === "number" ? payload.length : undefined,
-            externalBookingId:
-              payload.bookingId !== undefined && payload.bookingId !== null
-                ? String(payload.bookingId)
-                : undefined,
+        await ctx.runMutation(internal.activityLog.logActivity, {
+          projectId,
+          prospectId,
+          actor: "system",
+          kind: activityKind,
+          payload: {
+            triggerEvent,
+            calEventId: data.calEventId,
+            externalBookingId: data.externalBookingId,
+            eventType: data.eventTypeKey,
+            email: data.primaryEmail,
+            startTime: data.startTime,
+            endTime,
+            title: data.title,
+            status: data.status,
+            fullPayload: payload,
           },
         });
 
-        console.log("[cal-webhook] processed prospect booking", {
+        console.log("[cal-webhook] processed booking event", {
           triggerEvent,
-          eventType: payload.type,
-          uid,
-          email: primaryEmail,
+          eventType: data.eventTypeKey,
+          calEventId: data.calEventId,
+          email: data.primaryEmail,
+          callType,
         });
       } else {
         console.log("[cal-webhook] ignoring event", {

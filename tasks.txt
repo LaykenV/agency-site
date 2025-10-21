@@ -3,19 +3,23 @@
 //manual prospect creation in /admin
 //cal webhook creates prospect or finds matching email and then adds call data
 
-need subscriptions in schema?
-update schema
-update webhook func
-backfill activity_log
+//need subscriptions in schema?
+//update schema
+//update webhook func
+//backfill activity_log
+
 send welcome email button in admin
 resend email
 magic link working and redirect to /agreement
+
 project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
 terms page and agreement page
+
 payment page
 webhook? need to check docs for polar
-after paid, always redirect to /portal/projectId
+always redirect to /portal/projectId
+
 stepped form
 domain search
 form

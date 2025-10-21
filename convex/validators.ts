@@ -53,9 +53,12 @@ export const deploymentValidator = v.object({
 
 export const calBookingValidator = v.object({
   scheduledAt: v.number(),
+  endTime: v.optional(v.number()),
+  title: v.optional(v.string()),
   meetingUrl: v.optional(v.string()),
   notes: v.optional(v.string()),
   calEventId: v.optional(v.string()),
+  iCalUID: v.optional(v.string()),
   attendeeMetadata: v.optional(v.object({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
@@ -84,13 +87,9 @@ export const agreementValidator = v.object({
 export const activityLogValidator = v.object({
   projectId: v.optional(v.id("projects")),
   prospectId: v.optional(v.id("prospects")),
-  actor: v.union(
-    v.literal("system"),
-    v.literal("user"),
-    v.literal("admin"),
-  ),
+  actor: v.union(v.literal("system"), v.literal("user"), v.literal("admin")),
   kind: v.string(),
-  payload: v.optional(v.object({})),
+  payload: v.optional(v.any()),
   createdAt: v.number(),
 });
 
@@ -103,11 +102,18 @@ export const scheduledCallValidator = v.object({
     v.literal("review"),
     v.literal("support"),
   ),
+  title: v.optional(v.string()),
   startTime: v.number(),
   endTime: v.number(),
   status: v.string(),
+  meetingUrl: v.optional(v.string()),
   location: v.optional(v.string()),
-  externalId: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  calEventId: v.optional(v.string()),
+  iCalUID: v.optional(v.string()),
+  eventTypeKey: v.optional(v.string()),
+  durationMinutes: v.optional(v.number()),
+  externalBookingId: v.optional(v.string()),
   attendeeMetadata: v.optional(v.object({
     name: v.optional(v.string()),
     email: v.optional(v.string()),

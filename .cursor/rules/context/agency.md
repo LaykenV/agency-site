@@ -199,7 +199,9 @@ export default defineSchema({
   scheduled_calls: defineTable(scheduledCallValidator)
     .index("by_projectId", ["projectId"])
     .index("by_prospectId", ["prospectId"])
-    .index("by_startTime", ["startTime"]),
+    .index("by_startTime", ["startTime"]) 
+    .index("by_calEventId", ["calEventId"]) 
+    .index("by_externalBookingId", ["externalBookingId"]),
 });
 
 Validators (validators.ts)
@@ -258,9 +260,12 @@ export const deploymentValidator = v.object({
 
 export const calBookingValidator = v.object({
   scheduledAt: v.number(),
+  endTime: v.optional(v.number()),
+  title: v.optional(v.string()),
   meetingUrl: v.optional(v.string()),
   notes: v.optional(v.string()),
   calEventId: v.optional(v.string()),
+  iCalUID: v.optional(v.string()),
   attendeeMetadata: v.optional(v.object({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
@@ -304,11 +309,18 @@ export const scheduledCallValidator = v.object({
     v.literal("review"),
     v.literal("support"),
   ),
+  title: v.optional(v.string()),
   startTime: v.number(),
   endTime: v.number(),
   status: v.string(),
+  meetingUrl: v.optional(v.string()),
   location: v.optional(v.string()),
-  externalId: v.optional(v.string()), // Cal.com booking id
+  notes: v.optional(v.string()),
+  calEventId: v.optional(v.string()),
+  iCalUID: v.optional(v.string()),
+  eventTypeKey: v.optional(v.string()),
+  durationMinutes: v.optional(v.number()),
+  externalBookingId: v.optional(v.string()),
   attendeeMetadata: v.optional(v.object({
     name: v.optional(v.string()),
     email: v.optional(v.string()),
@@ -370,7 +382,7 @@ Portal guardrails
 - Surface a timeline based on activity_log.
 
 Scheduling
-- Cal.com webhooks write into scheduled_calls and update projects.calKickoffBooking, calReviewBooking as snapshots for convenience.
+- Cal.com webhooks write into `scheduled_calls`, update `prospects.calProspectBooking` for confirmation calls, and update `projects.calKickoffBooking` / `projects.calReviewBooking` for project calls. Each event also appends `activity_log` with `call.booked` / `call.rescheduled` / `call.canceled`.
 
 Terms of Service essentials (MVP outline)
 - Term: 12-month minimum commitment at $199/mo; renews monthly thereafter until canceled.

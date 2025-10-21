@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as activityLog from "../activityLog.js";
 import type * as admin from "../admin.js";
 import type * as auth from "../auth.js";
 import type * as cal from "../cal.js";
@@ -32,6 +33,7 @@ import type {
  * ```
  */
 declare const fullApi: ApiFromModules<{
+  activityLog: typeof activityLog;
   admin: typeof admin;
   auth: typeof auth;
   cal: typeof cal;

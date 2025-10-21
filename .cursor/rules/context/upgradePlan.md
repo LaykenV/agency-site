@@ -47,12 +47,14 @@
 
 - **scheduled_calls** (new)
   - Purpose: store bookings (from Cal.com) and render schedule in the portal.
-  - Fields: `projectId?: Id<'projects'>`, `prospectId?: Id<'prospects'>`, `type: "confirmation" | "kickoff" | "review" | "support"`, `startTime: number`, `endTime: number`, `status: string`, `location?: string`, `externalId?: string`, `attendeeMetadata?: { name?: string; email?: string; phone?: string }`.
-  - Indexes: `by_projectId`, `by_prospectId`, `by_startTime`.
+  - Fields: `projectId?: Id<'projects'>`, `prospectId?: Id<'prospects'>`, `type: "confirmation" | "kickoff" | "review" | "support"`, `title?: string`, `startTime: number`, `endTime: number`, `status: string`, `meetingUrl?: string`, `location?: string`, `notes?: string`, `calEventId?: string`, `iCalUID?: string`, `eventTypeKey?: string`, `durationMinutes?: number`, `externalBookingId?: string`, `attendeeMetadata?: { name?: string; email?: string; phone?: string }`.
+  - Indexes: `by_projectId`, `by_prospectId`, `by_startTime`, `by_calEventId`, `by_externalBookingId`.
 
 ### Validators
 - **projectStatusValidator**: add `"AWAITING_AGREEMENT"` and keep existing: `"AWAITING_PAYMENT"`, `"AWAITING_ASSETS"`, `"IN_PROGRESS"`, `"IN_REVIEW"`, `"LIVE"`, `"ARCHIVED"`.
-- Add: `agreementValidator`, `activityLogValidator`, `scheduledCallValidator` matching the table field shapes above.
+- Add: `agreementValidator`, `activityLogValidator`.
+- `scheduledCallValidator` fields: `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
+- `calBookingValidator` snapshot fields: `scheduledAt`, `endTime?`, `title?`, `meetingUrl?`, `notes?`, `calEventId?`, `iCalUID?`, `status?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
 
 ---
 
@@ -124,9 +126,42 @@
 - In portal queries, call `polar.getCurrentSubscription` and derive gating flags; do not persist billing state.
 - Use `activity_log` to render a unified timeline for admins and clients.
 
-### Scheduling (existing Cal.com webhook)
+### Scheduling (Cal.com)
 - Keep current `convex/http.ts` Cal route.
-- Ensure webhook action writes to `scheduled_calls` and updates snapshot fields on `projects` (`calKickoffBooking`, `calReviewBooking`).
+- Webhook behavior for `BOOKING_CREATED` (and later `BOOKING_RESCHEDULED`/`BOOKING_CANCELED`):
+  1) Parse payload; extract:
+     - `primaryEmail` (from `responses.email` or `attendees[0].email`)
+     - `primaryName` (from `responses.name` or `attendees[0].name`)
+     - `startTime` / `endTime` (ms since epoch)
+     - `notes` (from `additionalNotes` or `responses.notes`)
+     - `location` and derived `meetingUrl` or `phone`
+     - `uid` as `calEventId`, `iCalUID`
+     - `bookingId` as `externalBookingId`
+     - `status`, `type` as `eventTypeKey`, `length` as `durationMinutes`, `title`
+  2) Determine association:
+     - If `payload.metadata.projectId` present, attach to that `projectId`.
+     - Else attempt to locate a `prospects` row by `details.contactEmail` (index), attach `prospectId`.
+  3) Map `eventTypeKey` to `scheduled_calls.type`:
+     - `agency-prospect` → `confirmation`
+     - `agency-kickoff` → `kickoff`
+     - `agency-review` → `review`
+     - otherwise → `support`
+  4) Idempotency: upsert `scheduled_calls` by `calEventId` if present; otherwise by `externalBookingId`.
+  5) Insert or update `scheduled_calls` with:
+     - `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
+  6) Update snapshots:
+     - If `type = confirmation` → upsert `prospects.calProspectBooking` (shape = `calBookingValidator`).
+     - If `type = kickoff` → upsert `projects.calKickoffBooking`.
+     - If `type = review` → upsert `projects.calReviewBooking`.
+  7) Append `activity_log`:
+     - `kind: "call.booked" | "call.rescheduled" | "call.canceled"`, include `projectId?`, `prospectId?`, and a compact payload with identifiers and times.
+
+- `scheduled_calls` table fields and indexes:
+  - Fields: `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
+  - Indexes: `by_projectId`, `by_prospectId`, `by_startTime`, plus `by_calEventId`, `by_externalBookingId` (to support idempotent upserts).
+
+- `calBookingValidator` snapshot fields (used in `prospects` and `projects`):
+  - `scheduledAt: number`, `endTime?: number`, `title?: string`, `meetingUrl?: string`, `notes?: string`, `calEventId?: string`, `iCalUID?: string`, `status?: string`, `eventTypeKey?: string`, `durationMinutes?: number`, `externalBookingId?: string`, `attendeeMetadata?: { name?: string; email?: string; phone?: string }`.
 
 ---
 

@@ -1,14 +1,14 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import {
-  activityLogValidator,
-  agreementValidator,
   aiGeneratedPlanValidator,
   buildDetailsValidator,
   calBookingValidator,
   deploymentValidator,
   projectStatusValidator,
   prospectDetailsValidator,
+  agreementValidator,
+  activityLogValidator,
   scheduledCallValidator,
 } from "./validators";
 
@@ -58,5 +58,11 @@ export default defineSchema({
   scheduled_calls: defineTable(scheduledCallValidator)
     .index("by_projectId", ["projectId"])
     .index("by_prospectId", ["prospectId"])
-    .index("by_startTime", ["startTime"]),
+    .index("by_startTime", ["startTime"])
+    .index("by_calEventId", ["calEventId"])
+    .index("by_externalBookingId", ["externalBookingId"]),
+
+  //subscriptions - managed by Polar component
+  //editRequests - future
+  //errorReports - future
 });
