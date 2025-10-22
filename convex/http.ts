@@ -2,12 +2,15 @@ import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
 import { api } from "./_generated/api";
+import { polar } from "./polarSettings";
 
 const http = httpRouter();
 
 authComponent.registerRoutes(http, createAuth, {
   cors: true,
 });
+
+polar.registerRoutes(http);
 
 http.route({
   path: "/cal-webhook",
