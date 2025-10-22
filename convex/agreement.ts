@@ -4,7 +4,11 @@ import { polar } from "./polarSettings";
 export const syncProducts = action({
     args: {},
     handler: async (ctx) => {
-      await polar.syncProducts(ctx);
+    console.log('syncProducts')
+    const products = await polar.listProducts(ctx);
+    console.log('products', products);
+    await polar.syncProducts(ctx);
+    console.log('synced products');
     },
   });
   

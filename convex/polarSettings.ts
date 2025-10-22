@@ -5,6 +5,7 @@ import { DataModel } from "./_generated/dataModel";
 
 const products = {
   premiumMonthly: "4a129b6a-180b-4482-ae81-3463f64b0959",
+  test: "df60c46b-d34d-4a53-84db-36bd9e11a404"
 } as const;
 
 export const polar: Polar<DataModel, typeof products> = new Polar<DataModel, typeof products>(components.polar, {
