@@ -18,9 +18,9 @@
 //name? acadianawebdesign
 //domain for email sending
 
-magic link working and redirect to /agreement
-activity log
-track emails in table?
+//magic link working and redirect to /agreement
+//activity log
+//track emails in table?
 
 project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
