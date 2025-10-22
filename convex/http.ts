@@ -10,7 +10,23 @@ authComponent.registerRoutes(http, createAuth, {
   cors: true,
 });
 
-polar.registerRoutes(http);
+polar.registerRoutes(http, {
+  path: "/polar/events",
+  onSubscriptionCreated: async (ctx, event) => {
+    console.log("[Polar] onSubscriptionCreated called, event:", JSON.stringify(event));
+    // activity log
+    // update project status to awaiting assets
+  },
+  onSubscriptionUpdated: async (ctx, event) => {
+    console.log("[Polar] onSubscriptionUpdated called, event:", JSON.stringify(event));
+  },
+  onProductCreated: async (ctx, event) => {
+    console.log("[Polar] onProductCreated called, event:", JSON.stringify(event));
+  },
+  onProductUpdated: async (ctx, event) => {
+    console.log("[Polar] onProductUpdated called, event:", JSON.stringify(event));
+  },
+});
 
 http.route({
   path: "/cal-webhook",
