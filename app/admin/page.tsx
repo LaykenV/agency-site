@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation } from "convex/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
 
@@ -28,6 +28,25 @@ export default function AdminPage() {
   const [editingProspectId, setEditingProspectId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProspectDetails>(emptyDetails);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+
+  // Cooldown timer effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCooldowns((prev) => {
+        const updated = { ...prev };
+        let hasChanges = false;
+        for (const key in updated) {
+          if (updated[key] > 0) {
+            updated[key] -= 1;
+            hasChanges = true;
+          }
+        }
+        return hasChanges ? updated : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleCreateNew = () => {
     setFormData(emptyDetails);
@@ -80,13 +99,44 @@ export default function AdminPage() {
   };
 
   const handleSendMagicLink = async (prospect: Doc<"prospects">) => {
+    // Check cooldown
+    const cooldownKey = prospect._id;
+    if (cooldowns[cooldownKey] && cooldowns[cooldownKey] > 0) {
+      return; // Button should be disabled, but just in case
+    }
+
     try {
+      // Set cooldown immediately to prevent double-clicks
+      setCooldowns((prev) => ({ ...prev, [cooldownKey]: 60 }));
+
       // Call the authClient magic link method
-      await authClient.signIn.magicLink({
-        email: prospect.details.contactEmail,
-        callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
-        newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
-      });
+      await authClient.signIn.magicLink(
+        {
+          email: prospect.details.contactEmail,
+          name: prospect.details.contactName,
+          callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+          newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+          errorCallbackURL: `/portal/autherror?sid=${prospect.sessionId}&error=magic_link`,
+        },
+        {
+          onError: async (ctx) => {
+            if (ctx.response.status === 429) {
+              const retryAfter = ctx.response.headers.get("X-Retry-After");
+              const waitTime = retryAfter ? `${retryAfter} seconds` : "a moment";
+              alert(`Too many requests. Please try again in ${waitTime}.`);
+              // Update cooldown if server provided a retry-after value
+              if (retryAfter) {
+                setCooldowns((prev) => ({
+                  ...prev,
+                  [cooldownKey]: parseInt(retryAfter, 10),
+                }));
+              }
+            } else {
+              alert("Failed to send magic link. Please try again.");
+            }
+          },
+        }
+      );
 
       // Log the activity
       await logMagicLinkSent({
@@ -97,6 +147,8 @@ export default function AdminPage() {
       alert("Magic link sent successfully!");
     } catch (error) {
       console.error("Failed to send magic link:", error);
+      // Reset cooldown on error (unless it was a 429, handled above)
+      setCooldowns((prev) => ({ ...prev, [cooldownKey]: 0 }));
       alert("Failed to send magic link. Please try again.");
     }
   };
@@ -269,9 +321,12 @@ export default function AdminPage() {
                   <div className="text-right flex gap-2 justify-end">
                     <button
                       onClick={() => handleSendMagicLink(prospect)}
-                      className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition"
+                      disabled={cooldowns[prospect._id] > 0}
+                      className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Send Magic Link
+                      {cooldowns[prospect._id] > 0
+                        ? `Wait ${cooldowns[prospect._id]}s`
+                        : "Send Magic Link"}
                     </button>
                     <button
                       onClick={() => handleEdit(prospect)}

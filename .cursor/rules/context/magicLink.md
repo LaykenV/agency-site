@@ -1,161 +1,166 @@
-## Magic Link Plan (Better Auth + Convex)
+## Magic Link (Better Auth + Convex): Current Setup and Update Plan
 
 ### Objectives
 - **Magic link email works**: Send Better Auth magic link via Resend with correct content and expiry.
 - **Auth and redirect work**: Clicking the link authenticates the user and redirects to `/portal/agreement?sid=<sessionId>`.
 
-### Current State (as of repo snapshot)
-- Next auth proxy present at `app/api/auth/[...all]/route.ts` using `nextJsHandler()`.
-- Convex app registers components: Better Auth and Resend in `convex/convex.config.ts`.
-- `convex/auth.ts` creates Better Auth with `magicLink` plugin but `sendMagicLink` is a stub (console log only).
-- `convex/emails.ts` defines a `Resend` component instance and an internal mutation `sendWelcomeEmail` that currently sends a simple welcome email (not a magic link).
-- `convex/admin.ts` has `triggerWelcomeEmail` action calling `internal.emails.sendWelcomeEmail`.
-- `lib/auth-client.ts` initializes Better Auth client with `convexClient()` plugin only (no magic link client yet).
+## 1) Current Implementation
 
-### Decision: Use magic link as the welcome email
-- The welcome email that Admin triggers should be the Better Auth magic link email.
-- We will send it through the magic link plugin’s `sendMagicLink` callback to ensure URL correctness and built-in verification flow.
-- Redirect target for both existing users and new users: `/portal/agreement?sid=<sessionId>`.
+- **Next.js auth proxy**: All Better Auth routes are proxied via `nextJsHandler()` at `/api/auth/*`.
 
-### Redirect Strategy: `/portal/agreement?sid=<sessionId>`
-- On landing, the user is authenticated via Better Auth (session cookie set by verification endpoint).
-- The agreement page should idempotently find-or-create a `projects` row linked to:
-  - `authUserId` (Better Auth user identifier)
-  - `prospectId` (from the `prospects` row identified by `sessionId`)
-  - `projectStatus = "AWAITING_AGREEMENT"`
-- Keep this logic idempotent to handle multiple visits/clicks.
-- Treat `sid` as non-secret; always enforce auth for portal routes.
+```1:6:app/api/auth/[...all]/route.ts
+import { nextJsHandler } from "@convex-dev/better-auth/nextjs";
 
-### Implementation Plan
+// Phase 3: HTTP Handlers & Next Proxy
+// This route handler proxies all auth requests from /api/auth/* to Convex
+// Handles GET and POST requests for sign-in, sign-out, callbacks, etc.
+export const { GET, POST } = nextJsHandler();
+```
 
-1) Client: enable magic link plugin and Admin trigger
-- Add the magic link client plugin to `lib/auth-client.ts`:
-  ```ts
-  import { createAuthClient } from "better-auth/react";
-  import { convexClient } from "@convex-dev/better-auth/client/plugins";
-  import { magicLinkClient } from "better-auth/client/plugins";
+- **Better Auth server config (`convex/auth.ts`)**:
+  - `baseURL` reads from `SITE_URL`.
+  - `magicLink` plugin configured with `expiresIn: 900`, `disableSignUp: false`, `storeToken: "hashed"`.
+  - `sendMagicLink` implemented via Resend using the provided `url` (no token construction).
 
-  export const authClient = createAuthClient({
-    plugins: [convexClient(), magicLinkClient()],
-  });
-  ```
-- Update the Admin UI (e.g., `app/admin/page.tsx`) to call:
-  ```ts
-  await authClient.signIn.magicLink({
-    email: prospect.details.contactEmail,
-    name: prospect.details.contactName,
-    callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
-    newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
-    errorCallbackURL: `/portal/welcome?sid=${prospect.sessionId}&error=magic_link`,
-  });
-  ```
-- Rationale: Calling from the client ensures Better Auth endpoints receive/issue session cookies correctly. No custom server proxy needed.
+```10:13:convex/auth.ts
+const siteUrl = process.env.SITE_URL!;
 
-2) Server: implement `sendMagicLink` with Resend in `convex/auth.ts`
-- Implement Better Auth magic link plugin options:
-  - `sendMagicLink`: send via Resend using the provided `url`.
-  - `expiresIn`: 600–900 seconds.
-  - `disableSignUp`: false (allow first-time signups via the link).
-  - `storeToken`: "hashed" (security best practice).
-- Example implementation sketch:
-  ```ts
-  import { resend } from "./emails"; // reuse Resend component
+export const authComponent = createClient<DataModel>(components.betterAuth);
+```
 
-  export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optionsOnly: false }) => {
-    return betterAuth({
-      baseURL: process.env.SITE_URL!,
-      database: authComponent.adapter(ctx),
-      logger: { disabled: optionsOnly },
-      emailAndPassword: { enabled: false },
-      plugins: [
-        convex(),
-        magicLink({
-          expiresIn: 900,
-          disableSignUp: false,
-          storeToken: "hashed",
-          sendMagicLink: async ({ email, url }, request) => {
-            await resend.sendEmail(ctx, {
-              from: "Acadiana Web Design <welcome@notifications.acadianawebdesign.com>",
-              to: email,
-              subject: "Your secure sign-in link",
-              html: `
-                <h2>Welcome to Acadiana Web Design</h2>
-                <p>Click the button below to sign in. This link expires in 15 minutes.</p>
-                <p><a href="${url}" style="display:inline-block;padding:10px 16px;background:#111;color:#fff;border-radius:6px;text-decoration:none;">Sign in</a></p>
-                <p>If you didn’t request this, you can safely ignore this email.</p>
-              `,
-            });
-          },
-        }),
-      ],
+```47:55:convex/auth.ts
+  return betterAuth({
+    logger: {
+      disabled: optionsOnly,
+    },
+    baseURL: siteUrl,
+    database: authComponent.adapter(ctx),
+    emailAndPassword: {
+      enabled: false,
+    },
+```
+
+```66:79:convex/auth.ts
+      convex(),
+      magicLink({
+        expiresIn: 900, // 15 minutes
+        disableSignUp: false,
+        storeToken: "hashed",
+        sendMagicLink: async ({ email, url }) => {
+          console.log("[auth] sending magic link", { email, url });
+          await sendMagicLinkEmail(requireActionCtx(ctx), {
+            to: email,
+            url,
+          });
+        },
+      }),
+```
+
+- **Auth client is enabled with magic link**:
+
+```1:6:lib/auth-client.ts
+import { createAuthClient } from "better-auth/react";
+import { convexClient } from "@convex-dev/better-auth/client/plugins";
+import { magicLinkClient } from "better-auth/client/plugins";
+```
+
+```20:27:lib/auth-client.ts
+export const authClient = createAuthClient({
+  plugins: [
+    // Convex integration plugin (required)
+    convexClient(),
+    // Magic link plugin for passwordless authentication
+    magicLinkClient(),
+  ],
+});
+```
+
+- **Admin UI sends magic link** (no `errorCallbackURL`, no name, no client-side throttle yet):
+
+```82:90:app/admin/page.tsx
+const handleSendMagicLink = async (prospect: Doc<"prospects">) => {
+  try {
+    // Call the authClient magic link method
+    await authClient.signIn.magicLink({
+      email: prospect.details.contactEmail,
+      callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+      newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
     });
-  };
-  ```
-- Note: Use the `url` provided by Better Auth; don’t construct your own tokenized URL.
-- Ensure `SITE_URL` is the canonical Next domain (https) that hosts `/api/auth/*`.
+```
 
-3) Admin server action (`convex/admin.ts`)
-- Keep `triggerWelcomeEmail` if useful for logging/validation, but stop sending the email from Convex mutations.
-- Preferred flow: Admin UI calls `authClient.signIn.magicLink(...)` directly (see step 1).
-- If you keep `triggerWelcomeEmail`, change it to return necessary prospect fields so the client can call `signIn.magicLink` with the right parameters.
+- **Agreement page**:
+  - Reads `sid` from query.
+  - Waits for session; if present, idempotently links project to `authUserId` and `prospectId`.
+  - No dedicated error UI for expired/invalid links yet.
 
-4) Email module (`convex/emails.ts`)
-- Keep `Resend` component instance export for general-purpose emails.
-- Deprecate the current `sendWelcomeEmail` as the magic link email will be sent via `sendMagicLink`.
-- Optionally, keep utility methods/templates for non-auth emails (kickoff reminder, dunning, etc.).
+```13:37:app/portal/agreement/AgreementContent.tsx
+const session = authClient.useSession();
+const findOrCreateProject = useMutation(api.projects.findOrCreateProjectForProspect);
 
-5) Agreement page behavior (`/portal/agreement`)
-- On load (SSR/route handler):
-  - Read session with Better Auth (you have `lib/auth-server.ts:getToken` and `authComponent.getAuthUser`).
-  - Validate `sid` param; load the `prospects` row by `sessionId`.
-  - Idempotently find-or-create `projects` row:
-    - Link `authUserId` (Better Auth user identity)
-    - Link `prospectId`
-    - Set `projectStatus = AWAITING_AGREEMENT` if creating
-  - Proceed to show the clickwrap agreement UI.
+// Get prospect by sessionId
+const prospect = useQuery(
+  api.prospects.getProspectBySessionId,
+  sid ? { sessionId: sid } : "skip"
+);
 
-### Environment & Config Checklist
-- `SITE_URL` env var set to canonical prod domain (no trailing slash) used by Better Auth.
-- Resend domain verified; sending from `welcome@notifications.acadianawebdesign.com` is allowed.
-- Convex components already registered (`betterAuth`, `resend`).
-- Client includes `magicLinkClient()` plugin.
+useEffect(() => {
+  if (session.data && prospect && !isInitialized) {
+    // Idempotent project creation
+    findOrCreateProject({
+      authUserId: session.data.user.id,
+      prospectId: prospect._id,
+    })
+      .then(() => {
+        console.log("[agreement] project initialized");
+        setIsInitialized(true);
+      })
+      .catch((error) => {
+        console.error("[agreement] failed to initialize project:", error);
+      });
+  }
+}, [session.data, prospect, isInitialized, findOrCreateProject]);
+```
 
-### Error Handling & Edge Cases
-- Expired link: Better Auth will redirect to `errorCallbackURL` (or `callbackURL?error=...`). Show a banner with “Link expired. Resend link.” CTA.
-- Multiple sends: Acceptable. Optionally throttle resends in Admin UI.
-- Existing user vs new user: Use same callback URLs; Better Auth handles signup unless `disableSignUp` is true.
-- Security: Treat `sid` as a locator only; gate all portal routes by auth.
+```50:56:app/portal/agreement/AgreementContent.tsx
+if (!session.data) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto mb-4"></div>
+        <p className="text-gray-600">Authenticating...</p>
+```
 
-### Testing Plan
-1. Local send test:
-   - Trigger magic link in Admin.
-   - Verify email arrives; link opens `/api/auth/magic-link/verify?token=...` and redirects to `/portal/agreement?sid=...`.
-2. Session verification:
-   - On `/portal/agreement`, confirm session is readable server-side and client-side.
-3. Idempotent project creation:
-   - First visit creates and links project; subsequent visits do nothing.
-4. Error path:
-   - Expired token → redirected to error URL; test UI affordance.
+- **Email**: Uses Convex `Resend` component for magic link email delivery.
 
-### Best Practices Referenced
-- Better Auth Magic Link docs: server plugin (`sendMagicLink`), client plugin (`magicLinkClient()`), `signIn.magicLink` parameters, and `magic-link/verify` route.
-- Convex + Better Auth component: use the component adapter (`authComponent.adapter(ctx)`), keep auth logic centralized in `convex/auth.ts`.
-- Email sending: use the Convex Resend component from within `sendMagicLink` to standardize sending and logging.
+### Redirects (current behavior)
+- We pass `callbackURL` and `newUserCallbackURL` → both point to `/portal/agreement?sid=<sid>`.
+- We do not pass `errorCallbackURL` → Better Auth will redirect errors to `callbackURL` with `?error=...`.
 
-### Minimal Code Changes Summary (when implementing)
-- `lib/auth-client.ts`: add `magicLinkClient()` plugin.
-- `convex/auth.ts`: implement `sendMagicLink` with Resend; set plugin options (`expiresIn`, `storeToken: "hashed"`, `disableSignUp: false`). Ensure `baseURL = SITE_URL`.
-- `app/admin/page.tsx`: call `authClient.signIn.magicLink(...)` with `sid` in all callback URLs.
-- `convex/emails.ts`: deprecate `sendWelcomeEmail` for auth, keep for non-auth emails.
-- `/portal/agreement`: ensure idempotent project linking to user + prospect.
+### Known gaps
+- No `errorCallbackURL` in Admin send call; no `name` passed for first-time signups.
+- No client-side throttling or 429 handling in Admin UI.
+- No Better Auth `rateLimit` config on server; no `onAPIError` logging hook.
+- Agreement page lacks an error banner and a "Resend link" CTA when verification fails.
 
-### Open Questions
-- Do we also include `resumeToken` in the callback for extra correlation? e.g., `/portal/agreement?sid=...&rt=...` (optional; security still enforced via session).
-- Should we log an `activity_log` entry when a magic link is sent and/or verified? (Recommended for Ops audit.)
+## 2) Update Plan: Error handling, throttling, and resilience
 
----
+High-level:
+- Always provide all three redirect URLs.
+- Keep `disableSignUp: false` for admin-initiated magic link onboarding.
+- Throttle sends on client and rate-limit on server; surface retry timing.
+- Add user-facing error UI and a safe Resend flow.
 
-Appendix: Example Admin trigger (client)
+### Admin UI (`app/admin/page.tsx`)
+- Call `signIn.magicLink` with:
+  - `email`, `name` (for new signups),
+  - `callbackURL` and `newUserCallbackURL`: `/portal/agreement?sid=<sid>`,
+  - `errorCallbackURL`: `/portal/welcome?sid=<sid>&error=magic_link`.
+- Throttle the "Send Magic Link" button for 30–60s after a send; show a countdown.
+- Handle 429 using `fetchOptions.onError`; read `X-Retry-After` and message the user.
+- Keep logging via `logMagicLinkSent`.
+
+Proposed call (illustrative):
+
 ```ts
 await authClient.signIn.magicLink({
   email: prospect.details.contactEmail,
@@ -163,17 +168,121 @@ await authClient.signIn.magicLink({
   callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
   newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
   errorCallbackURL: `/portal/welcome?sid=${prospect.sessionId}&error=magic_link`,
+  fetchOptions: {
+    onError: async ({ response }) => {
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("X-Retry-After");
+        // Surface: "Too many requests. Try again in ${retryAfter}s."
+      }
+    },
+  },
 });
 ```
 
-Appendix: Magic Link plugin options (server)
+Optional client cooldown pattern:
+
 ```ts
-magicLink({
-  expiresIn: 900,
-  disableSignUp: false,
-  storeToken: "hashed",
-  sendMagicLink: async ({ email, url }, request) => { /* send via Resend */ },
-})
+const [cooldownSec, setCooldownSec] = useState(0);
+// After successful send, setCooldownSec(60); start an interval to decrement.
+// Disable button when cooldownSec > 0 or while request is in-flight.
 ```
+
+### Server (`convex/auth.ts`)
+- Keep magic link options as-is: `expiresIn: 900`, `storeToken: "hashed"`, `disableSignUp: false`.
+- Add Better Auth rate limiting:
+  - Global: window 60s, max ~100.
+  - Custom rules:
+    - `/sign-in/magic-link`: window 60s, max 3 (send attempts).
+    - `/magic-link/verify`: window 60s, max 10 (verification retries).
+- Add centralized logging with `onAPIError.onError`.
+
+Illustrative configuration (not applied yet):
+
+```ts
+export const createAuth = (ctx: GenericCtx<DataModel>, { optionsOnly } = { optionsOnly: false }) =>
+  betterAuth({
+    baseURL: process.env.SITE_URL!,
+    database: authComponent.adapter(ctx),
+    onAPIError: {
+      throw: false,
+      onError: (error, context) => {
+        console.error("[auth] error", { path: context?.path, error });
+      },
+    },
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        "/sign-in/magic-link": { window: 60, max: 3 },
+        "/magic-link/verify": { window: 60, max: 10 },
+      },
+      storage: "memory",
+    },
+    plugins: [
+      convex(),
+      magicLink({
+        expiresIn: 900,
+        disableSignUp: false,
+        storeToken: "hashed",
+        sendMagicLink: async ({ email, url }) => {
+          await sendMagicLinkEmail(requireActionCtx(ctx), { to: email, url });
+        },
+      }),
+    ],
+  });
+```
+
+### Agreement page (`/portal/agreement`)
+- On load:
+  - If session present and `sid` valid → run idempotent linking (current behavior).
+  - If session missing and redirected via `errorCallbackURL` or `?error=...` → show error banner and a "Resend link" CTA.
+- Resend CTA should call `signIn.magicLink` with the same 3 URLs and respect cooldown.
+
+Illustrative logic:
+
+```ts
+const error = searchParams.get("error");
+if (!session.data && (error || likelyExpired)) {
+  // Render: banner + Resend button that calls signIn.magicLink(...)
+}
+```
+
+### Auth client (global)
+- Optional: add global `fetchOptions.onError` to standardize 429 handling across the app.
+
+```ts
+export const authClient = createAuthClient({
+  fetchOptions: {
+    onError: async ({ response }) => {
+      if (response.status === 429) {
+        const retryAfter = response.headers.get("X-Retry-After");
+        // Handle globally (toast/banner)
+      }
+    },
+  },
+  plugins: [convexClient(), magicLinkClient()],
+});
+```
+
+### Logging and audit
+- Keep `logMagicLinkSent` on success.
+- Optionally log verification success (e.g., when agreement page initializes a project with a valid session + `sid`).
+
+### Security & config
+- Ensure `SITE_URL` is the canonical HTTPS domain hosting `/api/auth/*`.
+- Continue using `storeToken: "hashed"` and never construct tokenized URLs manually—use the provided `url`.
+- Treat `sid` as a locator; always enforce auth for portal routes.
+
+### Testing checklist
+- Success path: email arrives → verify → redirect to `/portal/agreement?sid=...` → project linking runs once.
+- Expired/invalid link: redirect to error destination; error banner shows; Resend works and throttles.
+- Rate limited: simulate 429; UI shows retry timing and disables send.
+- Multiple sends: cooldown prevents spamming; activity logs updated.
+
+### Best practices referenced
+- Better Auth magic link plugin: server `sendMagicLink`, client `magicLinkClient()`, `signIn.magicLink` params, `/magic-link/verify` route.
+- Rate limiting: global + custom rules for sensitive endpoints; client `onError` with `X-Retry-After`.
+- Keep auth logic centralized in `convex/auth.ts`; use Convex Resend component for sending and logging.
 
 

@@ -62,6 +62,22 @@ export const createAuth = (
         prompt: "select_account",
       },*/
     },
+    onAPIError: {
+      throw: false,
+      onError: (error) => {
+        console.error("[auth] error", { error });
+      },
+    },
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        "/sign-in/magic-link": { window: 60, max: 3 },
+        "/magic-link/verify": { window: 60, max: 10 },
+      },
+      storage: "memory",
+    },
     plugins: [
       convex(),
       magicLink({

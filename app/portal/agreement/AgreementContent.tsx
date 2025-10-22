@@ -8,6 +8,7 @@ import { authClient } from "@/lib/auth-client";
 export default function AgreementContent() {
   const searchParams = useSearchParams();
   const sid = searchParams.get("sid");
+  const error = searchParams.get("error");
   const [isInitialized, setIsInitialized] = useState(false);
 
   const session = authClient.useSession();
@@ -18,6 +19,13 @@ export default function AgreementContent() {
     api.prospects.getProspectBySessionId,
     sid ? { sessionId: sid } : "skip"
   );
+
+  // Redirect to error page if there's an error and no valid session
+  useEffect(() => {
+    if (error && !session.data) {
+      window.location.href = `/portal/autherror?sid=${sid}&error=${error}`;
+    }
+  }, [error, session.data, sid]);
 
   useEffect(() => {
     if (session.data && prospect && !isInitialized) {

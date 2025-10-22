@@ -22,6 +22,8 @@
 //activity log
 //track emails in table?
 
+magic link not working second time
+
 project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
 terms page and agreement page
