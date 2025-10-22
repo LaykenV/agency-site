@@ -12,13 +12,20 @@
 
 //scheduled call doesnt have prospect id
 
-send welcome email button in admin
-resend email
+//send welcome email button in admin
+//resend email
+
+//name? acadianawebdesign
+//domain for email sending
+
 magic link working and redirect to /agreement
+activity log
+track emails in table?
 
 project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
 terms page and agreement page
+agreement email
 
 payment page
 webhook? need to check docs for polar
@@ -48,7 +55,13 @@ about me
 our products
 pricing section
 
+google business profile
+
 marketing // use atlas outbound, get them to sign up
+
+get first client
+
+LLC
 
 
 

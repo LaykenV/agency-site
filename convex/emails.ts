@@ -3,7 +3,9 @@ import { Resend } from "@convex-dev/resend";
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
 
-export const resend: Resend = new Resend(components.resend, {});
+export const resend: Resend = new Resend(components.resend, {
+    testMode: false
+});
 
 export const sendWelcomeEmail = internalMutation({
   args: {
@@ -16,10 +18,10 @@ export const sendWelcomeEmail = internalMutation({
     });
 
     await resend.sendEmail(ctx, {
-      from: "Me <test@mydomain.com>",
+      from: "Acadiana Web Design <welcome@notifications.acadianawebdesign.com>",
       to: "laykenv@gmail.com",
       subject: "Welcome to the agency",
-      html: "This is a test email",
+      html: `<p>Welcome to the agency</p>`,
     });
     return null;
   },
