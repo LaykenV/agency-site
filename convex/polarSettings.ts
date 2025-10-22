@@ -11,8 +11,13 @@ export const polar: Polar<DataModel, typeof products> = new Polar<DataModel, typ
 
   getUserInfo: async (ctx): Promise<{ userId: string; email: string }> => {
     const user: { _id: string; email: string } | null = await ctx.runQuery(api.auth.getCurrentUser);
+    console.log("[Polar] getUserInfo called, user:", JSON.stringify(user));
     if (!user) {
-      throw new Error("User not found");
+      throw new Error("User not found - user is not authenticated");
+    }
+    if (!user.email) {
+      console.error("[Polar] User object missing email:", user);
+      throw new Error("User email not found");
     }
     return {
       userId: user._id,
