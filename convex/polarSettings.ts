@@ -4,8 +4,8 @@ import { api, components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
 
 const products = {
-  //subscription: "088b8669-3a9d-48d4-ad44-927a75aa70dd", //production
-  subscription: "27d54ba6-6f22-4d9b-89ef-23bd636ae410" //sandbox
+  subscription: "088b8669-3a9d-48d4-ad44-927a75aa70dd", //production
+  //subscription: "27d54ba6-6f22-4d9b-89ef-23bd636ae410" //sandbox
 } as const;
 
 // Debug: Log environment variable availability
@@ -40,12 +40,12 @@ export const polar: Polar<DataModel, typeof products> = new Polar<DataModel, typ
   // whatever you want), and replace the values with the actual product IDs from your
   // Polar dashboard
   products,
-  //server: 'production',
-  server: 'sandbox',
-  organizationToken: process.env.SANDBOX_POLAR_ORGANIZATION_TOKEN,
-  webhookSecret: process.env.SANDBOX_POLAR_WEBHOOK_SECRET,
-  //organizationToken: process.env.POLAR_ORGANIZATION_TOKEN,
-  //webhookSecret: process.env.POLAR_WEBHOOK_SECRET,
+  server: 'production',
+  //  server: 'sandbox',
+  //organizationToken: process.env.SANDBOX_POLAR_ORGANIZATION_TOKEN,
+  //webhookSecret: process.env.SANDBOX_POLAR_WEBHOOK_SECRET,
+  organizationToken: process.env.POLAR_ORGANIZATION_TOKEN,
+  webhookSecret: process.env.POLAR_WEBHOOK_SECRET,
 });
 
 // Export API functions from the Polar client
