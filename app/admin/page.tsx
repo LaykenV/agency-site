@@ -1,8 +1,9 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useMutation } from "convex/react";
 import { useState } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
+import { authClient } from "@/lib/auth-client";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -21,7 +22,7 @@ export default function AdminPage() {
   const prospects = useQuery(api.admin.getProspects);
   const createProspect = useMutation(api.admin.createProspect);
   const updateProspect = useMutation(api.admin.updateProspectDetails);
-  const triggerWelcomeEmail = useAction(api.admin.triggerWelcomeEmail);
+  const logMagicLinkSent = useMutation(api.admin.logMagicLinkSent);
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingProspectId, setEditingProspectId] = useState<string | null>(null);
@@ -76,6 +77,28 @@ export default function AdminPage() {
       ...prev,
       [field]: e.target.value,
     }));
+  };
+
+  const handleSendMagicLink = async (prospect: Doc<"prospects">) => {
+    try {
+      // Call the authClient magic link method
+      await authClient.signIn.magicLink({
+        email: prospect.details.contactEmail,
+        callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+        newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+      });
+
+      // Log the activity
+      await logMagicLinkSent({
+        prospectId: prospect._id,
+        email: prospect.details.contactEmail,
+      });
+
+      alert("Magic link sent successfully!");
+    } catch (error) {
+      console.error("Failed to send magic link:", error);
+      alert("Failed to send magic link. Please try again.");
+    }
   };
 
   return (
@@ -245,10 +268,10 @@ export default function AdminPage() {
                   </div>
                   <div className="text-right flex gap-2 justify-end">
                     <button
-                      onClick={() => triggerWelcomeEmail({ prospectId: prospect._id as Id<"prospects"> })}
+                      onClick={() => handleSendMagicLink(prospect)}
                       className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition"
                     >
-                      Send Welcome Email
+                      Send Magic Link
                     </button>
                     <button
                       onClick={() => handleEdit(prospect)}

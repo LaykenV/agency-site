@@ -1,8 +1,6 @@
-import { query, mutation, action } from "./_generated/server";
+import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { prospectValidator, prospectDetailsValidator } from "./validators";
-import { Id } from "./_generated/dataModel";
-import { internal } from "./_generated/api";
 
 export const getProspects = query({
   args: {},
@@ -63,19 +61,26 @@ export const updateProspectDetails = mutation({
   },
 });
 
-export const triggerWelcomeEmail = action({
+export const logMagicLinkSent = mutation({
   args: {
     prospectId: v.id("prospects"),
+    email: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    console.log("[admin] triggering welcome email", {
+    await ctx.db.insert("activity_log", {
       prospectId: args.prospectId,
+      actor: "admin",
+      kind: "magic_link_sent",
+      payload: { email: args.email },
+      createdAt: Date.now(),
     });
 
-    await ctx.runMutation(internal.emails.sendWelcomeEmail, {
+    console.log("[admin] logged magic link sent", {
       prospectId: args.prospectId,
+      email: args.email,
     });
+
     return null;
   },
 });

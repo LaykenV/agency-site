@@ -17,6 +17,8 @@ import type * as emails from "../emails.js";
 import type * as http from "../http.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
 import type * as onboarding_sessions from "../onboarding/sessions.js";
+import type * as projects from "../projects.js";
+import type * as prospects from "../prospects.js";
 import type * as validators from "../validators.js";
 
 import type {
@@ -43,6 +45,8 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "onboarding/agent": typeof onboarding_agent;
   "onboarding/sessions": typeof onboarding_sessions;
+  projects: typeof projects;
+  prospects: typeof prospects;
   validators: typeof validators;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
