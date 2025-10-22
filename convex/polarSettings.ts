@@ -7,6 +7,12 @@ const products = {
   subscription: "088b8669-3a9d-48d4-ad44-927a75aa70dd",
 } as const;
 
+// Debug: Log environment variable availability
+console.log("[Polar Config] Checking environment variables...");
+console.log("[Polar Config] POLAR_ORGANIZATION_TOKEN exists:", !!process.env.POLAR_ORGANIZATION_TOKEN);
+console.log("[Polar Config] POLAR_WEBHOOK_SECRET exists:", !!process.env.POLAR_WEBHOOK_SECRET);
+console.log("[Polar Config] POLAR_ORGANIZATION_TOKEN starts with:", process.env.POLAR_ORGANIZATION_TOKEN?.substring(0, 15));
+
 export const polar: Polar<DataModel, typeof products> = new Polar<DataModel, typeof products>(components.polar, {
 
   getUserInfo: async (ctx): Promise<{ userId: string; email: string }> => {
@@ -33,7 +39,9 @@ export const polar: Polar<DataModel, typeof products> = new Polar<DataModel, typ
   // whatever you want), and replace the values with the actual product IDs from your
   // Polar dashboard
   products,
-  server: 'sandbox'
+  server: 'production',
+  organizationToken: process.env.POLAR_ORGANIZATION_TOKEN,
+  webhookSecret: process.env.POLAR_WEBHOOK_SECRET,
 });
 
 // Export API functions from the Polar client
