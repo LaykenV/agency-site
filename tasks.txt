@@ -26,6 +26,10 @@
 
 //project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
+
+sandbox polar
+big prompt
+
 terms page and agreement page
 agreement email
 
