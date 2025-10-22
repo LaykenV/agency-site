@@ -4,7 +4,7 @@ import { api, components } from "./_generated/api";
 import { DataModel } from "./_generated/dataModel";
 
 const products = {
-  premiumMonthly: "4a129b6a-180b-4482-ae81-3463f64b0959",
+  subscription: "088b8669-3a9d-48d4-ad44-927a75aa70dd",
   test: "df60c46b-d34d-4a53-84db-36bd9e11a404"
 } as const;
 
