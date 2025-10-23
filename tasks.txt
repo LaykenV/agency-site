@@ -28,6 +28,11 @@
 /portal email input if not authed and if auth no project /agreement
 
 sandbox polar
+denied? stripe?
+basic landing page
+submit reviews 
+paypal?
+
 big prompt
 
 terms page and agreement page
