@@ -107,3 +107,48 @@ export const getCurrentUser = query({
     }
   },
 });
+
+
+type UserWithSubscription = {
+  subscription: {
+    _id: string;
+    userId: string;
+    stripeCustomerId: string;
+    subscriptionId: string;
+    status: string;
+    priceId: string;
+    currentPeriodStartMs: number;
+    currentPeriodEndMs: number;
+    cancelAtPeriodEnd: boolean;
+    paymentBrand?: string;
+    paymentLast4?: string;
+    updatedAtMs: number;
+    _creationTime: number;
+  } | null;
+  [key: string]: unknown;
+};
+
+export const getCurrentUserWithSubscription = query({
+  args: {},
+  returns: v.union(v.any(), v.null()),
+  handler: async (ctx): Promise<UserWithSubscription | null> => {
+    const user = await authComponent.getAuthUser(ctx);
+    if (!user?._id) return null;
+    const subscription: {
+      _id: string;
+      userId: string;
+      stripeCustomerId: string;
+      subscriptionId: string;
+      status: string;
+      priceId: string;
+      currentPeriodStartMs: number;
+      currentPeriodEndMs: number;
+      cancelAtPeriodEnd: boolean;
+      paymentBrand?: string;
+      paymentLast4?: string;
+      updatedAtMs: number;
+      _creationTime: number;
+    } | null = await ctx.runQuery(api.stripeHelpers.getMySubscription);
+    return { ...user, subscription };
+  },
+});

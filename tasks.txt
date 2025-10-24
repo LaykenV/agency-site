@@ -27,20 +27,18 @@
 //project creation on /agreement
 /portal email input if not authed and if auth no project /agreement
 
-sandbox polar
-denied? stripe?
-basic landing page
-submit reviews 
-paypal?
+//rm polar code env
 
-big prompt
+fix agency.md
+big prompt for upgrade plan
+architecture, auth, payment, redirect handling for all pages
 
 terms page and agreement page
-agreement email
 
 payment page
-webhook? need to check docs for polar
-always redirect to /portal/projectId
+
+webhook email and activity log -> awaiting assets
+always redirect to /portal/paymentSuccess then /portal
 
 stepped form
 domain search

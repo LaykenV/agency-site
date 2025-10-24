@@ -62,7 +62,31 @@ export default defineSchema({
     .index("by_calEventId", ["calEventId"])
     .index("by_externalBookingId", ["externalBookingId"]),
 
-  //subscriptions - managed by Polar component
+  billingCustomers: defineTable({
+    userId: v.string(),
+    stripeCustomerId: v.string(),
+    email: v.optional(v.string()),
+    createdAtMs: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_customer", ["stripeCustomerId"]),
+
+  subscriptions: defineTable({
+    userId: v.string(),
+    stripeCustomerId: v.string(),
+    subscriptionId: v.string(),
+    status: v.string(),
+    priceId: v.string(),
+    currentPeriodStartMs: v.number(),
+    currentPeriodEndMs: v.number(),
+    cancelAtPeriodEnd: v.boolean(),
+    paymentBrand: v.optional(v.string()),
+    paymentLast4: v.optional(v.string()),
+    updatedAtMs: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_subscription", ["subscriptionId"]),
+
   //editRequests - future
   //errorReports - future
 });

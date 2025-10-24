@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.1
-Last Updated: October 21, 2025
+Document Version: 2.2
+Last Updated: October 24, 2025
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -64,19 +64,19 @@ IV. The Golden Path (End-to-End Client Journey)
   - Log activity (contract.accepted).
   - Update projectStatus = AWAITING_PAYMENT.
 
-5) Payment (Polar)
-- Create a Polar Checkout (subscription) server-side with metadata (projectId, prospectId, agreementId).
-- Redirect to Polar’s hosted checkout.
-- Success/cancel return to your app.
+5) Payment (Stripe)
+- Ensure a Stripe customer exists for the user; create if missing and store mapping in a `stripe_customers` table (authUserId → stripeCustomerId).
+- Create a Stripe Checkout Session with metadata { projectId, prospectId, agreementId, termsVersion } and `success_url` to `/portal/success`.
+- Redirect to Stripe’s hosted checkout.
 
 6) Webhook (Master Conductor)
-- /api/polar-webhook handles:
-  - Checkout/session completed (store checkoutId, customerId).
-  - Subscription created/active or first invoice paid:
-    - Upsert subscriptions row.
-    - Update projectStatus → AWAITING_ASSETS.
+- /api/stripe handles:
+  - `checkout.session.completed` and relevant `customer.subscription.*`, `invoice.*`, and `payment_intent.*` events.
+  - On subscription activated or first invoice paid:
+    - Update projectStatus → AWAITING_ASSETS (if still awaiting payment).
     - Send “Welcome Aboard” and route user to the portal (they’re already logged in via magic link).
-  - Payment failures/ canceled subscriptions update subscriptions and projectStatus (e.g., PAUSED) and trigger dunning.
+  - On payment failures or canceled subscriptions:
+    - Append `activity_log` entry; do not mutate `projectStatus`; restrict portal features at read-time based on the Stripe subscription cache.
 
 7) Inside the Client Portal
 - Clear CTAs:
@@ -106,14 +106,15 @@ V. Legal & Policy (MVP)
 - Optional later: add an e-sign vendor (Dropbox Sign/SignWell) if customers ask or to further reduce disputes; your schema accommodates this via agreements table.
 
 VI. Application Architecture
-- Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Polar (subscriptions), Convex (DB + functions), Cal.com (scheduling).
+- Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions), Cal.com (scheduling).
 - Routing highlights:
   - /portal/agreement (gated first step)
   - /portal (dashboard)
   - /portal/welcome (optional linking route)
   - /legal/terms (versioned, hashable)
+  - /portal/success (post-checkout sync + redirect)
 - Webhooks:
-  - /polar/events (billing events via Polar component)
+  - /api/stripe (Stripe billing events)
   - /api/cal-webhook (scheduling events)
 - Emails:
   - Welcome Agreement Link
@@ -122,7 +123,7 @@ VI. Application Architecture
   - Dunning and failed payment notices
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, and scheduled_calls tables; no subscriptions table.
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, and scheduled_calls tables; add Stripe KV tables (`stripe_customers`, `stripe_subscription_cache`); no local subscriptions table.
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -189,7 +190,7 @@ export default defineSchema({
     .index("by_authUserId", ["authUserId"])
     .index("by_acceptedAt", ["acceptedAt"]),
 
-  // No local subscriptions table; use Polar component for subscription state
+  // No local subscriptions table; Stripe subscription state is derived from a KV cache (see `stripe_customers` and `stripe_subscription_cache` tables below).
 
   activity_log: defineTable(activityLogValidator)
     .index("by_projectId", ["projectId"])
@@ -203,6 +204,14 @@ export default defineSchema({
     .index("by_calEventId", ["calEventId"]) 
     .index("by_externalBookingId", ["externalBookingId"]),
 });
+
+KV Tables (Stripe)
+- stripe_customers
+  - Fields: authUserId (string), stripeCustomerId (string), createdAt (number), updatedAt (number)
+  - Indexes: by_authUserId, by_stripeCustomerId
+- stripe_subscription_cache
+  - Fields: stripeCustomerId (string), status (Stripe status or "none"), subscriptionId (string | null), priceId (string | null), currentPeriodStart (number | null), currentPeriodEnd (number | null), cancelAtPeriodEnd (boolean), paymentMethod { brand: string | null, last4: string | null } | null, updatedAt (number)
+  - Indexes: by_stripeCustomerId
 
 Validators (validators.ts)
 import { v } from "convex/values";
@@ -360,25 +369,24 @@ Agreement capture (clickwrap)
   - Update projectStatus → AWAITING_PAYMENT.
   - Email a copy of terms/order summary.
 
-Polar checkout
-- Create a Polar Checkout for a subscription product/price.
-- Include metadata: { projectId, prospectId, agreementId, termsVersion }.
-- Success/cancel URLs back to your app.
-- No local persistence required for subscription/customer IDs; rely on Polar; optionally log an activity entry.
+Stripe Checkout
+- Always ensure a Stripe customer exists (create if missing) and store authUserId → stripeCustomerId in `stripe_customers`.
+- Create a Stripe Checkout Session with metadata: { projectId, prospectId, agreementId, termsVersion } and set `success_url` to `/portal/success`.
+- No local subscriptions table; rely on Stripe and a KV subscription cache; optionally log an activity entry.
 
-Webhook (Polar)
+Webhook (Stripe)
 - Verify signature.
-- Handle:
-  - checkout.completed (or equivalent): append `activity_log` entry (payment.intent) including relevant metadata.
-  - subscription.created/activated or invoice.paid (first successful payment):
-    - Update projectStatus → AWAITING_ASSETS.
-    - Append `activity_log` entry (payment.subscription_activated).
-  - payment_failed, subscription.canceled: append `activity_log` entry; do not mutate projectStatus; restrict portal features at read-time based on Polar status.
-- Idempotency: use Polar event IDs or provider IDs when writing `activity_log`; guard updates by `projectId` from metadata.
+- For allowed events, resolve `customerId` and call a `syncStripeDataToKV(customerId)` function.
+- On activation or first invoice paid:
+  - Update projectStatus → AWAITING_ASSETS (if still awaiting payment).
+  - Append `activity_log` entry (payment.subscription_activated).
+- On payment failures/canceled:
+  - Append `activity_log` entry; do not mutate projectStatus; restrict portal features at read-time using the cache.
+- Idempotency: use Stripe event IDs; guard updates by `projectId` from metadata or by mapping via `stripe_customers`.
 
 Portal guardrails
 - Don’t allow self-serve cancellation in months 1–12; route to support. Apply your early termination policy operationally.
-- Show billing status and renewal date read-only (derived from Polar’s subscription at read-time).
+- Show billing status and renewal date read-only (derived from the Stripe subscription cache at read-time).
 - Surface a timeline based on activity_log.
 
 Scheduling
@@ -396,11 +404,11 @@ Terms of Service essentials (MVP outline)
 
 IX. Admin and Ops
 - Admin actions:
-  - Create prospect, send welcome email, resend agreement link, create Polar checkout (server-triggered after agreement), manual status overrides.
-- Dunning (via Polar + email):
+  - Create prospect, send welcome email, resend agreement link, create Stripe Checkout Session (server-triggered after agreement), manual status overrides.
+- Dunning (via Stripe + email):
   - Day 0 fail: notify client
   - Day 3 fail: second attempt and email
-  - Day 7 fail: restrict portal features based on Polar status (no projectStatus mutation); log activity entries
+  - Day 7 fail: restrict portal features based on Stripe subscription cache status (no projectStatus mutation); log activity entries
 - Archival:
   - Projects stuck in AWAITING_AGREEMENT or AWAITING_PAYMENT > 30–60 days → ARCHIVED
 - Analytics:
@@ -409,11 +417,11 @@ IX. Admin and Ops
 X. Security and Compliance
 - Store IP and user agent for agreement acceptance. Hash terms content and keep version numbers.
 - Sign webhook payloads and enforce replay protection.
-- Minimize PII; never store raw payment details (Polar handles it).
+- Minimize PII; never store raw payment details (Stripe handles it).
 - Log all user-facing state changes in activity_log.
 
 XI. Roadmap
-- V1: In-app clickwrap + Polar subscription + webhook-driven automation.
+- V1: In-app clickwrap + Stripe subscription + webhook-driven automation.
 - V1.1: Add domain purchase/management workflow; portal ticketing for edits.
 - V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
 - V1.3: Self-serve asset library and change history; auto-generated monthly reports.
@@ -425,9 +433,12 @@ Example high-level flow (pseudo)
 - POST /portal/agreement
   - Validate checkbox; compute termsHash; insert agreements row; activity_log
   - Update project -> AWAITING_PAYMENT
-  - Create Polar Checkout (metadata: projectId, prospectId, agreementId); redirect to checkout.url
-- POST /api/polar-webhook
+  - Create Stripe Checkout (metadata: projectId, prospectId, agreementId, termsVersion); redirect to checkout.url
+- GET /portal/success
+  - Read stripeCustomerId via auth user mapping
+  - Call `syncStripeDataToKV(customerId)`; redirect to /portal
+- POST /api/stripe
   - On subscription activated or first invoice paid:
-    - Upsert subscriptions; update project -> AWAITING_ASSETS
+    - Update project -> AWAITING_ASSETS
     - Email welcome; redirect signed-in user to /portal with success UI
 

@@ -1,31 +1,13 @@
 import { httpRouter } from "convex/server";
 import { httpAction } from "./_generated/server";
 import { authComponent, createAuth } from "./auth";
-import { api } from "./_generated/api";
-import { polar } from "./polarSettings";
+import { api, internal } from "./_generated/api";
+import Stripe from "stripe";
 
 const http = httpRouter();
 
 authComponent.registerRoutes(http, createAuth, {
   cors: true,
-});
-
-polar.registerRoutes(http, {
-  path: "/polar/events",
-  onSubscriptionCreated: async (ctx, event) => {
-    console.log("[Polar] onSubscriptionCreated called, event:", JSON.stringify(event));
-    // activity log
-    // update project status to awaiting assets
-  },
-  onSubscriptionUpdated: async (ctx, event) => {
-    console.log("[Polar] onSubscriptionUpdated called, event:", JSON.stringify(event));
-  },
-  onProductCreated: async (ctx, event) => {
-    console.log("[Polar] onProductCreated called, event:", JSON.stringify(event));
-  },
-  onProductUpdated: async (ctx, event) => {
-    console.log("[Polar] onProductUpdated called, event:", JSON.stringify(event));
-  },
 });
 
 http.route({
@@ -60,6 +42,57 @@ http.route({
       console.error(error);
       return new Response("Error", { status: 500 });
     }
+  }),
+});
+
+http.route({
+  method: "POST",
+  path: "/stripe/webhook",
+  handler: httpAction(async (ctx, request) => {
+      const signature = request.headers.get("stripe-signature");
+      if (!signature) return new Response("Missing signature", { status: 400 });
+      const rawBody = await request.text();
+      try {
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2025-09-30.clover" });
+          const event = stripe.webhooks.constructEvent(
+              rawBody,
+              signature,
+              process.env.STRIPE_WEBHOOK_SECRET as string,
+          );
+          // Allowed events from Theo's list
+          const allowed: Set<string> = new Set([
+              "checkout.session.completed",
+              "customer.subscription.created",
+              "customer.subscription.updated",
+              "customer.subscription.deleted",
+              "customer.subscription.paused",
+              "customer.subscription.resumed",
+              "customer.subscription.pending_update_applied",
+              "customer.subscription.pending_update_expired",
+              "customer.subscription.trial_will_end",
+              "invoice.paid",
+              "invoice.payment_failed",
+              "invoice.payment_action_required",
+              "invoice.upcoming",
+              "invoice.marked_uncollectible",
+              "invoice.payment_succeeded",
+              "payment_intent.succeeded",
+              "payment_intent.payment_failed",
+              "payment_intent.canceled",
+          ]);
+          if (!allowed.has(event.type)) {
+              return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "content-type": "application/json" } });
+          }
+          const obj = event.data.object as { customer?: string };
+          const customerId = obj?.customer;
+          if (typeof customerId === "string" && customerId.length > 0) {
+              await ctx.runAction(internal.stripeActions.syncStripeCustomer, { stripeCustomerId: customerId });
+          }
+      } catch (err) {
+          console.error("Stripe webhook error", err);
+          return new Response("Webhook error", { status: 200 });
+      }
+      return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "content-type": "application/json" } });
   }),
 });
 
