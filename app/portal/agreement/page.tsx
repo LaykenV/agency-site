@@ -1,10 +1,17 @@
 "use client";
 
-import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { useQuery, useMutation } from "convex/react";
+import {
+  Authenticated,
+  Unauthenticated,
+  AuthLoading,
+  useQuery,
+  useConvex,
+} from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function AgreementPage() {
   return (
@@ -57,6 +64,9 @@ function AuthenticatedAgreementView() {
   const sid = searchParams.get("sid");
   const error = searchParams.get("error");
   const [isInitialized, setIsInitialized] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const router = useRouter();
+  const convex = useConvex();
 
   const findOrCreateProject = useMutation(api.projects.findOrCreateProjectForProspect);
 
@@ -69,6 +79,13 @@ function AuthenticatedAgreementView() {
   // Get current user
   const user = useQuery(api.auth.getCurrentUser);
 
+  // Load the portal decision to reuse redirect logic and the primary project
+  const decision = useQuery(api.auth.getPortalDecision);
+
+  const setError = useCallback((message: string | null) => {
+    setErrorMessage(message);
+  }, []);
+
   // Redirect to error page if there's an error
   useEffect(() => {
     if (error && sid) {
@@ -77,22 +94,51 @@ function AuthenticatedAgreementView() {
   }, [error, sid]);
 
   useEffect(() => {
-    if (user && prospect && !isInitialized) {
-      // Idempotent project creation
-      findOrCreateProject({
-        authUserId: user._id,
-        prospectId: prospect._id,
-      })
-        .then(() => {
-          console.log("[agreement] project initialized");
-          setIsInitialized(true);
-        })
-        .catch((error) => {
-          console.error("[agreement] failed to initialize project:", error);
-        });
-    }
-  }, [user, prospect, isInitialized, findOrCreateProject]);
+    if (!user || !prospect || isInitialized) return;
 
+    void findOrCreateProject({
+      authUserId: user._id,
+      prospectId: prospect._id,
+    })
+      .then(() => {
+        setIsInitialized(true);
+      })
+      .catch((initializationError) => {
+        console.error("[agreement] failed to initialize project", initializationError);
+        setError("We couldn't prepare your project. Please refresh or contact support.");
+      });
+  }, [findOrCreateProject, isInitialized, prospect, setError, user]);
+
+  useEffect(() => {
+    if (!user || !prospect) return;
+    if (user.email && user.email !== prospect.details.contactEmail) {
+      setError("This agreement belongs to another account.");
+      router.replace(`/portal/autherror?sid=${prospect.sessionId}&error=ownership`);
+    }
+  }, [prospect, router, setError, user]);
+
+  useEffect(() => {
+    if (!decision || !prospect || !user?._id) return;
+
+    // User must have a primary project when initialized. If already awaiting payment or assets, redirect.
+    if (decision.primaryProject) {
+      const status = decision.primaryProject.projectStatus ?? "AWAITING_AGREEMENT";
+      if (status === "AWAITING_PAYMENT") {
+        router.replace("/portal/subscribe");
+        return;
+      }
+      if (status === "AWAITING_AGREEMENT") {
+        return;
+      }
+      router.replace(`/portal/${decision.primaryProject.projectId}`);
+      return;
+    }
+    if (decision.redirect && decision.redirect !== `/portal/agreement?sid=${prospect.sessionId}`) {
+      router.replace(decision.redirect);
+    }
+  }, [decision, prospect, router, user?._id]);
+
+  // Early returns after all hooks
   if (!sid) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
@@ -121,31 +167,82 @@ function AuthenticatedAgreementView() {
         <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
           <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
           <p>Setting up your project...</p>
+          {errorMessage && <p className="text-red-500">{errorMessage}</p>}
         </div>
       </div>
     );
   }
 
+  const latestProject = decision?.primaryProject;
+
+  const handleAgreementAccept = async () => {
+    if (!latestProject) return;
+    try {
+      await convex.mutation(api.agreement.createFromClickwrap, {
+        projectId: latestProject._id,
+        termsVersion: "2024-09-01",
+        termsHash: "placeholder-hash",
+      });
+      router.replace("/portal/subscribe");
+    } catch (err) {
+      console.error("[portal] failed to accept agreement", err);
+      alert("We couldn't capture your agreement. Please try again.");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">Service Agreement</h1>
-        <p className="text-lg text-gray-700 mb-6">
-          Welcome, {prospect.details.contactName}!
-        </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
-          <h2 className="text-xl font-semibold text-blue-900 mb-2">
-            Project Overview
-          </h2>
-          <p className="text-blue-800">
-            Company: <span className="font-medium">{prospect.details.companyName}</span>
+    <div className="relative min-h-dvh bg-[var(--background)] text-[var(--foreground)] px-6 py-16">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--muted)_0%,transparent_70%)] opacity-50" />
+      <div className="relative z-10 mx-auto max-w-3xl rounded-3xl border border-[var(--border)] bg-[var(--card)]/90 p-10 shadow-2xl backdrop-blur">
+        <div className="mb-8">
+          <p className="text-xs uppercase tracking-[0.4em] text-[var(--secondary)]">
+            Agreement Stage
+          </p>
+          <h1 className="mt-4 text-3xl font-semibold">Sign your service agreement</h1>
+          <p className="mt-3 text-sm text-[var(--secondary)]">
+            Hi {prospect.details.contactName}, review and approve your onboarding agreement to move forward.
           </p>
         </div>
-        <div className="text-gray-600">
-          <p className="mb-4">Agreement UI will be implemented here.</p>
-          <p className="text-sm text-gray-500">
-            This is a placeholder page. The actual clickwrap agreement interface will be added in a future update.
+
+        <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
+          <h2 className="text-lg font-semibold">Project details</h2>
+          <dl className="mt-4 grid grid-cols-1 gap-4 text-sm text-[var(--secondary)] sm:grid-cols-2">
+            <div>
+              <dt className="font-medium text-[var(--foreground)]">Company</dt>
+              <dd>{prospect.details.companyName}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[var(--foreground)]">Primary contact</dt>
+              <dd>{prospect.details.contactName}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[var(--foreground)]">Email</dt>
+              <dd>{prospect.details.contactEmail}</dd>
+            </div>
+            <div>
+              <dt className="font-medium text-[var(--foreground)]">Project status</dt>
+              <dd>{latestProject?.projectStatus ?? "AWAITING_AGREEMENT"}</dd>
+            </div>
+          </dl>
+        </div>
+
+        {errorMessage && (
+          <div className="mt-6 rounded-xl border border-red-200 bg-red-500/10 p-4 text-sm text-red-500">
+            {errorMessage}
+          </div>
+        )}
+
+        <div className="mt-8 space-y-4 text-sm text-[var(--secondary)]">
+          <p>
+            The full agreement text will appear here. By confirming, you agree to the terms outlined
+            for your website project and acknowledge that the next step will be a secure payment checkout.
           </p>
+          <button
+            onClick={handleAgreementAccept}
+            className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--primary)]/30 transition hover:brightness-110"
+          >
+            Accept & Continue to Payment
+          </button>
         </div>
       </div>
     </div>

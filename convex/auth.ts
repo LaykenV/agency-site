@@ -1,12 +1,13 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
-import { api, components } from "./_generated/api";
-import { DataModel } from "./_generated/dataModel";
+import { api, components, internal } from "./_generated/api";
+import { DataModel, Id } from "./_generated/dataModel";
 import { query, ActionCtx } from "./_generated/server";
 import { betterAuth } from "better-auth";
-import { v } from "convex/values";
+import { v, Infer } from "convex/values";
 import { magicLink } from "better-auth/plugins";
 import { resend } from "./emails";
+import { projectStatusValidator } from "./validators";
 const siteUrl = process.env.SITE_URL!;
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
@@ -150,5 +151,122 @@ export const getCurrentUserWithSubscription = query({
       _creationTime: number;
     } | null = await ctx.runQuery(api.stripeHelpers.getMySubscription);
     return { ...user, subscription };
+  },
+});
+
+type ProjectStatus = Infer<typeof projectStatusValidator>;
+
+type PortalDecisionReturn = {
+  authed: boolean;
+  user: {
+    _id: string;
+    email: string;
+    name?: string;
+  } | null;
+  primaryProject: {
+    _id: Id<"projects">;
+    projectId: string;
+    projectStatus?: ProjectStatus;
+  } | null;
+  prospectSessionId: string | null;
+  subscription: unknown;
+  redirect: string | null;
+};
+
+export const getPortalDecision = query({
+  args: {},
+  returns: v.object({
+    authed: v.boolean(),
+    user: v.union(
+      v.object({
+        _id: v.string(),
+        email: v.string(),
+        name: v.optional(v.string()),
+      }),
+      v.null(),
+    ),
+    primaryProject: v.union(
+      v.object({
+        _id: v.id("projects"),
+        projectId: v.string(),
+        projectStatus: v.optional(projectStatusValidator),
+      }),
+      v.null(),
+    ),
+    prospectSessionId: v.union(v.string(), v.null()),
+    subscription: v.union(v.any(), v.null()),
+    redirect: v.union(v.string(), v.null()),
+  }),
+  handler: async (ctx): Promise<PortalDecisionReturn> => {
+    let user;
+    try {
+      user = await authComponent.getAuthUser(ctx);
+    } catch (error) {
+      console.warn("[auth] getPortalDecision unauthenticated", { error });
+      user = null;
+    }
+    if (!user?._id) {
+      return {
+        authed: false,
+        user: null,
+        primaryProject: null,
+        prospectSessionId: null,
+        subscription: null,
+        redirect: null,
+      } as const;
+    }
+
+    const authUserId: string = user._id;
+
+    const [primaryProject, prospect, subscription] = await Promise.all([
+      ctx.runQuery(internal.projects.internalGetLatestProjectByAuthUser, {
+        authUserId,
+      }),
+      user.email
+        ? ctx.runQuery(api.prospects.findLatestByEmail, {
+            email: user.email,
+          })
+        : Promise.resolve(null),
+      ctx.runQuery(api.stripeHelpers.getMySubscription),
+    ]);
+
+    let redirect: string | null = null;
+
+    if (!primaryProject && prospect) {
+      redirect = `/portal/agreement?sid=${prospect.sessionId}`;
+    }
+
+    if (primaryProject) {
+      const projectStatus = primaryProject.projectStatus ?? "AWAITING_AGREEMENT";
+      if (projectStatus === "AWAITING_AGREEMENT") {
+        const sessionId = prospect?.sessionId;
+        if (sessionId) {
+          redirect = `/portal/agreement?sid=${sessionId}`;
+        }
+      } else if (projectStatus === "AWAITING_PAYMENT") {
+        redirect = "/portal/subscribe";
+      } else {
+        redirect = `/portal/${primaryProject.projectId}`;
+      }
+    }
+
+    return {
+      authed: true,
+      user: {
+        _id: authUserId,
+        email: user.email ?? "",
+        name: user.name ?? undefined,
+      },
+      primaryProject: primaryProject
+        ? {
+            _id: primaryProject._id,
+            projectId: primaryProject.projectId,
+            projectStatus: primaryProject.projectStatus,
+          }
+        : null,
+      prospectSessionId: prospect?.sessionId ?? null,
+      subscription,
+      redirect,
+    } as const;
   },
 });

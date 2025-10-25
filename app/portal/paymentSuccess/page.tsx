@@ -1,8 +1,8 @@
 "use client";
 
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Authenticated, Unauthenticated } from "convex/react";
 
@@ -30,19 +30,38 @@ function PaymentSuccessContent() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(true);
+  const decision = useQuery(api.auth.getPortalDecision);
+
+  useEffect(() => {
+    if (!decision) return;
+    if (!decision.authed) {
+      router.replace("/portal");
+    }
+  }, [decision, router]);
+
+  const statusMessage = useMemo(() => {
+    if (!decision) return "Setting up your subscription...";
+    if (!decision.authed) return "Redirecting to sign-in...";
+    const status = decision.primaryProject?.projectStatus ?? "AWAITING_AGREEMENT";
+    if (status === "AWAITING_PAYMENT") {
+      return "Finalizing your subscription...";
+    }
+    if (status === "AWAITING_AGREEMENT") {
+      return "Redirecting to agreement...";
+    }
+    return "Redirecting to your portal...";
+  }, [decision]);
 
   useEffect(() => {
     async function syncAndRedirect() {
       try {
         setSyncing(true);
         await syncAfterSuccess({});
-        // Wait a moment for the sync to complete
         await new Promise((resolve) => setTimeout(resolve, 1000));
         router.push("/portal");
       } catch (err) {
         console.error("Error syncing subscription:", err);
         setError("Failed to sync subscription. Redirecting anyway...");
-        // Still redirect even if there's an error - webhooks will catch up
         setTimeout(() => {
           router.push("/portal");
         }, 2000);
@@ -51,8 +70,8 @@ function PaymentSuccessContent() {
       }
     }
 
-    syncAndRedirect();
-  }, [syncAfterSuccess, router]);
+    void syncAndRedirect();
+  }, [router, syncAfterSuccess]);
 
   if (error) {
     return (
@@ -84,7 +103,7 @@ function PaymentSuccessContent() {
         </div>
         <h1 className="text-2xl font-bold mb-2">Payment Successful!</h1>
         <p className="text-[var(--secondary)] mb-4">
-          {syncing ? "Setting up your subscription..." : "Redirecting to your portal..."}
+          {syncing ? statusMessage : "Redirecting to your portal..."}
         </p>
         <div className="flex items-center justify-center gap-2 text-sm text-[var(--secondary)]">
           <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />

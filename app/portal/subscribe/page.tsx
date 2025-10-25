@@ -1,10 +1,16 @@
 "use client";
 
-import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import {
+  Authenticated,
+  Unauthenticated,
+  AuthLoading,
+  useQuery,
+} from "convex/react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function SubscribePage() {
   return (
@@ -41,13 +47,50 @@ export default function SubscribePage() {
 function AuthenticatedSubscribeView() {
   const createCheckout = useAction(api.stripeActions.createCheckoutSession);
   const [loading, setLoading] = useState(false);
-  //getcurrentuser
-  const currentUser = useQuery(api.auth.getCurrentUser);
+  const decision = useQuery(api.auth.getPortalDecision);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!decision) return;
+    if (!decision.authed) {
+      router.replace("/portal");
+      return;
+    }
+
+    const primaryStatus = decision.primaryProject?.projectStatus ?? "AWAITING_AGREEMENT";
+
+    if (primaryStatus === "AWAITING_AGREEMENT") {
+      const destination = decision.prospectSessionId
+        ? `/portal/agreement?sid=${decision.prospectSessionId}`
+        : "/portal";
+      router.replace(destination);
+      return;
+    }
+
+    if (primaryStatus !== "AWAITING_PAYMENT") {
+      if (decision.primaryProject) {
+        router.replace(`/portal/${decision.primaryProject.projectId}`);
+      } else if (decision.redirect) {
+        router.replace(decision.redirect);
+      } else {
+        router.replace("/portal");
+      }
+    }
+  }, [decision, router]);
+
+  const statusMessage = useMemo(() => {
+    if (!decision) return "Loading your subscription status...";
+    if (!decision.authed) return "Redirecting to sign-in...";
+    const status = decision.primaryProject?.projectStatus ?? "AWAITING_AGREEMENT";
+    if (status === "AWAITING_PAYMENT") return "Ready to complete checkout";
+    if (status === "AWAITING_AGREEMENT") return "Redirecting to agreement";
+    return "Redirecting to your project";
+  }, [decision]);
   
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
       <h1 className="text-2xl font-bold mb-4">Subscribe</h1>
-      <div className="mb-4">{JSON.stringify(currentUser)}</div>
+      <p className="mb-6 text-sm text-[var(--secondary)]">{statusMessage}</p>
       <button
         disabled={loading}
         onClick={async () => {

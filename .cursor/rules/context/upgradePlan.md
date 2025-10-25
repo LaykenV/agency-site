@@ -1,205 +1,247 @@
-## Agency Subscription & Agreement Upgrade Plan (Polar Component First)
+Portal Architecture, Routing, and Gating – Upgrade Plan
+Last Updated: 2025-10-24
 
-### Objective
-- Use `@convex-dev/polar` as the single source of truth for billing and subscription state.
-- Simplify our Convex schema to only track what we must own: agreement evidence, project workflow/status, activity timeline, and scheduling.
-- Do not add provider-agnostic or provider-specific billing fields to our schema; no subscription rows.
+## Goals
+- Keep marketing pages open and unchanged.
+- Gate admin to you only.
+- Make `/portal` a single decision point driven by auth + project status.
+- Provide a clean unauthenticated login flow with email check + magic link.
+- Implement robust gating for Agreement, Payment, and Payment Success.
+- Improve header behavior inside the portal (show user avatar, not the link).
 
-### Constraints & Principles
-- **No billing provider flexibility**: we standardize on Polar.
-- **No local subscription table**: read subscription status live via Polar APIs/webhooks.
-- **Evidence matters**: agreements (clickwrap) are stored by us for legal/audit purposes.
-- **Workflow in app, billing in Polar**: `projects.projectStatus` models delivery workflow only, not billing states.
-- **Idempotency & minimal writes**: webhook callbacks write `activity_log` and only the minimal `projects` fields necessary.
+## Non‑Goals
+- No visual redesign of public pages.
+- No major database redesign; build on today’s schema and helpers.
+- No Stripe price changes.
 
----
+## Current State (relevant)
+- Public pages: `app/page.tsx`, `app/onboarding/page.tsx`, `app/legal/terms/page.tsx`.
+- Admin UI (no gating yet): `app/admin/page.tsx`, backed by `convex/admin.ts`.
+- Auth: Better Auth via Convex plugin in `convex/auth.ts` with magic link and rate limits.
+- Prospects: `convex/prospects.ts` + `prospects` table (has `by_contactEmail` index).
+- Projects: `convex/projects.ts` (find-or-create on agreement landing).
+- Stripe: `convex/stripeActions.ts`, `convex/stripeHelpers.ts`, schema includes `billingCustomers`, `subscriptions`.
+- Portal routes:
+  - `app/portal/page.tsx` (Auth wrappers but no single decision function yet).
+  - `app/portal/agreement/page.tsx` (idempotent project init exists).
+  - `app/portal/subscribe/page.tsx` (checkout + auth required).
+  - `app/portal/paymentSuccess/page.tsx` (post-success sync).
+  - `app/portal/[projectId]/page.tsx` (exists; use for the actual portal view).
 
-## Current State (from repo)
-- Auth via `@convex-dev/better-auth` with `getCurrentUser` available in `convex/auth.ts`.
-- `convex/schema.ts`: tables `prospects`, `projects` (includes `stripeCustomerId`), placeholders for `subscriptions`.
-- `convex/validators.ts`: has `projectStatusValidator` without `AWAITING_AGREEMENT`.
-- `convex/http.ts`: registers Better Auth routes and a Cal.com webhook; no Polar routes yet.
+## Target Architecture Overview
+- Public stays public: `/`, `/onboarding`, `/legal/terms`.
+- Admin gated to you only: `/admin` (UI redirect + server-side authorization in every admin function).
+- Client Portal routing becomes a state machine:
+  - Unauthed on `/portal`: show “Already a client?” email input → only send magic link if email is known.
+  - Authed on `/portal`: run one query to decide where to send the user:
+    - No project but known prospect → `/portal/agreement?sid=<sessionId>`
+    - `AWAITING_AGREEMENT` → `/portal/agreement?sid=<sessionId>`
+    - `AWAITING_PAYMENT` → `/portal/subscribe`
+    - `AWAITING_ASSETS | IN_PROGRESS | IN_REVIEW | LIVE` → render portal (ideally at `/portal/[projectId]`)
+    - `ARCHIVED` → show read-only/closed view with support CTA
+- Agreement gating: authenticated and `sid` must belong to the authed user’s email.
+- Payment gating: authenticated and project must be `AWAITING_PAYMENT` both in UI and server action.
+- Payment success: authenticated; perform sync; then route to `/portal`.
+- In-portal header: show user avatar/menu instead of “Client Portal →” link.
 
----
+## Routing Matrix
+- Public
+  - `/` (landing): public
+  - `/onboarding`: public
+  - `/legal/terms`: public
+- Admin
+  - `/admin`: admin-only
+- Portal
+  - `/portal`:
+    - Unauthed: email input → check known email → send magic link → callback to `/portal`.
+    - Authed: call single “decision” query; redirect based on project status; else render portal root when appropriate.
+  - `/portal/agreement?sid=...`: authed + `sid` ownership required
+  - `/portal/subscribe`: authed + `AWAITING_PAYMENT` required
+  - `/portal/paymentSuccess`: authed; sync; then redirect to `/portal`
+  - `/portal/[projectId]`: authed + project ownership required; render portal
 
-## Proposed Data Model (Convex)
+## Single Decision Query
+Create a Convex query (e.g., `auth.getPortalDecision`) that returns:
+- `authed`: boolean
+- `user`: minimal user fields `{ _id, email, name? }`
+- `primaryProject`: `{ _id, projectId, projectStatus } | null`
+- `prospectSessionId`: `string | null` (latest by email if available)
+- `subscription`: minimal cached subscription (from `stripeHelpers.getMySubscription`)
+- `redirect`: one of `null | "/portal/agreement?sid=..." | "/portal/subscribe" | "/portal/[projectId]"`
 
-### What we will NOT store
-- No `subscriptions` table.
-- No `stripeCustomerId`, `billingProvider`, or similar fields on `projects`.
+Logic:
+- If not authed → `{ authed: false, redirect: null }`
+- If authed and no project:
+  - If `prospectSessionId` can be found via `prospects.by_contactEmail`, set `redirect` to agreement with that `sid`.
+- If authed and project exists: set `redirect` by `projectStatus`:
+  - `AWAITING_AGREEMENT` → `/portal/agreement?sid=...`
+  - `AWAITING_PAYMENT` → `/portal/subscribe`
+  - `AWAITING_ASSETS+` → `/portal/[projectId]`
+  - `ARCHIVED` → `/portal/[projectId]` with read-only notice
 
-### Tables and fields
-- **projects** (keep; simplify)
-  - Keep: `authUserId: string`, `projectId: string` (human slug), `prospectId?: Id<'prospects'>`, `projectStatus?: ProjectStatus`, `buildDetails?`, `deployment?`, `calKickoffBooking?`, `calReviewBooking?`.
-  - Remove: `stripeCustomerId`.
-  - Add: `createdAt?: number`, `updatedAt?: number` (for operational analytics; `_creationTime` still exists as system field).
-  - Indexes: keep `by_authUserId`, `by_projectId`.
+Note: If multiple projects later, define “primary” as most recent non-archived or most recent by `createdAt`.
 
-- **agreements** (new)
-  - Purpose: store clickwrap evidence of terms acceptance.
-  - Fields: `projectId: Id<'projects'>`, `prospectId?: Id<'prospects'>`, `authUserId: string`, `method: "clickwrap"`, `source: "portal"`, `termsVersion: string`, `termsHash: string`, `acceptedAt: number`, `ip?: string`, `userAgent?: string`, `snapshotUrl?: string`.
-  - Indexes: `by_projectId`, `by_prospectId`, `by_authUserId`, `by_acceptedAt`.
+## Unauthenticated Portal Login Flow (/portal)
+- UI: “Already a client?” email input.
+- On submit:
+  - Call `prospects.isKnownEmail({ email })`:
+    - Check `prospects.by_contactEmail` for latest.
+    - Optionally check `billingCustomers` by email (add `by_email` index for convenience).
+  - If known → call Better Auth magic link with `callbackURL: "/portal"`.
+  - If unknown → message “We couldn’t find your email” with CTAs (Start Onboarding | Schedule Call).
+- Rate limit: rely on Better Auth’s existing rules and add a mild UI cooldown.
 
-- **activity_log** (new)
-  - Purpose: audit trail of key lifecycle events (agreement accepted, subscription activated, cancellations, bookings, status changes).
-  - Fields: `projectId?: Id<'projects'>`, `prospectId?: Id<'prospects'>`, `actor: "system" | "user" | "admin"`, `kind: string`, `payload?: object`, `createdAt: number`.
-  - Indexes: `by_projectId`, `by_prospectId`, `by_createdAt`.
+## Agreement Page (/portal/agreement?sid=...)
+- Gating:
+  - Must be authed.
+  - Validate `sid` belongs to authed user:
+    - Load prospect by `sid` and ensure `user.email === prospect.details.contactEmail`.
+    - If mismatch → `/portal/autherror?sid=...&error=ownership`.
+- Initialization:
+  - Use existing `projects.findOrCreateProjectForProspect` (idempotent).
+- Clickwrap:
+  - On accept: insert into `agreements`, append `activity_log`, update project → `AWAITING_PAYMENT`, then redirect to `/portal/subscribe`.
 
-- **scheduled_calls** (new)
-  - Purpose: store bookings (from Cal.com) and render schedule in the portal.
-  - Fields: `projectId?: Id<'projects'>`, `prospectId?: Id<'prospects'>`, `type: "confirmation" | "kickoff" | "review" | "support"`, `title?: string`, `startTime: number`, `endTime: number`, `status: string`, `meetingUrl?: string`, `location?: string`, `notes?: string`, `calEventId?: string`, `iCalUID?: string`, `eventTypeKey?: string`, `durationMinutes?: number`, `externalBookingId?: string`, `attendeeMetadata?: { name?: string; email?: string; phone?: string }`.
-  - Indexes: `by_projectId`, `by_prospectId`, `by_startTime`, `by_calEventId`, `by_externalBookingId`.
+## Payment Page (/portal/subscribe)
+- Gating:
+  - Must be authed and user’s project must be `AWAITING_PAYMENT`.
+  - Enforce precondition server-side in `stripeActions.createCheckoutSession`:
+    - Load the user’s project; if not `AWAITING_PAYMENT`, throw an error.
+- Create Checkout:
+  - Use existing action; ensure `success_url` → `/portal/paymentSuccess`.
 
-### Validators
-- **projectStatusValidator**: add `"AWAITING_AGREEMENT"` and keep existing: `"AWAITING_PAYMENT"`, `"AWAITING_ASSETS"`, `"IN_PROGRESS"`, `"IN_REVIEW"`, `"LIVE"`, `"ARCHIVED"`.
-- Add: `agreementValidator`, `activityLogValidator`.
-- `scheduledCallValidator` fields: `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
-- `calBookingValidator` snapshot fields: `scheduledAt`, `endTime?`, `title?`, `meetingUrl?`, `notes?`, `calEventId?`, `iCalUID?`, `status?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
+## Payment Success (/portal/paymentSuccess)
+- Gating:
+  - Must be authed.
+- Behavior:
+  - Call `stripeActions.syncAfterSuccessForSelf`.
+  - Optional small delay; then `router.push("/portal")`.
+- Webhook (ensure correctness):
+  - When subscription goes active or first invoice paid, set project → `AWAITING_ASSETS` if still in a pre-asset state; append `activity_log`.
 
----
+## Portal Page (/portal and /portal/[projectId])
+- `/portal`:
+  - Unauthed: email input flow above.
+  - Authed: call decision query; if `redirect` is set, push to it; else render primary portal view.
+- `/portal/[projectId]`:
+  - Fetch project by `projectId`.
+  - Verify `authUserId === currentUser._id`.
+  - Render full portal when `AWAITING_ASSETS+`; show a read-only/closed view for `ARCHIVED`.
 
-## Backend Architecture (Polar-first)
+## Admin Gating (/admin)
+- Use account-based gating (recommended) rather than a password wall:
+  - Env: `ADMIN_EMAILS="you@example.com,alt@example.com"`
+  - UI: If not admin, redirect away from `/admin`.
+  - Server: Every function in `convex/admin.ts` verifies admin (authoritative).
+- Optional defense-in-depth:
+  - Add Next middleware basic auth only for `/admin` in production.
 
-### Polar client
-- Create `convex/polar.ts` that instantiates `new Polar(components.polar, { getUserInfo })`.
-- `getUserInfo`: call `api.auth.getCurrentUser` (our existing query from `convex/auth.ts`) and return `{ userId: user._id, email: user.email }`.
-- Export APIs: `changeCurrentSubscription`, `cancelCurrentSubscription`, `getConfiguredProducts`, `listAllProducts`, `generateCheckoutLink`, `generateCustomerPortalUrl` via `polar.api()`.
+## Global Header
+- Outside portal:
+  - Keep “Client Portal →” link (as today).
+- Inside portal (`pathname.startsWith("/portal")`):
+  - If authed: show user avatar + menu (profile, sign out).
+  - If not authed: still show portal link or a subtle “Sign in” button.
+- Load minimal user info only when in portal to avoid global auth coupling.
 
-### Webhooks
-- Register webhook routes in `convex/http.ts` via `polar.registerRoutes(http, { ...callbacks })` at default path `/polar/events`.
-- Callback mapping:
-  - `onSubscriptionCreated` and `onSubscriptionUpdated`: resolve `projectId` from `event.data.metadata.projectId` (we will pass this in at checkout creation time).
-  - On first "active"/"trialing":
-    - Update `projects.projectStatus = "AWAITING_ASSETS"`.
-    - Append `activity_log` entry: `kind: "payment.subscription_activated"`, include Polar event payload subset.
-  - On cancellation/past_due:
-    - Append `activity_log` entry (e.g., `payment.subscription_canceled` or `payment.subscription_past_due`).
-    - Do not mutate `projectStatus`; portal gating derives from live subscription at read time.
+## Convex Additions/Changes
+- Queries/Mutations/Actions
+  - `auth.getPortalDecision` (query): returns the decision object above.
+  - `projects.getMyPrimaryProject` (query): by `by_authUserId`, order by `createdAt` desc; filter `ARCHIVED` last.
+  - `prospects.findLatestByEmail` (query): uses `by_contactEmail`; returns latest.
+  - `prospects.isKnownEmail` (query): boolean; checks `prospects` (and optionally `billingCustomers` by email).
+  - `agreements.createFromClickwrap` (mutation): inserts agreement + `activity_log`; sets project → `AWAITING_PAYMENT`.
+  - `admin.requireAdmin` (helper) or inline check in each `convex/admin.ts` function using `authComponent.getAuthUser`.
+- Stripe actions
+  - `stripeActions.createCheckoutSession`: assert user project is `AWAITING_PAYMENT`.
+  - Webhook handler (Next API route or `convex/http.ts`): on activation/first invoice paid → project → `AWAITING_ASSETS`; log activity.
 
-### Reading subscription state (no DB writes)
-- Anywhere we need billing state (e.g., portal dashboard), fetch with:
-  - `const sub = await polar.getCurrentSubscription(ctx, { userId })`.
-  - Derive flags: `isSubscribed = !!sub && ["active", "trialing"].includes(sub.status)`; gate features accordingly.
+## Schema Updates (optional but recommended)
+- `billingCustomers`: add index `by_email` to support login checks by email.
+- No other schema changes required for MVP of this plan.
 
----
+## Environment Variables
+- `SITE_URL` (Better Auth base URL)
+- `NEXT_PUBLIC_BASE_URL` (public site origin; used in Stripe redirects)
+- `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`
+- `ADMIN_EMAILS` (comma-separated)
+- Email sending: configured already for Resend via Better Auth plugin
 
-## Golden Path Alignment (from `agency.md`)
-- 1) Landing at `/portal/agreement` (magic link): find/create `projects` stub with `projectStatus = "AWAITING_AGREEMENT"` linked to `prospectId`.
-- 2) Agreement (clickwrap): insert `agreements` row (evidence), log `activity_log: contract.accepted`, update `projectStatus = "AWAITING_PAYMENT"`.
-- 3) Payment: generate Polar checkout link (or use `<CheckoutLink>`), include metadata `{ projectId, prospectId, agreementId }`.
-- 4) Webhook: on activation or first invoice paid, update `projectStatus = "AWAITING_ASSETS"`, write `activity_log` entry.
-- 5) Portal: gate features by live Polar status; surface `activity_log` timeline; show CTA to schedule kickoff and upload assets.
+## Security Considerations
+- Agreement ownership: enforce `sid` belongs to authed user before allowing acceptance.
+- Admin authorization: enforce in every admin Convex function; UI checks are not enough.
+- Payment preconditions: assert project status server-side before creating checkout.
+- Magic link abuse: keep Better Auth rate limits; add UI cooldown and a server-side “known email” check.
+- Project access: always scope queries to `authUserId`; never leak other users’ projects.
 
----
+## UX Notes
+- `/portal` should show clear state messages during redirects: “Taking you to your agreement…”, “Taking you to checkout…”.
+- Unauthed `/portal`: friendly copy if email not found, with two CTAs (Onboarding | Schedule a Call).
+- After payment success: short success feedback before redirect.
 
-## Implementation Steps (no code changes yet; this is the plan)
+## Implementation Steps
+1) Back end (Convex)
+- Add `auth.getPortalDecision`, `projects.getMyPrimaryProject`, `prospects.findLatestByEmail`, `prospects.isKnownEmail`.
+- Add `agreements.createFromClickwrap` mutation; patch project → `AWAITING_PAYMENT`; append `activity_log`.
+- Update `stripeActions.createCheckoutSession` to assert `AWAITING_PAYMENT`.
+- Ensure webhook updates project → `AWAITING_ASSETS` when subscription is active or first invoice paid.
 
-### Schema & Validators
-- Update `convex/validators.ts`:
-  - Add `AWAITING_AGREEMENT` to `projectStatusValidator`.
-  - Add `agreementValidator`, `activityLogValidator`, `scheduledCallValidator`.
-- Update `convex/schema.ts`:
-  - In `projects`: remove `stripeCustomerId`; add `createdAt?`, `updatedAt?` (optional numeric timestamps); retain existing indexes.
-  - Add tables: `agreements`, `activity_log`, `scheduled_calls` with indexes as listed.
-  - Ensure `prospects` remains unchanged.
+2) Front end (Next.js)
+- `/portal/page.tsx`:
+  - Unauthed email input → check known email → send magic link with `callbackURL: "/portal"`.
+  - Authed: call decision query once; push to `redirect`.
+- `/portal/agreement/page.tsx`:
+  - Verify `sid` ownership; initialize project; render clickwrap; on accept call `agreements.createFromClickwrap`; then push `/portal/subscribe`.
+- `/portal/subscribe/page.tsx`:
+  - Optionally pre-check project status (UI); action enforces it anyway; on error, push to `/portal`.
+- `/portal/paymentSuccess/page.tsx`:
+  - Keep existing sync + redirect.
+- `/portal/[projectId]/page.tsx`:
+  - Verify ownership; render portal or archived-readonly.
 
-### Polar integration
-- Add dependency `@convex-dev/polar` and register in `convex/convex.config.ts` with `app.use(polarConfig)`.
-- Create `convex/polar.ts` Polar client (see "Polar client" above).
-- Set env vars: `POLAR_ORGANIZATION_TOKEN`, `POLAR_WEBHOOK_SECRET`, optionally `POLAR_SERVER`.
-- Register webhook routes in `convex/http.ts` and implement callbacks that:
-  - Resolve `projectId` from metadata.
-  - Update `projects.projectStatus` to `AWAITING_ASSETS` on activation.
-  - Append `activity_log` entries for all subscription lifecycle changes.
+3) Header
+- In `components/global-header.tsx`, if inside portal and authed, show avatar + menu; otherwise keep “Client Portal →”.
 
-### Agreement flow
-- On `/portal/agreement` GET:
-  - Ensure a `projects` stub exists with `AWAITING_AGREEMENT` and link to `prospectId`.
-- On POST agree:
-  - Compute `termsHash` from current `/legal/terms` HTML.
-  - Insert into `agreements`.
-  - Append `activity_log: contract.accepted`.
-  - Update `projects.projectStatus = "AWAITING_PAYMENT"`.
-  - Create a Polar checkout link with metadata `{ projectId, prospectId, agreementId }` and redirect.
+4) Admin
+- UI: redirect away if not admin.
+- Server: enforce admin in `convex/admin.ts`.
 
-### Gating and reads
-- In portal queries, call `polar.getCurrentSubscription` and derive gating flags; do not persist billing state.
-- Use `activity_log` to render a unified timeline for admins and clients.
+5) Optional Middleware (production)
+- Basic auth for `/admin` as secondary protection.
 
-### Scheduling (Cal.com)
-- Keep current `convex/http.ts` Cal route.
-- Webhook behavior for `BOOKING_CREATED` (and later `BOOKING_RESCHEDULED`/`BOOKING_CANCELED`):
-  1) Parse payload; extract:
-     - `primaryEmail` (from `responses.email` or `attendees[0].email`)
-     - `primaryName` (from `responses.name` or `attendees[0].name`)
-     - `startTime` / `endTime` (ms since epoch)
-     - `notes` (from `additionalNotes` or `responses.notes`)
-     - `location` and derived `meetingUrl` or `phone`
-     - `uid` as `calEventId`, `iCalUID`
-     - `bookingId` as `externalBookingId`
-     - `status`, `type` as `eventTypeKey`, `length` as `durationMinutes`, `title`
-  2) Determine association:
-     - If `payload.metadata.projectId` present, attach to that `projectId`.
-     - Else attempt to locate a `prospects` row by `details.contactEmail` (index), attach `prospectId`.
-  3) Map `eventTypeKey` to `scheduled_calls.type`:
-     - `agency-prospect` → `confirmation`
-     - `agency-kickoff` → `kickoff`
-     - `agency-review` → `review`
-     - otherwise → `support`
-  4) Idempotency: upsert `scheduled_calls` by `calEventId` if present; otherwise by `externalBookingId`.
-  5) Insert or update `scheduled_calls` with:
-     - `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
-  6) Update snapshots:
-     - If `type = confirmation` → upsert `prospects.calProspectBooking` (shape = `calBookingValidator`).
-     - If `type = kickoff` → upsert `projects.calKickoffBooking`.
-     - If `type = review` → upsert `projects.calReviewBooking`.
-  7) Append `activity_log`:
-     - `kind: "call.booked" | "call.rescheduled" | "call.canceled"`, include `projectId?`, `prospectId?`, and a compact payload with identifiers and times.
+## Testing Checklist
+- Unauthed `/portal`:
+  - Known email → receives magic link; callback to `/portal` → decision redirects correctly.
+  - Unknown email → shows helpful message and CTAs; no link sent.
+- Authenticated:
+  - No project; known prospect → `/portal/agreement?sid=...`.
+  - Agreement accept → project → `AWAITING_PAYMENT` → `/portal/subscribe`.
+  - Checkout success → `/portal/paymentSuccess` → sync → `/portal`.
+  - Webhook flips project to `AWAITING_ASSETS`; next `/portal` load renders portal.
+  - Archived project → read-only view.
+- Admin:
+  - Non-admin blocked in UI and server functions.
+- Header:
+  - In-portal shows avatar; elsewhere shows portal link.
 
-- `scheduled_calls` table fields and indexes:
-  - Fields: `projectId?`, `prospectId?`, `type`, `title?`, `startTime`, `endTime`, `status`, `meetingUrl?`, `location?`, `notes?`, `calEventId?`, `iCalUID?`, `eventTypeKey?`, `durationMinutes?`, `externalBookingId?`, `attendeeMetadata?`.
-  - Indexes: `by_projectId`, `by_prospectId`, `by_startTime`, plus `by_calEventId`, `by_externalBookingId` (to support idempotent upserts).
+## Rollout Plan
+- Implement Convex queries/mutations.
+- Implement portal decision and gating UI.
+- Add admin server checks.
+- Add Stripe preconditions and verify webhook promotion to `AWAITING_ASSETS`.
+- Ship behind a short-lived feature flag if desired; test with a dummy account; then remove flag.
 
-- `calBookingValidator` snapshot fields (used in `prospects` and `projects`):
-  - `scheduledAt: number`, `endTime?: number`, `title?: string`, `meetingUrl?: string`, `notes?: string`, `calEventId?: string`, `iCalUID?: string`, `status?: string`, `eventTypeKey?: string`, `durationMinutes?: number`, `externalBookingId?: string`, `attendeeMetadata?: { name?: string; email?: string; phone?: string }`.
+## Future Enhancements
+- Multiple projects per user: enhance decision to choose active primary project or show project switcher.
+- Portal ticketing and asset library.
+- Subscription management surfacing from `subscriptions` cache with next renewal date.
+- Dunning states: restrict some features at read-time based on subscription status.
 
----
+### To-dos
 
-## Migration Plan
-- Remove `stripeCustomerId` from `projects` schema:
-  - Deploy schema change; if needed, run a one-time mutation to clean legacy docs referencing it.
-- Add new tables and validators first; then extend `projectStatusValidator`.
-- Deploy Polar component and webhook routes before exposing checkout to users.
-
----
-
-## Security & Compliance
-- Store agreement evidence: `termsVersion`, `termsHash`, `acceptedAt`, `ip`, `userAgent`, `snapshotUrl`.
-- Sign and verify Polar webhooks using `POLAR_WEBHOOK_SECRET`.
-- Enforce idempotency in callbacks by using Polar event IDs or `providerSubscriptionId` when writing `activity_log`.
-- Minimize PII and never store payment details (handled by Polar).
-
----
-
-## Acceptance Criteria
-- No `subscriptions` table or billing fields in our schema.
-- `projects.projectStatus` reflects workflow stages only; billing gates derive from Polar.
-- Agreements can be listed and audited per `projectId`/`authUserId`.
-- Webhooks produce `activity_log` entries and set `AWAITING_ASSETS` on activation.
-- Portal renders correct gating based on `polar.getCurrentSubscription`.
-
----
-
-## Out of Scope (for now)
-- Provider flexibility / multi-provider billing.
-- Self-serve cancellation policy logic in months 1–12 (enforced operationally, not in schema).
-- One-time payments (Polar component is subscription-focused).
-
----
-
-## Next Actions (when ready to implement)
-- Update `validators.ts` and `schema.ts` per this plan.
-- Add Polar component and `convex/polar.ts` client, register webhook routes.
-- Wire agreement POST to create `agreements` row and redirect to generated checkout link with metadata.
-- Update portal queries to gate on `polar.getCurrentSubscription` and to render `activity_log`.
-
+- [x] Implement Convex queries/mutations and schema/index updates per plan
+- [x] Harden Stripe actions and webhook status promotion
+- [ ] Refactor portal routes for auth gating and decision redirects
+- [ ] Adjust portal header/avatar behavior
+- [ ] Enforce admin-only access in UI and Convex admin functions
+- [ ] Run end-to-end portal and admin QA

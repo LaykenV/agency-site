@@ -69,7 +69,8 @@ export default defineSchema({
     createdAtMs: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_customer", ["stripeCustomerId"]),
+    .index("by_customer", ["stripeCustomerId"])
+    .index("by_email", ["email"]),
 
   subscriptions: defineTable({
     userId: v.string(),

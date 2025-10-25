@@ -94,9 +94,16 @@ export const createCheckoutSession = action({
     // Fetch user from Better Auth
     const user = await authComponent.getAuthUser(ctx);
     if (!user?._id) throw new Error("Not authenticated");
-    
+
     const userId = user._id;
     const userEmail = user.email;
+
+    const primaryProject = await ctx.runQuery(internal.projects.internalGetLatestProjectByAuthUser, {
+      authUserId: userId,
+    });
+    if (!primaryProject || primaryProject.projectStatus !== "AWAITING_PAYMENT") {
+      throw new Error("Project must be awaiting payment before starting checkout");
+    }
 
     type BillingCustomer = {
       _id: Id<"billingCustomers">;
@@ -159,6 +166,16 @@ export const syncAfterSuccessForSelf = action({
       throw new Error("Failed to get or create Stripe customer ID");
     }
     await ctx.runAction(internal.stripeActions.syncStripeCustomer, { stripeCustomerId });
+    const project = await ctx.runQuery(internal.projects.internalGetLatestProjectByAuthUser, {
+      authUserId: userId,
+    });
+    if (project && project.projectStatus === "AWAITING_PAYMENT") {
+      await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
+        projectId: project._id,
+        status: "AWAITING_ASSETS",
+        expectedCurrentStatus: "AWAITING_PAYMENT",
+      });
+    }
     return null;
   },
 });
