@@ -9,8 +9,9 @@ import {
 } from "convex/react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function AgreementPage() {
@@ -93,29 +94,31 @@ function AuthenticatedAgreementView() {
     }
   }, [error, sid]);
 
+  const [primaryProjectId, setPrimaryProjectId] = useState<string | null>(null);
+
   useEffect(() => {
     if (!user || !prospect || isInitialized) return;
 
+    const normalizedUserEmail = (user.email ?? "").trim().toLowerCase();
+    const normalizedProspectEmail = prospect.details.contactEmail.trim().toLowerCase();
+    if (!normalizedUserEmail || normalizedUserEmail !== normalizedProspectEmail) {
+      setError("This agreement belongs to another account.");
+      router.replace(`/portal/autherror?sid=${prospect.sessionId}&error=ownership`);
+      return;
+    }
+
     void findOrCreateProject({
-      authUserId: user._id,
       prospectId: prospect._id,
     })
-      .then(() => {
+      .then((projectId) => {
+        setPrimaryProjectId(projectId);
         setIsInitialized(true);
       })
       .catch((initializationError) => {
         console.error("[agreement] failed to initialize project", initializationError);
         setError("We couldn't prepare your project. Please refresh or contact support.");
       });
-  }, [findOrCreateProject, isInitialized, prospect, setError, user]);
-
-  useEffect(() => {
-    if (!user || !prospect) return;
-    if (user.email && user.email !== prospect.details.contactEmail) {
-      setError("This agreement belongs to another account.");
-      router.replace(`/portal/autherror?sid=${prospect.sessionId}&error=ownership`);
-    }
-  }, [prospect, router, setError, user]);
+  }, [findOrCreateProject, isInitialized, prospect, router, setError, user]);
 
   useEffect(() => {
     if (!decision || !prospect || !user?._id) return;
@@ -137,6 +140,36 @@ function AuthenticatedAgreementView() {
       router.replace(decision.redirect);
     }
   }, [decision, prospect, router, user?._id]);
+
+  // Compute latestProject before early returns (hooks must come before conditionals)
+  const latestProject = useMemo(() => {
+    if (decision?.primaryProject) {
+      return decision.primaryProject;
+    }
+    if (primaryProjectId) {
+      return {
+        _id: primaryProjectId as unknown as Id<"projects">,
+        projectId: "",
+        projectStatus: "AWAITING_AGREEMENT" as const,
+      };
+    }
+    return null;
+  }, [decision?.primaryProject, primaryProjectId]);
+
+  const handleAgreementAccept = async () => {
+    if (!latestProject) return;
+    try {
+      await convex.mutation(api.agreement.createFromClickwrap, {
+        projectId: latestProject._id,
+        termsVersion: "2024-09-01",
+        termsHash: "placeholder-hash",
+      });
+      router.replace("/portal/subscribe");
+    } catch (err) {
+      console.error("[portal] failed to accept agreement", err);
+      alert("We couldn't capture your agreement. Please try again.");
+    }
+  };
 
   // Early returns after all hooks
   if (!sid) {
@@ -172,23 +205,6 @@ function AuthenticatedAgreementView() {
       </div>
     );
   }
-
-  const latestProject = decision?.primaryProject;
-
-  const handleAgreementAccept = async () => {
-    if (!latestProject) return;
-    try {
-      await convex.mutation(api.agreement.createFromClickwrap, {
-        projectId: latestProject._id,
-        termsVersion: "2024-09-01",
-        termsHash: "placeholder-hash",
-      });
-      router.replace("/portal/subscribe");
-    } catch (err) {
-      console.error("[portal] failed to accept agreement", err);
-      alert("We couldn't capture your agreement. Please try again.");
-    }
-  };
 
   return (
     <div className="relative min-h-dvh bg-[var(--background)] text-[var(--foreground)] px-6 py-16">

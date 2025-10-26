@@ -2,45 +2,68 @@ import { internalMutation, internalQuery, mutation, query } from "./_generated/s
 import { v } from "convex/values";
 import { authComponent } from "./auth";
 import { projectStatusValidator } from "./validators";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Doc } from "./_generated/dataModel";
 
 export const findOrCreateProjectForProspect = mutation({
   args: {
-    authUserId: v.string(),
     prospectId: v.id("prospects"),
   },
   returns: v.id("projects"),
   handler: async (ctx, args) => {
-    // Try to find existing project
-    const existing = await ctx.db
-      .query("projects")
-      .withIndex("by_authUserId", (q) => q.eq("authUserId", args.authUserId))
-      .filter((q) => q.eq(q.field("prospectId"), args.prospectId))
-      .first();
-
-    if (existing) {
-      console.log("[projects] found existing project", {
-        projectId: existing._id,
-        authUserId: args.authUserId,
-        prospectId: args.prospectId,
-      });
-      return existing._id;
+    const authedUser = await authComponent.getAuthUser(ctx);
+    if (!authedUser?._id) {
+      console.warn("[projects] findOrCreateProjectForProspect unauthenticated call");
+      throw new Error("Authentication required");
     }
+
+    const authUserId = authedUser._id;
 
     const prospect = await ctx.db.get(args.prospectId);
     if (!prospect) {
       console.error("[projects] prospect not found", {
         prospectId: args.prospectId,
+        authUserId,
       });
       throw new Error("Prospect not found");
     }
 
-    // Create new project
+    const normalizedUserEmail = (authedUser.email ?? "").trim().toLowerCase();
+    const normalizedProspectEmail = prospect.details.contactEmail.trim().toLowerCase();
+
+    if (!normalizedUserEmail || normalizedUserEmail !== normalizedProspectEmail) {
+      console.warn("[projects] prospect email mismatch", {
+        authUserId,
+        userEmail: authedUser.email,
+        prospectEmail: prospect.details.contactEmail,
+        prospectId: args.prospectId,
+      });
+      throw new Error("Prospect does not belong to this account");
+    }
+
+    let existing: Doc<"projects"> | null = null;
+    for await (const project of ctx.db
+      .query("projects")
+      .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))) {
+      if (project.prospectId && project.prospectId === args.prospectId) {
+        existing = project;
+        break;
+      }
+    }
+
+    if (existing) {
+      console.log("[projects] found existing project", {
+        projectId: existing._id,
+        authUserId,
+        prospectId: args.prospectId,
+      });
+      return existing._id;
+    }
+
     const now = Date.now();
     const projectId = crypto.randomUUID();
 
     const newProjectId = await ctx.db.insert("projects", {
-      authUserId: args.authUserId,
+      authUserId,
       projectId,
       prospectId: prospect._id,
       projectStatus: "AWAITING_AGREEMENT",
@@ -48,19 +71,18 @@ export const findOrCreateProjectForProspect = mutation({
       updatedAt: now,
     } as const);
 
-    // Log activity
     await ctx.db.insert("activity_log", {
       projectId: newProjectId,
       prospectId: prospect._id,
       actor: "system",
       kind: "project_created",
-      payload: { authUserId: args.authUserId },
+      payload: { authUserId },
       createdAt: now,
     });
 
     console.log("[projects] created new project", {
       projectId: newProjectId,
-      authUserId: args.authUserId,
+      authUserId,
       prospectId: prospect._id,
     });
 
@@ -160,16 +182,6 @@ export const internalSetStatusIfEligible = internalMutation({
     await ctx.db.patch(args.projectId, {
       projectStatus: args.status,
       updatedAt: Date.now(),
-    });
-    await ctx.db.insert("activity_log", {
-      projectId: args.projectId,
-      prospectId: project.prospectId,
-      actor: "system",
-      kind: "project_status_updated",
-      payload: {
-        status: args.status,
-      },
-      createdAt: Date.now(),
     });
     return true;
   },

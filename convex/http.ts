@@ -90,7 +90,8 @@ http.route({
           }
       } catch (err) {
           console.error("Stripe webhook error", err);
-          return new Response("Webhook error", { status: 200 });
+          const status = err instanceof Stripe.errors.StripeSignatureVerificationError ? 400 : 500;
+          return new Response("Webhook error", { status });
       }
       return new Response(JSON.stringify({ received: true }), { status: 200, headers: { "content-type": "application/json" } });
   }),

@@ -106,7 +106,7 @@ function UnauthenticatedView() {
           </p>
           <h1 className="mt-3 text-3xl font-semibold">Already a client?</h1>
           <p className="mt-3 text-sm text-[var(--secondary)]">
-            Enter the email you use with us and we’ll send a secure sign-in link.
+            Enter the email you use with us and we&apos;ll send a secure sign-in link.
           </p>
         </div>
 
@@ -170,6 +170,7 @@ function AuthenticatedPortalRedirect() {
   const decision = useQuery(api.auth.getPortalDecision);
   const router = useRouter();
   const hasRedirected = useRef(false);
+  const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
     if (!decision) return;
@@ -185,6 +186,12 @@ function AuthenticatedPortalRedirect() {
     if (target && target !== "/portal") {
       hasRedirected.current = true;
       router.replace(target);
+      return;
+    }
+
+    if (!target) {
+      hasRedirected.current = true;
+      setShowFallback(true);
     }
   }, [decision, router]);
 
@@ -201,6 +208,9 @@ function AuthenticatedPortalRedirect() {
       if (decision.prospectSessionId) {
         return "Taking you to your service agreement...";
       }
+      if (showFallback) {
+        return "Let's get you set up.";
+      }
       return "We couldn't find a project yet. Redirecting...";
     }
 
@@ -214,8 +224,39 @@ function AuthenticatedPortalRedirect() {
     if (status === "ARCHIVED") {
       return "Opening your archived project...";
     }
+    if (!decision.redirect) {
+      return "Let&apos;s get you set up.";
+    }
     return "Launching your project workspace...";
-  }, [decision]);
+  }, [decision, showFallback]);
+
+  if (showFallback) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
+        <div className="max-w-md text-center space-y-4">
+          <h1 className="text-2xl font-semibold">Welcome to your portal</h1>
+          <p className="text-sm text-[var(--secondary)]">
+            We couldn&apos;t find an active project yet. If you recently signed up, check your email for your
+            agreement link or start the onboarding flow below.
+          </p>
+          <div className="flex flex-col gap-3 text-sm">
+            <a
+              href="/onboarding"
+              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            >
+              Start onboarding
+            </a>
+            <a
+              href="https://cal.com/acadianawebdesign"
+              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            >
+              Schedule a call
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">

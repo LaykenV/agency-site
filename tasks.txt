@@ -29,26 +29,32 @@
 
 //rm polar code env
 
-fix agency.md
-big prompt for upgrade plan
-architecture, auth, payment, redirect handling for all pages
+//fix agency.md
+//big prompt for upgrade plan
+//architecture, auth, payment, redirect handling for all pages
+
+//read then test architecture
+test full flow
+so slow?
 
 terms page and agreement page
 
 payment page
 
-webhook email and activity log -> awaiting assets
-always redirect to /portal/paymentSuccess then /portal
+//webhook email and activity log -> awaiting assets
+//always redirect to /portal/paymentSuccess then /portal
 
 stepped form
 domain search
 form
 kickoff call
 build step 
-render projects in /admin
+support request form
 build finished button
 then schedule review call button
 live page
+
+render projects and support requests in /admin
 
 ux improvements
 

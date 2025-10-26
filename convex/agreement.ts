@@ -1,4 +1,4 @@
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
 
@@ -102,6 +102,38 @@ export const internalAppendAgreementActivity = internalMutation({
       },
       createdAt: Date.now(),
     });
+  },
+});
+
+export const internalGetLatestAgreementForProject = internalQuery({
+  args: {
+    projectId: v.id("projects"),
+  },
+  returns: v.union(
+    v.object({
+      _id: v.id("agreements"),
+      projectId: v.id("projects"),
+      prospectId: v.optional(v.id("prospects")),
+      authUserId: v.string(),
+      method: v.literal("clickwrap"),
+      source: v.literal("portal"),
+      termsVersion: v.string(),
+      termsHash: v.string(),
+      acceptedAt: v.number(),
+      ip: v.optional(v.string()),
+      userAgent: v.optional(v.string()),
+      snapshotUrl: v.optional(v.string()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    return (
+      (await ctx.db
+        .query("agreements")
+        .withIndex("by_projectId", (q) => q.eq("projectId", args.projectId))
+        .order("desc")
+        .first()) ?? null
+    );
   },
 });
 

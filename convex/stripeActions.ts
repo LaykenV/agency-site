@@ -63,7 +63,7 @@ export const syncStripeCustomer = internalAction({
       customer: args.stripeCustomerId,
       limit: 1,
       status: "all",
-      expand: ["data.default_payment_method"],
+      expand: ["data.default_payment_method", "data.items.data.price.product"],
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sub = subs.data[0] as any; // Stripe.Subscription;
@@ -83,6 +83,50 @@ export const syncStripeCustomer = internalAction({
       paymentBrand: card?.brand ?? undefined,
       paymentLast4: card?.last4 ?? undefined,
     });
+
+    const metadata = sub.metadata ?? {};
+    const projectIdRaw = metadata.projectId;
+    const prospectIdRaw = metadata.prospectId;
+    const projectId = typeof projectIdRaw === "string" && projectIdRaw.length > 0 ? (projectIdRaw as Id<"projects">) : undefined;
+    const prospectId = typeof prospectIdRaw === "string" && prospectIdRaw.length > 0 ? (prospectIdRaw as Id<"prospects">) : undefined;
+
+    if (projectId) {
+      if (sub.status === "active" || sub.status === "trialing") {
+        await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
+          projectId,
+          status: "AWAITING_ASSETS",
+          expectedCurrentStatus: "AWAITING_PAYMENT",
+        });
+        await ctx.runMutation(internal.activityLog.logActivity, {
+          projectId,
+          prospectId,
+          actor: "system",
+          kind: "payment.subscription_activated",
+          payload: {
+            stripeCustomerId: args.stripeCustomerId,
+            subscriptionId: sub.id,
+            status: sub.status,
+          },
+        });
+      } else if (
+        sub.status === "past_due" ||
+        sub.status === "unpaid" ||
+        sub.status === "canceled" ||
+        sub.status === "paused"
+      ) {
+        await ctx.runMutation(internal.activityLog.logActivity, {
+          projectId,
+          prospectId,
+          actor: "system",
+          kind: "payment.subscription_status_changed",
+          payload: {
+            stripeCustomerId: args.stripeCustomerId,
+            subscriptionId: sub.id,
+            status: sub.status,
+          },
+        });
+      }
+    }
     return null;
   },
 });
@@ -133,10 +177,30 @@ export const createCheckoutSession = action({
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL;
     if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL or SITE_URL must be set");
 
+    const agreement = await ctx.runQuery(internal.agreement.internalGetLatestAgreementForProject, {
+      projectId: primaryProject._id,
+    });
+
     const session: Stripe.Checkout.Session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
       line_items: [{ price: priceId, quantity: 1 }],
+      metadata: {
+        projectId: primaryProject._id,
+        projectSlug: primaryProject.projectId,
+        prospectId: primaryProject.prospectId ?? "",
+        agreementId: agreement?._id ?? "",
+        termsVersion: agreement?.termsVersion ?? "",
+      },
+      subscription_data: {
+        metadata: {
+          projectId: primaryProject._id,
+          projectSlug: primaryProject.projectId,
+          prospectId: primaryProject.prospectId ?? "",
+          agreementId: agreement?._id ?? "",
+          termsVersion: agreement?.termsVersion ?? "",
+        },
+      },
       success_url: `${baseUrl}/portal/paymentSuccess`,
       cancel_url: `${baseUrl}/portal/subscribe`,
     });
