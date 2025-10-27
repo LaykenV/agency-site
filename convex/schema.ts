@@ -88,6 +88,26 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_subscription", ["subscriptionId"]),
 
-  //editRequests - future
+  edit_requests: defineTable({
+    projectId: v.id("projects"),
+    authUserId: v.string(),
+    title: v.string(),
+    details: v.string(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("in_progress"),
+      v.literal("waiting_on_client"),
+      v.literal("resolved"),
+      v.literal("closed")
+    ),
+    priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
+    attachments: v.optional(v.array(v.id("_storage"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_status_and_projectId", ["status", "projectId"])
+    .index("by_createdAt", ["createdAt"]),
+
   //errorReports - future
 });

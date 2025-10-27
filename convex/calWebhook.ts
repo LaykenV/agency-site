@@ -356,6 +356,29 @@ export const processCalWebhook = action({
                 externalBookingId: data.externalBookingId,
               },
             });
+
+            // Status nudge: kickoff booking created -> IN_PROGRESS
+            if (triggerEvent === "BOOKING_CREATED") {
+              const transitioned = await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
+                projectId,
+                status: "IN_PROGRESS",
+                expectedCurrentStatus: "AWAITING_ASSETS",
+              });
+
+              if (transitioned) {
+                await ctx.runMutation(internal.activityLog.logActivity, {
+                  projectId,
+                  prospectId,
+                  actor: "system",
+                  kind: "call.kickoff_recorded",
+                  payload: {
+                    calEventId: data.calEventId,
+                    scheduledAt: data.startTime,
+                    eventTypeKey: data.eventTypeKey,
+                  },
+                });
+              }
+            }
           } else if (callType === "review" && projectId) {
             // Update projects.calReviewBooking
             await ctx.runMutation(internal.cal.updateProjectBooking, {
@@ -376,6 +399,29 @@ export const processCalWebhook = action({
                 externalBookingId: data.externalBookingId,
               },
             });
+
+            // Status nudge: review booking created -> IN_REVIEW
+            if (triggerEvent === "BOOKING_CREATED") {
+              const transitioned = await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
+                projectId,
+                status: "IN_REVIEW",
+                expectedCurrentStatus: "IN_PROGRESS",
+              });
+
+              if (transitioned) {
+                await ctx.runMutation(internal.activityLog.logActivity, {
+                  projectId,
+                  prospectId,
+                  actor: "system",
+                  kind: "call.review_recorded",
+                  payload: {
+                    calEventId: data.calEventId,
+                    scheduledAt: data.startTime,
+                    eventTypeKey: data.eventTypeKey,
+                  },
+                });
+              }
+            }
           }
         }
 

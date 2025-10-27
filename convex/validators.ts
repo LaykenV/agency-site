@@ -34,13 +34,11 @@ export const buildDetailsValidator = v.object({
   headline: v.union(v.string(), v.null()),
   domainPreference: v.union(v.string(), v.null()),
   inspirationLinks: v.array(v.string()),
-  functionalRequirements: v.union(v.string(), v.null()),
+  myNotes: v.union(v.string(), v.null()),
   brand: v.object({
-    logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-    photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
     styleVibe: v.union(v.string(), v.null()),
-    logoUrl: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    logoStorageId: v.optional(v.id("_storage")),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
   }),
   brandAssetsUploaded: v.boolean(),
 });
@@ -133,6 +131,26 @@ export const prospectValidator = v.object({
   planGenerationInProgress: v.boolean(),
   createdAt: v.number(),
   updatedAt: v.number(),
+});
+
+export const editRequestValidator = v.object({
+  _id: v.id("edit_requests"),
+  projectId: v.id("projects"),
+  authUserId: v.string(),
+  title: v.string(),
+  details: v.string(),
+  status: v.union(
+    v.literal("open"),
+    v.literal("in_progress"),
+    v.literal("waiting_on_client"),
+    v.literal("resolved"),
+    v.literal("closed")
+  ),
+  priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
+  attachments: v.optional(v.array(v.id("_storage"))),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  _creationTime: v.number(),
 });
 
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;

@@ -79,18 +79,24 @@ IV. The Golden Path (End-to-End Client Journey)
     - Append `activity_log` entry; do not mutate `projectStatus`; restrict portal features at read-time based on the Stripe subscription cache.
 
 7) Inside the Client Portal
-- Clear CTAs:
-  - Schedule 45-min Kickoff
-  - Upload brand assets (logo, photos, copy, requirements)
+- Status-driven experience with clear CTAs per stage:
+  - AWAITING_ASSETS: Submit build details form (headline, domain preference, inspiration links, brand style, logo/images via Convex storage), then schedule 45-min kickoff call
+  - IN_PROGRESS: View kickoff call details and build progress message
+  - IN_REVIEW: Access staging site link and schedule 30-min review call
+  - LIVE: View live site URL, submit edit/support requests, and view request history with status tracking
 
 8) Kickoff Call
 - Deep dive into brand, target audience, content, and assets.
+- Cal.com webhook automatically transitions project from AWAITING_ASSETS → IN_PROGRESS on kickoff booking.
 
 9) Build & Review
 - Build on staging (Vercel); schedule 30-min review; collect edits.
+- Cal.com webhook automatically transitions project from IN_PROGRESS → IN_REVIEW on review booking.
 
 10) Go Live
 - Connect domain, launch, and send launch email.
+- Admin manually transitions project to LIVE status.
+- Clients can submit unlimited edit requests via portal with title, details, priority (low/normal/high), and optional attachments.
 
 V. Legal & Policy (MVP)
 - Use in-app clickwrap (checkbox + link to Terms). This is widely enforceable in B2B if logged.
@@ -123,7 +129,7 @@ VI. Application Architecture
   - Dunning and failed payment notices
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, and scheduled_calls tables; add Stripe KV tables (`stripe_customers`, `stripe_subscription_cache`); no local subscriptions table.
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, scheduled_calls, and edit_requests tables; add Stripe KV tables (`stripe_customers`, `stripe_subscription_cache`); no local subscriptions table.
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -203,6 +209,27 @@ export default defineSchema({
     .index("by_startTime", ["startTime"]) 
     .index("by_calEventId", ["calEventId"]) 
     .index("by_externalBookingId", ["externalBookingId"]),
+
+  edit_requests: defineTable({
+    projectId: v.id("projects"),
+    authUserId: v.string(),
+    title: v.string(),
+    details: v.string(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("in_progress"),
+      v.literal("waiting_on_client"),
+      v.literal("resolved"),
+      v.literal("closed")
+    ),
+    priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
+    attachments: v.optional(v.array(v.id("_storage"))),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_status_and_projectId", ["status", "projectId"])
+    .index("by_createdAt", ["createdAt"]),
 });
 
 KV Tables (Stripe)
@@ -250,13 +277,11 @@ export const buildDetailsValidator = v.object({
   headline: v.union(v.string(), v.null()),
   domainPreference: v.union(v.string(), v.null()),
   inspirationLinks: v.array(v.string()),
-  functionalRequirements: v.union(v.string(), v.null()),
+  myNotes: v.union(v.string(), v.null()), // Admin-only field, not exposed to clients
   brand: v.object({
-    logoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
-    photoStatus: v.union(v.literal("ready"), v.literal("not_yet")),
     styleVibe: v.union(v.string(), v.null()),
-    logoUrl: v.optional(v.string()),
-    imageUrls: v.optional(v.array(v.string())),
+    logoStorageId: v.optional(v.id("_storage")),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
   }),
   brandAssetsUploaded: v.boolean(),
 });
@@ -351,6 +376,26 @@ export const prospectValidator = v.object({
   updatedAt: v.number(),
 });
 
+export const editRequestValidator = v.object({
+  _id: v.id("edit_requests"),
+  projectId: v.id("projects"),
+  authUserId: v.string(),
+  title: v.string(),
+  details: v.string(),
+  status: v.union(
+    v.literal("open"),
+    v.literal("in_progress"),
+    v.literal("waiting_on_client"),
+    v.literal("resolved"),
+    v.literal("closed")
+  ),
+  priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
+  attachments: v.optional(v.array(v.id("_storage"))),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  _creationTime: v.number(),
+});
+
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;
 export const PLAN_TEXT_MAX_LENGTH = 280;
 export const SESSION_EXPIRY_DAYS = 30;
@@ -392,6 +437,34 @@ Portal guardrails
 
 Scheduling
 - Cal.com webhooks write into `scheduled_calls`, update `prospects.calProspectBooking` for confirmation calls, and update `projects.calKickoffBooking` / `projects.calReviewBooking` for project calls. Each event also appends `activity_log` with `call.booked` / `call.rescheduled` / `call.canceled`.
+- Automatic status transitions on booking creation:
+  - Kickoff booking → AWAITING_ASSETS to IN_PROGRESS (if currently awaiting assets)
+  - Review booking → IN_PROGRESS to IN_REVIEW (if currently in progress)
+- Uses idempotent `internalSetStatusIfEligible` with expected current status guards.
+
+Client Portal (/portal/[projectId])
+- Status-driven UI with mutual exclusivity per project stage:
+  - AWAITING_AGREEMENT / AWAITING_PAYMENT: Redirects to /portal/agreement or /portal/subscribe
+  - AWAITING_ASSETS: Build details form + kickoff scheduling CTA
+  - IN_PROGRESS: Progress message + kickoff call summary
+  - IN_REVIEW: Staging site access + review call scheduling CTA
+  - LIVE: Live site link + edit request form + request history list
+  - ARCHIVED: Read-only notice with support contact
+- Build Details Form (`projects.upsertBuildDetails`):
+  - Client fields: headline, domainPreference, inspirationLinks, brand.styleVibe
+  - File uploads: brand.logoStorageId, brand.imageStorageIds (Convex storage)
+  - Admin-only field: myNotes (not exposed to client, only editable via admin)
+  - Auto-sets brandAssetsUploaded flag when files uploaded
+- Edit Requests System (`edit_requests` table):
+  - Mutations: `projects.createEditRequest`, Query: `projects.listEditRequests`
+  - Fields: title, details, priority (low/normal/high), status (open/in_progress/waiting_on_client/resolved/closed)
+  - Optional attachments via Convex storage (UI placeholder ready)
+  - Activity log integration for ticket.created events
+  - Real-time list with expand/collapse details
+- Call Scheduling Integration:
+  - Displays Cal.com booking summaries (title, date/time, meeting URL) for kickoff and review calls
+  - CTAs open external Cal.com links configured in lib/config.ts (CAL_KICKOFF_URL, CAL_REVIEW_URL)
+  - Booking metadata passed via Cal.com includes projectId for webhook routing
 
 Terms of Service essentials (MVP outline)
 - Term: 12-month minimum commitment at $199/mo; renews monthly thereafter until canceled.
@@ -423,10 +496,11 @@ X. Security and Compliance
 - Log all user-facing state changes in activity_log.
 
 XI. Roadmap
-- V1: In-app clickwrap + Stripe subscription + webhook-driven automation.
-- V1.1: Add domain purchase/management workflow; portal ticketing for edits.
+- V1: In-app clickwrap + Stripe subscription + webhook-driven automation. ✅
+- V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage (in progress); domain purchase/management workflow (pending).
 - V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
 - V1.3: Self-serve asset library and change history; auto-generated monthly reports.
+- V1.4: Admin dashboard for managing projects, viewing edit requests, and bulk operations.
 
 Example high-level flow (pseudo)
 - GET /portal/agreement

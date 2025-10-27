@@ -39,11 +39,11 @@
 
 //update header
 
-test full flow
+//test full flow
 
-terms page and agreement page
+//terms page and agreement page
 
-payment page
+//payment page
 
 //webhook email and activity log -> awaiting assets
 //always redirect to /portal/paymentSuccess then /portal
@@ -56,6 +56,12 @@ build step
 build finished button on admin
 then schedule review call button with link
 live page
+
+domain api
+
+file upload
+
+test project page
 
 render projects and support requests in /admin
 gate admin
@@ -71,6 +77,8 @@ hero
 about me
 our products
 pricing section
+
+full ui / refinement of portal pages
 
 google business profile
 
