@@ -37,7 +37,7 @@
 //test full flow
 //so slow?
 
-update header
+//update header
 
 test full flow
 
@@ -48,20 +48,19 @@ payment page
 //webhook email and activity log -> awaiting assets
 //always redirect to /portal/paymentSuccess then /portal
 
-stepped form
+stepped form w support request form
 domain search
-form
+build details form
 kickoff call
-build step 
-support request form
-build finished button
-then schedule review call button
+build step
+build finished button on admin
+then schedule review call button with link
 live page
 
 render projects and support requests in /admin
 gate admin
+
 'what are you hoping' to myNotes field
-gate admin
 
 review all code
 all backend complete and tested
@@ -80,6 +79,8 @@ marketing // use atlas outbound, get them to sign up
 get first client
 
 LLC
+support inbound email
+
 
 
 

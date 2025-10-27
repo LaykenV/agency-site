@@ -76,11 +76,12 @@ const renderSectionContent = () =>
   ));
 
 type TermsPageProps = {
-  searchParams?: Record<string, string | string[] | undefined>;
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default function TermsPage({ searchParams }: TermsPageProps) {
-  const printMode = searchParams?.print === "1";
+export default async function TermsPage({ searchParams }: TermsPageProps) {
+  const params = await searchParams;
+  const printMode = params?.print === "1";
 
   if (printMode) {
     return (
