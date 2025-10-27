@@ -63,7 +63,7 @@ export const syncStripeCustomer = internalAction({
       customer: args.stripeCustomerId,
       limit: 1,
       status: "all",
-      expand: ["data.default_payment_method", "data.items.data.price.product"],
+      expand: ["data.default_payment_method"],
     });
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const sub = subs.data[0] as any; // Stripe.Subscription;
