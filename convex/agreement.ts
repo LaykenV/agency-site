@@ -119,6 +119,7 @@ export const internalGetLatestAgreementForProject = internalQuery({
   returns: v.union(
     v.object({
       _id: v.id("agreements"),
+      _creationTime: v.number(),
       projectId: v.id("projects"),
       prospectId: v.optional(v.id("prospects")),
       authUserId: v.string(),
