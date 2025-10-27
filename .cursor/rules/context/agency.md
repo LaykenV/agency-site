@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.2
-Last Updated: October 24, 2025
+Document Version: 2.3
+Last Updated: October 26, 2025
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -364,10 +364,10 @@ Create project on agreement landing
 Agreement capture (clickwrap)
 - UI: Checkbox + link to /legal/terms; show a short conspicuous summary (price, 12-month term, early termination, recurring billing).
 - On submit:
-  - Compute SHA-256 hash of the current Terms HTML.
+  - Compute SHA-256 hash from the canonical terms content module (same source used to render /legal/terms) and record `termsVersion` + `termsHash` + `userAgent`.
   - Insert agreements row and activity_log (contract.accepted).
   - Update projectStatus → AWAITING_PAYMENT.
-  - Email a copy of terms/order summary.
+  - Do not send an email at acceptance; email is sent post-payment.
 
 Stripe Checkout
 - Always ensure a Stripe customer exists (create if missing) and store authUserId → stripeCustomerId in `stripe_customers`.
@@ -376,13 +376,14 @@ Stripe Checkout
 
 Webhook (Stripe)
 - Verify signature.
-- For allowed events, resolve `customerId` and call a `syncStripeDataToKV(customerId)` function.
+- For allowed events, resolve `customerId` and call a sync to persist subscription state.
 - On activation or first invoice paid:
   - Update projectStatus → AWAITING_ASSETS (if still awaiting payment).
   - Append `activity_log` entry (payment.subscription_activated).
+  - Send the “Welcome Aboard” email with order summary and a link to the stored terms snapshot (includes `termsVersion`/`termsHash`).
 - On payment failures/canceled:
   - Append `activity_log` entry; do not mutate projectStatus; restrict portal features at read-time using the cache.
-- Idempotency: use Stripe event IDs; guard updates by `projectId` from metadata or by mapping via `stripe_customers`.
+- Idempotency: use Stripe event IDs; guard updates by `projectId` from metadata or by mapping.
 
 Portal guardrails
 - Don’t allow self-serve cancellation in months 1–12; route to support. Apply your early termination policy operationally.
@@ -415,7 +416,8 @@ IX. Admin and Ops
   - Build dashboards from activity_log (conversion rates, time-in-stage, payment health)
 
 X. Security and Compliance
-- Store IP and user agent for agreement acceptance. Hash terms content and keep version numbers.
+- Store user agent for agreement acceptance and hash terms content; keep version numbers.
+- IP capture is deferred to a future iteration (edge-captured) and is not required for MVP.
 - Sign webhook payloads and enforce replay protection.
 - Minimize PII; never store raw payment details (Stripe handles it).
 - Log all user-facing state changes in activity_log.

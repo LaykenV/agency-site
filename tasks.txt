@@ -34,8 +34,12 @@
 //architecture, auth, payment, redirect handling for all pages
 
 //read then test architecture
+//test full flow
+//so slow?
+
+update header
+
 test full flow
-so slow?
 
 terms page and agreement page
 
@@ -55,15 +59,14 @@ then schedule review call button
 live page
 
 render projects and support requests in /admin
-
-ux improvements
-
+gate admin
 'what are you hoping' to myNotes field
 gate admin
 
 review all code
 all backend complete and tested
 
+ux improvements
 build full ui 
 hero 
 about me

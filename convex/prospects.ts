@@ -1,4 +1,4 @@
-import { query } from "./_generated/server";
+import { internalQuery, query } from "./_generated/server";
 import { v } from "convex/values";
 import { prospectValidator } from "./validators";
 
@@ -46,6 +46,15 @@ export const isKnownEmail = query({
       .first();
 
     return billingCustomer !== null;
+  },
+});
+
+export const internalGetProspectById = internalQuery({
+  args: { prospectId: v.id("prospects") },
+  returns: v.union(prospectValidator, v.null()),
+  handler: async (ctx, args) => {
+    const prospect = await ctx.db.get(args.prospectId);
+    return prospect ?? null;
   },
 });
 

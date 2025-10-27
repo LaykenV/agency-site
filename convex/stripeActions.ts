@@ -92,11 +92,14 @@ export const syncStripeCustomer = internalAction({
 
     if (projectId) {
       if (sub.status === "active" || sub.status === "trialing") {
-        await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
+        // Attempt to transition from AWAITING_PAYMENT to AWAITING_ASSETS
+        // This returns true only if the status was actually updated (preventing duplicate emails)
+        const statusUpdated: boolean = await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
           projectId,
           status: "AWAITING_ASSETS",
           expectedCurrentStatus: "AWAITING_PAYMENT",
         });
+
         await ctx.runMutation(internal.activityLog.logActivity, {
           projectId,
           prospectId,
@@ -108,6 +111,23 @@ export const syncStripeCustomer = internalAction({
             status: sub.status,
           },
         });
+
+        // Trigger welcome email ONLY if we were the call that successfully transitioned the status
+        // This prevents duplicate emails when both webhook and client-side sync run simultaneously
+        if (statusUpdated) {
+          const agreement = await ctx.runQuery(internal.agreement.internalGetLatestAgreementForProject, {
+            projectId,
+          });
+          
+          if (agreement) {
+            // Schedule the welcome email to be sent after the snapshot is ready
+            // We pass all necessary data to avoid additional queries
+            await ctx.scheduler.runAfter(2000, internal.agreementActions.sendWelcomeEmailAfterSnapshot, {
+              agreementId: agreement._id,
+              projectId,
+            });
+          }
+        }
       } else if (
         sub.status === "past_due" ||
         sub.status === "unpaid" ||

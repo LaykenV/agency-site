@@ -1,247 +1,145 @@
-Portal Architecture, Routing, and Gating – Upgrade Plan
-Last Updated: 2025-10-24
+Agreement & Terms MVP Plan (v1.0)
 
-## Goals
-- Keep marketing pages open and unchanged.
-- Gate admin to you only.
-- Make `/portal` a single decision point driven by auth + project status.
-- Provide a clean unauthenticated login flow with email check + magic link.
-- Implement robust gating for Agreement, Payment, and Payment Success.
-- Improve header behavior inside the portal (show user avatar, not the link).
+Scope
+- Clickwrap agreement at `/portal/agreement` that records: `termsVersion`, `termsHash` (SHA-256), `acceptedAt`, and `userAgent`.
+- Versioned, public Terms page at `/legal/terms` rendered from a canonical content module.
+- Post-payment “Welcome Aboard” email sent after Stripe activation (webhook), including order summary and link to terms evidence.
+- Defer PDF generation and server-captured IP to a future iteration.
 
-## Non‑Goals
-- No visual redesign of public pages.
-- No major database redesign; build on today’s schema and helpers.
-- No Stripe price changes.
+Key Decisions
+- Terms source of truth: a canonical content export (e.g., `lib/legal/terms.ts`) used both to render `/legal/terms` and to compute the hash during acceptance to avoid mismatches.
+- Hashing: compute SHA-256 in-browser via Web Crypto on the exact canonical string used to render the page; store `termsHash` with `termsVersion`.
+- Evidence: store an HTML snapshot of the accepted version server-side for durability (Convex storage). Linking to this snapshot in the welcome email is sufficient for MVP.
+- Email timing: send the welcome email after Stripe confirms activation (or trialing) via webhook; no email at the acceptance step.
+- Future upgrades: capture client IP at the edge and attach a PDF snapshot; not required for MVP.
 
-## Current State (relevant)
-- Public pages: `app/page.tsx`, `app/onboarding/page.tsx`, `app/legal/terms/page.tsx`.
-- Admin UI (no gating yet): `app/admin/page.tsx`, backed by `convex/admin.ts`.
-- Auth: Better Auth via Convex plugin in `convex/auth.ts` with magic link and rate limits.
-- Prospects: `convex/prospects.ts` + `prospects` table (has `by_contactEmail` index).
-- Projects: `convex/projects.ts` (find-or-create on agreement landing).
-- Stripe: `convex/stripeActions.ts`, `convex/stripeHelpers.ts`, schema includes `billingCustomers`, `subscriptions`.
-- Portal routes:
-  - `app/portal/page.tsx` (Auth wrappers but no single decision function yet).
-  - `app/portal/agreement/page.tsx` (idempotent project init exists).
-  - `app/portal/subscribe/page.tsx` (checkout + auth required).
-  - `app/portal/paymentSuccess/page.tsx` (post-success sync).
-  - `app/portal/[projectId]/page.tsx` (exists; use for the actual portal view).
+Implementation Outline
+1) Terms content
+   - Create `lib/legal/terms.ts` exporting:
+     - `TERMS_VERSION` (e.g., `"2025-10-01"`)
+     - `TERMS_LAST_UPDATED` (ISO date string)
+     - `TERMS_HTML` (canonical HTML string) or `TERMS_MD` + a stable renderer
+   - Render `/legal/terms` from this module; display “Last updated” and add `data-terms-version` on the container.
+   - Optional: plan a `/legal/terms/[version]` route for archived versions.
 
-## Target Architecture Overview
-- Public stays public: `/`, `/onboarding`, `/legal/terms`.
-- Admin gated to you only: `/admin` (UI redirect + server-side authorization in every admin function).
-- Client Portal routing becomes a state machine:
-  - Unauthed on `/portal`: show “Already a client?” email input → only send magic link if email is known.
-  - Authed on `/portal`: run one query to decide where to send the user:
-    - No project but known prospect → `/portal/agreement?sid=<sessionId>`
-    - `AWAITING_AGREEMENT` → `/portal/agreement?sid=<sessionId>`
-    - `AWAITING_PAYMENT` → `/portal/subscribe`
-    - `AWAITING_ASSETS | IN_PROGRESS | IN_REVIEW | LIVE` → render portal (ideally at `/portal/[projectId]`)
-    - `ARCHIVED` → show read-only/closed view with support CTA
-- Agreement gating: authenticated and `sid` must belong to the authed user’s email.
-- Payment gating: authenticated and project must be `AWAITING_PAYMENT` both in UI and server action.
-- Payment success: authenticated; perform sync; then route to `/portal`.
-- In-portal header: show user avatar/menu instead of “Client Portal →” link.
+2) Agreement page (`app/portal/agreement/page.tsx`)
+   - Add a checkbox “I agree to the Terms” (link to `/legal/terms`).
+   - Disable the CTA until checked; show a brief order summary (price, 12-month minimum, recurring billing notice).
+   - On accept:
+     - Import the canonical content and compute `termsHash` with Web Crypto.
+     - Collect `userAgent` from `navigator.userAgent`.
+     - Call `api.agreement.createFromClickwrap({ projectId, termsVersion, termsHash, userAgent })`.
+     - On success, redirect to `/portal/subscribe`.
 
-## Routing Matrix
-- Public
-  - `/` (landing): public
-  - `/onboarding`: public
-  - `/legal/terms`: public
-- Admin
-  - `/admin`: admin-only
-- Portal
-  - `/portal`:
-    - Unauthed: email input → check known email → send magic link → callback to `/portal`.
-    - Authed: call single “decision” query; redirect based on project status; else render portal root when appropriate.
-  - `/portal/agreement?sid=...`: authed + `sid` ownership required
-  - `/portal/subscribe`: authed + `AWAITING_PAYMENT` required
-  - `/portal/paymentSuccess`: authed; sync; then redirect to `/portal`
-  - `/portal/[projectId]`: authed + project ownership required; render portal
+3) Backend (`convex/agreement.ts`)
+   - Keep `createFromClickwrap` logic (auth, ownership, idempotency, set project → AWAITING_PAYMENT, log activity).
+   - Add an internal action to store an HTML snapshot of the terms (from the canonical content) into Convex storage and patch the agreement with a `snapshotUrl` or `snapshotFileId`.
+   - Schedule the snapshot write with `ctx.scheduler.runAfter(0, internal.agreement.generateAndStoreTermsSnapshot, { agreementId, version })`.
 
-## Single Decision Query
-Create a Convex query (e.g., `auth.getPortalDecision`) that returns:
-- `authed`: boolean
-- `user`: minimal user fields `{ _id, email, name? }`
-- `primaryProject`: `{ _id, projectId, projectStatus } | null`
-- `prospectSessionId`: `string | null` (latest by email if available)
-- `subscription`: minimal cached subscription (from `stripeHelpers.getMySubscription`)
-- `redirect`: one of `null | "/portal/agreement?sid=..." | "/portal/subscribe" | "/portal/[projectId]"`
+4) Stripe + email
+   - In `convex/stripeActions.ts` webhook sync (`syncStripeCustomer`): when subscription becomes `active` or `trialing`:
+     - Set project → `AWAITING_ASSETS` if currently `AWAITING_PAYMENT`.
+     - Send the “Welcome Aboard” email with order summary and a link to the stored HTML snapshot (fetch the latest agreement for the project to include `termsVersion`/`termsHash`/`snapshotUrl`).
+   - Implement `internal.emails.sendWelcomeEmail` in `convex/emails.ts` using `resend`.
 
-Logic:
-- If not authed → `{ authed: false, redirect: null }`
-- If authed and no project:
-  - If `prospectSessionId` can be found via `prospects.by_contactEmail`, set `redirect` to agreement with that `sid`.
-- If authed and project exists: set `redirect` by `projectStatus`:
-  - `AWAITING_AGREEMENT` → `/portal/agreement?sid=...`
-  - `AWAITING_PAYMENT` → `/portal/subscribe`
-  - `AWAITING_ASSETS+` → `/portal/[projectId]`
-  - `ARCHIVED` → `/portal/[projectId]` with read-only notice
+5) Testing checklist
+- Terms page shows correct “Last updated” and version; `data-terms-version` matches `TERMS_VERSION`.
+- Agreement flow stores agreement with correct `termsVersion`, `termsHash`, `userAgent`.
+- Snapshot task writes an artifact and attaches `snapshotUrl` (or file id) to the agreement.
+- Stripe webhook transitions project to `AWAITING_ASSETS` and sends the welcome email with expected content.
 
-Note: If multiple projects later, define “primary” as most recent non-archived or most recent by `createdAt`.
+Future Upgrades (post-MVP)
+- Server-captured IP: add an `httpAction` acceptance endpoint or an edge route to securely capture `x-forwarded-for` and store `ip`.
+- PDF snapshot: render the versioned Terms page to PDF (e.g., `puppeteer`) in an action, store it, and link/attach in the email when requested.
 
-## Unauthenticated Portal Login Flow (/portal)
-- UI: “Already a client?” email input.
-- On submit:
-  - Call `prospects.isKnownEmail({ email })`:
-    - Check `prospects.by_contactEmail` for latest.
-    - Optionally check `billingCustomers` by email (add `by_email` index for convenience).
-  - If known → call Better Auth magic link with `callbackURL: "/portal"`.
-  - If unknown → message “We couldn’t find your email” with CTAs (Start Onboarding | Schedule Call).
-- Rate limit: rely on Better Auth’s existing rules and add a mild UI cooldown.
+Frontend — Pages (Detailed UX Plan)
 
-## Agreement Page (/portal/agreement?sid=...)
-- Gating:
-  - Must be authed.
-  - Validate `sid` belongs to authed user:
-    - Load prospect by `sid` and ensure `user.email === prospect.details.contactEmail`.
-    - If mismatch → `/portal/autherror?sid=...&error=ownership`.
-- Initialization:
-  - Use existing `projects.findOrCreateProjectForProspect` (idempotent).
-- Clickwrap:
-  - On accept: insert into `agreements`, append `activity_log`, update project → `AWAITING_PAYMENT`, then redirect to `/portal/subscribe`.
+1) Terms page (`/legal/terms`)
+- Purpose: Clear, confidence-inspiring legal page that’s readable, skimmable, and printable.
+- Rendering approach:
+  - Use the canonical content module (see “Terms content”) as the single source of truth.
+  - SSR page; support a `?print=1` mode for a minimal, print-friendly layout.
+- Visual design (align with existing tokens and user preference for soft tints/gradients [[memory:10223702]]):
+  - Page background: `bg-[var(--background)]`; optional subtle radial gradient backdrop like agreement page.
+  - Content card: centered, `max-w-3xl`, rounded, `bg-[var(--card)]/90`, border `var(--border)`, `shadow-2xl`, `backdrop-blur`.
+  - Typography: headings with clear hierarchy; body text uses `text-[var(--secondary)]` for long-form sections.
+- Structure (ordered for skimmability):
+  1. Header
+     - Title: “Terms of Service”
+     - Meta line: “Version: {TERMS_VERSION} • Last updated: {TERMS_LAST_UPDATED}”
+     - Note: “These terms apply to Website‑as‑a‑Service subscriptions.”
+  2. Conspicuous Summary (callout box)
+     - Plan & Price: `$199/mo, $0 down`
+     - Minimum Term: `12‑month commitment`
+     - Early Termination: short statement (e.g., remaining months or defined fee)
+     - Recurring Billing Authorization: simple sentence confirming ongoing monthly charge
+     - Link to a short “Order Summary” section below
+  3. Table of Contents (auto-generated from headings; anchors for each section)
+  4. Core Sections (anchor-linked):
+     - Order Summary (what you get, price, billing cadence, renewals)
+     - Scope of Service (pages, performance target, edits policy expectations)
+     - Unlimited Edits Policy (reasonable use, non‑material changes, examples)
+     - Responsibilities (client content/assets/timely feedback)
+     - Intellectual Property & License (ownership of content; service license during term; domain transfer conditions)
+     - Billing & Payment Authorization (recurring, method on file)
+     - Minimum Term & Early Termination (clear mechanics)
+     - Scheduling & Communication (support channel and timelines)
+     - Disclaimers & Warranties
+     - Limitation of Liability
+     - Termination & Suspension
+     - Governing Law & Venue
+     - Changes to Terms (how we notify/version)
+     - Notices & Contact (support email)
+  5. Footer
+     - “Questions? Email support” with mailto link.
+     - “Version {TERMS_VERSION}” repeated; `data-terms-version` on the root container.
+- Accessibility & UX details:
+  - Ensure keyboard navigable TOC; visible focus; `aria-label` for TOC nav.
+  - High contrast for callout summary; avoid walls of text (bullets, short paragraphs).
+  - In `?print=1` mode: remove gradients/shadows; black text on white; include version/date in header.
 
-## Payment Page (/portal/subscribe)
-- Gating:
-  - Must be authed and user’s project must be `AWAITING_PAYMENT`.
-  - Enforce precondition server-side in `stripeActions.createCheckoutSession`:
-    - Load the user’s project; if not `AWAITING_PAYMENT`, throw an error.
-- Create Checkout:
-  - Use existing action; ensure `success_url` → `/portal/paymentSuccess`.
+2) Agreement page (`/portal/agreement`)
+- Purpose: Make it obvious, low‑friction, and reassuring to proceed while ensuring enforceable consent.
+- Page layout (build on existing page):
+  - Keep the soft radial gradient background and card container.
+  - Left/top: Progress context (e.g., “Agreement Stage”) and a friendly headline.
+  - Project Details card (already present): company, contact, email, current status.
+  - Summary of the subscription (clear, non‑legalese):
+    - “The All‑Inclusive Plan — $199/month, $0 down”
+    - “12‑month minimum commitment”
+    - “Recurring billing each month until canceled per terms”
+  - Terms acceptance area:
+    - Checkbox: “I have read and agree to the Terms of Service.”
+    - Link opens `/legal/terms` in a new tab (`target="_blank"`, `rel="noopener noreferrer"`).
+    - Microcopy under the checkbox: “By clicking accept, you agree to the Terms and recurring billing.”
+  - Primary CTA button (full width): “Accept & Continue to Payment”
+    - Disabled until checkbox is checked.
+    - On click: compute SHA‑256 of canonical terms content, capture `navigator.userAgent`, call `agreement.createFromClickwrap`, then navigate to `/portal/subscribe` on success.
+- Empty/loading/error states (owner‑friendly):
+  - Loading prospect/user: show spinner and short text (“Preparing your agreement…”) — already present.
+  - Email mismatch/ownership: redirect to `/portal/autherror` as implemented; show a clear explanation.
+  - Mutation failure: inline error above CTA with friendly text and retry guidance.
+- Accessibility & UX details:
+  - Associate checkbox with label; ensure it’s reachable via keyboard and has visible focus.
+  - Ensure the CTA has `aria-disabled` when disabled.
+  - Keep copy concise; no legalese on this page beyond the summary.
+- Trust & reassurance touches:
+  - “Takes 2 minutes” hint near the CTA.
+  - Small “Questions? Email support” line under the CTA.
+  - Optional tiny badges or lock icon near “Continue to Payment” to signal security.
+- Mobile/responsive behavior:
+  - Maintain card padding; stack detail fields; ensure larger tap targets for checkbox and CTA.
+  - Sticky bottom CTA on mobile is optional; otherwise keep within the card near the checkbox.
 
-## Payment Success (/portal/paymentSuccess)
-- Gating:
-  - Must be authed.
-- Behavior:
-  - Call `stripeActions.syncAfterSuccessForSelf`.
-  - Optional small delay; then `router.push("/portal")`.
-- Webhook (ensure correctness):
-  - When subscription goes active or first invoice paid, set project → `AWAITING_ASSETS` if still in a pre-asset state; append `activity_log`.
+3) Microcopy (ready‑to‑use)
+- Checkbox label: “I have read and agree to the Terms of Service.”
+- Summary bullets:
+  - “$199/month, $0 down”
+  - “12‑month minimum commitment”
+  - “Recurring billing each month until canceled per terms”
+- CTA: “Accept & Continue to Payment”
+- Error (acceptance failure): “We couldn’t capture your agreement. Please try again.”
 
-## Portal Page (/portal and /portal/[projectId])
-- `/portal`:
-  - Unauthed: email input flow above.
-  - Authed: call decision query; if `redirect` is set, push to it; else render primary portal view.
-- `/portal/[projectId]`:
-  - Fetch project by `projectId`.
-  - Verify `authUserId === currentUser._id`.
-  - Render full portal when `AWAITING_ASSETS+`; show a read-only/closed view for `ARCHIVED`.
-
-## Admin Gating (/admin)
-- Use account-based gating (recommended) rather than a password wall:
-  - Env: `ADMIN_EMAILS="you@example.com,alt@example.com"`
-  - UI: If not admin, redirect away from `/admin`.
-  - Server: Every function in `convex/admin.ts` verifies admin (authoritative).
-- Optional defense-in-depth:
-  - Add Next middleware basic auth only for `/admin` in production.
-
-## Global Header
-- Outside portal:
-  - Keep “Client Portal →” link (as today).
-- Inside portal (`pathname.startsWith("/portal")`):
-  - If authed: show user avatar + menu (profile, sign out).
-  - If not authed: still show portal link or a subtle “Sign in” button.
-- Load minimal user info only when in portal to avoid global auth coupling.
-
-## Convex Additions/Changes
-- Queries/Mutations/Actions
-  - `auth.getPortalDecision` (query): returns the decision object above.
-  - `projects.getMyPrimaryProject` (query): by `by_authUserId`, order by `createdAt` desc; filter `ARCHIVED` last.
-  - `prospects.findLatestByEmail` (query): uses `by_contactEmail`; returns latest.
-  - `prospects.isKnownEmail` (query): boolean; checks `prospects` (and optionally `billingCustomers` by email).
-  - `agreements.createFromClickwrap` (mutation): inserts agreement + `activity_log`; sets project → `AWAITING_PAYMENT`.
-  - `admin.requireAdmin` (helper) or inline check in each `convex/admin.ts` function using `authComponent.getAuthUser`.
-- Stripe actions
-  - `stripeActions.createCheckoutSession`: assert user project is `AWAITING_PAYMENT`.
-  - Webhook handler (Next API route or `convex/http.ts`): on activation/first invoice paid → project → `AWAITING_ASSETS`; log activity.
-
-## Schema Updates (optional but recommended)
-- `billingCustomers`: add index `by_email` to support login checks by email.
-- No other schema changes required for MVP of this plan.
-
-## Environment Variables
-- `SITE_URL` (Better Auth base URL)
-- `NEXT_PUBLIC_BASE_URL` (public site origin; used in Stripe redirects)
-- `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`
-- `ADMIN_EMAILS` (comma-separated)
-- Email sending: configured already for Resend via Better Auth plugin
-
-## Security Considerations
-- Agreement ownership: enforce `sid` belongs to authed user before allowing acceptance.
-- Admin authorization: enforce in every admin Convex function; UI checks are not enough.
-- Payment preconditions: assert project status server-side before creating checkout.
-- Magic link abuse: keep Better Auth rate limits; add UI cooldown and a server-side “known email” check.
-- Project access: always scope queries to `authUserId`; never leak other users’ projects.
-
-## UX Notes
-- `/portal` should show clear state messages during redirects: “Taking you to your agreement…”, “Taking you to checkout…”.
-- Unauthed `/portal`: friendly copy if email not found, with two CTAs (Onboarding | Schedule a Call).
-- After payment success: short success feedback before redirect.
-
-## Implementation Steps
-1) Back end (Convex)
-- Add `auth.getPortalDecision`, `projects.getMyPrimaryProject`, `prospects.findLatestByEmail`, `prospects.isKnownEmail`.
-- Add `agreements.createFromClickwrap` mutation; patch project → `AWAITING_PAYMENT`; append `activity_log`.
-- Update `stripeActions.createCheckoutSession` to assert `AWAITING_PAYMENT`.
-- Ensure webhook updates project → `AWAITING_ASSETS` when subscription is active or first invoice paid.
-
-2) Front end (Next.js)
-- `/portal/page.tsx`:
-  - Unauthed email input → check known email → send magic link with `callbackURL: "/portal"`.
-  - Authed: call decision query once; push to `redirect`.
-- `/portal/agreement/page.tsx`:
-  - Verify `sid` ownership; initialize project; render clickwrap; on accept call `agreements.createFromClickwrap`; then push `/portal/subscribe`.
-- `/portal/subscribe/page.tsx`:
-  - Optionally pre-check project status (UI); action enforces it anyway; on error, push to `/portal`.
-- `/portal/paymentSuccess/page.tsx`:
-  - Keep existing sync + redirect.
-- `/portal/[projectId]/page.tsx`:
-  - Verify ownership; render portal or archived-readonly.
-
-3) Header
-- In `components/global-header.tsx`, if inside portal and authed, show avatar + menu; otherwise keep “Client Portal →”.
-
-4) Admin
-- UI: redirect away if not admin.
-- Server: enforce admin in `convex/admin.ts`.
-
-5) Optional Middleware (production)
-- Basic auth for `/admin` as secondary protection.
-
-## Testing Checklist
-- Unauthed `/portal`:
-  - Known email → receives magic link; callback to `/portal` → decision redirects correctly.
-  - Unknown email → shows helpful message and CTAs; no link sent.
-- Authenticated:
-  - No project; known prospect → `/portal/agreement?sid=...`.
-  - Agreement accept → project → `AWAITING_PAYMENT` → `/portal/subscribe`.
-  - Checkout success → `/portal/paymentSuccess` → sync → `/portal`.
-  - Webhook flips project to `AWAITING_ASSETS`; next `/portal` load renders portal.
-  - Archived project → read-only view.
-- Admin:
-  - Non-admin blocked in UI and server functions.
-- Header:
-  - In-portal shows avatar; elsewhere shows portal link.
-
-## Rollout Plan
-- Implement Convex queries/mutations.
-- Implement portal decision and gating UI.
-- Add admin server checks.
-- Add Stripe preconditions and verify webhook promotion to `AWAITING_ASSETS`.
-- Ship behind a short-lived feature flag if desired; test with a dummy account; then remove flag.
-
-## Future Enhancements
-- Multiple projects per user: enhance decision to choose active primary project or show project switcher.
-- Portal ticketing and asset library.
-- Subscription management surfacing from `subscriptions` cache with next renewal date.
-- Dunning states: restrict some features at read-time based on subscription status.
-
-### To-dos
-
-- [x] Implement Convex queries/mutations and schema/index updates per plan
-- [x] Harden Stripe actions and webhook status promotion
-- [ ] Refactor portal routes for auth gating and decision redirects
-- [ ] Adjust portal header/avatar behavior
-- [ ] Enforce admin-only access in UI and Convex admin functions
-- [ ] Run end-to-end portal and admin QA
+4) Analytics & success signals (optional)
+- Fire an analytics event on acceptance (before redirect) with `{ termsVersion }`.
+- In Stripe success page, show a brief “Subscription active” confirmation and guide to next steps.

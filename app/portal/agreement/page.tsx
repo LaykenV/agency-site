@@ -1,18 +1,17 @@
 "use client";
 
-import {
-  Authenticated,
-  Unauthenticated,
-  AuthLoading,
-  useQuery,
-  useConvex,
-} from "convex/react";
+import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import {
+  TERMS_SUMMARY_POINTS,
+  TERMS_VERSION,
+  TERMS_HASH_INPUT,
+} from "@/lib/legal/terms";
 
 export default function AgreementPage() {
   return (
@@ -66,10 +65,13 @@ function AuthenticatedAgreementView() {
   const error = searchParams.get("error");
   const [isInitialized, setIsInitialized] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [acceptanceError, setAcceptanceError] = useState<string | null>(null);
+  const [isAccepting, setIsAccepting] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
   const router = useRouter();
-  const convex = useConvex();
 
   const findOrCreateProject = useMutation(api.projects.findOrCreateProjectForProspect);
+  const createFromClickwrap = useMutation(api.agreement.createFromClickwrap);
 
   // Get prospect by sessionId
   const prospect = useQuery(
@@ -86,6 +88,16 @@ function AuthenticatedAgreementView() {
   const setError = useCallback((message: string | null) => {
     setErrorMessage(message);
   }, []);
+
+  useEffect(() => {
+    if (acceptanceError) {
+      const timer = window.setTimeout(() => {
+        setAcceptanceError(null);
+      }, 4000);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [acceptanceError]);
 
   // Redirect to error page if there's an error
   useEffect(() => {
@@ -156,19 +168,33 @@ function AuthenticatedAgreementView() {
     return null;
   }, [decision?.primaryProject, primaryProjectId]);
 
+  const computeTermsHash = useCallback(async () => {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(TERMS_HASH_INPUT);
+    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  }, []);
+
   const handleAgreementAccept = async () => {
-    if (!latestProject) return;
+    if (!latestProject || !isChecked || isAccepting) return;
+    setAcceptanceError(null);
+    setIsAccepting(true);
     try {
-      await convex.mutation(api.agreement.createFromClickwrap, {
+      const termsHash = await computeTermsHash();
+      const userAgent = typeof window !== "undefined" ? window.navigator.userAgent : undefined;
+      await createFromClickwrap({
         projectId: latestProject._id,
-        termsVersion: "2024-09-01",
-        termsHash: "placeholder-hash",
+        termsVersion: TERMS_VERSION,
+        termsHash,
+        userAgent,
       });
       router.replace("/portal/subscribe");
     } catch (err) {
       console.error("[portal] failed to accept agreement", err);
-      alert("We couldn't capture your agreement. Please try again.");
+      setAcceptanceError("We couldn't capture your agreement. Please try again.");
     }
+    setIsAccepting(false);
   };
 
   // Early returns after all hooks
@@ -248,17 +274,73 @@ function AuthenticatedAgreementView() {
           </div>
         )}
 
-        <div className="mt-8 space-y-4 text-sm text-[var(--secondary)]">
-          <p>
-            The full agreement text will appear here. By confirming, you agree to the terms outlined
-            for your website project and acknowledge that the next step will be a secure payment checkout.
-          </p>
-          <button
-            onClick={handleAgreementAccept}
-            className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--primary)]/30 transition hover:brightness-110"
-          >
-            Accept & Continue to Payment
-          </button>
+        <div className="mt-10 space-y-8 text-sm text-[var(--secondary)]">
+          <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/60 p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-[var(--secondary)]">Plan Snapshot</p>
+            <ul className="mt-4 space-y-3">
+              {TERMS_SUMMARY_POINTS.map((item) => (
+                <li key={item.label} className="flex items-start gap-3">
+                  <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-[var(--primary)]" />
+                  <span>
+                    <span className="font-semibold text-[var(--foreground)]">{item.label}:</span> {item.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-xs text-[var(--secondary)]">
+              Version {TERMS_VERSION} • The complete agreement is available at the link below.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <p>
+              Review the Terms of Service before continuing. Acceptance confirms the 12-month commitment, recurring billing authorization, and our unlimited edits policy.
+            </p>
+            <a
+              href="/legal/terms"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--primary)] hover:underline"
+            >
+              View Terms of Service
+            </a>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--card)]/90 p-6">
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--primary)]"
+                checked={isChecked}
+                onChange={(event) => setIsChecked(event.target.checked)}
+              />
+              <span>
+                I have read and agree to the Terms of Service, including the 12-month commitment and recurring billing authorization.
+              </span>
+            </label>
+            <p className="text-xs text-[var(--secondary)]">
+              By clicking accept, you authorize the monthly subscription charge of $199 after checkout. Questions? Email
+              {" "}
+              <a className="text-[var(--primary)]" href="mailto:support@acadianawebdesign.com">
+                support@acadianawebdesign.com
+              </a>
+              .
+            </p>
+            {acceptanceError && (
+              <div className="rounded-lg border border-red-500/50 bg-red-500/10 p-3 text-sm text-red-500">
+                {acceptanceError}
+              </div>
+            )}
+            <button
+              onClick={handleAgreementAccept}
+              className="w-full rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--primary)]/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={!isChecked || isAccepting}
+              aria-disabled={!isChecked || isAccepting}
+            >
+              {isAccepting ? "Capturing agreement..." : "Accept & Continue to Payment"}
+            </button>
+            <p className="text-xs text-[var(--secondary)]">Takes about 2 minutes.</p>
+          </div>
         </div>
       </div>
     </div>

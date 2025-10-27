@@ -115,6 +115,39 @@ export const internalGetLatestProjectByAuthUser = internalQuery({
   },
 });
 
+export const internalGetProjectById = internalQuery({
+  args: { projectId: v.id("projects") },
+  returns: v.union(
+    v.object({
+      _id: v.id("projects"),
+      authUserId: v.string(),
+      projectId: v.string(),
+      prospectId: v.optional(v.id("prospects")),
+      projectStatus: v.optional(projectStatusValidator),
+      _creationTime: v.number(),
+      createdAt: v.optional(v.number()),
+      updatedAt: v.optional(v.number()),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      return null;
+    }
+    return {
+      _id: project._id,
+      authUserId: project.authUserId,
+      projectId: project.projectId,
+      prospectId: project.prospectId,
+      projectStatus: project.projectStatus,
+      _creationTime: project._creationTime,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
+  },
+});
+
 export const getPortalProject = query({
   args: {
     projectId: v.string(),

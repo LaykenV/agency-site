@@ -1,6 +1,7 @@
 import { internalMutation, internalQuery, mutation } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
+import { internal } from "./_generated/api";
 
 export const createFromClickwrap = mutation({
   args: {
@@ -78,6 +79,12 @@ export const createFromClickwrap = mutation({
       createdAt: now,
     });
 
+    // Schedule snapshot generation
+    await ctx.scheduler.runAfter(0, internal.agreementActions.generateAndStoreTermsSnapshot, {
+      agreementId,
+      termsVersion: args.termsVersion,
+    });
+
     return { agreementId, projectStatus: "AWAITING_PAYMENT" } as const;
   },
 });
@@ -137,3 +144,16 @@ export const internalGetLatestAgreementForProject = internalQuery({
   },
 });
 
+export const internalPatchAgreementSnapshot = internalMutation({
+  args: {
+    agreementId: v.id("agreements"),
+    snapshotUrl: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.agreementId, {
+      snapshotUrl: args.snapshotUrl,
+    });
+    return null;
+  },
+});

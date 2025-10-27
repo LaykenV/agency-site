@@ -11,6 +11,7 @@
 import type * as activityLog from "../activityLog.js";
 import type * as admin from "../admin.js";
 import type * as agreement from "../agreement.js";
+import type * as agreementActions from "../agreementActions.js";
 import type * as auth from "../auth.js";
 import type * as cal from "../cal.js";
 import type * as calWebhook from "../calWebhook.js";
@@ -42,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   activityLog: typeof activityLog;
   admin: typeof admin;
   agreement: typeof agreement;
+  agreementActions: typeof agreementActions;
   auth: typeof auth;
   cal: typeof cal;
   calWebhook: typeof calWebhook;
