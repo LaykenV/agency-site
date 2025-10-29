@@ -57,9 +57,11 @@ build finished button on admin
 then schedule review call button with link
 live page
 
-domain api
+//domain api
 
-file upload
+//file upload and color scheme
+
+add calls
 
 test project page
 

@@ -112,7 +112,23 @@ export const internalGetLatestProjectByAuthUser = internalQuery({
       .withIndex("by_authUserId", (q) => q.eq("authUserId", args.authUserId))
       .order("desc");
 
-    return await findPrimaryProject(projectQuery);
+    const project = await findPrimaryProject(projectQuery);
+    
+    if (!project) {
+      return null;
+    }
+
+    // Return only the fields specified in the validator
+    return {
+      _id: project._id,
+      authUserId: project.authUserId,
+      projectId: project.projectId,
+      prospectId: project.prospectId,
+      projectStatus: project.projectStatus,
+      _creationTime: project._creationTime,
+      createdAt: project.createdAt,
+      updatedAt: project.updatedAt,
+    };
   },
 });
 
@@ -168,7 +184,10 @@ export const getPortalProject = query({
         domainPreference: v.union(v.string(), v.null()),
         inspirationLinks: v.array(v.string()),
         brand: v.object({
-          styleVibe: v.union(v.string(), v.null()),
+          colorScheme: v.object({
+            primary: v.string(),
+            accent: v.string(),
+          }),
           logoStorageId: v.optional(v.id("_storage")),
           imageStorageIds: v.optional(v.array(v.id("_storage"))),
         }),
@@ -205,7 +224,7 @@ export const getPortalProject = query({
       domainPreference: project.buildDetails.domainPreference,
       inspirationLinks: project.buildDetails.inspirationLinks,
       brand: {
-        styleVibe: project.buildDetails.brand.styleVibe,
+        colorScheme: project.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: project.buildDetails.brand.logoStorageId,
         imageStorageIds: project.buildDetails.brand.imageStorageIds,
       },
@@ -259,7 +278,10 @@ export const upsertBuildDetails = mutation({
     domainPreference: v.optional(v.string()),
     inspirationLinks: v.optional(v.array(v.string())),
     brand: v.optional(v.object({
-      styleVibe: v.optional(v.string()),
+      colorScheme: v.optional(v.object({
+        primary: v.string(),
+        accent: v.string(),
+      })),
     })),
     logoStorageId: v.optional(v.id("_storage")),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
@@ -290,7 +312,7 @@ export const upsertBuildDetails = mutation({
       inspirationLinks: args.inspirationLinks !== undefined ? args.inspirationLinks : existingBuildDetails?.inspirationLinks ?? [],
       myNotes: existingBuildDetails?.myNotes ?? null, // Preserve admin-only field
       brand: {
-        styleVibe: args.brand?.styleVibe !== undefined ? args.brand.styleVibe : existingBuildDetails?.brand?.styleVibe ?? null,
+        colorScheme: args.brand?.colorScheme !== undefined ? args.brand.colorScheme : existingBuildDetails?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: args.logoStorageId !== undefined ? args.logoStorageId : existingBuildDetails?.brand?.logoStorageId,
         imageStorageIds: args.imageStorageIds !== undefined ? args.imageStorageIds : existingBuildDetails?.brand?.imageStorageIds,
       },

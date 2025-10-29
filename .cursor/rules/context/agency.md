@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.3
-Last Updated: October 26, 2025
+Document Version: 2.4
+Last Updated: January 28, 2025
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -80,7 +80,7 @@ IV. The Golden Path (End-to-End Client Journey)
 
 7) Inside the Client Portal
 - Status-driven experience with clear CTAs per stage:
-  - AWAITING_ASSETS: Submit build details form (headline, domain preference, inspiration links, brand style, logo/images via Convex storage), then schedule 45-min kickoff call
+  - AWAITING_ASSETS: Submit build details form (headline, domain preference, inspiration links, brand color scheme with live preview, logo/images via Convex storage with instant previews), then schedule 45-min kickoff call
   - IN_PROGRESS: View kickoff call details and build progress message
   - IN_REVIEW: Access staging site link and schedule 30-min review call
   - LIVE: View live site URL, submit edit/support requests, and view request history with status tracking
@@ -112,7 +112,7 @@ V. Legal & Policy (MVP)
 - Optional later: add an e-sign vendor (Dropbox Sign/SignWell) if customers ask or to further reduce disputes; your schema accommodates this via agreements table.
 
 VI. Application Architecture
-- Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions), Cal.com (scheduling).
+- Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions + file storage), Cal.com (scheduling).
 - Routing highlights:
   - /portal/agreement (gated first step)
   - /portal (dashboard)
@@ -122,6 +122,10 @@ VI. Application Architecture
 - Webhooks:
   - /api/stripe (Stripe billing events)
   - /api/cal-webhook (scheduling events)
+- File Storage (convex/files.ts):
+  - `generateUploadUrl` (mutation): Returns pre-signed upload URL for client-side file uploads
+  - `getUrls` (query): Fetches signed URLs for stored files with ownership verification
+  - `deleteFile` (mutation): Deletes files from storage with authorization checks
 - Emails:
   - Welcome Agreement Link
   - Payment Success + Terms copy
@@ -279,7 +283,10 @@ export const buildDetailsValidator = v.object({
   inspirationLinks: v.array(v.string()),
   myNotes: v.union(v.string(), v.null()), // Admin-only field, not exposed to clients
   brand: v.object({
-    styleVibe: v.union(v.string(), v.null()),
+    colorScheme: v.object({
+      primary: v.string(), // Hex color for primary brand color
+      accent: v.string(),  // Hex color for accent brand color
+    }),
     logoStorageId: v.optional(v.id("_storage")),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
   }),
@@ -451,8 +458,12 @@ Client Portal (/portal/[projectId])
   - LIVE: Live site link + edit request form + request history list
   - ARCHIVED: Read-only notice with support contact
 - Build Details Form (`projects.upsertBuildDetails`):
-  - Client fields: headline, domainPreference, inspirationLinks, brand.styleVibe
-  - File uploads: brand.logoStorageId, brand.imageStorageIds (Convex storage)
+  - Client fields: headline, domainPreference, inspirationLinks, brand.colorScheme (primary/accent hex colors with native color pickers and live gradient preview)
+  - File uploads: brand.logoStorageId, brand.imageStorageIds (Convex storage via `files.generateUploadUrl`)
+    - Instant local previews using `URL.createObjectURL()` before upload
+    - Stored image previews via signed URLs from `files.getUrls` query
+    - Logo: single preview card with contained image
+    - Brand images: responsive grid (2-3 columns) with thumbnails
   - Admin-only field: myNotes (not exposed to client, only editable via admin)
   - Auto-sets brandAssetsUploaded flag when files uploaded
 - Edit Requests System (`edit_requests` table):
@@ -497,7 +508,7 @@ X. Security and Compliance
 
 XI. Roadmap
 - V1: In-app clickwrap + Stripe subscription + webhook-driven automation. ✅
-- V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage (in progress); domain purchase/management workflow (pending).
+- V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage with live previews ✅; domain purchase/management workflow (pending).
 - V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
 - V1.3: Self-serve asset library and change history; auto-generated monthly reports.
 - V1.4: Admin dashboard for managing projects, viewing edit requests, and bulk operations.

@@ -35,9 +35,11 @@ type BuildDetailsFormData = {
   domainPreference: string;
   inspirationLinks: string[];
   brand: {
-    styleVibe: string;
+    colorScheme: { primary: string; accent: string };
     logoFile?: File | null;
     imageFiles?: File[];
+    logoStorageId?: Id<"_storage">;
+    imageStorageIds?: Id<"_storage">[];
   };
 };
 
@@ -265,7 +267,7 @@ function AwaitingAssetsSection({
     domainPreference: string | null;
     inspirationLinks: string[];
     brand: {
-      styleVibe: string | null;
+      colorScheme: { primary: string; accent: string };
       logoStorageId?: Id<"_storage">;
       imageStorageIds?: Id<"_storage">[];
     };
@@ -301,7 +303,9 @@ function AwaitingAssetsSection({
             domainPreference: buildDetails.domainPreference ?? "",
             inspirationLinks: buildDetails.inspirationLinks,
             brand: {
-              styleVibe: buildDetails.brand.styleVibe ?? "",
+              colorScheme: buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
+              logoStorageId: buildDetails.brand.logoStorageId,
+              imageStorageIds: buildDetails.brand.imageStorageIds,
             },
           } : undefined}
           onSuccess={() => {
@@ -337,13 +341,41 @@ function BuildDetailsForm({
     domainPreference: initialValues?.domainPreference ?? "",
     inspirationLinks: initialValues?.inspirationLinks ?? [],
     brand: {
-      styleVibe: initialValues?.brand?.styleVibe ?? "",
+      colorScheme: initialValues?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
       logoFile: null,
       imageFiles: [],
+      logoStorageId: initialValues?.brand?.logoStorageId,
+      imageStorageIds: initialValues?.brand?.imageStorageIds,
     },
   });
 
+  // Local preview URLs for newly selected files
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+  const [imagePreviewUrls, setImagePreviewUrls] = useState<string[]>([]);
+
   const upsertBuildDetails = useMutation(api.projects.upsertBuildDetails);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+  // Fetch signed URLs for existing storage files
+  const storageIds = useMemo(() => {
+    const ids: Id<"_storage">[] = [];
+    if (formData.brand.logoStorageId) ids.push(formData.brand.logoStorageId);
+    if (formData.brand.imageStorageIds) ids.push(...formData.brand.imageStorageIds);
+    return ids;
+  }, [formData.brand.logoStorageId, formData.brand.imageStorageIds]);
+
+  const storedFileUrls = useQuery(
+    api.files.getUrls,
+    storageIds.length > 0 ? { projectId, storageIds } : "skip"
+  );
+
+  // Cleanup object URLs on unmount or when files change
+  useEffect(() => {
+    return () => {
+      if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+      imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [logoPreviewUrl, imagePreviewUrls]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -357,17 +389,59 @@ function BuildDetailsForm({
     setPending(true);
 
     try {
+      let logoStorageId: Id<"_storage"> | undefined;
+      let imageStorageIds: Id<"_storage">[] | undefined;
+
+      // Upload logo if selected
+      if (formData.brand.logoFile) {
+        const uploadUrl = await generateUploadUrl();
+        const uploadResult = await fetch(uploadUrl, {
+          method: "POST",
+          headers: { "Content-Type": formData.brand.logoFile.type },
+          body: formData.brand.logoFile,
+        });
+        
+        if (!uploadResult.ok) {
+          throw new Error("Failed to upload logo");
+        }
+        
+        const { storageId } = await uploadResult.json();
+        logoStorageId = storageId;
+      }
+
+      // Upload brand images if selected
+      if (formData.brand.imageFiles && formData.brand.imageFiles.length > 0) {
+        const uploadedIds: Id<"_storage">[] = [];
+        
+        for (const file of formData.brand.imageFiles) {
+          const uploadUrl = await generateUploadUrl();
+          const uploadResult = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
+          
+          if (!uploadResult.ok) {
+            throw new Error(`Failed to upload ${file.name}`);
+          }
+          
+          const { storageId } = await uploadResult.json();
+          uploadedIds.push(storageId);
+        }
+        
+        imageStorageIds = uploadedIds;
+      }
+
       await upsertBuildDetails({
         projectId,
         headline: formData.headline.trim() || undefined,
         domainPreference: formData.domainPreference.trim() || undefined,
         inspirationLinks: formData.inspirationLinks.length > 0 ? formData.inspirationLinks : undefined,
         brand: {
-          styleVibe: formData.brand.styleVibe.trim() || undefined,
+          colorScheme: formData.brand.colorScheme,
         },
-        // File uploads will be implemented later
-        // logoStorageId: undefined,
-        // imageStorageIds: undefined,
+        logoStorageId,
+        imageStorageIds,
       });
       
       toast.success("Build details saved!");
@@ -430,20 +504,54 @@ function BuildDetailsForm({
       <div className="border-t border-[var(--border)] pt-6 space-y-4">
         <h3 className="font-semibold">Brand Assets</h3>
 
-        <div>
-          <Label htmlFor="styleVibe">Style & Vibe</Label>
-          <Input
-            id="styleVibe"
-            value={formData.brand.styleVibe}
-            onChange={(e) => setFormData({
-              ...formData,
-              brand: { ...formData.brand, styleVibe: e.target.value }
-            })}
-            placeholder="e.g., Minimal and modern, Bold and colorful..."
-          />
-          <p className="mt-1 text-xs text-[var(--secondary)]">
-            Describe the look and feel you want for your site
-          </p>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="primaryColor">Primary Color</Label>
+            <input
+              type="color"
+              id="primaryColor"
+              value={formData.brand.colorScheme.primary}
+              onChange={(e) => setFormData({
+                ...formData,
+                brand: { 
+                  ...formData.brand, 
+                  colorScheme: { ...formData.brand.colorScheme, primary: e.target.value }
+                }
+              })}
+              className="h-10 w-24 rounded border border-[var(--border)] cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="accentColor">Accent Color</Label>
+            <input
+              type="color"
+              id="accentColor"
+              value={formData.brand.colorScheme.accent}
+              onChange={(e) => setFormData({
+                ...formData,
+                brand: { 
+                  ...formData.brand, 
+                  colorScheme: { ...formData.brand.colorScheme, accent: e.target.value }
+                }
+              })}
+              className="h-10 w-24 rounded border border-[var(--border)] cursor-pointer"
+            />
+          </div>
+
+          <div>
+            <Label>Color Preview</Label>
+            <div className="rounded-xl h-32 p-4 flex items-end" style={{
+              background: `linear-gradient(135deg, ${formData.brand.colorScheme.primary}, ${formData.brand.colorScheme.accent})`
+            }}>
+              <span className="px-3 py-1 rounded-full text-sm font-medium" style={{
+                backgroundColor: formData.brand.colorScheme.primary,
+                color: '#fff'
+              }}>
+                Preview
+              </span>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -454,9 +562,22 @@ function BuildDetailsForm({
             accept="image/*,.svg"
             onChange={(e) => {
               const file = e.target.files?.[0] || null;
+              
+              // Cleanup old preview URL
+              if (logoPreviewUrl) {
+                URL.revokeObjectURL(logoPreviewUrl);
+              }
+              
+              // Create new preview URL
+              if (file) {
+                setLogoPreviewUrl(URL.createObjectURL(file));
+              } else {
+                setLogoPreviewUrl(null);
+              }
+              
               setFormData({
                 ...formData,
-                brand: { ...formData.brand, logoFile: file }
+                brand: { ...formData.brand, logoFile: file, logoStorageId: undefined }
               });
             }}
           />
@@ -467,6 +588,17 @@ function BuildDetailsForm({
             <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
               ✓ Selected: {formData.brand.logoFile.name}
             </p>
+          )}
+          
+          {/* Logo preview */}
+          {(logoPreviewUrl || (formData.brand.logoStorageId && storedFileUrls?.[formData.brand.logoStorageId])) && (
+            <div className="mt-3 rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
+              <img
+                src={logoPreviewUrl || storedFileUrls?.[formData.brand.logoStorageId!]}
+                alt="Logo preview"
+                className="max-h-32 object-contain"
+              />
+            </div>
           )}
         </div>
 
@@ -479,9 +611,17 @@ function BuildDetailsForm({
             multiple
             onChange={(e) => {
               const files = Array.from(e.target.files || []);
+              
+              // Cleanup old preview URLs
+              imagePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+              
+              // Create new preview URLs
+              const newPreviewUrls = files.map(file => URL.createObjectURL(file));
+              setImagePreviewUrls(newPreviewUrls);
+              
               setFormData({
                 ...formData,
-                brand: { ...formData.brand, imageFiles: files }
+                brand: { ...formData.brand, imageFiles: files, imageStorageIds: undefined }
               });
             }}
           />
@@ -492,6 +632,32 @@ function BuildDetailsForm({
             <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
               ✓ {formData.brand.imageFiles.length} file{formData.brand.imageFiles.length !== 1 ? "s" : ""} selected
             </p>
+          )}
+          
+          {/* Brand images preview */}
+          {(imagePreviewUrls.length > 0 || (formData.brand.imageStorageIds && formData.brand.imageStorageIds.length > 0)) && (
+            <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {imagePreviewUrls.map((url, idx) => (
+                <div key={`preview-${idx}`} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
+                  <img
+                    src={url}
+                    alt={`Preview ${idx + 1}`}
+                    className="w-full h-24 object-cover rounded"
+                  />
+                </div>
+              ))}
+              {!imagePreviewUrls.length && formData.brand.imageStorageIds?.map((storageId) => (
+                storedFileUrls?.[storageId] && (
+                  <div key={storageId} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
+                    <img
+                      src={storedFileUrls[storageId]}
+                      alt="Stored image"
+                      className="w-full h-24 object-cover rounded"
+                    />
+                  </div>
+                )
+              ))}
+            </div>
           )}
         </div>
       </div>

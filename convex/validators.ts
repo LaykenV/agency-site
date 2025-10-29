@@ -36,7 +36,10 @@ export const buildDetailsValidator = v.object({
   inspirationLinks: v.array(v.string()),
   myNotes: v.union(v.string(), v.null()),
   brand: v.object({
-    styleVibe: v.union(v.string(), v.null()),
+    colorScheme: v.object({
+      primary: v.string(),
+      accent: v.string(),
+    }),
     logoStorageId: v.optional(v.id("_storage")),
     imageStorageIds: v.optional(v.array(v.id("_storage"))),
   }),

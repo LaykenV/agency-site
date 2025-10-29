@@ -16,6 +16,7 @@ import type * as auth from "../auth.js";
 import type * as cal from "../cal.js";
 import type * as calWebhook from "../calWebhook.js";
 import type * as emails from "../emails.js";
+import type * as files from "../files.js";
 import type * as http from "../http.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
 import type * as onboarding_sessions from "../onboarding/sessions.js";
@@ -48,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   cal: typeof cal;
   calWebhook: typeof calWebhook;
   emails: typeof emails;
+  files: typeof files;
   http: typeof http;
   "onboarding/agent": typeof onboarding_agent;
   "onboarding/sessions": typeof onboarding_sessions;

@@ -1,145 +1,195 @@
-Agreement & Terms MVP Plan (v1.0)
+## Upgrade Plan: Color Scheme + File Uploads (Convex)
 
-Scope
-- Clickwrap agreement at `/portal/agreement` that records: `termsVersion`, `termsHash` (SHA-256), `acceptedAt`, and `userAgent`.
-- Versioned, public Terms page at `/legal/terms` rendered from a canonical content module.
-- Post-payment “Welcome Aboard” email sent after Stripe activation (webhook), including order summary and link to terms evidence.
-- Defer PDF generation and server-captured IP to a future iteration.
+### Goals
+- Replace `brand.styleVibe` with `brand.colorScheme` containing `primary` and `accent` colors.
+- Wire up file upload to Convex storage for logo and brand images with client-side previews.
+- Keep implementation simple: native color inputs, gradient preview; no color picker library.
+- No data migration or backward compatibility paths. Existing projects without a `colorScheme` will display defaults until saved.
 
-Key Decisions
-- Terms source of truth: a canonical content export (e.g., `lib/legal/terms.ts`) used both to render `/legal/terms` and to compute the hash during acceptance to avoid mismatches.
-- Hashing: compute SHA-256 in-browser via Web Crypto on the exact canonical string used to render the page; store `termsHash` with `termsVersion`.
-- Evidence: store an HTML snapshot of the accepted version server-side for durability (Convex storage). Linking to this snapshot in the welcome email is sufficient for MVP.
-- Email timing: send the welcome email after Stripe confirms activation (or trialing) via webhook; no email at the acceptance step.
-- Future upgrades: capture client IP at the edge and attach a PDF snapshot; not required for MVP.
+### Constraints and Decisions
+- No migration function; do not read or preserve `styleVibe`.
+- If a project’s `buildDetails.brand.colorScheme` is missing, the server will return a default color pair so the client validator shape is always satisfied.
+- Native `<input type="color">` for picking `primary` and `accent`.
+- Gradient preview card uses soft tints and more apparent gradients to match the product’s style preferences [[memory:10223702]].
 
-Implementation Outline
-1) Terms content
-   - Create `lib/legal/terms.ts` exporting:
-     - `TERMS_VERSION` (e.g., `"2025-10-01"`)
-     - `TERMS_LAST_UPDATED` (ISO date string)
-     - `TERMS_HTML` (canonical HTML string) or `TERMS_MD` + a stable renderer
-   - Render `/legal/terms` from this module; display “Last updated” and add `data-terms-version` on the container.
-   - Optional: plan a `/legal/terms/[version]` route for archived versions.
+---
 
-2) Agreement page (`app/portal/agreement/page.tsx`)
-   - Add a checkbox “I agree to the Terms” (link to `/legal/terms`).
-   - Disable the CTA until checked; show a brief order summary (price, 12-month minimum, recurring billing notice).
-   - On accept:
-     - Import the canonical content and compute `termsHash` with Web Crypto.
-     - Collect `userAgent` from `navigator.userAgent`.
-     - Call `api.agreement.createFromClickwrap({ projectId, termsVersion, termsHash, userAgent })`.
-     - On success, redirect to `/portal/subscribe`.
+## Affected Files and Current References
 
-3) Backend (`convex/agreement.ts`)
-   - Keep `createFromClickwrap` logic (auth, ownership, idempotency, set project → AWAITING_PAYMENT, log activity).
-   - Add an internal action to store an HTML snapshot of the terms (from the canonical content) into Convex storage and patch the agreement with a `snapshotUrl` or `snapshotFileId`.
-   - Schedule the snapshot write with `ctx.scheduler.runAfter(0, internal.agreement.generateAndStoreTermsSnapshot, { agreementId, version })`.
+### Current validator (to be replaced)
+```33:44:convex/validators.ts
+export const buildDetailsValidator = v.object({
+  headline: v.union(v.string(), v.null()),
+  domainPreference: v.union(v.string(), v.null()),
+  inspirationLinks: v.array(v.string()),
+  myNotes: v.union(v.string(), v.null()),
+  brand: v.object({
+    styleVibe: v.union(v.string(), v.null()),
+    logoStorageId: v.optional(v.id("_storage")),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
+  }),
+  brandAssetsUploaded: v.boolean(),
+});
+```
 
-4) Stripe + email
-   - In `convex/stripeActions.ts` webhook sync (`syncStripeCustomer`): when subscription becomes `active` or `trialing`:
-     - Set project → `AWAITING_ASSETS` if currently `AWAITING_PAYMENT`.
-     - Send the “Welcome Aboard” email with order summary and a link to the stored HTML snapshot (fetch the latest agreement for the project to include `termsVersion`/`termsHash`/`snapshotUrl`).
-   - Implement `internal.emails.sendWelcomeEmail` in `convex/emails.ts` using `resend`.
+### Backend return shape including styleVibe (to be updated)
+```202:211:convex/projects.ts
+const buildDetails = project.buildDetails ? {
+  headline: project.buildDetails.headline,
+  domainPreference: project.buildDetails.domainPreference,
+  inspirationLinks: project.buildDetails.inspirationLinks,
+  brand: {
+    styleVibe: project.buildDetails.brand.styleVibe,
+    logoStorageId: project.buildDetails.brand.logoStorageId,
+    imageStorageIds: project.buildDetails.brand.imageStorageIds,
+  },
+  brandAssetsUploaded: project.buildDetails.brandAssetsUploaded,
+} : undefined;
+```
 
-5) Testing checklist
-- Terms page shows correct “Last updated” and version; `data-terms-version` matches `TERMS_VERSION`.
-- Agreement flow stores agreement with correct `termsVersion`, `termsHash`, `userAgent`.
-- Snapshot task writes an artifact and attaches `snapshotUrl` (or file id) to the agreement.
-- Stripe webhook transitions project to `AWAITING_ASSETS` and sends the welcome email with expected content.
+### Backend args for upsert including styleVibe (to be updated)
+```255:266:convex/projects.ts
+export const upsertBuildDetails = mutation({
+  args: {
+    projectId: v.id("projects"),
+    headline: v.optional(v.string()),
+    domainPreference: v.optional(v.string()),
+    inspirationLinks: v.optional(v.array(v.string())),
+    brand: v.optional(v.object({
+      styleVibe: v.optional(v.string()),
+    })),
+    logoStorageId: v.optional(v.id("_storage")),
+    imageStorageIds: v.optional(v.array(v.id("_storage"))),
+  },
+```
 
-Future Upgrades (post-MVP)
-- Server-captured IP: add an `httpAction` acceptance endpoint or an edge route to securely capture `x-forwarded-for` and store `ip`.
-- PDF snapshot: render the versioned Terms page to PDF (e.g., `puppeteer`) in an action, store it, and link/attach in the email when requested.
+### Client UI field (to be replaced with color pickers + preview)
+```433:447:app/portal/[projectId]/page.tsx
+<Label htmlFor="styleVibe">Style & Vibe</Label>
+<Input
+  id="styleVibe"
+  value={formData.brand.styleVibe}
+  onChange={(e) => setFormData({
+    ...formData,
+    brand: { ...formData.brand, styleVibe: e.target.value }
+  })}
+  placeholder="e.g., Minimal and modern, Bold and colorful..."
+/>
+```
 
-Frontend — Pages (Detailed UX Plan)
+---
 
-1) Terms page (`/legal/terms`)
-- Purpose: Clear, confidence-inspiring legal page that’s readable, skimmable, and printable.
-- Rendering approach:
-  - Use the canonical content module (see “Terms content”) as the single source of truth.
-  - SSR page; support a `?print=1` mode for a minimal, print-friendly layout.
-- Visual design (align with existing tokens and user preference for soft tints/gradients [[memory:10223702]]):
-  - Page background: `bg-[var(--background)]`; optional subtle radial gradient backdrop like agreement page.
-  - Content card: centered, `max-w-3xl`, rounded, `bg-[var(--card)]/90`, border `var(--border)`, `shadow-2xl`, `backdrop-blur`.
-  - Typography: headings with clear hierarchy; body text uses `text-[var(--secondary)]` for long-form sections.
-- Structure (ordered for skimmability):
-  1. Header
-     - Title: “Terms of Service”
-     - Meta line: “Version: {TERMS_VERSION} • Last updated: {TERMS_LAST_UPDATED}”
-     - Note: “These terms apply to Website‑as‑a‑Service subscriptions.”
-  2. Conspicuous Summary (callout box)
-     - Plan & Price: `$199/mo, $0 down`
-     - Minimum Term: `12‑month commitment`
-     - Early Termination: short statement (e.g., remaining months or defined fee)
-     - Recurring Billing Authorization: simple sentence confirming ongoing monthly charge
-     - Link to a short “Order Summary” section below
-  3. Table of Contents (auto-generated from headings; anchors for each section)
-  4. Core Sections (anchor-linked):
-     - Order Summary (what you get, price, billing cadence, renewals)
-     - Scope of Service (pages, performance target, edits policy expectations)
-     - Unlimited Edits Policy (reasonable use, non‑material changes, examples)
-     - Responsibilities (client content/assets/timely feedback)
-     - Intellectual Property & License (ownership of content; service license during term; domain transfer conditions)
-     - Billing & Payment Authorization (recurring, method on file)
-     - Minimum Term & Early Termination (clear mechanics)
-     - Scheduling & Communication (support channel and timelines)
-     - Disclaimers & Warranties
-     - Limitation of Liability
-     - Termination & Suspension
-     - Governing Law & Venue
-     - Changes to Terms (how we notify/version)
-     - Notices & Contact (support email)
-  5. Footer
-     - “Questions? Email support” with mailto link.
-     - “Version {TERMS_VERSION}” repeated; `data-terms-version` on the root container.
-- Accessibility & UX details:
-  - Ensure keyboard navigable TOC; visible focus; `aria-label` for TOC nav.
-  - High contrast for callout summary; avoid walls of text (bullets, short paragraphs).
-  - In `?print=1` mode: remove gradients/shadows; black text on white; include version/date in header.
+## Planned Changes (No Migration)
 
-2) Agreement page (`/portal/agreement`)
-- Purpose: Make it obvious, low‑friction, and reassuring to proceed while ensuring enforceable consent.
-- Page layout (build on existing page):
-  - Keep the soft radial gradient background and card container.
-  - Left/top: Progress context (e.g., “Agreement Stage”) and a friendly headline.
-  - Project Details card (already present): company, contact, email, current status.
-  - Summary of the subscription (clear, non‑legalese):
-    - “The All‑Inclusive Plan — $199/month, $0 down”
-    - “12‑month minimum commitment”
-    - “Recurring billing each month until canceled per terms”
-  - Terms acceptance area:
-    - Checkbox: “I have read and agree to the Terms of Service.”
-    - Link opens `/legal/terms` in a new tab (`target="_blank"`, `rel="noopener noreferrer"`).
-    - Microcopy under the checkbox: “By clicking accept, you agree to the Terms and recurring billing.”
-  - Primary CTA button (full width): “Accept & Continue to Payment”
-    - Disabled until checkbox is checked.
-    - On click: compute SHA‑256 of canonical terms content, capture `navigator.userAgent`, call `agreement.createFromClickwrap`, then navigate to `/portal/subscribe` on success.
-- Empty/loading/error states (owner‑friendly):
-  - Loading prospect/user: show spinner and short text (“Preparing your agreement…”) — already present.
-  - Email mismatch/ownership: redirect to `/portal/autherror` as implemented; show a clear explanation.
-  - Mutation failure: inline error above CTA with friendly text and retry guidance.
-- Accessibility & UX details:
-  - Associate checkbox with label; ensure it’s reachable via keyboard and has visible focus.
-  - Ensure the CTA has `aria-disabled` when disabled.
-  - Keep copy concise; no legalese on this page beyond the summary.
-- Trust & reassurance touches:
-  - “Takes 2 minutes” hint near the CTA.
-  - Small “Questions? Email support” line under the CTA.
-  - Optional tiny badges or lock icon near “Continue to Payment” to signal security.
-- Mobile/responsive behavior:
-  - Maintain card padding; stack detail fields; ensure larger tap targets for checkbox and CTA.
-  - Sticky bottom CTA on mobile is optional; otherwise keep within the card near the checkbox.
+### 1) Validators and Types
+- Update `convex/validators.ts`:
+  - Replace `brand.styleVibe` with `brand.colorScheme: v.object({ primary: v.string(), accent: v.string() })`.
+  - Keep `logoStorageId` and `imageStorageIds` as-is.
+  - Keep `brandAssetsUploaded` as-is.
 
-3) Microcopy (ready‑to‑use)
-- Checkbox label: “I have read and agree to the Terms of Service.”
-- Summary bullets:
-  - “$199/month, $0 down”
-  - “12‑month minimum commitment”
-  - “Recurring billing each month until canceled per terms”
-- CTA: “Accept & Continue to Payment”
-- Error (acceptance failure): “We couldn’t capture your agreement. Please try again.”
+- Update any corresponding exported types inferred from validators (client usage expects `brand.colorScheme` now).
 
-4) Analytics & success signals (optional)
-- Fire an analytics event on acceptance (before redirect) with `{ termsVersion }`.
-- In Stripe success page, show a brief “Subscription active” confirmation and guide to next steps.
+Notes:
+- Color strings validated as `v.string()`; client enforces hex format `#RRGGBB`.
+
+### 2) Backend Functions (`convex/projects.ts`)
+- `upsertBuildDetails` args: accept `brand: { colorScheme?: { primary: string; accent: string } }` only.
+- Merge logic:
+  - Set `buildDetails.brand.colorScheme` to provided values if present; otherwise leave unchanged.
+  - Remove any logic referencing `styleVibe`.
+  - Preserve and recompute `brandAssetsUploaded` as today based on storage IDs.
+- `getPortalProject` return validator and mapping:
+  - Return `brand.colorScheme` in the response.
+  - If `project.buildDetails.brand.colorScheme` is absent, synthesize a default pair (e.g., `primary = "#111827"`, `accent = "#6EE7B7"`) so the returned object always satisfies the validator.
+  - Do not include `styleVibe` anywhere in the returned object.
+
+Rationale:
+- This avoids a DB migration while keeping the API shape consistent for the client.
+
+### 3) Schema (`convex/schema.ts`)
+- No structural change; schema imports `buildDetailsValidator` which will now include `colorScheme`.
+
+### 4) Storage Endpoints (new `convex/files.ts`)
+- Add functions aligned with Convex storage best practices:
+  - `generateUploadUrl` (mutation): returns `await ctx.storage.generateUploadUrl()`.
+  - `getUrls` (query): args `{ ids: v.array(v.id("_storage")) }`; returns `Record<Id<'_storage'>, string>` using `await ctx.storage.getUrl(id)` and omitting nulls.
+  - `deleteFile` (mutation, optional): args `{ storageId: v.id("_storage") }`; calls `await ctx.storage.delete(storageId)`.
+- Access control:
+  - For `getUrls`, verify that requested IDs belong to the caller’s project(s) before returning URLs. Simplest: fetch project by `args.projectId` and ensure id set is a subset of `logoStorageId` and `imageStorageIds`.
+  - For `deleteFile`, ensure the caller owns the project that references the storage ID.
+
+References:
+- Generate upload URLs (mutation context is permitted): [Convex file storage – upload files](https://github.com/get-convex/convex-backend/blob/main/npm-packages/docs/docs/file-storage/upload-files.mdx)
+- Generate signed URLs on server: [Convex file storage – serve files](https://github.com/get-convex/convex-backend/blob/main/npm-packages/docs/docs/file-storage/serve-files.mdx)
+- Storage API: `generateUploadUrl`, `getUrl`, `delete` on ctx.storage: [Server API: Storage](https://github.com/get-convex/convex-backend/blob/main/npm-packages/convex/api-extractor-configs/reports/server.api.md)
+- Metadata: if needed later, query `_storage` via `ctx.db.system.get` (avoid deprecated metadata helpers).
+
+### 5) Client UI: Build Details Form (`app/portal/[projectId]/page.tsx`)
+- State shape:
+  - Replace `formData.brand.styleVibe: string` with `formData.brand.colorScheme: { primary: string; accent: string }`.
+  - Initialize defaults from server values; if undefined, use the same defaults as server (`#111827` / `#6EE7B7`).
+
+- Inputs:
+  - Replace styleVibe input with two native color inputs:
+    - Primary color: `<input type="color" value={...} onChange=... />`
+    - Accent color: `<input type="color" value={...} onChange=... />`
+  - Keep logo and images file inputs as-is.
+
+- Gradient preview:
+  - Add a small live preview card using the selected colors, e.g., a top-to-bottom gradient from `primary` → `accent`, with soft tinted background and a small sample button/badge to visualize contrast [[memory:10223702]].
+
+- Submit flow (simple, on submit):
+  1) Validate text fields.
+  2) If files selected:
+     - For each file, request `generateUploadUrl`.
+     - `fetch(uploadUrl, { method: 'POST', headers: { 'Content-Type': file.type }, body: file })`.
+     - Parse `{ storageId }` from JSON response.
+  3) Call `projects.upsertBuildDetails` with:
+     - `brand: { colorScheme: { primary, accent } }`
+     - `logoStorageId` (if uploaded)
+     - `imageStorageIds` (if uploaded)
+  4) Optimistic UI: show local `URL.createObjectURL(file)` previews immediately; after save, refresh signed URLs via `files.getUrls`.
+
+- Previews after save:
+  - Request signed URLs from the server via `files.getUrls([logoStorageId, ...imageStorageIds])` and render those URLs (they are ephemeral; rely on re-render to refresh).
+
+### 6) Security and Validation
+- Server-side authorization (already present on project mutations/queries) must also guard `files.getUrls` and `files.deleteFile`.
+- Client-side validation:
+  - Accept images only (existing `accept` attributes already enforce this).
+  - Surface a friendly max size (e.g., 10MB) with immediate feedback.
+- Rate limiting is not required initially; consider later if needed.
+
+### 7) Implementation Order
+1) Update `buildDetailsValidator` to use `brand.colorScheme`.
+2) Update `projects.upsertBuildDetails` args and merge logic; remove all `styleVibe` references.
+3) Update `projects.getPortalProject` mapping to always return `brand.colorScheme`, synthesizing defaults if absent.
+4) Add `convex/files.ts` with `generateUploadUrl`, `getUrls`, and optional `deleteFile`.
+5) Update `BuildDetailsForm` state, inputs, submit logic, and preview UI.
+6) Sanity pass: remove any leftover `styleVibe` usage in client code.
+7) QA.
+
+### 8) QA Checklist
+- Color scheme
+  - New projects: pick colors, save, reload; values persist and render.
+  - Existing projects (no migration): default colors appear; saving writes `colorScheme` and clears any obsolete UI state client-side.
+  - No references to `styleVibe` remain in API shapes or UI.
+
+- File uploads
+  - Upload single logo and multiple images; get previews immediately (local) and after save (signed URLs).
+  - URLs resolve and display; deleting (if implemented) removes files and thumbnails.
+  - Unauthorized access blocked for storage URL resolution and deletion.
+
+### Acceptance Criteria
+- `buildDetails.brand.colorScheme.primary` and `.accent` are the sole color fields persisted and returned; `styleVibe` is not used.
+- Client shows two color inputs and a live gradient preview; selections persist.
+- Logo and images upload successfully to Convex storage via pre-signed URLs; previews render via signed URLs.
+- All endpoints enforce ownership checks.
+
+### Notes on Convex Storage Best Practices
+- Use `ctx.storage.generateUploadUrl()` in a mutation to obtain a client upload URL.
+- Use `ctx.storage.getUrl(storageId)` in queries/mutations to produce signed, ephemeral URLs for rendering.
+- Use `ctx.storage.delete(storageId)` in a mutation for cleanup.
+- If metadata is ever needed, query `_storage` via `ctx.db.system.get(id)` rather than deprecated helpers.
+
+
