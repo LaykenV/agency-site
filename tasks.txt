@@ -48,25 +48,18 @@
 //webhook email and activity log -> awaiting assets
 //always redirect to /portal/paymentSuccess then /portal
 
-stepped form w support request form
-domain search
-build details form
-kickoff call
-build step
-build finished button on admin
-then schedule review call button with link
-live page
-
 //domain api
 
 //file upload and color scheme
 
 //add calls
 
-test project page
+//test project page
 
-render projects and support requests in /admin
-gate admin
+//render projects and support requests in /admin
+//gate admin
+
+img upload to edit request
 
 'what are you hoping' to myNotes field
 

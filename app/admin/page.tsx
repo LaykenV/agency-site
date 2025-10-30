@@ -691,22 +691,30 @@ function ProjectsTab() {
                     <td className="px-6 py-4 text-sm">
                       {project.deployment?.liveUrl || project.deployment?.stagingUrl ? (
                         <div className="space-y-1">
-                          {project.deployment.liveUrl && (
-                            <div>
-                              <span className="text-gray-500">Live:</span>{" "}
-                              <a href={project.deployment.liveUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                {project.deployment.liveUrl.slice(0, 20)}...
-                              </a>
-                            </div>
-                          )}
-                          {project.deployment.stagingUrl && (
-                            <div>
-                              <span className="text-gray-500">Staging:</span>{" "}
-                              <a href={project.deployment.stagingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                {project.deployment.stagingUrl.slice(0, 20)}...
-                              </a>
-                            </div>
-                          )}
+                          {project.deployment.liveUrl && (() => {
+                            const url = project.deployment.liveUrl;
+                            const absoluteUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+                            return (
+                              <div>
+                                <span className="text-gray-500">Live:</span>{" "}
+                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  {url.slice(0, 20)}...
+                                </a>
+                              </div>
+                            );
+                          })()}
+                          {project.deployment.stagingUrl && (() => {
+                            const url = project.deployment.stagingUrl;
+                            const absoluteUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
+                            return (
+                              <div>
+                                <span className="text-gray-500">Staging:</span>{" "}
+                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                  {url.slice(0, 20)}...
+                                </a>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>

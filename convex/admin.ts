@@ -1,9 +1,8 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { prospectValidator, prospectDetailsValidator, projectStatusValidator, deploymentValidator, scheduledCallValidator } from "./validators";
+import { prospectValidator, prospectDetailsValidator, projectStatusValidator, deploymentValidator } from "./validators";
 import { requireAdmin } from "./adminGuard";
 import { internal } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
 
 export const getProspects = query({
   args: {},
@@ -81,7 +80,35 @@ export const listScheduledCalls = query({
     startAfter: v.optional(v.number()),
     startBefore: v.optional(v.number()),
   },
-  returns: v.array(scheduledCallValidator),
+  returns: v.array(v.object({
+    _id: v.id("scheduled_calls"),
+    _creationTime: v.number(),
+    projectId: v.optional(v.id("projects")),
+    prospectId: v.optional(v.id("prospects")),
+    type: v.union(
+      v.literal("confirmation"),
+      v.literal("kickoff"),
+      v.literal("review"),
+      v.literal("support"),
+    ),
+    title: v.optional(v.string()),
+    startTime: v.number(),
+    endTime: v.number(),
+    status: v.string(),
+    meetingUrl: v.optional(v.string()),
+    location: v.optional(v.string()),
+    notes: v.optional(v.string()),
+    calEventId: v.optional(v.string()),
+    iCalUID: v.optional(v.string()),
+    eventTypeKey: v.optional(v.string()),
+    durationMinutes: v.optional(v.number()),
+    externalBookingId: v.optional(v.string()),
+    attendeeMetadata: v.optional(v.object({
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+    })),
+  })),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     let queryBuilder;
@@ -129,6 +156,7 @@ export const listEditRequests = query({
   },
   returns: v.array(v.object({
     _id: v.id("edit_requests"),
+    _creationTime: v.number(),
     projectId: v.id("projects"),
     authUserId: v.string(),
     title: v.string(),

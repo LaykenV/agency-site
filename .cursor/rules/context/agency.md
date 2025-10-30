@@ -119,6 +119,7 @@ VI. Application Architecture
   - /portal/welcome (optional linking route)
   - /legal/terms (versioned, hashable)
   - /portal/success (post-checkout sync + redirect)
+  - /admin (admin portal, server-gated by ADMIN_EMAIL env var)
 - Webhooks:
   - /api/stripe (Stripe billing events)
   - /api/cal-webhook (scheduling events)
@@ -180,7 +181,8 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index("by_authUserId", ["authUserId"])
-    .index("by_projectId", ["projectId"]),
+    .index("by_projectId", ["projectId"])
+    .index("by_updatedAt", ["updatedAt"]),
 
   agreements: defineTable({
     projectId: v.id("projects"),
@@ -233,6 +235,7 @@ export default defineSchema({
   })
     .index("by_projectId", ["projectId"])
     .index("by_status_and_projectId", ["status", "projectId"])
+    .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"]),
 });
 
@@ -490,6 +493,15 @@ Terms of Service essentials (MVP outline)
 IX. Admin and Ops
 - Admin actions:
   - Create prospect, send welcome email, resend agreement link, create Stripe Checkout Session (server-triggered after agreement), manual status overrides.
+  - Admin portal at `/admin` (server-gated by ADMIN_EMAIL env var):
+    - Prospects tab: View all prospects, create/edit prospects, send magic links
+    - Projects tab: View all projects sorted by recent activity, update project status, manage admin notes (myNotes), update deployment URLs (live/staging/vercelProjectId)
+    - Scheduled Calls tab: View all scheduled calls grouped by date with project/prospect links
+    - Edit Requests tab: View all edit/support requests, update status and priority, filter by status
+  - Admin API endpoints (all guarded by `requireAdmin`):
+    - Queries: `admin.listProspects`, `admin.listProjects`, `admin.listScheduledCalls`, `admin.listEditRequests`
+    - Mutations: `admin.updateProjectStatus`, `admin.updateProjectMyNotes`, `admin.updateDeployment`, `admin.updateEditRequestStatus`
+  - All admin mutations log to `activity_log` with `actor: "admin"` and descriptive `kind` fields
 - Dunning (via Stripe + email):
   - Day 0 fail: notify client
   - Day 3 fail: second attempt and email
@@ -505,13 +517,23 @@ X. Security and Compliance
 - Sign webhook payloads and enforce replay protection.
 - Minimize PII; never store raw payment details (Stripe handles it).
 - Log all user-facing state changes in activity_log.
+- Admin access control:
+  - Server-side route gating via `app/admin/layout.tsx` checks `ADMIN_EMAIL` env var (supports comma-separated `ADMIN_EMAILS` for multiple admins)
+  - Convex RBAC guard (`convex/adminGuard.ts`) enforces admin authorization on all admin functions
+  - Defense-in-depth: Both server-side layout and Convex functions verify admin status
+  - All admin mutations log to `activity_log` with `actor: "admin"` for audit trail
 
 XI. Roadmap
 - V1: In-app clickwrap + Stripe subscription + webhook-driven automation. ✅
 - V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage with live previews ✅; domain purchase/management workflow (pending).
 - V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
 - V1.3: Self-serve asset library and change history; auto-generated monthly reports.
-- V1.4: Admin dashboard for managing projects, viewing edit requests, and bulk operations.
+- V1.4: Admin dashboard for managing projects, viewing edit requests, and bulk operations. ✅
+  - Admin portal with tabs for Prospects, Projects, Scheduled Calls, and Edit Requests ✅
+  - Admin-only mutations for updating project status, admin notes, deployment details, and edit request status ✅
+  - Activity logging for all admin actions ✅
+  - Server-side access gating via layout.tsx ✅
+  - Convex RBAC guard for all admin functions ✅
 
 Example high-level flow (pseudo)
 - GET /portal/agreement

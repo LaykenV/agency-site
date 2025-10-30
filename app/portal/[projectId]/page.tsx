@@ -781,6 +781,12 @@ function ReviewSection({
   stagingUrl?: string;
   reviewBooking?: CalBooking;
 }) {
+  const absoluteStagingUrl = stagingUrl
+    ? stagingUrl.startsWith('http://') || stagingUrl.startsWith('https://')
+      ? stagingUrl
+      : `https://${stagingUrl}`
+    : undefined;
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
@@ -790,9 +796,9 @@ function ReviewSection({
           to walk through it together.
         </p>
         
-        {stagingUrl ? (
+        {absoluteStagingUrl ? (
           <Button asChild variant="default">
-            <a href={stagingUrl} target="_blank" rel="noopener noreferrer">
+            <a href={absoluteStagingUrl} target="_blank" rel="noopener noreferrer">
               Open Staging Site <ExternalLink className="ml-2 h-4 w-4" />
             </a>
           </Button>
@@ -823,6 +829,12 @@ function LiveSupportPanel({
   domainPreference?: string;
   editRequests?: EditRequest[];
 }) {
+  const absoluteLiveUrl = liveUrl
+    ? liveUrl.startsWith('http://') || liveUrl.startsWith('https://')
+      ? liveUrl
+      : `https://${liveUrl}`
+    : undefined;
+
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
@@ -830,11 +842,11 @@ function LiveSupportPanel({
           Your Site is Live! 🎉
         </h2>
         <div className="space-y-3">
-          {liveUrl ? (
+          {absoluteLiveUrl ? (
             <div>
               <p className="text-sm text-[var(--secondary)] mb-2">Live at:</p>
               <Button asChild variant="outline">
-                <a href={liveUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-sm">
+                <a href={absoluteLiveUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-sm">
                   {liveUrl} <ExternalLink className="ml-2 h-4 w-4" />
                 </a>
               </Button>
