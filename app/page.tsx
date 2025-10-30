@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import StarRating from "@/components/star-rating";
 
 export default function Home() {
   return (
@@ -71,6 +72,9 @@ export default function Home() {
       <section>
         <div className="mx-auto max-w-5xl px-6">
           <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Kind words from clients</h2>
+          <div className="mt-8 flex justify-center">
+            <StarRating />
+          </div>
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
             <figure className="card-surface rounded-xl p-6">
               <div className="text-amber-500">★★★★★</div>
