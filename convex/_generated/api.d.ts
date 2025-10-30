@@ -10,6 +10,7 @@
 
 import type * as activityLog from "../activityLog.js";
 import type * as admin from "../admin.js";
+import type * as adminGuard from "../adminGuard.js";
 import type * as agreement from "../agreement.js";
 import type * as agreementActions from "../agreementActions.js";
 import type * as auth from "../auth.js";
@@ -43,6 +44,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activityLog: typeof activityLog;
   admin: typeof admin;
+  adminGuard: typeof adminGuard;
   agreement: typeof agreement;
   agreementActions: typeof agreementActions;
   auth: typeof auth;

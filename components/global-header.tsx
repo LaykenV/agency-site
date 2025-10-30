@@ -59,7 +59,7 @@ export function GlobalHeader() {
                   <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-semibold uppercase text-[var(--foreground)]">
                     {initials}
                   </span>
-                  <span>Account</span>
+                  <span>Account {decision?.user?.email}</span>
                 </Link>
                 <button
                   onClick={handleSignOut}

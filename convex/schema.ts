@@ -42,7 +42,8 @@ export default defineSchema({
     updatedAt: v.optional(v.number()),
   })
     .index("by_authUserId", ["authUserId"])
-    .index("by_projectId", ["projectId"]),
+    .index("by_projectId", ["projectId"])
+    .index("by_updatedAt", ["updatedAt"]),
 
   agreements: defineTable(agreementValidator)
     .index("by_projectId", ["projectId"])
@@ -107,6 +108,7 @@ export default defineSchema({
   })
     .index("by_projectId", ["projectId"])
     .index("by_status_and_projectId", ["status", "projectId"])
+    .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"]),
 
   //errorReports - future
