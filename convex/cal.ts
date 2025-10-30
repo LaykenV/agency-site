@@ -329,6 +329,23 @@ export const findProspectByEmail = internalQuery({
   },
 });
 
+export const findProjectByProspectId = internalQuery({
+  args: {
+    prospectId: v.id("prospects"),
+  },
+  returns: v.union(v.id("projects"), v.null()),
+  handler: async (ctx, args) => {
+    // Note: No direct index on prospectId, so we iterate through projects
+    // In practice, there should be at most one project per prospect
+    for await (const project of ctx.db.query("projects")) {
+      if (project.prospectId === args.prospectId) {
+        return project._id;
+      }
+    }
+    return null;
+  },
+});
+
 export const updateProjectBooking = internalMutation({
   args: {
     projectId: v.id("projects"),

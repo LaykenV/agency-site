@@ -82,8 +82,8 @@ const parseSignature = (signature: string): Buffer | null => {
 
 const mapEventTypeToCallType = (eventTypeKey?: string): "confirmation" | "kickoff" | "review" | "support" => {
   if (eventTypeKey === "agency-prospect") return "confirmation";
-  if (eventTypeKey === "agency-kickoff") return "kickoff";
-  if (eventTypeKey === "agency-review") return "review";
+  if (eventTypeKey === "agency-kickoff" || eventTypeKey === "website-kickoff-call") return "kickoff";
+  if (eventTypeKey === "agency-review" || eventTypeKey === "website-review-call") return "review";
   return "support";
 };
 
@@ -138,6 +138,14 @@ const parseCalBookingPayload = (payload: CalPayload["payload"]): ParsedBookingDa
       meetingUrl = location;
     } else if (!phone && looksLikePhone(location)) {
       phone = location;
+    }
+  }
+
+  // Check metadata.videoCallUrl for actual meeting URL (when location is a placeholder like "integrations:google:meet")
+  if (!meetingUrl && payload.metadata && typeof payload.metadata === "object" && "videoCallUrl" in payload.metadata) {
+    const videoCallUrl = normalizeString(payload.metadata.videoCallUrl);
+    if (videoCallUrl && looksLikeUrl(videoCallUrl)) {
+      meetingUrl = videoCallUrl;
     }
   }
 
@@ -283,6 +291,13 @@ export const processCalWebhook = action({
           });
           if (prospect) {
             prospectId = prospect._id;
+            // Find project associated with this prospect
+            const foundProjectId = await ctx.runQuery(internal.cal.findProjectByProspectId, {
+              prospectId: prospect._id,
+            });
+            if (foundProjectId) {
+              projectId = foundProjectId;
+            }
           }
         }
 
