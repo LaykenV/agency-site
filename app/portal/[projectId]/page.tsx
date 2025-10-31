@@ -311,7 +311,6 @@ function AwaitingAssetsSection({
           } : undefined}
           onSuccess={() => {
             setShowForm(false);
-            toast.success("Build details saved successfully!");
           }}
         />
       )}

@@ -9,9 +9,13 @@ import {
 } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
+
+const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
+const MAGIC_LINK_STORAGE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export default function PortalPage() {
   return (
@@ -43,6 +47,28 @@ function UnauthenticatedView() {
     "idle" | "loading" | "unknown" | "sent" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+
+  // Restore success state from localStorage on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const stored = localStorage.getItem(MAGIC_LINK_STORAGE_KEY);
+      if (stored) {
+        const { email: storedEmail, timestamp } = JSON.parse(stored);
+        const now = Date.now();
+        if (now - timestamp < MAGIC_LINK_STORAGE_TTL) {
+          setSubmittedEmail(storedEmail);
+          setStatus("sent");
+        } else {
+          localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
+        }
+      }
+    } catch (error) {
+      console.error("[portal] failed to restore success state", error);
+    }
+  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -73,6 +99,21 @@ function UnauthenticatedView() {
         errorCallbackURL: "/portal/autherror?error=magic_link",
       });
 
+      // Persist success state to localStorage
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            MAGIC_LINK_STORAGE_KEY,
+            JSON.stringify({
+              email: trimmed,
+              timestamp: Date.now(),
+            }),
+          );
+        } catch (error) {
+          console.error("[portal] failed to persist success state", error);
+        }
+      }
+
       setStatus("sent");
     } catch (error) {
       console.error("[portal] failed to send magic link", error);
@@ -81,12 +122,56 @@ function UnauthenticatedView() {
     }
   };
 
+  const handleResend = async () => {
+    if (!submittedEmail) return;
+
+    setIsResending(true);
+    setErrorMessage(null);
+
+    try {
+      await authClient.signIn.magicLink({
+        email: submittedEmail,
+        callbackURL: "/portal",
+        newUserCallbackURL: "/portal",
+        errorCallbackURL: "/portal/autherror?error=magic_link",
+      });
+
+      setIsResending(false);
+      // Update localStorage timestamp
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(
+            MAGIC_LINK_STORAGE_KEY,
+            JSON.stringify({
+              email: submittedEmail,
+              timestamp: Date.now(),
+            }),
+          );
+        } catch (error) {
+          console.error("[portal] failed to persist success state", error);
+        }
+      }
+    } catch (error) {
+      console.error("[portal] failed to resend magic link", error);
+      setErrorMessage("We couldn't send a magic link. Please try again.");
+      setIsResending(false);
+      // Keep status as "sent" to stay in success view, but show error message
+    }
+  };
+
+  const handleTryDifferentEmail = () => {
+    setEmail("");
+    setSubmittedEmail(null);
+    setStatus("idle");
+    setErrorMessage(null);
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
+    }
+  };
+
   const statusCopy = useMemo(() => {
     if (status === "loading") {
       return "Checking your account...";
-    }
-    if (status === "sent") {
-      return "Magic link sent! Check your inbox to continue.";
     }
     if (status === "unknown") {
       return "We couldn't find that email. Start onboarding or schedule a call.";
@@ -97,6 +182,81 @@ function UnauthenticatedView() {
     return null;
   }, [status, errorMessage]);
 
+  // Success view - replaces entire form
+  if (status === "sent" && submittedEmail) {
+    return (
+      <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-6 text-[var(--foreground)]">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--card)_0%,transparent_60%)] opacity-60" />
+        <div className="relative z-10 w-full max-w-lg rounded-3xl border border-[var(--border)] bg-[var(--card)]/80 p-10 shadow-xl backdrop-blur animate-[fadeIn_0.3s_ease-in]">
+          <div className="mb-8 text-center">
+            <div className="mb-6 flex justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-full bg-[var(--primary)]/20 animate-ping" />
+                <CheckCircle2 className="relative h-16 w-16 text-[var(--primary)] animate-[zoomIn_0.5s_ease-out]" />
+              </div>
+            </div>
+            <p className="text-xs uppercase tracking-[0.35em] text-[var(--secondary)]">
+              Magic Link Sent
+            </p>
+            <h1 className="mt-3 text-3xl font-semibold">Check your inbox</h1>
+            <p className="mt-3 text-sm text-[var(--secondary)]">
+              We&apos;ve sent a secure sign-in link to
+            </p>
+            <p className="mt-2 text-base font-medium text-[var(--foreground)]">
+              {submittedEmail}
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            {errorMessage && (
+              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
+                {errorMessage}
+              </div>
+            )}
+
+            <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/40 p-4 text-sm text-[var(--secondary)]">
+              <p className="font-medium text-[var(--foreground)] mb-2">
+                What&apos;s next?
+              </p>
+              <ul className="space-y-1.5 text-xs">
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>Check your inbox for an email from us</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>Click the sign-in link in the email</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>Don&apos;t see it? Check your spam folder</span>
+                </li>
+              </ul>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={handleResend}
+                disabled={isResending}
+                className="flex w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResending ? "Sending..." : "Resend email"}
+              </button>
+              <button
+                onClick={handleTryDifferentEmail}
+                disabled={isResending}
+                className="flex w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm font-medium text-[var(--secondary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Try different email
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Login form view
   return (
     <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-6 text-[var(--foreground)]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--card)_0%,transparent_60%)] opacity-60" />
@@ -121,13 +281,13 @@ function UnauthenticatedView() {
               className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)]/90 px-4 py-3 text-[var(--foreground)] shadow-inner focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
               placeholder="you@company.com"
               required
-              disabled={status === "loading" || status === "sent"}
+              disabled={status === "loading"}
             />
           </label>
 
           <button
             type="submit"
-            disabled={status === "loading" || status === "sent"}
+            disabled={status === "loading"}
             className="flex w-full items-center justify-center rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--primary)]/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {status === "loading" ? "Sending magic link..." : "Send magic link"}
@@ -155,12 +315,6 @@ function UnauthenticatedView() {
               Schedule a call
             </a>
           </div>
-        )}
-
-        {submittedEmail && status === "sent" && (
-          <p className="mt-6 text-center text-xs uppercase tracking-[0.3em] text-[var(--secondary)]">
-            Sent to {submittedEmail}
-          </p>
         )}
       </div>
     </div>

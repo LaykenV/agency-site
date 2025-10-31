@@ -63,16 +63,17 @@
 
 //'what are you hoping' to myNotes field
 
-sign in with laykenv@gmail for admin
-test full flow
+//sign in with laykenv@gmail for admin
+//test full flow
 
-review all code
-all backend complete and tested
+review all code and backend doc
+//all backend complete and tested webhook flow
 
-email sent on /portal
+//email sent on /portal
+2 toasts on build detail save
+//kickoff call schedule should not flip status
 
-ux improvements
-build full ui 
+build full landing ui 
 hero 
 about me
 our products
@@ -80,8 +81,13 @@ pricing section
 
 full ui / refinement of portal pages
 
-google business profile
+ux improvements
+
 email? voip?
+
+test everything
+
+google business profile
 live stripe
 
 marketing // use atlas outbound, get them to sign up

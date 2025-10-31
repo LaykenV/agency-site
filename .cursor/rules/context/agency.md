@@ -87,11 +87,13 @@ IV. The Golden Path (End-to-End Client Journey)
 
 8) Kickoff Call
 - Deep dive into brand, target audience, content, and assets.
-- Cal.com webhook automatically transitions project from AWAITING_ASSETS → IN_PROGRESS on kickoff booking.
+- Cal.com webhook records kickoff booking details in `projects.calKickoffBooking` field.
+- Admin manually transitions project from AWAITING_ASSETS → IN_PROGRESS via admin panel.
 
 9) Build & Review
 - Build on staging (Vercel); schedule 30-min review; collect edits.
-- Cal.com webhook automatically transitions project from IN_PROGRESS → IN_REVIEW on review booking.
+- Cal.com webhook records review booking details in `projects.calReviewBooking` field.
+- Admin manually transitions project from IN_PROGRESS → IN_REVIEW via admin panel.
 
 10) Go Live
 - Connect domain, launch, and send launch email.
@@ -447,10 +449,7 @@ Portal guardrails
 
 Scheduling
 - Cal.com webhooks write into `scheduled_calls`, update `prospects.calProspectBooking` for confirmation calls, and update `projects.calKickoffBooking` / `projects.calReviewBooking` for project calls. Each event also appends `activity_log` with `call.booked` / `call.rescheduled` / `call.canceled`.
-- Automatic status transitions on booking creation:
-  - Kickoff booking → AWAITING_ASSETS to IN_PROGRESS (if currently awaiting assets)
-  - Review booking → IN_PROGRESS to IN_REVIEW (if currently in progress)
-- Uses idempotent `internalSetStatusIfEligible` with expected current status guards.
+- Project status transitions are manual via admin panel (no automatic transitions on booking creation).
 
 Client Portal (/portal/[projectId])
 - Status-driven UI with mutual exclusivity per project stage:
