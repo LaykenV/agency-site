@@ -1,15 +1,28 @@
 import { v } from "convex/values";
 
-export const prospectDetailsValidator = v.object({
+export const prospectDetailsStoredValidator = v.object({
   contactName: v.string(),
   contactEmail: v.string(),
   companyName: v.string(),
   phone: v.string(),
   currentWebsite: v.string(),
   businessDescription: v.string(),
-  goals: v.string(),
-  notes: v.string(),
+  prospectNotes: v.string(),
+  myNotes: v.optional(v.string()),
 });
+
+export const prospectDetailsPublicValidator = v.object({
+  contactName: v.string(),
+  contactEmail: v.string(),
+  companyName: v.string(),
+  phone: v.string(),
+  currentWebsite: v.string(),
+  businessDescription: v.string(),
+  prospectNotes: v.string(),
+});
+
+// Legacy export for backwards compatibility during migration
+export const prospectDetailsValidator = prospectDetailsStoredValidator;
 
 export const aiGeneratedPlanValidator = v.object({
   generatedAt: v.number(),
@@ -127,7 +140,21 @@ export const prospectValidator = v.object({
   _creationTime: v.number(),
   sessionId: v.string(),
   resumeToken: v.string(),
-  details: prospectDetailsValidator,
+  details: prospectDetailsStoredValidator,
+  aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
+  calProspectBooking: v.optional(calBookingValidator),
+  lastPlanRequestedAt: v.optional(v.number()),
+  planGenerationInProgress: v.boolean(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const prospectPublicValidator = v.object({
+  _id: v.id("prospects"),
+  _creationTime: v.number(),
+  sessionId: v.string(),
+  resumeToken: v.string(),
+  details: prospectDetailsPublicValidator,
   aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
   calProspectBooking: v.optional(calBookingValidator),
   lastPlanRequestedAt: v.optional(v.number()),

@@ -7,7 +7,7 @@ import { generatePlanWithAgent } from "./agent";
 import {
   aiGeneratedPlanValidator,
   PLAN_GENERATION_THROTTLE_MS,
-  prospectDetailsValidator,
+  prospectDetailsPublicValidator,
 } from "../validators";
 
 type ProspectPlan = NonNullable<Doc<"prospects">["aiGeneratedPlan"]>;
@@ -50,8 +50,7 @@ export const initSession = mutation({
         phone: "",
         currentWebsite: "",
         businessDescription: "",
-        goals: "",
-        notes: "",
+        prospectNotes: "",
       },
       aiGeneratedPlan: undefined,
       lastPlanRequestedAt: undefined,
@@ -74,7 +73,7 @@ export const getSession = query({
     v.object({
       sessionId: v.string(),
       resumeToken: v.string(),
-      details: prospectDetailsValidator,
+      details: prospectDetailsPublicValidator,
       plan: v.optional(aiGeneratedPlanValidator),
     }),
     v.null(),
@@ -89,10 +88,13 @@ export const getSession = query({
       return null;
     }
 
+    // Omit myNotes from public response
+    const { myNotes, ...publicDetails } = session.details;
+
     return {
       sessionId: session.sessionId,
       resumeToken: session.resumeToken,
-      details: session.details,
+      details: publicDetails,
       plan: session.aiGeneratedPlan ?? undefined,
     };
   },
@@ -102,7 +104,7 @@ export const updateDetails = mutation({
   args: {
     sessionId: v.string(),
     resumeToken: v.string(),
-    details: prospectDetailsValidator,
+    details: prospectDetailsPublicValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -115,7 +117,7 @@ export const generatePlan = mutation({
   args: {
     sessionId: v.string(),
     resumeToken: v.string(),
-    details: prospectDetailsValidator,
+    details: prospectDetailsPublicValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -156,7 +158,7 @@ async function saveDetailsInternal(
   ctx: MutationCtx,
   sessionId: string,
   resumeToken: string,
-  details: ProspectDoc["details"],
+  details: Omit<ProspectDoc["details"], "myNotes">,
 ): Promise<ProspectDoc> {
   const session = await ctx.db
     .query("prospects")
@@ -171,10 +173,14 @@ async function saveDetailsInternal(
     throw new Error("Unauthorized session update");
   }
 
-  const updatedDetails = { ...details };
-  const normalizedEmail = updatedDetails.contactEmail.trim().toLowerCase();
+  const normalizedEmail = details.contactEmail.trim().toLowerCase();
 
-  updatedDetails.contactEmail = normalizedEmail;
+  // Preserve existing myNotes when updating public details
+  const updatedDetails: ProspectDoc["details"] = {
+    ...details,
+    contactEmail: normalizedEmail,
+    myNotes: session.details.myNotes, // Preserve admin-only field
+  };
 
   await ctx.db.patch(session._id, {
     details: updatedDetails,

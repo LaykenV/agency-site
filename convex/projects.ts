@@ -382,6 +382,58 @@ export const createEditRequest = mutation({
       updatedAt: now,
     });
 
+    // Union attachmentIds into project brand images if present
+    if (args.attachmentIds && args.attachmentIds.length > 0) {
+      const existingBuildDetails = project.buildDetails;
+      const existingImageIds = existingBuildDetails?.brand?.imageStorageIds ?? [];
+      
+      // Use Set for deduplication
+      const mergedIds = new Set<string>();
+      existingImageIds.forEach(id => mergedIds.add(id));
+      args.attachmentIds.forEach(id => mergedIds.add(id));
+      
+      const updatedImageIds = Array.from(mergedIds) as typeof args.attachmentIds;
+      
+      const updatedBuildDetails = existingBuildDetails ? {
+        headline: existingBuildDetails.headline,
+        domainPreference: existingBuildDetails.domainPreference,
+        inspirationLinks: existingBuildDetails.inspirationLinks,
+        myNotes: existingBuildDetails.myNotes,
+        brand: {
+          colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
+          logoStorageId: existingBuildDetails.brand?.logoStorageId,
+          imageStorageIds: updatedImageIds,
+        },
+        brandAssetsUploaded: existingBuildDetails.brandAssetsUploaded,
+      } : {
+        headline: null,
+        domainPreference: null,
+        inspirationLinks: [],
+        myNotes: null,
+        brand: {
+          colorScheme: { primary: "#111827", accent: "#6EE7B7" },
+          imageStorageIds: updatedImageIds,
+        },
+        brandAssetsUploaded: false,
+      };
+
+      await ctx.db.patch(args.projectId, {
+        buildDetails: updatedBuildDetails,
+        updatedAt: now,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+        projectId: args.projectId,
+        prospectId: project.prospectId,
+        actor: "user",
+        kind: "ticket.attachment_added",
+        payload: {
+          requestId,
+          count: args.attachmentIds.length,
+        },
+      });
+    }
+
     await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
       projectId: args.projectId,
       prospectId: project.prospectId,
@@ -421,6 +473,7 @@ export const listEditRequests = query({
     priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
     createdAt: v.number(),
     details: v.optional(v.string()),
+    attachments: v.optional(v.array(v.id("_storage"))),
   })),
   handler: async (ctx, args) => {
     const user = await authComponent.getAuthUser(ctx);
@@ -450,6 +503,7 @@ export const listEditRequests = query({
       priority: req.priority,
       createdAt: req.createdAt,
       details: req.details,
+      attachments: req.attachments,
     }));
   },
 });

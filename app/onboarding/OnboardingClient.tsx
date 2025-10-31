@@ -212,27 +212,13 @@ function OnboardingContent() {
               </div>
 
               <div className="flex flex-col gap-2 text-sm">
-                <Label className="font-medium text-[var(--foreground)]" htmlFor="goals">
-                  What are you hoping your new site will do for you?
-                </Label>
-                <Textarea
-                  id="goals"
-                  value={details.goals}
-                  onChange={(event) => handleFieldChange("goals", event.target.value)}
-                  placeholder="Example: book more consultations, showcase testimonials, streamline updates"
-                  rows={4}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 text-sm">
-                <Label className="font-medium text-[var(--foreground)]" htmlFor="notes">
+                <Label className="font-medium text-[var(--foreground)]" htmlFor="prospectNotes">
                   Anything else we should keep in mind?
                 </Label>
                 <Textarea
-                  id="notes"
-                  value={details.notes}
-                  onChange={(event) => handleFieldChange("notes", event.target.value)}
+                  id="prospectNotes"
+                  value={details.prospectNotes}
+                  onChange={(event) => handleFieldChange("prospectNotes", event.target.value)}
                   placeholder="Optional context, inspiration links, requirements, etc."
                   rows={4}
                   className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"

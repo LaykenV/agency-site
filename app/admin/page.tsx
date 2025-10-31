@@ -1,7 +1,7 @@
 "use client";
 import { api } from "@/convex/_generated/api";
 import { useQuery, useMutation, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
@@ -15,8 +15,8 @@ const emptyDetails: ProspectDetails = {
   phone: "",
   currentWebsite: "",
   businessDescription: "",
-  goals: "",
-  notes: "",
+  prospectNotes: "",
+  myNotes: "",
 };
 
 type Tab = "prospects" | "projects" | "calls" | "requests";
@@ -357,25 +357,25 @@ function ProspectsTab() {
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Goals *
+                    Prospect Notes
                   </label>
                   <textarea
-                    value={formData.goals}
-                    onChange={(e) => handleInputChange(e, "goals")}
-                    required
+                    value={formData.prospectNotes}
+                    onChange={(e) => handleInputChange(e, "prospectNotes")}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                    Prospect My Notes (private)
                   </label>
                   <textarea
-                    value={formData.notes}
-                    onChange={(e) => handleInputChange(e, "notes")}
+                    value={formData.myNotes || ""}
+                    onChange={(e) => handleInputChange(e, "myNotes")}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Admin-only notes (not visible to client)"
                   />
                 </div>
               </div>
@@ -475,12 +475,12 @@ function ProspectsTab() {
 
               <div className="grid grid-cols-2 gap-4 mb-4 border-t pt-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Goals</p>
-                  <p className="text-sm text-gray-900">{prospect.details.goals}</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Prospect Notes</p>
+                  <p className="text-sm text-gray-900">{prospect.details.prospectNotes || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Notes</p>
-                  <p className="text-sm text-gray-900">{prospect.details.notes || "N/A"}</p>
+                  <p className="text-xs font-semibold text-gray-500 uppercase">Prospect My Notes (private)</p>
+                  <p className="text-sm text-gray-900">{prospect.details.myNotes || "N/A"}</p>
                 </div>
               </div>
 
@@ -548,6 +548,36 @@ function ProjectsTab() {
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
   const [editingDeployment, setEditingDeployment] = useState<Record<string, { liveUrl?: string; stagingUrl?: string; vercelProjectId?: string }>>({});
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [cachedFileUrls, setCachedFileUrls] = useState<Record<Id<"projects">, Record<Id<"_storage">, string>>>({});
+
+  // Helper component to fetch and cache URLs for a project
+  const ProjectFileUrlsFetcher = ({ projectId, storageIds }: { projectId: Id<"projects">; storageIds: Id<"_storage">[] }) => {
+    const urls = useQuery(
+      api.admin.getProjectFileUrls,
+      storageIds.length > 0 ? { projectId, storageIds } : "skip"
+    );
+
+    const hasSetUrlsRef = useRef(false);
+    
+    useEffect(() => {
+      // Only set URLs once when they're first fetched
+      if (urls && !hasSetUrlsRef.current) {
+        hasSetUrlsRef.current = true;
+        setCachedFileUrls(prev => {
+          // Only update if we don't already have URLs for this project
+          if (prev[projectId]) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [projectId]: urls,
+          };
+        });
+      }
+    }, [projectId, urls]);
+
+    return null;
+  };
 
   if (projects === undefined) {
     return (
@@ -732,83 +762,210 @@ function ProjectsTab() {
                       </button>
                     </td>
                   </tr>
-                  {expandedProjectId === project._id && (
-                    <tr>
-                      <td colSpan={7} className="px-6 py-4 bg-gray-50 border-t">
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">My Notes</label>
-                            <textarea
-                              value={editingNotes[project._id] || ""}
-                              onChange={(e) => setEditingNotes(prev => ({ ...prev, [project._id]: e.target.value }))}
-                              rows={4}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="Admin notes (not visible to client)..."
-                            />
-                            <div className="mt-2 flex gap-2">
-                              <button
-                                onClick={() => handleNotesSave(project._id)}
-                                disabled={saving[`notes-${project._id}`]}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
-                              >
-                                {saving[`notes-${project._id}`] ? "Saving..." : "Save Notes"}
-                              </button>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Deployment</label>
-                            <div className="grid grid-cols-1 gap-3">
+                  {expandedProjectId === project._id && (() => {
+                    // Collect storage IDs for file fetching
+                    const storageIds: Id<"_storage">[] = [];
+                    if (project.buildDetails?.brand?.logoStorageId) {
+                      storageIds.push(project.buildDetails.brand.logoStorageId);
+                    }
+                    if (project.buildDetails?.brand?.imageStorageIds) {
+                      storageIds.push(...project.buildDetails.brand.imageStorageIds);
+                    }
+
+                    return (
+                      <>
+                        {/* Fetch file URLs when expanded */}
+                        {storageIds.length > 0 && (
+                          <ProjectFileUrlsFetcher projectId={project._id} storageIds={storageIds} />
+                        )}
+                        <tr>
+                          <td colSpan={7} className="px-6 py-4 bg-gray-50 border-t">
+                            <div className="space-y-4">
+                              {/* Build Details Section */}
+                              {project.buildDetails && (
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-3">Build Details</label>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Headline</p>
+                                      <p className="text-sm text-gray-900">{project.buildDetails.headline || "-"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Domain Preference</p>
+                                      <p className="text-sm text-gray-900">{project.buildDetails.domainPreference || "-"}</p>
+                                    </div>
+                                    {project.buildDetails.inspirationLinks && project.buildDetails.inspirationLinks.length > 0 && (
+                                      <div className="md:col-span-2">
+                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Inspiration Links</p>
+                                        <ul className="list-disc list-inside space-y-1">
+                                          {project.buildDetails.inspirationLinks.map((link, i) => (
+                                            <li key={i} className="text-sm">
+                                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                {link}
+                                              </a>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Color Scheme</p>
+                                      <div className="flex gap-2 mt-1">
+                                        <div className="flex items-center gap-1">
+                                          <div 
+                                            className="w-6 h-6 rounded border border-gray-300"
+                                            style={{ backgroundColor: project.buildDetails.brand.colorScheme.primary }}
+                                            title={`Primary: ${project.buildDetails.brand.colorScheme.primary}`}
+                                          />
+                                          <span className="text-xs text-gray-600">Primary</span>
+                                          <span> {project.buildDetails.brand.colorScheme.primary}</span>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <div 
+                                            className="w-6 h-6 rounded border border-gray-300"
+                                            style={{ backgroundColor: project.buildDetails.brand.colorScheme.accent }}
+                                            title={`Accent: ${project.buildDetails.brand.colorScheme.accent}`}
+                                          />
+                                          <span className="text-xs text-gray-600">Accent</span>
+                                          <span> {project.buildDetails.brand.colorScheme.accent}</span>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Brand Assets Section */}
+                                  {(project.buildDetails.brand.logoStorageId || (project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0)) && (
+                                    <div className="mb-4 border-t pt-4">
+                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Brand Assets</p>
+                                      <div className="flex flex-wrap gap-3">
+                                        {/* Logo */}
+                                        {project.buildDetails.brand.logoStorageId && (() => {
+                                          const logoUrl = cachedFileUrls[project._id]?.[project.buildDetails.brand.logoStorageId!];
+                                          return logoUrl ? (
+                                            <div>
+                                              <p className="text-xs text-gray-600 mb-1">Logo</p>
+                                              <a
+                                                href={logoUrl}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-block"
+                                              >
+                                                <img
+                                                  src={logoUrl}
+                                                  alt="Logo"
+                                                  className="h-20 w-20 object-contain border border-gray-300 rounded hover:border-blue-500 transition"
+                                                />
+                                              </a>
+                                            </div>
+                                          ) : null;
+                                        })()}
+                                        {/* Images */}
+                                        {project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0 && (
+                                          <div>
+                                            <p className="text-xs text-gray-600 mb-1">Images</p>
+                                            <div className="flex flex-wrap gap-2">
+                                              {project.buildDetails.brand.imageStorageIds.map((storageId) => {
+                                                const imageUrl = cachedFileUrls[project._id]?.[storageId];
+                                                return imageUrl ? (
+                                                  <a
+                                                    key={storageId}
+                                                    href={imageUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-block"
+                                                  >
+                                                    <img
+                                                      src={imageUrl}
+                                                      alt="Brand image"
+                                                      className="h-20 w-20 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
+                                                    />
+                                                  </a>
+                                                ) : null;
+                                              })}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
                               <div>
-                                <label className="block text-xs text-gray-600 mb-1">Live URL</label>
-                                <input
-                                  type="url"
-                                  value={editingDeployment[project._id]?.liveUrl || project.deployment?.liveUrl || ""}
-                                  onChange={(e) => setEditingDeployment(prev => ({
-                                    ...prev,
-                                    [project._id]: { ...prev[project._id], liveUrl: e.target.value }
-                                  }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                <label className="block text-sm font-medium text-gray-700 mb-2">My Notes</label>
+                                <textarea
+                                  value={editingNotes[project._id] || project.buildDetails?.myNotes || ""}
+                                  onChange={(e) => setEditingNotes(prev => ({ ...prev, [project._id]: e.target.value }))}
+                                  rows={4}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  placeholder="Admin notes (not visible to client)..."
                                 />
+                                <div className="mt-2 flex gap-2">
+                                  <button
+                                    onClick={() => handleNotesSave(project._id)}
+                                    disabled={saving[`notes-${project._id}`]}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
+                                  >
+                                    {saving[`notes-${project._id}`] ? "Saving..." : "Save Notes"}
+                                  </button>
+                                </div>
                               </div>
                               <div>
-                                <label className="block text-xs text-gray-600 mb-1">Staging URL</label>
-                                <input
-                                  type="url"
-                                  value={editingDeployment[project._id]?.stagingUrl || project.deployment?.stagingUrl || ""}
-                                  onChange={(e) => setEditingDeployment(prev => ({
-                                    ...prev,
-                                    [project._id]: { ...prev[project._id], stagingUrl: e.target.value }
-                                  }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-600 mb-1">Vercel Project ID</label>
-                                <input
-                                  type="text"
-                                  value={editingDeployment[project._id]?.vercelProjectId || project.deployment?.vercelProjectId || ""}
-                                  onChange={(e) => setEditingDeployment(prev => ({
-                                    ...prev,
-                                    [project._id]: { ...prev[project._id], vercelProjectId: e.target.value }
-                                  }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                />
+                                <label className="block text-sm font-medium text-gray-700 mb-2">Deployment</label>
+                                <div className="grid grid-cols-1 gap-3">
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Live URL</label>
+                                    <input
+                                      type="url"
+                                      value={editingDeployment[project._id]?.liveUrl || project.deployment?.liveUrl || ""}
+                                      onChange={(e) => setEditingDeployment(prev => ({
+                                        ...prev,
+                                        [project._id]: { ...prev[project._id], liveUrl: e.target.value }
+                                      }))}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Staging URL</label>
+                                    <input
+                                      type="url"
+                                      value={editingDeployment[project._id]?.stagingUrl || project.deployment?.stagingUrl || ""}
+                                      onChange={(e) => setEditingDeployment(prev => ({
+                                        ...prev,
+                                        [project._id]: { ...prev[project._id], stagingUrl: e.target.value }
+                                      }))}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-600 mb-1">Vercel Project ID</label>
+                                    <input
+                                      type="text"
+                                      value={editingDeployment[project._id]?.vercelProjectId || project.deployment?.vercelProjectId || ""}
+                                      onChange={(e) => setEditingDeployment(prev => ({
+                                        ...prev,
+                                        [project._id]: { ...prev[project._id], vercelProjectId: e.target.value }
+                                      }))}
+                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                    />
+                                  </div>
+                                </div>
+                                <div className="mt-2">
+                                  <button
+                                    onClick={() => handleDeploymentSave(project._id)}
+                                    disabled={saving[`deploy-${project._id}`]}
+                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
+                                  >
+                                    {saving[`deploy-${project._id}`] ? "Saving..." : "Save Deployment"}
+                                  </button>
+                                </div>
                               </div>
                             </div>
-                            <div className="mt-2">
-                              <button
-                                onClick={() => handleDeploymentSave(project._id)}
-                                disabled={saving[`deploy-${project._id}`]}
-                                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
-                              >
-                                {saving[`deploy-${project._id}`] ? "Saving..." : "Save Deployment"}
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                          </td>
+                        </tr>
+                      </>
+                    );
+                  })()}
                 </Fragment>
               ))}
             </tbody>
@@ -911,6 +1068,82 @@ function EditRequestsTab() {
   const updateEditRequestStatus = useMutation(api.admin.updateEditRequestStatus);
 
   const [saving, setSaving] = useState<Record<string, boolean>>({});
+  const [cachedFileUrls, setCachedFileUrls] = useState<Record<Id<"projects">, Record<Id<"_storage">, string>>>({});
+
+  // Group requests by projectId and aggregate storage IDs (as plain object for stable reference)
+  const projectStorageIdsMap = useMemo(() => {
+    const map: Record<Id<"projects">, Id<"_storage">[]> = {};
+    const seenIds = new Set<string>();
+    
+    requests?.forEach(request => {
+      if (request.attachments && request.attachments.length > 0) {
+        const projectId = request.projectId;
+        if (!map[projectId]) {
+          map[projectId] = [];
+        }
+        request.attachments.forEach(id => {
+          const key = `${projectId}:${id}`;
+          if (!seenIds.has(key)) {
+            seenIds.add(key);
+            map[projectId].push(id);
+          }
+        });
+      }
+    });
+    
+    return map;
+  }, [requests]);
+
+  // Create stable array of unique projects with their storage IDs
+  // Create a stable key from requests to ensure we only recalculate when requests change
+  const requestsKey = useMemo(() => {
+    if (!requests) return "";
+    return requests.map(r => `${r._id}:${r.attachments?.join(",") || ""}`).join("|");
+  }, [requests]);
+  
+  const uniqueProjects = useMemo(() => {
+    const result: Array<{ projectId: Id<"projects">; storageIds: Id<"_storage">[] }> = [];
+    const projectIds = Object.keys(projectStorageIdsMap) as Id<"projects">[];
+    
+    projectIds.slice(0, 10).forEach(projectId => {
+      const storageIds = projectStorageIdsMap[projectId];
+      if (storageIds && storageIds.length > 0) {
+        // Create a new array reference but with sorted IDs for stability
+        result.push({ projectId, storageIds: [...storageIds].sort() });
+      }
+    });
+    
+    return result;
+  }, [requestsKey, projectStorageIdsMap]);
+
+  // Helper component to fetch and cache URLs for a project
+  const ProjectFileUrlsFetcher = ({ projectId, storageIds }: { projectId: Id<"projects">; storageIds: Id<"_storage">[] }) => {
+    const urls = useQuery(
+      api.admin.getProjectFileUrls,
+      storageIds.length > 0 ? { projectId, storageIds } : "skip"
+    );
+
+    const hasSetUrlsRef = useRef(false);
+    
+    useEffect(() => {
+      // Only set URLs once when they're first fetched
+      if (urls && !hasSetUrlsRef.current) {
+        hasSetUrlsRef.current = true;
+        setCachedFileUrls(prev => {
+          // Only update if we don't already have URLs for this project
+          if (prev[projectId]) {
+            return prev;
+          }
+          return {
+            ...prev,
+            [projectId]: urls,
+          };
+        });
+      }
+    }, [projectId, urls]);
+
+    return null;
+  };
 
   const getProjectIdString = (projectId: Id<"projects"> | undefined) => {
     if (!projectId) return null;
@@ -975,6 +1208,11 @@ function EditRequestsTab() {
     <div>
       <h2 className="text-2xl font-semibold text-gray-900 mb-6">Edit Requests</h2>
 
+      {/* Fetch URLs for unique projects */}
+      {uniqueProjects.map(({ projectId, storageIds }) => (
+        <ProjectFileUrlsFetcher key={projectId} projectId={projectId} storageIds={storageIds} />
+      ))}
+
       {requests.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-gray-500 text-lg">No edit requests</p>
@@ -998,6 +1236,35 @@ function EditRequestsTab() {
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{request.title}</div>
                     <div className="text-xs text-gray-500 mt-1 max-w-md truncate">{request.details}</div>
+                    {/* Attachment thumbnails */}
+                    {request.attachments && request.attachments.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {request.attachments.slice(0, 3).map((storageId) => {
+                          const url = cachedFileUrls[request.projectId]?.[storageId];
+                          if (!url) return null;
+                          return (
+                            <a
+                              key={storageId}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block"
+                            >
+                              <img
+                                src={url}
+                                alt="Attachment"
+                                className="h-12 w-12 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
+                              />
+                            </a>
+                          );
+                        })}
+                        {request.attachments.length > 3 && (
+                          <span className="text-xs text-gray-500 self-center">
+                            +{request.attachments.length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select

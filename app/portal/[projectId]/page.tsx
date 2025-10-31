@@ -50,6 +50,7 @@ type EditRequest = {
   priority: "low" | "normal" | "high";
   createdAt: number;
   details?: string;
+  attachments?: Id<"_storage">[];
 };
 
 export default function ProjectPage() {
@@ -868,7 +869,7 @@ function LiveSupportPanel({
         <SupportRequestForm projectId={projectId} />
       </div>
 
-      <EditRequestsList editRequests={editRequests} />
+      <EditRequestsList projectId={projectId} editRequests={editRequests} />
     </div>
   );
 }
@@ -880,8 +881,53 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
     details: "",
     priority: "normal" as "low" | "normal" | "high",
   });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewUrls, setPreviewUrls] = useState<string[]>([]);
 
   const createEditRequest = useMutation(api.projects.createEditRequest);
+  const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+  // Cleanup preview URLs on unmount or when files change
+  useEffect(() => {
+    return () => {
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+    };
+  }, [previewUrls]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    
+    // Validation: max 5 files
+    if (files.length > 5) {
+      toast.error("Maximum 5 files allowed");
+      return;
+    }
+
+    // Validation: file types and sizes
+    const allowedTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    
+    const validFiles: File[] = [];
+    for (const file of files) {
+      if (!allowedTypes.includes(file.type)) {
+        toast.error(`${file.name} is not a supported image type. Please use PNG, JPEG, WebP, or SVG.`);
+        continue;
+      }
+      if (file.size > maxSize) {
+        toast.error(`${file.name} is too large. Maximum size is 10MB.`);
+        continue;
+      }
+      validFiles.push(file);
+    }
+
+    // Cleanup old preview URLs
+    previewUrls.forEach(url => URL.revokeObjectURL(url));
+
+    // Create new preview URLs
+    const newPreviewUrls = validFiles.map(file => URL.createObjectURL(file));
+    setPreviewUrls(newPreviewUrls);
+    setSelectedFiles(validFiles);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -894,21 +940,61 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
     setPending(true);
 
     try {
+      // Upload files if any
+      let attachmentIds: Id<"_storage">[] | undefined;
+      if (selectedFiles.length > 0) {
+        const uploadedIds: Id<"_storage">[] = [];
+        const failedFiles: string[] = [];
+
+        for (const file of selectedFiles) {
+          try {
+            const uploadUrl = await generateUploadUrl();
+            const uploadResult = await fetch(uploadUrl, {
+              method: "POST",
+              headers: { "Content-Type": file.type },
+              body: file,
+            });
+
+            if (!uploadResult.ok) {
+              throw new Error(`Failed to upload ${file.name}`);
+            }
+
+            const { storageId } = await uploadResult.json();
+            uploadedIds.push(storageId);
+          } catch (error) {
+            console.error(`Failed to upload ${file.name}:`, error);
+            failedFiles.push(file.name);
+          }
+        }
+
+        if (failedFiles.length > 0) {
+          toast.warning(`Some files failed to upload: ${failedFiles.join(", ")}. Request will be submitted with ${uploadedIds.length} attachment(s).`);
+        }
+
+        if (uploadedIds.length > 0) {
+          attachmentIds = uploadedIds;
+        }
+      }
+
       await createEditRequest({
         projectId,
         title: formData.title.trim(),
         details: formData.details.trim(),
         priority: formData.priority,
+        attachmentIds,
       });
 
       toast.success("Support request submitted!");
       
-      // Reset form
+      // Reset form and files
       setFormData({
         title: "",
         details: "",
         priority: "normal",
       });
+      previewUrls.forEach(url => URL.revokeObjectURL(url));
+      setPreviewUrls([]);
+      setSelectedFiles([]);
     } catch (error) {
       toast.error("Failed to submit request. Please try again.");
       console.error(error);
@@ -956,9 +1042,39 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
         </select>
       </div>
 
-      <p className="text-xs text-[var(--secondary)] italic">
-        Note: File attachments will be supported soon. For now, you can include URLs or references in the details field above.
-      </p>
+      <div>
+        <Label htmlFor="support-attachments">Attachments (Optional)</Label>
+        <Input
+          id="support-attachments"
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          multiple
+          onChange={handleFileChange}
+        />
+        <p className="mt-1 text-xs text-[var(--secondary)]">
+          Upload up to 5 images (PNG, JPEG, WebP, or SVG). Max 10MB per file.
+        </p>
+        {selectedFiles.length > 0 && (
+          <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+            ✓ {selectedFiles.length} file{selectedFiles.length !== 1 ? "s" : ""} selected
+          </p>
+        )}
+
+        {/* Preview thumbnails */}
+        {previewUrls.length > 0 && (
+          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {previewUrls.map((url, idx) => (
+              <div key={`preview-${idx}`} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
+                <img
+                  src={url}
+                  alt={`Preview ${idx + 1}`}
+                  className="w-full h-24 object-cover rounded"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex justify-end">
         <Button type="submit" disabled={pending}>
@@ -970,11 +1086,34 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
 }
 
 function EditRequestsList({ 
+  projectId,
   editRequests = []
 }: { 
+  projectId: Id<"projects">;
   editRequests?: EditRequest[]
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [cachedUrls, setCachedUrls] = useState<Record<string, Record<Id<"_storage">, string>>>({});
+
+  const fileUrls = useQuery(
+    api.files.getUrls,
+    expandedId && editRequests.find(r => r._id === expandedId)?.attachments?.length
+      ? {
+          projectId,
+          storageIds: editRequests.find(r => r._id === expandedId)!.attachments!,
+        }
+      : "skip"
+  );
+
+  // Cache URLs when they're fetched
+  useEffect(() => {
+    if (expandedId && fileUrls) {
+      setCachedUrls(prev => ({
+        ...prev,
+        [expandedId]: fileUrls,
+      }));
+    }
+  }, [expandedId, fileUrls]);
 
   if (editRequests.length === 0) {
     return (
@@ -1048,11 +1187,43 @@ function EditRequestsList({
                 </Button>
               </div>
 
-              {isExpanded && request.details && (
+              {isExpanded && (
                 <div className="mt-3 pt-3 border-t border-[var(--border)]">
-                  <p className="text-sm text-[var(--secondary)] whitespace-pre-wrap">
-                    {request.details}
-                  </p>
+                  {request.details && (
+                    <p className="text-sm text-[var(--secondary)] whitespace-pre-wrap mb-3">
+                      {request.details}
+                    </p>
+                  )}
+                  
+                  {/* Attachment thumbnails */}
+                  {request.attachments && request.attachments.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-[var(--secondary)] mb-2">
+                        Attachments ({request.attachments.length})
+                      </p>
+                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                        {request.attachments.map((storageId) => {
+                          const url = cachedUrls[request._id]?.[storageId];
+                          if (!url) return null;
+                          return (
+                            <a
+                              key={storageId}
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20 hover:bg-[var(--muted)]/40 transition"
+                            >
+                              <img
+                                src={url}
+                                alt="Attachment"
+                                className="w-full h-24 object-cover rounded"
+                              />
+                            </a>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

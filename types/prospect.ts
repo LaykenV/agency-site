@@ -2,7 +2,8 @@ import type { Doc } from "@/convex/_generated/dataModel";
 
 type ProspectDoc = Doc<"prospects">;
 
-export type ProspectDetails = ProspectDoc["details"];
+// Public shape (excludes admin-only myNotes)
+export type ProspectDetails = Omit<ProspectDoc["details"], "myNotes">;
 export type ProspectPlan = NonNullable<ProspectDoc["aiGeneratedPlan"]>;
 export type ProspectPlanCore = Omit<ProspectPlan, "generatedAt">;
 
@@ -25,7 +26,6 @@ export const defaultProspectDetails: ProspectDetails = {
   phone: "",
   currentWebsite: "",
   businessDescription: "",
-  goals: "",
-  notes: "",
+  prospectNotes: "",
 };
 

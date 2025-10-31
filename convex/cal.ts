@@ -174,8 +174,7 @@ export const upsertProspectFromBooking = internalMutation({
         phone: normalizedPhone,
         currentWebsite: "",
         businessDescription: "",
-        goals: "",
-        notes: "",
+        prospectNotes: "",
       },
       calProspectBooking: booking,
       planGenerationInProgress: false,
@@ -297,8 +296,8 @@ export const findProspectByEmail = internalQuery({
         phone: v.string(),
         currentWebsite: v.string(),
         businessDescription: v.string(),
-        goals: v.string(),
-        notes: v.string(),
+        prospectNotes: v.string(),
+        myNotes: v.optional(v.string()),
       }),
       aiGeneratedPlan: v.optional(
         v.object({

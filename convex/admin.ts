@@ -1,8 +1,9 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { prospectValidator, prospectDetailsValidator, projectStatusValidator, deploymentValidator } from "./validators";
+import { prospectValidator, prospectDetailsStoredValidator, projectStatusValidator, deploymentValidator } from "./validators";
 import { requireAdmin } from "./adminGuard";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 
 export const getProspects = query({
   args: {},
@@ -36,6 +37,17 @@ export const listProjects = query({
     projectStatus: v.optional(projectStatusValidator),
     buildDetails: v.optional(v.object({
       headline: v.union(v.string(), v.null()),
+      domainPreference: v.union(v.string(), v.null()),
+      inspirationLinks: v.array(v.string()),
+      myNotes: v.union(v.string(), v.null()),
+      brand: v.object({
+        colorScheme: v.object({
+          primary: v.string(),
+          accent: v.string(),
+        }),
+        logoStorageId: v.optional(v.id("_storage")),
+        imageStorageIds: v.optional(v.array(v.id("_storage"))),
+      }),
       brandAssetsUploaded: v.boolean(),
     })),
     deployment: v.optional(deploymentValidator),
@@ -58,6 +70,14 @@ export const listProjects = query({
       projectStatus: p.projectStatus,
       buildDetails: p.buildDetails ? {
         headline: p.buildDetails.headline,
+        domainPreference: p.buildDetails.domainPreference,
+        inspirationLinks: p.buildDetails.inspirationLinks,
+        myNotes: p.buildDetails.myNotes,
+        brand: {
+          colorScheme: p.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
+          logoStorageId: p.buildDetails.brand.logoStorageId,
+          imageStorageIds: p.buildDetails.brand.imageStorageIds,
+        },
         brandAssetsUploaded: p.buildDetails.brandAssetsUploaded,
       } : undefined,
       deployment: p.deployment,
@@ -171,6 +191,7 @@ export const listEditRequests = query({
     priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
     createdAt: v.number(),
     updatedAt: v.number(),
+    attachments: v.optional(v.array(v.id("_storage"))),
   })),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
@@ -188,21 +209,54 @@ export const listEditRequests = query({
     const requests = await queryBuilder.order("desc").collect();
     
     // Default filter: show open, in_progress, waiting_on_client if no status specified
-    if (!args.status) {
-      return requests.filter(r => 
-        r.status === "open" || 
-        r.status === "in_progress" || 
-        r.status === "waiting_on_client"
-      );
+    const filtered = !args.status 
+      ? requests.filter(r => 
+          r.status === "open" || 
+          r.status === "in_progress" || 
+          r.status === "waiting_on_client"
+        )
+      : requests;
+    
+    return filtered.map(r => ({
+      _id: r._id,
+      _creationTime: r._creationTime,
+      projectId: r.projectId,
+      authUserId: r.authUserId,
+      title: r.title,
+      details: r.details,
+      status: r.status,
+      priority: r.priority,
+      createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
+      attachments: r.attachments,
+    }));
+  },
+});
+
+export const getProjectFileUrls = query({
+  args: {
+    projectId: v.id("projects"),
+    storageIds: v.array(v.id("_storage")),
+  },
+  returns: v.record(v.id("_storage"), v.string()),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    const result: Record<string, string> = {};
+    for (const storageId of args.storageIds) {
+      const url = await ctx.storage.getUrl(storageId);
+      if (url) {
+        result[storageId] = url;
+      }
     }
     
-    return requests;
+    return result as Record<Id<"_storage">, string>;
   },
 });
 
 export const createProspect = mutation({
   args: {
-    details: prospectDetailsValidator,
+    details: prospectDetailsStoredValidator,
   },
   returns: v.id("prospects"),
   handler: async (ctx, args) => {
@@ -231,7 +285,7 @@ export const createProspect = mutation({
 export const updateProspectDetails = mutation({
   args: {
     prospectId: v.id("prospects"),
-    details: prospectDetailsValidator,
+    details: prospectDetailsStoredValidator,
   },
   returns: v.null(),
   handler: async (ctx, args) => {

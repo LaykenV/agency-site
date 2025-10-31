@@ -59,12 +59,17 @@
 //render projects and support requests in /admin
 //gate admin
 
-img upload to edit request
+//img upload to edit request
 
-'what are you hoping' to myNotes field
+//'what are you hoping' to myNotes field
+
+sign in with laykenv@gmail for admin
+test full flow
 
 review all code
 all backend complete and tested
+
+email sent on /portal
 
 ux improvements
 build full ui 
@@ -76,8 +81,12 @@ pricing section
 full ui / refinement of portal pages
 
 google business profile
+email? voip?
+live stripe
 
 marketing // use atlas outbound, get them to sign up
+bandit signs
+cold call
 
 get first client
 

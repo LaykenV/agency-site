@@ -8,7 +8,7 @@ import type { Doc } from "../_generated/dataModel";
 import {
   PLAN_TEXT_MAX_LENGTH,
   aiGeneratedPlanValidator,
-  prospectDetailsValidator,
+  prospectDetailsPublicValidator,
 } from "../validators";
 
 type ProspectDetails = Doc<"prospects">["details"];
@@ -40,8 +40,7 @@ function buildPrompt(details: ProspectDetails) {
 
   const summaryLines = `Client brief:\n${[...intro, ...optionalLines,
     `Business description: ${details.businessDescription || "Not provided"}`,
-    `Primary goals: ${details.goals || "Not provided"}`,
-    `Additional notes: ${details.notes || "None"}`,
+    `Additional notes: ${details.prospectNotes || "None"}`,
   ].join("\n")}`;
 
   return `You are devising a single website proposal for our All-Inclusive Plan ($199 per month, $0 down).
@@ -70,7 +69,7 @@ JSON only.`;
 
 export const generateOnboardingPlan = internalAction({
   args: {
-    details: prospectDetailsValidator,
+    details: prospectDetailsPublicValidator,
   },
   returns: v.object({
     promptVersion: v.string(),
@@ -168,7 +167,7 @@ export function fallbackPlan(): ProspectPlanCore {
     nextSteps: [
       "Schedule a 15-minute fit call",
       "Share any brand assets or inspiration",
-      "We&apos;ll confirm goals and align launch timeline",
+      "We&apos;ll align on launch timeline and kickoff",
     ],
   } satisfies ProspectPlanCore;
 }

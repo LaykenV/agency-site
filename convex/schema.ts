@@ -6,7 +6,7 @@ import {
   calBookingValidator,
   deploymentValidator,
   projectStatusValidator,
-  prospectDetailsValidator,
+  prospectDetailsStoredValidator,
   agreementValidator,
   activityLogValidator,
   scheduledCallValidator,
@@ -16,7 +16,7 @@ export default defineSchema({
   prospects: defineTable({
     sessionId: v.string(),
     resumeToken: v.string(),
-    details: prospectDetailsValidator,
+    details: prospectDetailsStoredValidator,
     aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
     calProspectBooking: v.optional(calBookingValidator),
     lastPlanRequestedAt: v.optional(v.number()),

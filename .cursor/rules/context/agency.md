@@ -472,8 +472,11 @@ Client Portal (/portal/[projectId])
 - Edit Requests System (`edit_requests` table):
   - Mutations: `projects.createEditRequest`, Query: `projects.listEditRequests`
   - Fields: title, details, priority (low/normal/high), status (open/in_progress/waiting_on_client/resolved/closed)
-  - Optional attachments via Convex storage (UI placeholder ready)
-  - Activity log integration for ticket.created events
+  - Optional attachments via Convex storage (up to 5 images: PNG, JPEG, WebP, SVG; max 10MB per file)
+  - Attachment storage IDs are automatically unioned into project brand images for authorization
+  - Activity log integration: `ticket.created` and `ticket.attachment_added` events
+  - Portal UI: File upload with previews, lazy-loaded thumbnails when request is expanded
+  - Admin UI: Inline thumbnails (up to 3 visible, "+N more" label) with clickable links to originals
   - Real-time list with expand/collapse details
 - Call Scheduling Integration:
   - Displays Cal.com booking summaries (title, date/time, meeting URL) for kickoff and review calls
@@ -495,11 +498,20 @@ IX. Admin and Ops
   - Create prospect, send welcome email, resend agreement link, create Stripe Checkout Session (server-triggered after agreement), manual status overrides.
   - Admin portal at `/admin` (server-gated by ADMIN_EMAIL env var):
     - Prospects tab: View all prospects, create/edit prospects, send magic links
-    - Projects tab: View all projects sorted by recent activity, update project status, manage admin notes (myNotes), update deployment URLs (live/staging/vercelProjectId)
+    - Projects tab: View all projects sorted by recent activity, update project status, manage admin notes (myNotes), update deployment URLs (live/staging/vercelProjectId). When expanded, displays full build details:
+      - Build Details: headline, domain preference, inspiration links (as clickable links), color scheme (with visual swatches showing primary and accent colors with hex values)
+      - Brand Assets: logo and brand images displayed as thumbnails (clickable to open full-size in new tab), fetched on-demand when project is expanded
+      - My Notes: editable admin-only notes field (pre-populated with existing value)
+      - Deployment: live URL, staging URL, and Vercel project ID fields
     - Scheduled Calls tab: View all scheduled calls grouped by date with project/prospect links
-    - Edit Requests tab: View all edit/support requests, update status and priority, filter by status
+    - Edit Requests tab: View all edit/support requests with attachment thumbnails, update status and priority, filter by status
   - Admin API endpoints (all guarded by `requireAdmin`):
-    - Queries: `admin.listProspects`, `admin.listProjects`, `admin.listScheduledCalls`, `admin.listEditRequests`
+    - Queries: 
+      - `admin.listProspects`: Returns all prospects with full details
+      - `admin.listProjects`: Returns all projects with full `buildDetails` including headline, domainPreference, inspirationLinks, myNotes, brand (colorScheme, logoStorageId, imageStorageIds), and brandAssetsUploaded
+      - `admin.listScheduledCalls`: Returns scheduled calls with optional filtering
+      - `admin.listEditRequests`: Returns edit requests with attachments
+      - `admin.getProjectFileUrls`: Fetches signed URLs for project file attachments (logo and brand images) given projectId and array of storage IDs
     - Mutations: `admin.updateProjectStatus`, `admin.updateProjectMyNotes`, `admin.updateDeployment`, `admin.updateEditRequestStatus`
   - All admin mutations log to `activity_log` with `actor: "admin"` and descriptive `kind` fields
 - Dunning (via Stripe + email):
@@ -525,7 +537,7 @@ X. Security and Compliance
 
 XI. Roadmap
 - V1: In-app clickwrap + Stripe subscription + webhook-driven automation. ✅
-- V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage with live previews ✅; domain purchase/management workflow (pending).
+- V1.1: Add portal ticketing for edits (`edit_requests` table) ✅; file uploads for brand assets via Convex storage with live previews ✅; image attachments for edit requests (up to 5 images per request) ✅; domain purchase/management workflow (pending).
 - V1.2: Optional e-sign integration (Dropbox Sign) using current agreements table if enterprise clients request signatures.
 - V1.3: Self-serve asset library and change history; auto-generated monthly reports.
 - V1.4: Admin dashboard for managing projects, viewing edit requests, and bulk operations. ✅

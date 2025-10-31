@@ -11,6 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
+import { ONBOARDING_CAL_LINK } from "@/lib/config";
 
 export default function PortalPage() {
   return (
@@ -148,7 +149,7 @@ function UnauthenticatedView() {
               Start onboarding
             </a>
             <a
-              href="https://cal.com/acadianawebdesign"
+              href={ONBOARDING_CAL_LINK}
               className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-center font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
             >
               Schedule a call
