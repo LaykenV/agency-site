@@ -152,3 +152,17 @@ Notes
 - Theming choices follow the user’s preference for very soft backgrounds with visible yet tasteful gradients and glows, while keeping typography highly legible. These utilities are intentionally general‑purpose and avoid chat‑specific or fixed layout patterns from the old project.
 
 
+
+## Landing Page Implementation Map
+
+- Hero: `surface-hero`, `offer-bar`, `badge`, `device-stack`, CTAs use `btn-cta` and `btn-soft`. Copy from `landingPage.md`.
+- Local trust strip: `surface-section`, `badge`, static stars text.
+- Problem → Solution: Two `surface` cards; solution card accented with `glow-amber`.
+- What’s included: Grid of `surface` tiles (2–3 columns responsive); microcopy “One plan. Zero surprises. You email; we ship.”
+- Speed & performance proof: `gauge` with inline `--value`; `stat-pill` for before/after; bullet list.
+- Showcase: `before-after` wrapper for MVP images; width/height set to prevent CLS.
+- How it works: Section id `how-it-works` with `anchor-target`; four `surface` step tiles.
+- Pricing: Section id `pricing` with `anchor-target`; CTAs with UTM; fine print links to `/legal/terms`.
+- Testimonials: Optional `StarRating` row above `surface` quote tiles; static 5‑star rows.
+- FAQs: Section id `faqs` with `anchor-target`; accessible `<details><summary>` pairs in `surface` cards.
+- Final CTA: `surface-section` with dual CTAs (`btn-cta`, `btn-soft`) and UTM `cta=final`.

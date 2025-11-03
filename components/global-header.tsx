@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 
 export function GlobalHeader() {
@@ -14,6 +14,14 @@ export function GlobalHeader() {
   const router = useRouter();
   const isPortal = pathname.startsWith("/portal");
   const decision = useQuery(api.auth.getPortalDecision);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 4);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const initials = useMemo(() => {
     const nameOrEmail = decision?.user?.name || decision?.user?.email;
@@ -38,7 +46,13 @@ export function GlobalHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--background)]/95 backdrop-blur-sm">
+    <header
+      className={
+        `sticky top-0 z-50 backdrop-blur-md transition-colors ${
+          scrolled ? "border-b border-[var(--border)] bg-[var(--background)]/80" : "border-b border-transparent bg-transparent"
+        }`
+      }
+    >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
         <Link
           href="/"
