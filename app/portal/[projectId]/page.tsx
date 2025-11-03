@@ -9,6 +9,7 @@ import {
 } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -593,10 +594,13 @@ function BuildDetailsForm({
           {/* Logo preview */}
           {(logoPreviewUrl || (formData.brand.logoStorageId && storedFileUrls?.[formData.brand.logoStorageId])) && (
             <div className="mt-3 rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <img
+              <Image
                 src={logoPreviewUrl || storedFileUrls?.[formData.brand.logoStorageId!]}
                 alt="Logo preview"
+                width={200}
+                height={128}
                 className="max-h-32 object-contain"
+                unoptimized
               />
             </div>
           )}
@@ -639,20 +643,26 @@ function BuildDetailsForm({
             <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
               {imagePreviewUrls.map((url, idx) => (
                 <div key={`preview-${idx}`} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
-                  <img
+                  <Image
                     src={url}
                     alt={`Preview ${idx + 1}`}
+                    width={200}
+                    height={96}
                     className="w-full h-24 object-cover rounded"
+                    unoptimized
                   />
                 </div>
               ))}
               {!imagePreviewUrls.length && formData.brand.imageStorageIds?.map((storageId) => (
                 storedFileUrls?.[storageId] && (
                   <div key={storageId} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
-                    <img
+                    <Image
                       src={storedFileUrls[storageId]}
                       alt="Stored image"
+                      width={200}
+                      height={96}
                       className="w-full h-24 object-cover rounded"
+                      unoptimized
                     />
                   </div>
                 )
@@ -1064,10 +1074,13 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
             {previewUrls.map((url, idx) => (
               <div key={`preview-${idx}`} className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20">
-                <img
+                <Image
                   src={url}
                   alt={`Preview ${idx + 1}`}
+                  width={200}
+                  height={96}
                   className="w-full h-24 object-cover rounded"
+                  unoptimized
                 />
               </div>
             ))}
@@ -1212,10 +1225,13 @@ function EditRequestsList({
                               rel="noopener noreferrer"
                               className="rounded-lg border border-[var(--border)] p-2 bg-[var(--muted)]/20 hover:bg-[var(--muted)]/40 transition"
                             >
-                              <img
+                              <Image
                                 src={url}
                                 alt="Attachment"
+                                width={200}
+                                height={96}
                                 className="w-full h-24 object-cover rounded"
+                                unoptimized
                               />
                             </a>
                           );

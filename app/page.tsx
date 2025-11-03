@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 
@@ -131,7 +132,7 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Fast Sites Convert More Calls</h2>
           <div className="mt-8 grid grid-cols-1 gap-8 md:grid-cols-2 md:items-center">
             <div className="flex items-center gap-6">
-              <div className="gauge" style={{ ["--value" as any]: 95 }}>
+              <div className="gauge" style={{ "--value": 95 } as React.CSSProperties & Record<string, number>}>
                 <div className="gauge-badge">95+</div>
               </div>
               <div>
@@ -162,27 +163,27 @@ export default function Home() {
             <figure className="surface rounded-xl p-4">
               <figcaption className="mb-3 text-sm text-[var(--muted-foreground)]">Landscaper in Austin</figcaption>
               <div className="before-after">
-                <img src="/showcase-1-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
+                <Image src="/showcase-1-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
                 <div className="before-after__after" aria-hidden>
-                  <img src="/showcase-1-after.jpg" alt="" />
+                  <Image src="/showcase-1-after.jpg" alt="" width={1200} height={720} />
                 </div>
               </div>
             </figure>
             <figure className="surface rounded-xl p-4">
               <figcaption className="mb-3 text-sm text-[var(--muted-foreground)]">Plumber in Round Rock</figcaption>
               <div className="before-after">
-                <img src="/showcase-2-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
+                <Image src="/showcase-2-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
                 <div className="before-after__after" aria-hidden>
-                  <img src="/showcase-2-after.jpg" alt="" />
+                  <Image src="/showcase-2-after.jpg" alt="" width={1200} height={720} />
                 </div>
               </div>
             </figure>
             <figure className="surface rounded-xl p-4">
               <figcaption className="mb-3 text-sm text-[var(--muted-foreground)]">Home Renovation</figcaption>
               <div className="before-after">
-                <img src="/showcase-3-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
+                <Image src="/showcase-3-before.jpg" alt="Before redesign" width={1200} height={720} loading="lazy" />
                 <div className="before-after__after" aria-hidden>
-                  <img src="/showcase-3-after.jpg" alt="" />
+                  <Image src="/showcase-3-after.jpg" alt="" width={1200} height={720} />
                 </div>
               </div>
             </figure>
@@ -248,7 +249,7 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">FAQs</h2>
           <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
             <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">What does "unlimited edits" include?</summary>
+              <summary className="font-semibold cursor-pointer">What does &quot;unlimited edits&quot; include?</summary>
               <p className="mt-2 text-sm text-[var(--muted-foreground)]">Non‑material updates like text, photos, hours, banners, sections, and minor layout tweaks. Fair, reasonable use; larger redesigns are scoped separately.</p>
             </details>
             <details className="surface rounded-xl p-6">
