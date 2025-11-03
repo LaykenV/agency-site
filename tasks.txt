@@ -66,12 +66,15 @@
 //sign in with laykenv@gmail for admin
 //test full flow
 
-review all code and backend doc
 //all backend complete and tested webhook flow
 
 //email sent on /portal
-2 toasts on build detail save
+//2 toasts on build detail save
 //kickoff call schedule should not flip status
+
+//review all code and backend doc
+
+landing page plan
 
 build full landing ui 
 hero 

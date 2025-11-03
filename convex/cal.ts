@@ -400,3 +400,36 @@ export const updateProjectBooking = internalMutation({
   },
 });
 
+export const clearProjectBooking = internalMutation({
+  args: {
+    projectId: v.id("projects"),
+    bookingType: v.union(v.literal("kickoff"), v.literal("review")),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const project = await ctx.db.get(args.projectId);
+    if (!project) {
+      console.warn("[cal] project not found", { projectId: args.projectId });
+      return false;
+    }
+
+    if (args.bookingType === "kickoff") {
+      await ctx.db.patch(args.projectId, {
+        calKickoffBooking: undefined,
+      });
+      console.log("[cal] cleared kickoff booking", {
+        projectId: args.projectId,
+      });
+    } else {
+      await ctx.db.patch(args.projectId, {
+        calReviewBooking: undefined,
+      });
+      console.log("[cal] cleared review booking", {
+        projectId: args.projectId,
+      });
+    }
+
+    return true;
+  },
+});
+

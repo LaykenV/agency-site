@@ -404,7 +404,7 @@ export const createEditRequest = mutation({
           logoStorageId: existingBuildDetails.brand?.logoStorageId,
           imageStorageIds: updatedImageIds,
         },
-        brandAssetsUploaded: existingBuildDetails.brandAssetsUploaded,
+        brandAssetsUploaded: true,
       } : {
         headline: null,
         domainPreference: null,
@@ -414,7 +414,7 @@ export const createEditRequest = mutation({
           colorScheme: { primary: "#111827", accent: "#6EE7B7" },
           imageStorageIds: updatedImageIds,
         },
-        brandAssetsUploaded: false,
+        brandAssetsUploaded: true,
       };
 
       await ctx.db.patch(args.projectId, {
@@ -430,6 +430,7 @@ export const createEditRequest = mutation({
         payload: {
           requestId,
           count: args.attachmentIds.length,
+          assetsRecordedViaTicket: true,
         },
       });
     }

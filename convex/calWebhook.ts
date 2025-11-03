@@ -394,6 +394,24 @@ export const processCalWebhook = action({
           }
         }
 
+        // Clear booking snapshots on cancellation and track success
+        let snapshotCleared = false;
+        if (triggerEvent === "BOOKING_CANCELED") {
+          if (callType === "kickoff" && projectId) {
+            const cleared: boolean = await ctx.runMutation(internal.cal.clearProjectBooking, {
+              projectId,
+              bookingType: "kickoff",
+            });
+            snapshotCleared = cleared;
+          } else if (callType === "review" && projectId) {
+            const cleared: boolean = await ctx.runMutation(internal.cal.clearProjectBooking, {
+              projectId,
+              bookingType: "review",
+            });
+            snapshotCleared = cleared;
+          }
+        }
+
         // Log activity
         const activityKind =
           triggerEvent === "BOOKING_CREATED"
@@ -417,6 +435,7 @@ export const processCalWebhook = action({
             endTime,
             title: data.title,
             status: data.status,
+            snapshotCleared,
             fullPayload: payload,
           },
         });
