@@ -8,6 +8,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
+import { MobileMenu } from "@/components/mobile-menu";
 
 export function GlobalHeader() {
   const pathname = usePathname();
@@ -15,6 +16,7 @@ export function GlobalHeader() {
   const isPortal = pathname.startsWith("/portal");
   const decision = useQuery(api.auth.getPortalDecision);
   const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -48,23 +50,38 @@ export function GlobalHeader() {
   return (
     <header
       className={
-        `sticky top-0 z-50 backdrop-blur-md transition-colors ${
-          scrolled ? "border-b border-[var(--border)] bg-[var(--background)]/80" : "border-b border-transparent bg-transparent"
+        `sticky top-0 z-50 backdrop-blur-sm transition-colors header-progressive-blur ${
+          scrolled ? "bg-[var(--background)]/80" : "bg-transparent"
         }`
       }
     >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
         <Link
           href="/"
-          className="text-sm font-semibold uppercase tracking-widest text-[var(--secondary)] transition hover:text-[var(--foreground)]"
+          className="group flex items-center gap-2"
         >
-          Agency
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--brand-amber))] shadow-soft-lg" />
+          <span className="whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+            Acadiana Web Design
+          </span>
         </Link>
 
-        <nav className="flex items-center gap-4">
-          <AnimatedThemeToggler />
-          {isPortal ? (
-            decision?.authed ? (
+        {/* Desktop navigation */}
+        <nav className="hidden items-center gap-4 md:flex">
+          {!isPortal ? (
+            <>
+              <AnimatedThemeToggler />
+              <Link
+                href="/portal"
+                className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
+              >
+                Client Portal
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              </Link>
+            </>
+          ) : decision?.authed ? (
+            <>
+              <AnimatedThemeToggler />
               <div className="flex items-center gap-3">
                 <Link
                   href="/portal"
@@ -84,25 +101,82 @@ export function GlobalHeader() {
                   <span>Sign Out</span>
                 </button>
               </div>
-            ) : (
+            </>
+          ) : (
+            <>
+              <AnimatedThemeToggler />
               <Link
                 href="/portal"
-                className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] transition hover:text-[var(--primary)]"
+                className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
               >
-                Sign in
-                <ArrowRight className="h-4 w-4 text-[var(--primary)]" />
+                Client Portal
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
-            )
-          ) : (
-            <Link
-              href="/portal"
-              className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)] transition hover:text-[var(--primary)]"
-            >
-              Client Portal
-              <ArrowRight className="h-4 w-4 text-[var(--primary)]" />
-            </Link>
+            </>
           )}
         </nav>
+
+        {/* Mobile hamburger + menu */}
+        <div className="md:hidden">
+          <label className="hamburger" aria-label="Open menu">
+            <input
+              type="checkbox"
+              checked={menuOpen}
+              onChange={() => setMenuOpen(!menuOpen)}
+              aria-checked={menuOpen}
+              aria-controls="mobile-menu"
+            />
+            <svg viewBox="0 0 32 32" aria-hidden="true" width="32" height="32">
+              <path className="line line-top-bottom" d="M27 10 13 10C10.8 10 9 8.2 9 6 9 3.5 10.8 2 13 2 15.2 2 17 3.8 17 6L17 26C17 28.2 18.8 30 21 30 23.2 30 25 28.2 25 26 25 23.8 23.2 22 21 22L7 22"></path>
+              <path className="line" d="M7 16 27 16"></path>
+            </svg>
+          </label>
+
+          <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)}>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-semibold opacity-80">Menu</span>
+                <AnimatedThemeToggler className="btn-icon" />
+              </div>
+              <div className="h-px" style={{ background: "hsl(var(--border))" }} />
+
+              {decision?.authed ? (
+                <div className="flex flex-col gap-2">
+                  <div className="text-xs text-[var(--muted-foreground)]">
+                    Signed in as {decision?.user?.email}
+                  </div>
+                  <Link
+                    href="/portal"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                  >
+                    Account
+                    <ArrowRight className="h-4 w-4 text-[var(--primary)]" />
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      await handleSignOut();
+                      setMenuOpen(false);
+                    }}
+                    className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-red-500 hover:text-red-500"
+                  >
+                    Sign Out
+                    <LogOut className="h-4 w-4" />
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  href="/portal"
+                  onClick={() => setMenuOpen(false)}
+                  className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
+                >
+                  Client Portal
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                </Link>
+              )}
+            </div>
+          </MobileMenu>
+        </div>
       </div>
     </header>
   );

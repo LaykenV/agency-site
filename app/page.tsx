@@ -276,39 +276,14 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing */}
-      <section id="pricing" className="anchor-target relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
-          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-            <div>
-              <h3 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan — $0 down, then $199/month — 12‑month minimum</h3>
-              <p className="mt-2 text-[var(--muted-foreground)]">
-                Includes: custom site, hosting + SSL, domain, unlimited edits, reviews widget, analytics. Service speed note: Go live within 72 hours once we start your build.
-              </p>
-              <p className="mt-2 text-xs text-[var(--muted-foreground)]">
-                12‑month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding?utm_source=lp&cta=pricing" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
-                Start for $0
-              </Link>
-              <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
-                Book a 15‑min Call
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Final CTA */}
+      {/* Final CTA / pricing */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
           <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
             <div>
               <h3 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Launch Your 5‑Star Website</h3>
               <p className="mt-2 text-[var(--muted-foreground)]">$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build</p>
-              <p className="mt-2 text-xs text-[var(--muted-foreground)]">Limited spots per city each month to ensure fast turnaround. Reserve yours.</p>
+              <p className="mt-2 text-xs text-[var(--muted-foreground)]">12&nbsp;month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
               <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
