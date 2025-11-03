@@ -592,18 +592,22 @@ function BuildDetailsForm({
           )}
           
           {/* Logo preview */}
-          {(logoPreviewUrl || (formData.brand.logoStorageId && storedFileUrls?.[formData.brand.logoStorageId])) && (
-            <div className="mt-3 rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
-              <Image
-                src={logoPreviewUrl || storedFileUrls?.[formData.brand.logoStorageId!]}
-                alt="Logo preview"
-                width={200}
-                height={128}
-                className="max-h-32 object-contain"
-                unoptimized
-              />
-            </div>
-          )}
+          {(() => {
+            const logoSrc = logoPreviewUrl ?? (formData.brand.logoStorageId ? storedFileUrls?.[formData.brand.logoStorageId] : undefined);
+            if (!logoSrc) return null;
+            return (
+              <div className="mt-3 rounded-lg border border-[var(--border)] p-3 bg-[var(--muted)]/20">
+                <Image
+                  src={logoSrc as string}
+                  alt="Logo preview"
+                  width={200}
+                  height={128}
+                  className="max-h-32 object-contain"
+                  unoptimized
+                />
+              </div>
+            );
+          })()}
         </div>
 
         <div>
