@@ -8,6 +8,8 @@
   /* Light theme: off-white tinted background with deeper neutrals */
   --background: 225 38% 95%;
   --foreground: 225 30% 35%;
+  /* Hero heading color tuned to the page gradient */
+  --hero-foreground: color-mix(in hsl, hsl(var(--foreground)) 90%, hsl(var(--primary)) 10%);
   --card: 225 33% 96%;
   --card-foreground: 225 28% 38%;
   --popover: 225 33% 96%;
@@ -18,7 +20,7 @@
   --secondary-foreground: 225 30% 35%;
   --muted: 225 20% 92%;
   --muted-foreground: 225 20% 50%;
-  --accent: 215 60% 94%;
+  --accent: 215 56% 92%;
   --accent-foreground: 225 25% 32%;
   --destructive: 0 72% 50%;
   --destructive-foreground: 0 0% 98%;
@@ -38,11 +40,11 @@
 
   /* gradient tokens (light) */
   --gradient-hero:
-    radial-gradient(1200px 600px at 80% -10%, hsl(var(--primary) / 0.26) 0%, transparent 60%),
-    radial-gradient(900px 480px at -10% 20%, hsl(var(--accent) / 0.20) 0%, transparent 60%);
+    radial-gradient(1200px 600px at 80% -10%, hsl(var(--primary) / 0.30) 0%, transparent 60%),
+    radial-gradient(900px 480px at -10% 20%, hsl(var(--accent) / 0.24) 0%, transparent 60%);
   --gradient-section:
-    radial-gradient(800px 420px at 100% 0%, hsl(var(--primary) / 0.18) 0%, transparent 60%),
-    radial-gradient(700px 360px at 0% 100%, hsl(var(--accent) / 0.14) 0%, transparent 60%);
+    radial-gradient(800px 420px at 100% 0%, hsl(var(--primary) / 0.22) 0%, transparent 60%),
+    radial-gradient(700px 360px at 0% 100%, hsl(var(--accent) / 0.18) 0%, transparent 60%);
   --gradient-surface:
     linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
 
@@ -53,8 +55,10 @@
 
   /* Page backdrop gradients (light) */
   --gradient-page:
-    radial-gradient(1200px 560px at 50% 0%, hsl(var(--primary) / 0.22) 0%, transparent 70%),
-    radial-gradient(1100px 520px at 50% 100%, hsl(var(--accent) / 0.18) 0%, transparent 70%);
+    linear-gradient(180deg, hsl(var(--primary) / 0.26) 0%, transparent 36%),
+    radial-gradient(1800px 760px at 50% -10%, hsl(var(--primary) / 0.38) 0%, transparent 68%),
+    radial-gradient(1500px 640px at 0% 0%, hsl(var(--primary) / 0.34) 0%, transparent 68%),
+    radial-gradient(1500px 640px at 100% 0%, hsl(var(--accent) / 0.30) 0%, transparent 68%);
 }
 
 /* Dark theme */
@@ -62,6 +66,8 @@
   /* Dark theme: off-gray tinted background and deeper neutrals */
   --background: 220 28% 11%;
   --foreground: 0 0% 100%;
+  /* Hero heading color tuned to the page gradient */
+  --hero-foreground: color-mix(in hsl, hsl(var(--foreground)) 94%, hsl(var(--primary)) 6%);
   --card: 220 28% 12%;
   --card-foreground: 0 0% 100%;
   --popover: 220 28% 12%;
@@ -101,8 +107,10 @@
 
   /* Page backdrop gradients (dark) */
   --gradient-page:
-    radial-gradient(1200px 560px at 50% 0%, hsl(var(--primary) / 0.40) 0%, transparent 70%),
-    radial-gradient(1100px 520px at 50% 100%, hsl(var(--accent) / 0.30) 0%, transparent 70%);
+    linear-gradient(180deg, hsl(var(--primary) / 0.32) 0%, transparent 38%),
+    radial-gradient(1800px 760px at 50% -10%, hsl(var(--primary) / 0.46) 0%, transparent 70%),
+    radial-gradient(1500px 640px at 0% 0%, hsl(var(--primary) / 0.40) 0%, transparent 68%),
+    radial-gradient(1500px 640px at 100% 0%, hsl(var(--accent) / 0.36) 0%, transparent 68%);
 }
 
 @theme inline {
@@ -191,8 +199,6 @@ body {
   }
   body {
     @apply bg-background text-foreground;
-    background-image: var(--gradient-page);
-    background-repeat: no-repeat;
   }
 }
 
@@ -380,8 +386,33 @@ body {
     padding: 0.75rem;
   }
 
+  /* CTA card: centered, elevated, brand-washed */
+  .cta-card {
+    background:
+      linear-gradient(180deg, color-mix(in hsl, hsl(var(--primary)) 10%, hsl(var(--card))) 0%, color-mix(in hsl, hsl(var(--primary)) 6%, hsl(var(--card))) 100%),
+      radial-gradient(600px 280px at 100% 0%, hsl(var(--brand-amber) / 0.18), transparent 60%);
+    border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 24%);
+    box-shadow:
+      0 24px 60px -24px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 50%),
+      inset 0 1px 0 hsl(0 0% 100% / 0.45);
+  }
+
   /* Beams overlay helper */
-  .beams-overlay { mix-blend-mode: normal; pointer-events: none; }
+  .beams-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    mix-blend-mode: normal;
+    filter: saturate(120%) blur(10px);
+    opacity: 0.9;
+    background:
+      conic-gradient(from 190deg at 70% 18%, hsl(var(--primary) / 0.14), transparent 25%),
+      conic-gradient(from 250deg at 20% 60%, hsl(var(--brand-amber) / 0.12), transparent 30%),
+      radial-gradient(800px 320px at 20% 0%, hsl(var(--primary) / 0.16), transparent 60%),
+      radial-gradient(1000px 420px at 85% 25%, hsl(var(--accent) / 0.12), transparent 65%);
+    -webkit-mask-image: radial-gradient(90% 70% at 50% 25%, #000 50%, transparent 100%);
+            mask-image: radial-gradient(90% 70% at 50% 25%, #000 50%, transparent 100%);
+  }
 }
 
 /* Landing page utilities */
@@ -410,8 +441,17 @@ body {
 
   /* Device mockup stack for hero visuals */
   .device-stack { position: relative; min-height: 360px; }
+  .device-glow {
+    position: absolute; inset: 0; z-index: 0;
+    filter: blur(24px);
+    background:
+      radial-gradient(520px 240px at 28% 32%, hsl(var(--primary) / 0.26), transparent 70%),
+      radial-gradient(520px 220px at 72% 64%, hsl(var(--accent) / 0.22), transparent 70%);
+    transform: translateZ(0);
+  }
   .device-frame {
     position: absolute;
+    z-index: 1;
     border-radius: 1rem;
     border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 22%);
     background: var(--card);
@@ -422,6 +462,13 @@ body {
   }
   .device-frame--laptop { left: 0; bottom: 0; width: 78%; aspect-ratio: 16 / 10; }
   .device-frame--mobile { right: 0; top: 12%; width: 32%; aspect-ratio: 9 / 19; border-radius: 1.25rem; }
+
+  /* Mobile layout tightening for device mocks */
+  @media (max-width: 768px) {
+    .device-stack { min-height: 220px; }
+    .device-frame--laptop { left: 0; bottom: 0; width: 62%; }
+    .device-frame--mobile { right: 0; bottom: 0; top: auto; width: 38%; }
+  }
 
   /* Lighthouse-like gauge for speed proof */
   .gauge {
@@ -473,21 +520,7 @@ body {
   }
 }
 
-/* Progressive blur helper for header (stronger at top, lighter at bottom) */
-.header-progressive-blur {}
-.header-progressive-blur::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--background) / 0.26) 0%,
-    hsl(var(--background) / 0.14) 40%,
-    hsl(var(--background) / 0.06) 70%,
-    transparent 100%
-  );
-}
+/* Header blends with page; no gradient overlay */
 
 /* Animated hamburger menu */
 .hamburger {

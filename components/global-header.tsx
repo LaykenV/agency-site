@@ -6,24 +6,17 @@ import { usePathname, useRouter } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { MobileMenu } from "@/components/mobile-menu";
+import { Logo } from "@/components/logo";
 
 export function GlobalHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isPortal = pathname.startsWith("/portal");
   const decision = useQuery(api.auth.getPortalDecision);
-  const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 4);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const initials = useMemo(() => {
     const nameOrEmail = decision?.user?.name || decision?.user?.email;
@@ -50,9 +43,7 @@ export function GlobalHeader() {
   return (
     <header
       className={
-        `sticky top-0 z-50 backdrop-blur-sm transition-colors header-progressive-blur ${
-          scrolled ? "bg-[var(--background)]/80" : "bg-transparent"
-        }`
+        `sticky top-0 z-50 backdrop-blur-sm transition-colors bg-transparent`
       }
     >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
@@ -60,7 +51,7 @@ export function GlobalHeader() {
           href="/"
           className="group flex items-center gap-2"
         >
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--border)] bg-gradient-to-br from-[hsl(var(--primary))] to-[hsl(var(--brand-amber))] shadow-soft-lg" />
+          <Logo size="sm" className="" />
           <span className="whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
             Acadiana Web Design
           </span>

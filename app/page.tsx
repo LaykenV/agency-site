@@ -2,46 +2,67 @@ import Link from "next/link";
 import Image from "next/image";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
+import { CheckCircle2, Clock } from "lucide-react";
 
 export default function Home() {
   return (
-    <main className="w-full flex flex-col">
+    <main className="w-full flex flex-col relative">
+      <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[56vh] md:h-[68vh] pointer-events-none" />
       {/* Hero */}
       <section id="hero" className="anchor-target relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-6 py-20 md:py-28 grid gap-12 md:grid-cols-2 md:items-center">
-          <div>
-            <div className="mb-3">
-              <StarRating />
+        <div className="mx-auto max-w-6xl px-6 pt-6 md:pt-12 pb-10 md:pb-16">
+          <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight text-[var(--hero-foreground)] mx-auto max-w-[22ch]">
+            A 5‑Star Website for Your Business
+          </h1>
+
+          <div className="mt-8 md:mt-12 grid grid-cols-1 gap-6 md:gap-10 md:grid-cols-2 lg:grid-cols-1 md:items-center">
+            {/* Details (left on desktop, after mockups on mobile) */}
+            <div className="order-2 md:order-1">
+              <div className="surface rounded-xl p-6">
+                <p className="text-lg md:text-xl font-semibold text-[var(--foreground)]">
+                  Done‑for‑you website and hosting.
+                </p>
+                <div className="mt-3 flex items-center gap-2">
+                  <StarRating />
+                  <span className="text-xs text-[var(--muted-foreground)]">Built for 5‑star local businesses</span>
+                </div>
+                <h2 className="mt-4 font-semibold text-[var(--foreground)]">All‑inclusive plan</h2>
+                <ul className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-[var(--primary)]" />
+                    <span>$199/mo • $0 down</span>
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-[var(--primary)]" />
+                    <span>72‑hour go‑live from build</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3 md:flex md:flex-row md:items-center">
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft w-full inline-flex items-center justify-center gap-2 px-6 py-3">
+                  Book a 15‑min Call
+                </Link>
+                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3">
+                  Start for $0
+                </Link>
+              </div>
             </div>
-            <p className="text-sm text-[var(--muted-foreground)]">Built for 5‑star local businesses with 4.5+ Google ratings.</p>
-            <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight">Your 5‑Star Reputation Deserves a 5‑Star Website</h1>
-            <p className="mt-5 max-w-[60ch] text-[var(--muted-foreground)]">We design, build, host, and maintain a lightning‑fast professional website—and handle unlimited edits—for one simple monthly price.</p>
-            <div className="mt-5 offer-bar">
-              <span>$0 down</span><span>•</span><span>$199/mo</span><span>•</span><span>12‑month minimum</span><span>•</span><span>72‑hour go‑live from build</span>
-            </div>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
-                Start for $0
-              </Link>
-              <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
-                Book a 15‑min Call
-              </Link>
-            </div>
-            <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
-              <span className="badge">95+ PageSpeed target</span>
-              <span className="badge">Managed on Vercel with SSL</span>
-              <span className="badge">Unlimited edits via email</span>
-              <span className="badge">Powered by Next.js</span>
+
+            {/* Visual placeholder (16:9) */}
+            <div className="order-1 md:order-2">
+              <div className="card-surface relative aspect-[16/9] w-full rounded-xl overflow-hidden">
+                <Image
+                  src="/test.png"
+                  alt="Preview of the website experience"
+                  fill
+                  priority
+                  className="object-cover"
+                />
+              </div>
             </div>
           </div>
-          <div className="relative">
-            <div className="device-stack">
-              <div className="device-frame device-frame--laptop" />
-              <div className="device-frame device-frame--mobile glow-primary" />
-            </div>
-          </div>
+
         </div>
-        <div className="beams-overlay" aria-hidden />
         <span className="sr-only">Hero background illustration</span>
         <span className="sr-only">Device mockups are decorative</span>
       </section>
@@ -279,19 +300,21 @@ export default function Home() {
       {/* Final CTA / pricing */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
-          <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-            <div>
-              <h3 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Launch Your 5‑Star Website</h3>
-              <p className="mt-2 text-[var(--muted-foreground)]">$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build</p>
-              <p className="mt-2 text-xs text-[var(--muted-foreground)]">12&nbsp;month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
-                Start for $0
-              </Link>
-              <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
-                Book a 15‑min Call
-              </Link>
+          <div className="cta-card surface-elevated rounded-xl mx-auto max-w-4xl p-8 md:p-10">
+            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+              <div>
+                <h3 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Launch Your 5‑Star Website</h3>
+                <p className="mt-2 text-[var(--muted-foreground)]">$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build</p>
+                <p className="mt-2 text-xs text-[var(--muted-foreground)]">12&nbsp;month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
+              </div>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
+                  Start for $0
+                </Link>
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
+                  Book a 15‑min Call
+                </Link>
+              </div>
             </div>
           </div>
         </div>
