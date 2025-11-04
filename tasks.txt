@@ -75,7 +75,7 @@
 //review all code and backend doc
 
 //logo flag
-colors / gradient ?
+//colors / gradient ?
 sections
 hero copy
 hero img or mockups?
@@ -84,10 +84,16 @@ full plan for lg or mobile
 landing page plan
 
 build full landing ui 
-hero 
-about me
-our products
-pricing section
+
+header
+hero
+reviews
+table comparison
+faq
+cta
+footer
+
+veteran owned?
 
 full ui / refinement of portal pages
 

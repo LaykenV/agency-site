@@ -3,7 +3,12 @@
 import { useEffect, useState } from "react";
 import styles from "./star-rating.module.css";
 
-const StarRating = () => {
+type StarRatingProps = {
+  align?: "left" | "center" | "right";
+  className?: string;
+};
+
+const StarRating = ({ align = "center", className }: StarRatingProps) => {
   const [animatedStars, setAnimatedStars] = useState<number[]>([]);
 
   useEffect(() => {
@@ -23,7 +28,13 @@ const StarRating = () => {
   }, []);
 
   return (
-    <div className={styles.wrapper}>
+    <div
+      className={`${styles.wrapper}${className ? ` ${className}` : ""}`}
+      style={{
+        justifyContent:
+          align === "left" ? "flex-start" : align === "right" ? "flex-end" : "center",
+      }}
+    >
       <div className={styles.rating}>
         <div className={animatedStars.includes(1) ? styles.animated : ""}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
