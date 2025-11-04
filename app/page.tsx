@@ -146,10 +146,6 @@ export default function Home() {
       <section id="trust" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
           <div className="text-center text-sm text-[var(--muted-foreground)] section-overline">Trusted by local service pros</div>
-          <div className="mt-3 flex items-center justify-center gap-3">
-            <StarRating />
-            <span className="text-[var(--muted-foreground)]">5.0 average from local clients</span>
-          </div>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <span className="badge">Plumbing</span>
             <span className="badge">Landscaping</span>

@@ -76,7 +76,8 @@
 
 //logo flag
 //colors / gradient ?
-sections
+//sections
+fine tune sections
 hero copy
 //hero img or mockups?
 //start for 0 change
