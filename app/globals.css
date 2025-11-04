@@ -509,6 +509,65 @@ body {
 
   /* Soft large shadow helper */
   .shadow-soft-lg { box-shadow: 0 24px 60px -28px hsl(0 0% 0% / 0.30); }
+
+  /* Section overline label */
+  .section-overline {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    opacity: 0.9;
+  }
+
+  /* Feature list with checks */
+  .list-checks {
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  /* Comparison table */
+  .compare-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 18%);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--card);
+  }
+  .compare-table thead th {
+    padding: 0.75rem 1rem;
+    background: color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%);
+    color: var(--foreground);
+    border-bottom: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 22%);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    text-align: left;
+  }
+  .compare-table tbody th,
+  .compare-table tbody td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    text-align: left;
+  }
+  .compare-table tbody tr:nth-child(odd) td,
+  .compare-table tbody tr:nth-child(odd) th[scope="row"] {
+    background: color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 4%);
+  }
+  .compare-table tbody tr:last-child td,
+  .compare-table tbody tr:last-child th {
+    border-bottom: 0;
+  }
+  @media (max-width: 640px) {
+    .compare-table thead { display: none; }
+    .compare-table tbody tr { display: grid; grid-template-columns: 1fr; }
+    .compare-table tbody th[scope="row"] {
+      background: color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%);
+      border-bottom: 1px dashed var(--border);
+      font-weight: 700;
+    }
+    .compare-table tbody td { padding-top: 0.5rem; }
+  }
 }
 
 /* Custom animations for portal success view */

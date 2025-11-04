@@ -78,8 +78,8 @@
 //colors / gradient ?
 sections
 hero copy
-hero img or mockups?
-start for 0 change
+//hero img or mockups?
+//start for 0 change
 full plan for lg or mobile
 landing page plan
 
