@@ -5,6 +5,7 @@ import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
+import Image from "next/image";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -640,28 +641,6 @@ function ProjectsTab() {
     }
   };
 
-  const getStatusBadge = (status?: string) => {
-    if (!status) return <span className="text-xs text-gray-500">-</span>;
-    const baseClass = "inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold";
-    switch (status) {
-      case "ARCHIVED":
-        return <span className={`${baseClass} bg-red-500/10 text-red-500`}>Archived</span>;
-      case "LIVE":
-        return <span className={`${baseClass} bg-emerald-500/10 text-emerald-500`}>Live</span>;
-      case "IN_PROGRESS":
-        return <span className={`${baseClass} bg-blue-500/10 text-blue-500`}>In Progress</span>;
-      case "IN_REVIEW":
-        return <span className={`${baseClass} bg-amber-500/10 text-amber-500`}>In Review</span>;
-      case "AWAITING_ASSETS":
-        return <span className={`${baseClass} bg-purple-500/10 text-purple-500`}>Awaiting Assets</span>;
-      case "AWAITING_PAYMENT":
-        return <span className={`${baseClass} bg-yellow-500/10 text-yellow-500`}>Awaiting Payment</span>;
-      case "AWAITING_AGREEMENT":
-        return <span className={`${baseClass} bg-gray-500/10 text-gray-500`}>Awaiting Agreement</span>;
-      default:
-        return <span className={`${baseClass} bg-gray-500/10 text-gray-500`}>{status}</span>;
-    }
-  };
 
   return (
     <div>
@@ -850,9 +829,12 @@ function ProjectsTab() {
                                                 rel="noopener noreferrer"
                                                 className="inline-block"
                                               >
-                                                <img
+                                                <Image
                                                   src={logoUrl}
                                                   alt="Logo"
+                                                  width={80}
+                                                  height={80}
+                                                  unoptimized
                                                   className="h-20 w-20 object-contain border border-gray-300 rounded hover:border-blue-500 transition"
                                                 />
                                               </a>
@@ -874,9 +856,12 @@ function ProjectsTab() {
                                                     rel="noopener noreferrer"
                                                     className="inline-block"
                                                   >
-                                                    <img
+                                                    <Image
                                                       src={imageUrl}
                                                       alt="Brand image"
+                                                      width={80}
+                                                      height={80}
+                                                      unoptimized
                                                       className="h-20 w-20 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
                                                     />
                                                   </a>
@@ -1095,12 +1080,6 @@ function EditRequestsTab() {
   }, [requests]);
 
   // Create stable array of unique projects with their storage IDs
-  // Create a stable key from requests to ensure we only recalculate when requests change
-  const requestsKey = useMemo(() => {
-    if (!requests) return "";
-    return requests.map(r => `${r._id}:${r.attachments?.join(",") || ""}`).join("|");
-  }, [requests]);
-  
   const uniqueProjects = useMemo(() => {
     const result: Array<{ projectId: Id<"projects">; storageIds: Id<"_storage">[] }> = [];
     const projectIds = Object.keys(projectStorageIdsMap) as Id<"projects">[];
@@ -1114,7 +1093,7 @@ function EditRequestsTab() {
     });
     
     return result;
-  }, [requestsKey, projectStorageIdsMap]);
+  }, [projectStorageIdsMap]);
 
   // Helper component to fetch and cache URLs for a project
   const ProjectFileUrlsFetcher = ({ projectId, storageIds }: { projectId: Id<"projects">; storageIds: Id<"_storage">[] }) => {
@@ -1250,9 +1229,12 @@ function EditRequestsTab() {
                               rel="noopener noreferrer"
                               className="inline-block"
                             >
-                              <img
+                              <Image
                                 src={url}
                                 alt="Attachment"
+                                width={48}
+                                height={48}
+                                unoptimized
                                 className="h-12 w-12 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
                               />
                             </a>

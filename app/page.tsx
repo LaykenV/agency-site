@@ -68,7 +68,7 @@ export default function Home() {
                           </svg>
                         </div>
                         <h3 className="mt-2 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">We Build Your Website</h3>
-                        <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Our team designs and develops a custom, high-performance website that's built to convert.</p>
+                        <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Our team designs and develops a custom, high-performance website that&apos;s built to convert.</p>
                       </li>
                       <li className="flex flex-col items-center text-center">
                         <div className="icon-badge">
