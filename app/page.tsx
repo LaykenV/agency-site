@@ -23,7 +23,7 @@ export default function Home() {
                       <li className="flex flex-col items-center text-center">
                         <div className="icon-badge">
                           <svg
-                            className="h-8 w-8 md:h-10 md:w-10"
+                            className="h-10 w-10 md:h-12 md:w-12"
                             viewBox="0 0 24 24"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -45,13 +45,13 @@ export default function Home() {
                             />
                           </svg>
                         </div>
-                        <h3 className="mt-2 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Tell us your vision</h3>
+                        <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Tell us your vision</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Schedule a call and do a deep dive on your business, brand, and goals.</p>
                       </li>
                       <li className="flex flex-col items-center text-center">
                         <div className="icon-badge">
                           <svg
-                            className="h-8 w-8 md:h-10 md:w-10"
+                            className="h-10 w-10 md:h-12 md:w-12"
                             viewBox="0 0 32 32"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -67,13 +67,13 @@ export default function Home() {
                             />
                           </svg>
                         </div>
-                        <h3 className="mt-2 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">We Build Your Website</h3>
+                        <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">We Build Your Website</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Our team designs and develops a custom, high-performance website that&apos;s built to convert.</p>
                       </li>
                       <li className="flex flex-col items-center text-center">
                         <div className="icon-badge">
                           <svg
-                            className="h-8 w-8 md:h-10 md:w-10"
+                            className="h-10 w-10 md:h-12 md:w-12"
                             viewBox="0 0 32 32"
                             fill="none"
                             xmlns="http://www.w3.org/2000/svg"
@@ -85,7 +85,7 @@ export default function Home() {
                             />
                           </svg>
                         </div>
-                        <h3 className="mt-2 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Launch and Grow</h3>
+                        <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Launch and Grow</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">We handle the launch, hosting, and all future updates, so you can enjoy a worry-free online presence.</p>
                       </li>
                     </ul>
@@ -115,10 +115,10 @@ export default function Home() {
                 <div className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end">
                   <div className="flex flex-row items-center gap-3">
                     <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center justify-center gap-2 px-6 py-3">
-                      Book a 15‑min Call
+                      Schedule Call
                     </Link>
                     <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3">
-                      Start for $0
+                      Start Onboarding
                     </Link>
                   </div>
                 </div>
@@ -127,11 +127,11 @@ export default function Home() {
             {/* CTAs on mobile below the card */}
             <div className="mt-4 md:hidden">
               <div className="grid grid-cols-2 gap-3">
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft w-full inline-flex items-center justify-center gap-2 px-6 py-3">
-                  Book a 15‑min Call
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft w-full inline-flex items-center justify-center gap-2 px-6 py-2">
+                  Schedule Call
                 </Link>
-                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3">
-                  Start for $0
+                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2">
+                  Start Onboarding
                 </Link>
               </div>
             </div>
@@ -324,7 +324,7 @@ export default function Home() {
           <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">From Sign‑Up to Live in 4 Simple Steps</h2>
           <ol className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-4">
             <li className="surface rounded-xl p-6">
-              <div className="text-sm font-semibold text-[var(--muted-foreground)]">1) Start for $0</div>
+              <div className="text-sm font-semibold text-[var(--muted-foreground)]">1) Start Onboarding</div>
               <p className="mt-2 text-sm text-[var(--muted-foreground)]">Accept terms on our onboarding page and subscribe securely.</p>
             </li>
             <li className="surface rounded-xl p-6">
@@ -388,10 +388,10 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-3 sm:flex-row">
                 <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
-                  Start for $0
+                  Start Onboarding
                 </Link>
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
-                  Book a 15‑min Call
+                  Schedule Call
                 </Link>
               </div>
             </div>
