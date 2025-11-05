@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 import { CheckCircle2, Clock } from "lucide-react";
+import { FloatingCtaTray } from "@/components/FloatingCtaTray";
 
 export default function Home() {
   return (
@@ -114,26 +115,28 @@ export default function Home() {
                 {/* CTAs on large screens inside the card, bottom-right */}
                 <div className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end">
                   <div className="flex flex-row items-center gap-3">
-                    <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center justify-center gap-2 px-6 py-3">
+                    <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                       Schedule Call
                     </Link>
-                    <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3">
+                    <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                       Start Onboarding
                     </Link>
                   </div>
                 </div>
+                <div id="cta-hero-desktop-sentinel" aria-hidden />
               </div>
             </div>
             {/* CTAs on mobile below the card */}
             <div className="mt-4 md:hidden">
               <div className="grid grid-cols-2 gap-3">
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft w-full inline-flex items-center justify-center gap-2 px-6 py-2">
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Schedule Call
                 </Link>
-                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2">
+                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Start Onboarding
                 </Link>
               </div>
+              <div id="cta-hero-mobile-sentinel" aria-hidden />
             </div>
           </div>
 
@@ -177,37 +180,72 @@ export default function Home() {
       <section id="offer" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
           <div className="surface-elevated rounded-xl p-6 md:p-8">
-            <div className="grid gap-8 md:grid-cols-2">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
-                <p className="mt-2 text-[var(--muted-foreground)]">$199/mo • $0 down • 72‑hour go‑live from build</p>
 
-                <div className="mt-6">
-                  <div className="text-sm font-semibold text-[var(--muted-foreground)]">How it works</div>
-                  <ol className="mt-3 grid grid-cols-1 gap-2 text-sm text-[var(--muted-foreground)]">
+            {/* Main grid: narrative + sticky proof */}
+            <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
+              {/* Narrative column */}
+              <div className="space-y-8">
+                {/* Overview */}
+                <section id="plan-overview">
+                <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
+                  <p className="mt-2 text-[var(--muted-foreground)]">Done‑for‑you website and hosting tailored to convert.</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="badge">$199/mo • $0 down</span>
+                    <span className="badge">72‑hour go‑live</span>
+                    <span className="badge">12‑month minimum</span>
+                  </div>
+                </section>
+
+                {/* Steps */}
+                <section id="plan-steps">
+                  <h3 className="mt-2 text-xl font-semibold text-[var(--foreground)]">How it works</h3>
+                  <ol className="mt-3 grid grid-cols-1 gap-2 text-sm text-[var(--muted-foreground)] md:grid-cols-2">
                     <li className="surface-soft rounded-md p-3">1) Start Onboarding — accept terms and subscribe securely.</li>
                     <li className="surface-soft rounded-md p-3">2) Kickoff — share details, brand, and inspiration; upload assets.</li>
                     <li className="surface-soft rounded-md p-3">3) Build Stage — we build; your site goes live within 72 hours.</li>
-                    <li className="surface-soft rounded-md p-3">4) Review & Ongoing Support — launch + unlimited edits via email.</li>
+                    <li className="surface-soft rounded-md p-3">4) Launch & Ongoing Support — unlimited edits via email.</li>
                   </ol>
-                </div>
+                </section>
 
-                <div className="mt-6">
-                  <div className="text-sm font-semibold text-[var(--muted-foreground)]">What you get</div>
+                {/* Inclusions */}
+                <section id="plan-inclusions">
+                  <h3 className="text-xl font-semibold text-[var(--foreground)]">What you get</h3>
+                  <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="surface rounded-lg p-4">
+                      <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
                   <ul className="mt-3 list-checks">
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
+                      </ul>
+                    </div>
+                    <div className="surface rounded-lg p-4">
+                      <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & Domain</div>
+                      <ul className="mt-3 list-checks">
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
+                      </ul>
+                    </div>
+                    <div className="surface rounded-lg p-4">
+                      <div className="text-sm font-semibold text-[var(--muted-foreground)]">Conversion</div>
+                      <ul className="mt-3 list-checks">
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
+                      </ul>
+                    </div>
+                    <div className="surface rounded-lg p-4">
+                      <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
+                      <ul className="mt-3 list-checks">
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
                     <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
                   </ul>
                 </div>
+                  </div>
+                </section>
               </div>
 
-              <div className="flex flex-col justify-center">
+              {/* Proof column (sticky) */}
+              <aside id="plan-performance" className="self-start md:sticky md:top-24">
+                <div className="surface rounded-xl p-6">
                 <div className="flex items-center gap-6">
                   <div className="gauge" style={{ "--value": 95 } as React.CSSProperties & Record<string, number>}>
                     <div className="gauge-badge">95+</div>
@@ -229,9 +267,89 @@ export default function Home() {
                   <li>Built with modern best practices</li>
                 </ul>
               </div>
+              </aside>
             </div>
 
-            <div className="mt-8 overflow-x-auto">
+            {/* Comparison */}
+            <section id="plan-comparison" className="mt-8">
+              <h3 className="text-xl font-semibold text-[var(--foreground)]">All‑Inclusive vs Traditional</h3>
+
+              {/* Mobile: stacked comparison cards */}
+              <div className="mt-4 grid grid-cols-1 gap-3 md:hidden">
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Price</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>$199/mo • $0 down</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>$3–5k+ upfront + retainers</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Timeline to live</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>72 hours from build</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>4–8 weeks</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Hosting & SSL</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Billed separately</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Domain</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included & managed</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Bring your own</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Unlimited edits</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Yes — via email</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Typically billed hourly</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">PageSpeed target</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>95+</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Varies (often 60–80)</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Reviews widget</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Often extra</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Analytics</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Monthly summary</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>DIY</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Support</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Email support, same‑day</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Ticket queues</div></div>
+                  </div>
+                </div>
+                <div className="surface rounded-lg p-4">
+                  <div className="text-sm font-semibold text-[var(--foreground)]">Contract term</div>
+                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>12‑month minimum</div></div>
+                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Project‑based/retainer</div></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop: table comparison */}
+              <div className="mt-4 hidden md:block overflow-x-auto">
               <table className="compare-table w-full">
                 <caption className="sr-only">All‑Inclusive Plan vs Traditional Agency</caption>
                 <thead>
@@ -295,6 +413,7 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
+            </section>
           </div>
         </div>
       </section>
@@ -342,26 +461,29 @@ export default function Home() {
                 <p className="mt-2 text-[var(--muted-foreground)]">$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build</p>
                 <p className="mt-2 text-xs text-[var(--muted-foreground)]">12&nbsp;month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
               </div>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta inline-flex items-center gap-2 px-6 py-3">
-                  Start Onboarding
-                </Link>
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">
+              <div className="flex flex-col gap-3 w-full md:max-w-[280px]">
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                   Schedule Call
+                </Link>
+                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
+                  Start Onboarding
                 </Link>
               </div>
             </div>
           </div>
         </div>
+        {/* Bottom gradient fade-out */}
+        <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none page-gradient-fade" aria-hidden="true" />
       </section>
 
       {/* Footer */}
-      <footer className="mx-auto w-full max-w-5xl px-6">
+      <footer className="mx-auto w-full max-w-5xl px-6 relative z-10">
         <div className="flex flex-col items-center justify-between gap-3 py-6 text-sm text-[var(--muted-foreground)] md:flex-row">
           <p>© {new Date().getFullYear()} Your Agency</p>
           <Link href="/legal/terms" className="hover:text-[var(--foreground)]">Terms</Link>
         </div>
       </footer>
+      <FloatingCtaTray />
     </main>
   );
 }

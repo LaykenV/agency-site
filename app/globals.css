@@ -310,6 +310,39 @@ body {
       0 0 0 4px color-mix(in hsl, hsl(var(--primary)), hsl(0 0% 100%) 10%),
       inset 0 1px 0 hsl(0 0% 100% / 0.30);
   }
+  /* Elegant secondary button that pairs with primary CTA */
+  .btn-secondary {
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 22%);
+    background:
+      linear-gradient(180deg, color-mix(in hsl, hsl(var(--secondary)) 88%, hsl(var(--primary)) 10%) 0%, color-mix(in hsl, hsl(var(--secondary)) 94%, hsl(var(--primary)) 6%) 100%),
+      linear-gradient(135deg, hsl(var(--primary) / 0.10), hsl(var(--accent) / 0.08));
+    color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 12%);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.22),
+      0 14px 32px -22px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
+      0 8px 20px -14px hsl(0 0% 0% / 0.16);
+    transition: box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease, border-color 0.18s ease;
+  }
+  .btn-secondary:hover {
+    border-color: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 12%);
+    filter: saturate(1.03);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.26),
+      0 20px 46px -24px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 45%),
+      0 10px 22px -12px hsl(0 0% 0% / 0.18);
+  }
+  .btn-secondary:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px color-mix(in hsl, hsl(var(--primary)), hsl(0 0% 100%) 12%),
+      inset 0 1px 0 hsl(0 0% 100% / 0.22);
+  }
+  .btn-secondary:active {
+    transform: translateY(1px);
+    filter: saturate(1.02);
+  }
 
   .btn-soft {
     border-radius: calc(var(--radius) - 2px);
@@ -431,6 +464,96 @@ body {
 @layer utilities {
   /* Anchor offset so in-header links don’t hide section titles */
   .anchor-target { scroll-margin-top: 76px; }
+
+  /* Floating CTA tray */
+  .floating-cta { position: fixed; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 70; }
+  .floating-cta__scrim { position: fixed; inset: 0; z-index: 60; }
+  /* Single morphing shell (circle ↔ bar) */
+  .floating-cta__shell {
+    --floating-cta-radius: 32px;
+    position: relative;
+    border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 26%);
+    background:
+      linear-gradient(180deg, color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 14%) 0%, color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 4%) 100%),
+      linear-gradient(140deg, color-mix(in hsl, hsl(var(--accent)), hsl(var(--primary)) 16%) 0%, transparent 65%);
+    transform-origin: right center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0;
+    will-change: transform, opacity;
+    border-radius: var(--floating-cta-radius);
+    overflow: hidden;
+    color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 8%);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.28);
+  }
+  .dark .floating-cta__shell {
+    color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 20%);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.12);
+  }
+  .floating-cta__shell[data-expanded="false"] {
+    inline-size: 60px;
+    block-size: 60px;
+    cursor: pointer;
+    border-radius: var(--floating-cta-radius);
+    box-shadow:
+      0 18px 40px -26px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 62%),
+      inset 0 1px 0 hsl(0 0% 100% / 0.28);
+  }
+  .floating-cta__shell[data-expanded="true"] {
+    block-size: 60px;
+    justify-content: flex-start;
+    padding-inline: 0.65rem;
+    padding-block: 0.35rem;
+    border-radius: var(--floating-cta-radius);
+    box-shadow:
+      0 24px 54px -28px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
+      inset 0 1px 0 hsl(0 0% 100% / 0.24);
+  }
+  /* Mobile: full-width expand to the left (wrapper stays bottom-right) */
+  .floating-cta__shell[data-expanded="true"] { inline-size: calc(100vw - 2rem - env(safe-area-inset-left) - env(safe-area-inset-right)); }
+  @media (min-width: 768px) {
+    .floating-cta__shell[data-expanded="true"] { inline-size: auto; max-inline-size: 720px; }
+  }
+  .floating-cta__trigger {
+    display: grid;
+    place-items: center;
+    inline-size: 100%;
+    block-size: 100%;
+    pointer-events: none;
+    color: hsl(var(--primary));
+  }
+  .dark .floating-cta__trigger {
+    color: hsl(var(--primary));
+  }
+  .floating-cta__trigger-icon { width: 24px; height: 24px; }
+  .floating-cta__shell[data-expanded="true"] .floating-cta__trigger { display: none; }
+  /* Content appears only when expanded */
+  .floating-cta__content { display: none; gap: 0.75rem; align-items: center; flex: 1 1 auto; }
+  .floating-cta__shell[data-expanded="true"] .floating-cta__content { display: flex; }
+  .floating-cta__shell[data-expanded="true"] .btn-cta,
+  .floating-cta__shell[data-expanded="true"] .btn-secondary {
+    border-radius: calc(var(--floating-cta-radius) - 12px);
+  }
+  /* Mobile: buttons fill available space horizontally */
+  @media (max-width: 640px) { .floating-cta__shell[data-expanded="true"] .floating-cta__content > * { flex: 1 1 0; min-width: 0; } }
+  .floating-cta__content > * { text-align: center; }
+  @media (min-width: 768px) { .floating-cta__shell[data-expanded="true"] .floating-cta__content > * { flex: 0 0 auto; } }
+  /* Collapse control at far right (same physical spot as collapsed circle) */
+  .floating-cta__collapse {
+    margin-inline-start: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.75rem;
+    border-radius: calc(var(--floating-cta-radius) - 10px);
+    cursor: pointer;
+  }
+  .floating-cta__collapse span { display: inline-block; line-height: 1; }
+  @media (max-width: 640px) {
+    .floating-cta__collapse { display: none; }
+  }
 
   /* Offer bar (inline pill with separators) */
   .offer-bar {
@@ -567,6 +690,111 @@ body {
       font-weight: 700;
     }
     .compare-table tbody td { padding-top: 0.5rem; }
+  }
+
+  /* Offer section: add a tasteful color overlay to the elevated surface */
+  #offer .surface-elevated {
+    position: relative;
+    /* overflow: hidden removed to allow sticky positioning to work */
+  }
+  #offer .surface-elevated::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background:
+      radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.20), transparent 62%),
+      radial-gradient(800px 320px at 0% 100%, hsl(var(--primary) / 0.22), transparent 64%),
+      radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.18), transparent 64%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark #offer .surface-elevated::after {
+    background:
+      radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.24), transparent 64%),
+      radial-gradient(800px 320px at 0% 100%, hsl(var(--primary) / 0.28), transparent 66%),
+      radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.22), transparent 66%);
+  }
+  #offer .surface-elevated > * { position: relative; z-index: 1; }
+
+  /* Inclusions: color-washed cards */
+  #offer #plan-inclusions .surface {
+    position: relative;
+    overflow: hidden;
+  }
+  #offer #plan-inclusions .surface::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background:
+      radial-gradient(600px 260px at 0% 0%, hsl(var(--primary) / 0.16), transparent 62%),
+      radial-gradient(520px 220px at 100% 100%, hsl(var(--accent) / 0.14), transparent 64%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark #offer #plan-inclusions .surface::after {
+    background:
+      radial-gradient(600px 260px at 0% 0%, hsl(var(--primary) / 0.20), transparent 64%),
+      radial-gradient(520px 220px at 100% 100%, hsl(var(--accent) / 0.18), transparent 66%);
+  }
+  #offer #plan-inclusions .surface > * { position: relative; z-index: 1; }
+
+  /* Steps: subtle primary tint and accent border */
+  #offer #plan-steps .surface-soft {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 10%) 0%,
+      color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 4%) 100%
+    );
+    border-left: 2px solid hsl(var(--primary));
+  }
+  .dark #offer #plan-steps .surface-soft {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 12%) 0%,
+      color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 6%) 100%
+    );
+    border-left-color: hsl(var(--primary));
+  }
+
+  /* Performance: light radial wash */
+  #offer #plan-performance .surface {
+    position: relative;
+    overflow: hidden;
+  }
+  #offer #plan-performance .surface::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background:
+      radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.18), transparent 65%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .dark #offer #plan-performance .surface::after {
+    background:
+      radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.22), transparent 68%);
+  }
+  #offer #plan-performance .surface > * { position: relative; z-index: 1; }
+
+  /* Transparent footer to show page gradient */
+  footer {
+    background: transparent;
+  }
+
+  /* Bottom gradient fade-out for smooth transition to footer */
+  .page-gradient-fade {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      hsl(var(--background) / 0.2) 40%,
+      hsl(var(--background) / 0.5) 70%,
+      hsl(var(--background) / 0.8) 90%,
+      hsl(var(--background) / 0.95) 100%
+    );
+    z-index: 1;
   }
 }
 
