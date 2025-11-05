@@ -12,7 +12,7 @@ type Review = {
 };
 
 interface ReviewsScrollerProps {
-  reviews: Review[];
+  reviews: readonly Review[];
   className?: string;
 }
 
