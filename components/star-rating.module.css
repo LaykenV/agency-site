@@ -6,7 +6,6 @@
 .rating {
   display: flex;
   gap: 0.3rem;
-  --stroke: #666;
   --fill: #ffc73a;
 }
 
@@ -18,65 +17,40 @@
   width: 2rem;
   height: 2rem;
   overflow: visible;
-  fill: transparent;
-  stroke: var(--stroke);
-  stroke-linejoin: bevel;
-  stroke-dasharray: 12;
-  animation: idle 4s linear infinite;
-  transition: stroke 0.2s, fill 0.5s;
-}
-
-@keyframes idle {
-  from {
-    stroke-dashoffset: 24;
-  }
+  fill: var(--fill);
+  fill-opacity: 0;
+  stroke: none;
+  transition: fill-opacity 0.5s;
 }
 
 /* Animation class for auto-animating stars */
 .rating > div.animated svg {
   transition: 0s;
-  animation: idle 4s linear infinite, yippee 0.75s backwards;
+  animation: yippee 0.75s backwards;
   fill: var(--fill);
-  stroke: var(--fill);
-  stroke-opacity: 0;
-  stroke-dasharray: 0;
-  stroke-linejoin: miter;
-  stroke-width: 8px;
+  fill-opacity: 1;
+  stroke: none;
 }
 
 @keyframes yippee {
   0% {
     transform: scale(1);
-    fill: var(--fill);
     fill-opacity: 0;
-    stroke-opacity: 1;
-    stroke: var(--stroke);
-    stroke-dasharray: 10;
-    stroke-width: 1px;
-    stroke-linejoin: bevel;
   }
 
   30% {
     transform: scale(0);
-    fill: var(--fill);
     fill-opacity: 0;
-    stroke-opacity: 1;
-    stroke: var(--stroke);
-    stroke-dasharray: 10;
-    stroke-width: 1px;
-    stroke-linejoin: bevel;
-  }
-
-  30.1% {
-    stroke: var(--fill);
-    stroke-dasharray: 0;
-    stroke-linejoin: miter;
-    stroke-width: 8px;
   }
 
   60% {
     transform: scale(1.2);
-    fill: var(--fill);
+    fill-opacity: 1;
+  }
+
+  100% {
+    transform: scale(1);
+    fill-opacity: 1;
   }
 }
 

@@ -77,14 +77,14 @@
 //logo flag
 //colors / gradient ?
 //sections
-fine tune sections
-hero copy
 //hero img or mockups?
 //start for 0 change
-full plan for lg or mobile
-landing page plan
+//full plan for lg or mobile
+//landing page plan
 
 build full landing ui 
+fine tune sections w components
+hero copy
 
 header
 hero

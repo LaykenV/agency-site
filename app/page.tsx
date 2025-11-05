@@ -4,6 +4,26 @@ import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 import { CheckCircle2, Clock } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
+import { ReviewsScroller } from "@/components/ReviewsScroller";
+import { HorizontalScroller } from "@/components/HorizontalScroller";
+
+const REVIEWS = [
+  {
+    quote: "They launched in 3 days and updates are an email away.",
+    name: "Alex R.",
+    role: "Landscaping Owner",
+  },
+  {
+    quote: "Fast, professional build. Our phone calls picked up immediately.",
+    name: "Maya P.",
+    role: "Plumbing Services",
+  },
+  {
+    quote: "We email changes and they ship the same day. Couldn’t be easier.",
+    name: "Jordan K.",
+    role: "Home Renovation",
+  },
+] as const;
 
 export default function Home() {
   return (
@@ -150,29 +170,13 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
           <div className="text-center text-sm text-[var(--muted-foreground)] section-overline">Trusted by local service pros</div>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-            <span className="badge">Plumbing</span>
-            <span className="badge">Landscaping</span>
-            <span className="badge">Painting</span>
-            <span className="badge">Consulting</span>
-            <span className="badge">Home Services</span>
+            <span className="pill">Plumbing</span>
+            <span className="pill">Landscaping</span>
+            <span className="pill">Painting</span>
+            <span className="pill">Consulting</span>
+            <span className="pill">Home Services</span>
           </div>
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-            <figure className="surface rounded-xl p-6">
-              <div className="text-amber-500" aria-hidden>★★★★★</div>
-              <blockquote className="mt-3 text-[var(--foreground)]">“They launched in 3 days and updates are an email away.”</blockquote>
-              <figcaption className="mt-4 text-sm text-[var(--muted-foreground)]">Alex R., Landscaping Owner</figcaption>
-            </figure>
-            <figure className="surface rounded-xl p-6">
-              <div className="text-amber-500" aria-hidden>★★★★★</div>
-              <blockquote className="mt-3 text-[var(--foreground)]">“Fast, professional build. Our phone calls picked up immediately.”</blockquote>
-              <figcaption className="mt-4 text-sm text-[var(--muted-foreground)]">Maya P., Plumbing Services</figcaption>
-            </figure>
-            <figure className="surface rounded-xl p-6">
-              <div className="text-amber-500" aria-hidden>★★★★★</div>
-              <blockquote className="mt-3 text-[var(--foreground)]">“We email changes and they ship the same day. Couldn’t be easier.”</blockquote>
-              <figcaption className="mt-4 text-sm text-[var(--muted-foreground)]">Jordan K., Home Renovation</figcaption>
-            </figure>
-          </div>
+          <ReviewsScroller reviews={REVIEWS} className="mt-6" />
         </div>
       </section>
 
@@ -184,15 +188,15 @@ export default function Home() {
             {/* Main grid: narrative + sticky proof */}
             <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
               {/* Narrative column */}
-              <div className="space-y-8">
+              <div className="space-y-8 min-w-0">
                 {/* Overview */}
                 <section id="plan-overview">
                 <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
                   <p className="mt-2 text-[var(--muted-foreground)]">Done‑for‑you website and hosting tailored to convert.</p>
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="badge">$199/mo • $0 down</span>
-                    <span className="badge">72‑hour go‑live</span>
-                    <span className="badge">12‑month minimum</span>
+                    <span className="pill">$199/mo • $0 down</span>
+                    <span className="pill">72‑hour go‑live</span>
+                    <span className="pill">12‑month minimum</span>
                   </div>
                 </section>
 
@@ -210,35 +214,69 @@ export default function Home() {
                 {/* Inclusions */}
                 <section id="plan-inclusions">
                   <h3 className="text-xl font-semibold text-[var(--foreground)]">What you get</h3>
-                  <div className="mt-3 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {/* Desktop unchanged */}
+                  <div className="mt-3 hidden md:grid md:grid-cols-2 md:gap-4">
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
-                  <ul className="mt-3 list-checks">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
+                      <ul className="mt-3 list-checks">
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & Domain</div>
                       <ul className="mt-3 list-checks">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Conversion</div>
                       <ul className="mt-3 list-checks">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
                       <ul className="mt-3 list-checks">
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
-                    <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
-                  </ul>
-                </div>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
+                      </ul>
+                    </div>
+                  </div>
+                  {/* Mobile scroller */}
+                  <div className="mt-3 md:hidden">
+                    <HorizontalScroller cardClassName="surface rounded-lg p-4" ariaLabel="What you get">
+                      <div>
+                        <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
+                        <ul className="mt-3 list-checks">
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & Domain</div>
+                        <ul className="mt-3 list-checks">
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-[var(--muted-foreground)]">Conversion</div>
+                        <ul className="mt-3 list-checks">
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
+                        </ul>
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
+                        <ul className="mt-3 list-checks">
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
+                        </ul>
+                      </div>
+                    </HorizontalScroller>
                   </div>
                 </section>
               </div>
@@ -274,78 +312,80 @@ export default function Home() {
             <section id="plan-comparison" className="mt-8">
               <h3 className="text-xl font-semibold text-[var(--foreground)]">All‑Inclusive vs Traditional</h3>
 
-              {/* Mobile: stacked comparison cards */}
-              <div className="mt-4 grid grid-cols-1 gap-3 md:hidden">
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Price</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>$199/mo • $0 down</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>$3–5k+ upfront + retainers</div></div>
+              {/* Mobile: horizontal scroller for comparison cards */}
+              <div className="mt-4 md:hidden">
+                <HorizontalScroller cardClassName="surface rounded-lg p-4" ariaLabel="Plan comparison">
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Price</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>$199/mo • $0 down</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>$3–5k+ upfront + retainers</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Timeline to live</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>72 hours from build</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>4–8 weeks</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Timeline to live</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>72 hours from build</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>4–8 weeks</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Hosting & SSL</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Billed separately</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Hosting & SSL</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Billed separately</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Domain</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included & managed</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Bring your own</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Domain</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included & managed</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Bring your own</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Unlimited edits</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Yes — via email</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Typically billed hourly</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Unlimited edits</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Yes — via email</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Typically billed hourly</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">PageSpeed target</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>95+</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Varies (often 60–80)</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">PageSpeed target</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>95+</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Varies (often 60–80)</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Reviews widget</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Often extra</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Reviews widget</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Often extra</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Analytics</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Monthly summary</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>DIY</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Analytics</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Monthly summary</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>DIY</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Support</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Email support, same‑day</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Ticket queues</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Support</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Email support, same‑day</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Ticket queues</div></div>
+                    </div>
                   </div>
-                </div>
-                <div className="surface rounded-lg p-4">
-                  <div className="text-sm font-semibold text-[var(--foreground)]">Contract term</div>
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
-                    <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>12‑month minimum</div></div>
-                    <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Project‑based/retainer</div></div>
+                  <div>
+                    <div className="text-sm font-semibold text-[var(--foreground)]">Contract term</div>
+                    <div className="mt-2 grid grid-cols-2 gap-3 text-sm">
+                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>12‑month minimum</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Project‑based/retainer</div></div>
+                    </div>
                   </div>
-                </div>
+                </HorizontalScroller>
               </div>
 
               {/* Desktop: table comparison */}
