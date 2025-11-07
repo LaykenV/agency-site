@@ -231,6 +231,12 @@ body {
   mix-blend-mode: normal;
   pointer-events: none;
 }
+.hero-overlay {
+  background:
+    linear-gradient(180deg, hsl(var(--background) / 0.00) 0%, hsl(var(--background) / 0.00) 70%, hsl(var(--background) / 0.06) 100%),
+    radial-gradient(100% 60% at 50% 0%, hsl(var(--primary) / 0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
 
 /* Reusable elevated surfaces, cards, glows, and CTAs */
 @layer utilities {
@@ -306,6 +312,29 @@ body {
     background-clip: text;
     color: transparent;
     -webkit-text-fill-color: transparent;
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.22),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 38%);
+  }
+
+  /* Glow-only layer: renders only the text-shadow without gradient clipping
+     Used as a static background layer for animated text to prevent shadow from 
+     animating word-by-word. Key: NO background-clip so text-shadow renders properly. */
+  .heading-gradient-glow-only {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Make text invisible but keep shadow */
+    color: transparent;
+    background: none;
+    /* Keep the shadow effect - same values as .heading-gradient */
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.30),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 52%);
+  }
+  .dark .heading-gradient-glow-only {
+    color: transparent;
+    background: none;
     text-shadow:
       0 12px 28px hsl(var(--primary) / 0.22),
       0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 38%);

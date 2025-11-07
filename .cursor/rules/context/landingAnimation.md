@@ -1,0 +1,243 @@
+### Landing page hero animation — Implementation (Framer Motion)
+
+This documents the hero animation we implemented with Framer Motion. It’s tasteful, performant, and respects our soft gradient aesthetic [[memory:10223702]].
+
+Summary
+- Header animates word‑by‑word on page load.
+- Hero card lands after the header completes.
+- Overlay fades shortly after the card lands (non‑destructive).
+- Icons, supporting copy, and bullets stagger in; CTAs animate last.
+- Motion respects reduced‑motion; hero/card viewport amount is 0.20 and runs once.
+
+Dependencies
+- `framer-motion` (installed with bun): `bun add framer-motion` [[memory:10223697]].
+
+Key files
+- `components/animations.tsx`: shared variants, `SplitWords`, and `useHeroTimings`.
+- `app/page.tsx`: hero wired with `LazyMotion`, `MotionConfig`, and variants.
+- `app/globals.css`: `.hero-overlay` helper to fade the hero overlay instead of animating gradients.
+
+Core imports in `app/page.tsx`
+
+```14:24:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+import { LazyMotion, domAnimation, MotionConfig, m as motion, useReducedMotion } from "framer-motion";
+import {
+  motionDefaults,
+  containerStagger,
+  fadeUp,
+  scaleCard,
+  popIn,
+  fadeIn,
+  SplitWords,
+  useHeroTimings,
+} from "@/components/animations";
+```
+
+Hero setup and timings
+
+```57:62:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+export default function Home() {
+  const reduce = useReducedMotion();
+  const TITLE = "A 5‑Star Website for Your Business in Acadiana";
+  const t = useHeroTimings(TITLE);
+  const [cardRevealed, setCardRevealed] = useState(false);
+```
+
+Header: word‑by‑word (reduced‑motion fallback is static)
+
+The `SplitWords` component uses a dual-layer approach to prevent the glow effect from animating separately:
+- A static background layer with the full text and glow effect (blurred, positioned absolutely)
+- An animated foreground layer with word-by-word animation (no text-shadow)
+
+This ensures the glow and text animate together as a cohesive unit.
+
+```64:77:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+{reduce ? (
+  <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
+    {TITLE}
+  </h1>
+) : (
+  <SplitWords
+    text={TITLE}
+    className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient"
+  />
+)}
+```
+
+Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
+
+```82:90:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+<motion.div
+  className="surface rounded-xl overflow-hidden motion-will-change"
+  variants={scaleCard}
+  initial={reduce ? false : "hidden"}
+  whileInView={reduce ? undefined : "visible"}
+  transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
+  viewport={{ once: true, amount: 0.20 }}
+  onAnimationComplete={() => setCardRevealed(true)}
+>
+```
+
+```90:98:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+<motion.div
+  className="absolute inset-0 motion-will-change hero-overlay opacity-0"
+  variants={fadeIn}
+  initial={reduce ? false : "hidden"}
+  animate={reduce ? undefined : "visible"}
+  transition={{ delay: reduce ? 0 : t.cardStart + 0.06 }}
+/>
+```
+
+Icons and content stagger
+
+```101:107:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+<motion.ul
+  className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8"
+  role="list"
+  variants={containerStagger}
+  initial={reduce ? false : "hidden"}
+  animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+  transition={{ delay: reduce ? 0 : 0.04 }}
+>
+```
+
+Supporting copy, rating, heading, bullets
+
+These are gated by `cardRevealed` (using `animate={cardRevealed ? "visible" : "hidden"}`) to ensure they reveal only after the card finishes.
+
+Overlay helper in CSS
+
+```234:239:/Users/laykenvarholdt/projects/agency-site/app/globals.css
+.hero-overlay {
+  background:
+    linear-gradient(180deg, hsl(var(--background) / 0.00) 0%, hsl(var(--background) / 0.00) 70%, hsl(var(--background) / 0.06) 100%),
+    radial-gradient(100% 60% at 50% 0%, hsl(var(--primary) / 0.10) 0%, transparent 70%);
+  pointer-events: none;
+}
+```
+
+Shared animation primitives (`components/animations.tsx`)
+
+```1:19:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
+"use client";
+
+import { m as motion } from "framer-motion";
+import type { Variants } from "framer-motion";
+import { useMemo } from "react";
+
+export const motionDefaults = {
+  transition: { duration: 0.56, ease: [0.22, 1, 0.36, 1] as const },
+};
+
+export const containerStagger: Variants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.06,
+    },
+  },
+};
+```
+
+`SplitWords` implementation with dual-layer glow fix
+
+The component renders two layers to separate the glow from the animated text:
+1. **Background glow layer**: Static text with only the `text-shadow` visible (uses `.heading-gradient-glow-only`)
+   - Text is transparent but shadow renders normally
+   - Does NOT use `background-clip: text` so text-shadow works properly
+2. **Foreground animated layer**: Word-by-word animation with the full gradient effect
+
+This prevents the text-shadow from being affected by the word-by-word opacity animation, eliminating the visual delay.
+
+```51:95:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
+export function SplitWords({ text, className }: SplitWordsProps) {
+  const words = text.trim().split(/\s+/);
+  return (
+    <div className="relative">
+      {/* Background glow layer - renders text without gradient clipping so shadow works */}
+      <h1 
+        className={`${className} heading-gradient-glow-only`}
+        aria-hidden="true"
+        style={{ 
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          userSelect: 'none'
+        }}
+      >
+        {text}
+      </h1>
+      
+      {/* Animated text layer with gradient */}
+      <motion.h1
+        className={`${className} relative z-[1]`}
+        aria-label={text}
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
+        }}
+      >
+        {words.map((word, i) => (
+          <motion.span
+            key={i}
+            aria-hidden="true"
+            className="inline-block motion-will-change"
+            variants={wordVariants}
+          >
+            {word}
+            <span aria-hidden="true">&nbsp;</span>
+          </motion.span>
+        ))}
+      </motion.h1>
+    </div>
+  );
+}
+```
+
+```82:96:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
+export function useHeroTimings(headerText: string) {
+  return useMemo(() => {
+    const words = headerText.trim().split(/\s+/);
+    // Account for per-word animation duration from MotionConfig defaults
+    const WORD_ANIM_DURATION = motionDefaults.transition.duration;
+    const headerDuration = (Math.max(words.length - 1, 0) * WORD_STAGGER) + WORD_ANIM_DURATION + WORD_PAD;
+
+    // Start hero card after header fully completes
+    const cardStart = headerDuration + 0.08;
+    const cardDuration = 0.52;
+    const cardContentStart = cardStart + cardDuration + 0.06;
+    const ctaStart = cardContentStart + 0.36;
+
+    return { headerDuration, cardStart, cardContentStart, ctaStart, wordStagger: WORD_STAGGER };
+  }, [headerText]);
+}
+```
+
+Behavioral notes
+- Transforms/opacity only; no gradient stop animation. We fade a child overlay, preserving gradients [[memory:10223702]].
+- Hero uses `viewport={{ once: true, amount: 0.20 }}` to reveal only once.
+- Icons and supporting content are gated by `cardRevealed` so they only appear after the card finishes.
+- Reduced‑motion short‑circuits animations to static or simple fade.
+- Bundle‑aware: `LazyMotion` + `domAnimation` are used.
+- **Glow fix**: The heading uses a dual-layer approach where a static blurred background provides the glow effect, while the foreground text animates word-by-word. This prevents the glow from animating separately and causing a visual delay.
+
+Adjustments
+- Global transition: tweak `motionDefaults.transition` in `components/animations.tsx`.
+- Sequence timings: tweak `useHeroTimings` return values.
+- Trigger amount: adjust `viewport.amount` on the hero/card containers.
+
+Optional performance hint
+Not added by default; you can enable a compositor hint class:
+
+```css
+.motion-will-change { will-change: transform, opacity; }
+```
+
+Testing checklist
+- With reduced‑motion enabled, hero renders statically (or subtle fades only).
+- Normal motion: header words → card lands/overlay fades → icons/copy → CTAs.
+- Visuals match the brand’s soft gradients; no flicker or harsh transitions.

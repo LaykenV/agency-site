@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
@@ -9,6 +12,17 @@ import { HowItWorks } from "@/components/our-plan/HowItWorks";
 import { PerformanceGauge } from "@/components/our-plan/PerformanceGauge";
 import { FaqItem } from "@/components/faq/FaqItem";
 import { SectionHeader } from "@/components/SectionHeader";
+import { LazyMotion, domAnimation, MotionConfig, m as motion, useReducedMotion } from "framer-motion";
+import {
+  motionDefaults,
+  containerStagger,
+  fadeUp,
+  scaleCard,
+  popIn,
+  fadeIn,
+  SplitWords,
+  useHeroTimings,
+} from "@/components/animations";
 
 const REVIEWS = [
   {
@@ -41,22 +55,58 @@ const REVIEWS = [
 ] as const;
 
 export default function Home() {
+  const reduce = useReducedMotion();
+  const TITLE = "A 5‑Star Website for Your Business in Acadiana";
+  const t = useHeroTimings(TITLE);
+  const [cardRevealed, setCardRevealed] = useState(false);
   return (
     <main className="w-full flex flex-col relative">
       <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[90vh] sm:h-[78vh] md:h-[68vh] pointer-events-none" />
       {/* Hero */}
-      <section id="hero" className="anchor-target relative overflow-hidden">
+      <motion.section id="hero" className="anchor-target relative overflow-hidden" viewport={{ once: true, amount: 0.20 }}>
         <div className="mx-auto max-w-6xl px-6 pt-2 md:pt-4 pb-10 md:pb-16">
-          <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
-            A 5‑Star Website for Your Business in Acadiana
-          </h1>
+          <LazyMotion features={domAnimation} strict>
+            <MotionConfig transition={motionDefaults.transition}>
+              {reduce ? (
+                <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
+                  {TITLE}
+                </h1>
+              ) : (
+                <SplitWords
+                  text={TITLE}
+                  className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient"
+                />
+              )}
 
-          <div className="mt-8 md:mt-12">
-            <div className="surface rounded-xl overflow-hidden">
-              <div className="relative w-full aspect-[21/9] sm:aspect-[24/9] md:aspect-[32/9] hero-media">
-                <div className="absolute inset-0 flex items-center">
-                  <ul className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8" role="list">
-                      <li className="flex flex-col items-center text-center">
+              <div className="mt-8 md:mt-12">
+                <motion.div
+                  className="surface rounded-xl overflow-hidden motion-will-change"
+                  variants={scaleCard}
+                  initial={reduce ? false : "hidden"}
+                  whileInView={reduce ? undefined : "visible"}
+                  transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
+                  viewport={{ once: true, amount: 0.20 }}
+                  onAnimationComplete={() => setCardRevealed(true)}
+                >
+                  <div className="relative w-full aspect-[21/9] sm:aspect-[24/9] md:aspect-[32/9] hero-media">
+                    {/* Fade the overlay in, not the gradient tokens */}
+                    <motion.div
+                      className="absolute inset-0 motion-will-change hero-overlay opacity-0"
+                      variants={fadeIn}
+                      initial={reduce ? false : "hidden"}
+                      animate={reduce ? undefined : "visible"}
+                      transition={{ delay: reduce ? 0 : t.cardStart + 0.06 }}
+                    />
+                    <div className="absolute inset-0 flex items-center">
+                      <motion.ul
+                        className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8"
+                        role="list"
+                        variants={containerStagger}
+                        initial={reduce ? false : "hidden"}
+                        animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                        transition={{ delay: reduce ? 0 : 0.04 }}
+                      >
+                      <motion.li className="flex flex-col items-center text-center" variants={popIn}>
                         <div className="icon-badge">
                           <svg
                             className="h-10 w-10 md:h-12 md:w-12"
@@ -83,8 +133,8 @@ export default function Home() {
                         </div>
                         <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Tell us your vision</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Schedule a call and do a deep dive on your business, brand, and goals.</p>
-                      </li>
-                      <li className="flex flex-col items-center text-center">
+                      </motion.li>
+                      <motion.li className="flex flex-col items-center text-center" variants={popIn}>
                         <div className="icon-badge">
                           <svg
                             className="h-10 w-10 md:h-12 md:w-12"
@@ -105,8 +155,8 @@ export default function Home() {
                         </div>
                         <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">We Build Your Website</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">Our team designs and develops a custom, high-performance website that&apos;s built to convert.</p>
-                      </li>
-                      <li className="flex flex-col items-center text-center">
+                      </motion.li>
+                      <motion.li className="flex flex-col items-center text-center" variants={popIn}>
                         <div className="icon-badge">
                           <svg
                             className="h-10 w-10 md:h-12 md:w-12"
@@ -123,20 +173,46 @@ export default function Home() {
                         </div>
                         <h3 className="mt-3 text-xs sm:text-sm md:text-base font-semibold text-[var(--foreground)]">Launch and Grow</h3>
                         <p className="hidden sm:block mt-1 text-[10px] sm:text-xs md:text-sm text-[var(--muted-foreground)]">We handle the launch, hosting, and all future updates, so you can enjoy a worry-free online presence.</p>
-                      </li>
-                    </ul>
-                </div>
-              </div>
-              <div className="pt-6 px-6 pb-4 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
-                <div>
-                  <p className="text-lg md:text-xl font-semibold text-[var(--foreground)]">
-                    Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
-                  </p>
-                  <div className="mt-2">
-                    <StarRating align="left" />
+                      </motion.li>
+                      </motion.ul>
+                    </div>
                   </div>
-                  <h2 className="mt-4 font-semibold text-[var(--foreground)]">All‑inclusive plan</h2>
-                  <ul className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]">
+                  <div className="pt-6 px-6 pb-4 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
+                <div>
+                  <motion.p
+                    className="text-lg md:text-xl font-semibold text-[var(--foreground)] opacity-0"
+                    variants={fadeUp}
+                    initial={reduce ? false : "hidden"}
+                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    transition={{ delay: reduce ? 0 : 0.08 }}
+                  >
+                    Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
+                  </motion.p>
+                  <motion.div
+                    className="mt-2 opacity-0"
+                    variants={fadeIn}
+                    initial={reduce ? false : "hidden"}
+                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    transition={{ delay: reduce ? 0 : 0.12 }}
+                  >
+                    <StarRating align="left" />
+                  </motion.div>
+                  <motion.h2
+                    className="mt-4 font-semibold text-[var(--foreground)] opacity-0"
+                    variants={fadeUp}
+                    initial={reduce ? false : "hidden"}
+                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    transition={{ delay: reduce ? 0 : 0.16 }}
+                  >
+                    All‑inclusive plan
+                  </motion.h2>
+                  <motion.ul
+                    className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]"
+                    variants={containerStagger}
+                    initial={reduce ? false : "hidden"}
+                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    transition={{ delay: reduce ? 0 : 0.20 }}
+                  >
                     <li className="flex items-center gap-2">
                     <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>$199/mo • $0 down</span>
@@ -149,12 +225,16 @@ export default function Home() {
                     <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>Unlimited edit requests via the client portal</span>
                     </li>
-                  </ul>
+                  </motion.ul>
                 </div>
                 {/* CTAs on large screens inside the card, bottom-right */}
-                <div
+                <motion.div
                   data-floating-cta-anchor
-                  className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end"
+                  className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end opacity-0"
+                  variants={fadeUp}
+                  initial={reduce ? false : "hidden"}
+                  animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                  transition={{ delay: reduce ? 0 : 0.36 }}
                 >
                   <div className="flex flex-row items-center gap-3">
                     <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
@@ -164,9 +244,12 @@ export default function Home() {
                       Start Onboarding
                     </Link>
                   </div>
-                </div>
+                </motion.div>
+                  </div>
+                </motion.div>
               </div>
-            </div>
+            </MotionConfig>
+          </LazyMotion>
             {/* CTAs on mobile below the card */}
             <div className="mt-4 md:hidden">
               <div
@@ -182,11 +265,9 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-        </div>
         <span className="sr-only">Hero background illustration</span>
         <span className="sr-only">Device mockups are decorative</span>
-      </section>
+      </motion.section>
 
       {/* Trust & Reviews */}
       <section id="trust" className="anchor-target">
@@ -206,7 +287,7 @@ export default function Home() {
       <section id="offer" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
           <SectionHeader as="h2" className="mb-6">Our Plan</SectionHeader>
-          <div className="surface-elevated rounded-xl p-4 sm:p-6 md:p-8 overflow-hidden">
+          <div className="surface-elevated rounded-xl p-4 sm:p-6 md:p-8 overflow-hidden md:overflow-visible">
 
             {/* Main grid: narrative + sticky proof */}
             <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
