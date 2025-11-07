@@ -6,15 +6,18 @@ import styles from "./star-rating.module.css";
 type StarRatingProps = {
   align?: "left" | "center" | "right";
   className?: string;
+  start?: boolean;
 };
 
-const StarRating = ({ align = "center", className }: StarRatingProps) => {
+const StarRating = ({ align = "center", className, start = true }: StarRatingProps) => {
   const [animatedStars, setAnimatedStars] = useState<number[]>([]);
 
   useEffect(() => {
+    if (!start) return;
     // Animate each star sequentially with 0.25s interval
-    const timeouts: NodeJS.Timeout[] = [];
-    
+    setAnimatedStars([]);
+    const timeouts: Array<ReturnType<typeof setTimeout>> = [];
+
     for (let i = 1; i <= 5; i++) {
       const timeout = setTimeout(() => {
         setAnimatedStars((prev) => [...prev, i]);
@@ -25,7 +28,7 @@ const StarRating = ({ align = "center", className }: StarRatingProps) => {
     return () => {
       timeouts.forEach((timeout) => clearTimeout(timeout));
     };
-  }, []);
+  }, [start]);
 
   return (
     <div

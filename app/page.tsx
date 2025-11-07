@@ -188,15 +188,9 @@ export default function Home() {
                   >
                     Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
                   </motion.p>
-                  <motion.div
-                    className="mt-2 opacity-0"
-                    variants={fadeIn}
-                    initial={reduce ? false : "hidden"}
-                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
-                    transition={{ delay: reduce ? 0 : 0.12 }}
-                  >
-                    <StarRating align="left" />
-                  </motion.div>
+                  <div className="mt-2">
+                    <StarRating align="left" start={reduce ? true : cardRevealed} />
+                  </div>
                   <motion.h2
                     className="mt-4 font-semibold text-[var(--foreground)] opacity-0"
                     variants={fadeUp}
