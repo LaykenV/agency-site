@@ -3,8 +3,9 @@
 This documents the hero animation we implemented with Framer Motion. It’s tasteful, performant, and respects our soft gradient aesthetic [[memory:10223702]].
 
 Summary
-- Header animates word‑by‑word on page load.
-- Hero card lands after the header completes.
+- Header animates from the bottom with a single gradient heading that reveals word-by-word (50 ms stagger, ~420 ms per word), using the `.heading-word` utility for a synced glow.
+- Hero card lands ~20ms after the final word finishes animating, so it follows immediately without overlap.
+- Icon trio animates in first; supporting copy, star rating, and CTAs wait for that phase to finish before revealing.
 - Overlay fades shortly after the card lands (non‑destructive).
 - Icons, supporting copy, and bullets stagger in; CTAs animate last.
 - Motion respects reduced‑motion; hero/card viewport amount is 0.20 and runs once.
@@ -45,11 +46,8 @@ export default function Home() {
 
 Header: word‑by‑word (reduced‑motion fallback is static)
 
-The `SplitWords` component uses a dual-layer approach to prevent the glow effect from animating separately:
-- A static background layer with the full text and glow effect (blurred, positioned absolutely)
-- An animated foreground layer with word-by-word animation (no text-shadow)
-
-This ensures the glow and text animate together as a cohesive unit.
+The `SplitWords` component renders a single gradient heading and relies on the `.heading-word` helper (pseudo-element glow) for each word. Word-by-word animation is driven by a 50 ms stagger and ~420 ms word duration so the glow and text move in lockstep.
+The hero card sequencing runs in phases: (1) card frame scales in, (2) icon trio animates sequentially, (3) supporting content and star rating fade up once the icons complete.
 
 ```64:77:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 {reduce ? (
@@ -59,7 +57,7 @@ This ensures the glow and text animate together as a cohesive unit.
 ) : (
   <SplitWords
     text={TITLE}
-    className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient"
+    className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch]"
   />
 )}
 ```
@@ -140,63 +138,14 @@ export const containerStagger: Variants = {
 };
 ```
 
-`SplitWords` implementation with dual-layer glow fix
+`SplitWords` implementation (single heading with per-word glow helper)
 
-The component renders two layers to separate the glow from the animated text:
-1. **Background glow layer**: Static text with only the `text-shadow` visible (uses `.heading-gradient-glow-only`)
-   - Text is transparent but shadow renders normally
-   - Does NOT use `background-clip: text` so text-shadow works properly
-2. **Foreground animated layer**: Word-by-word animation with the full gradient effect
+The component renders one `motion.h1` and maps words to `.heading-word` spans. The pseudo-element on `.heading-word` recreates the glow, so both glow and gradient share the same animation timeline, while the 50 ms stagger and ~420 ms word duration define the pacing.
 
-This prevents the text-shadow from being affected by the word-by-word opacity animation, eliminating the visual delay.
-
-```51:95:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
-export function SplitWords({ text, className }: SplitWordsProps) {
-  const words = text.trim().split(/\s+/);
-  return (
-    <div className="relative">
-      {/* Background glow layer - renders text without gradient clipping so shadow works */}
-      <h1 
-        className={`${className} heading-gradient-glow-only`}
-        aria-hidden="true"
-        style={{ 
-          position: 'absolute',
-          inset: 0,
-          zIndex: 0,
-          pointerEvents: 'none',
-          userSelect: 'none'
-        }}
-      >
-        {text}
-      </h1>
-      
-      {/* Animated text layer with gradient */}
-      <motion.h1
-        className={`${className} relative z-[1]`}
-        aria-label={text}
-        initial="hidden"
-        animate="visible"
-        variants={{
-          hidden: {},
-          visible: { transition: { staggerChildren: 0.06, delayChildren: 0.02 } },
-        }}
-      >
-        {words.map((word, i) => (
-          <motion.span
-            key={i}
-            aria-hidden="true"
-            className="inline-block motion-will-change"
-            variants={wordVariants}
-          >
-            {word}
-            <span aria-hidden="true">&nbsp;</span>
-          </motion.span>
-        ))}
-      </motion.h1>
-    </div>
-  );
-}
-```
+Hero card choreography (within `app/page.tsx`):
+1. Scale animation (`scaleCard`) plays on the card shell.
+2. `cardFrameDone` flips once the scale animation completes, triggering the icon trio list to animate (`containerStagger` + `popIn`).
+3. When the icon list finishes, `cardContentVisible` flips, revealing the supporting copy, star rating (via `start` prop), plan bullets, and CTAs.
 
 ```82:96:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
 export function useHeroTimings(headerText: string) {

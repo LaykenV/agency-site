@@ -139,17 +139,17 @@ export function GlobalHeader() {
                   <Link
                     href="/portal"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+                    className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
                   >
                     Account
-                    <ArrowRight className="h-4 w-4 text-[var(--primary)]" />
+                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                   </Link>
                   <button
                     onClick={async () => {
                       await handleSignOut();
                       setMenuOpen(false);
                     }}
-                    className="flex items-center justify-between rounded-md border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] hover:border-red-500 hover:text-red-500"
+                    className="btn-danger inline-flex items-center justify-between gap-2 px-4 py-2 text-sm font-semibold"
                   >
                     Sign Out
                     <LogOut className="h-4 w-4" />

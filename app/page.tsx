@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
@@ -58,7 +58,15 @@ export default function Home() {
   const reduce = useReducedMotion();
   const TITLE = "A 5‑Star Website for Your Business in Acadiana";
   const t = useHeroTimings(TITLE);
-  const [cardRevealed, setCardRevealed] = useState(false);
+  const [cardFrameDone, setCardFrameDone] = useState(reduce);
+  const [cardContentVisible, setCardContentVisible] = useState(reduce);
+
+  useEffect(() => {
+    if (reduce) {
+      setCardFrameDone(true);
+      setCardContentVisible(true);
+    }
+  }, [reduce]);
   return (
     <main className="w-full flex flex-col relative">
       <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[90vh] sm:h-[78vh] md:h-[68vh] pointer-events-none" />
@@ -74,7 +82,7 @@ export default function Home() {
               ) : (
                 <SplitWords
                   text={TITLE}
-                  className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient"
+                  className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch]"
                 />
               )}
 
@@ -86,7 +94,11 @@ export default function Home() {
                   whileInView={reduce ? undefined : "visible"}
                   transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
                   viewport={{ once: true, amount: 0.20 }}
-                  onAnimationComplete={() => setCardRevealed(true)}
+                  onAnimationComplete={() => {
+                    if (!reduce) {
+                      setCardFrameDone(true);
+                    }
+                  }}
                 >
                   <div className="relative w-full aspect-[21/9] sm:aspect-[24/9] md:aspect-[32/9] hero-media">
                     {/* Fade the overlay in, not the gradient tokens */}
@@ -103,8 +115,13 @@ export default function Home() {
                         role="list"
                         variants={containerStagger}
                         initial={reduce ? false : "hidden"}
-                        animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                        animate={reduce ? undefined : (cardFrameDone ? "visible" : "hidden")}
                         transition={{ delay: reduce ? 0 : 0.04 }}
+                        onAnimationComplete={() => {
+                          if (!reduce) {
+                            setCardContentVisible(true);
+                          }
+                        }}
                       >
                       <motion.li className="flex flex-col items-center text-center" variants={popIn}>
                         <div className="icon-badge">
@@ -183,42 +200,42 @@ export default function Home() {
                     className="text-lg md:text-xl font-semibold text-[var(--foreground)] opacity-0"
                     variants={fadeUp}
                     initial={reduce ? false : "hidden"}
-                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
                     transition={{ delay: reduce ? 0 : 0.08 }}
                   >
                     Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
                   </motion.p>
                   <div className="mt-2">
-                    <StarRating align="left" start={reduce ? true : cardRevealed} />
+                    <StarRating align="left" start={reduce ? true : cardContentVisible ?? undefined} />
                   </div>
                   <motion.h2
                     className="mt-4 font-semibold text-[var(--foreground)] opacity-0"
                     variants={fadeUp}
                     initial={reduce ? false : "hidden"}
-                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                    animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
                     transition={{ delay: reduce ? 0 : 0.16 }}
                   >
                     All‑inclusive plan
                   </motion.h2>
                   <motion.ul
-                    className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]"
-                    variants={containerStagger}
-                    initial={reduce ? false : "hidden"}
-                    animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
-                    transition={{ delay: reduce ? 0 : 0.20 }}
-                  >
-                    <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
+                     className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]"
+                     variants={containerStagger}
+                     initial={reduce ? false : "hidden"}
+                     animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
+                     transition={{ delay: reduce ? 0 : 0.20 }}
+                   >
+                    <motion.li className="flex items-center gap-2" variants={fadeUp}>
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>$199/mo • $0 down</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />
+                    </motion.li>
+                    <motion.li className="flex items-center gap-2" variants={fadeUp}>
+                      <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>72‑hour go‑live from build</span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
+                    </motion.li>
+                    <motion.li className="flex items-center gap-2" variants={fadeUp}>
+                      <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>Unlimited edit requests via the client portal</span>
-                    </li>
+                    </motion.li>
                   </motion.ul>
                 </div>
                 {/* CTAs on large screens inside the card, bottom-right */}
@@ -227,7 +244,7 @@ export default function Home() {
                   className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end opacity-0"
                   variants={fadeUp}
                   initial={reduce ? false : "hidden"}
-                  animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+                  animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
                   transition={{ delay: reduce ? 0 : 0.36 }}
                 >
                   <div className="flex flex-row items-center gap-3">
