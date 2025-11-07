@@ -155,7 +155,7 @@ export default function Home() {
                 <div className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end">
                   <div className="flex flex-row items-center gap-3">
                     <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                      Schedule 15‑min Call
+                      Schedule Call
                     </Link>
                     <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                       Start Onboarding
@@ -169,7 +169,7 @@ export default function Home() {
             <div className="mt-4 md:hidden">
               <div className="grid grid-cols-2 gap-3">
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
-                  Schedule 15‑min Call
+                  Schedule Call
                 </Link>
                 <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Start Onboarding
@@ -243,7 +243,7 @@ export default function Home() {
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests via the client portal</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests</span></li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly analytics summary</span></li>
                       </ul>
                     </div>
@@ -586,7 +586,7 @@ export default function Home() {
               </div>
               <div className="flex flex-col gap-3 w-full md:w-auto md:max-w-[320px]">
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                  Schedule 15‑min Call
+                  Schedule Call
                 </Link>
                 <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                   Start Onboarding
