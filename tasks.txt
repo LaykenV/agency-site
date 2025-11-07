@@ -93,7 +93,7 @@
 
 //footer
 small phone?
-framer motion on all
+//framer motion on all
 make full ui plan
 
 //veteran owned?

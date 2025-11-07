@@ -5,7 +5,9 @@ This documents the hero animation we implemented with Framer Motion. It’s tast
 Summary
 - Header animates from the bottom with a single gradient heading that reveals word-by-word (50 ms stagger, ~420 ms per word), using the `.heading-word` utility for a synced glow.
 - Hero card lands ~20ms after the final word finishes animating, so it follows immediately without overlap.
-- Icon trio animates in first; supporting copy, star rating, and CTAs wait for that phase to finish before revealing.
+- Card frame scales in first (`scaleCard` variant), then icon trio animates in with stagger (`containerStagger` + `popIn`).
+- Supporting copy, star rating, plan bullets, and CTAs wait for `cardContentVisible` state (set after icon animation completes) before revealing.
+- State management: `cardFrameDone` tracks card scale completion, `cardContentVisible` gates content reveal.
 - Overlay fades shortly after the card lands (non‑destructive).
 - Icons, supporting copy, and bullets stagger in; CTAs animate last.
 - Motion respects reduced‑motion; hero/card viewport amount is 0.20 and runs once.
@@ -36,12 +38,20 @@ import {
 
 Hero setup and timings
 
-```57:62:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+```57:69:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 export default function Home() {
   const reduce = useReducedMotion();
   const TITLE = "A 5‑Star Website for Your Business in Acadiana";
   const t = useHeroTimings(TITLE);
-  const [cardRevealed, setCardRevealed] = useState(false);
+  const [cardFrameDone, setCardFrameDone] = useState(reduce);
+  const [cardContentVisible, setCardContentVisible] = useState(reduce);
+
+  useEffect(() => {
+    if (reduce) {
+      setCardFrameDone(true);
+      setCardContentVisible(true);
+    }
+  }, [reduce]);
 ```
 
 Header: word‑by‑word (reduced‑motion fallback is static)
@@ -64,7 +74,7 @@ The hero card sequencing runs in phases: (1) card frame scales in, (2) icon trio
 
 Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
 
-```82:90:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+```90:102:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 <motion.div
   className="surface rounded-xl overflow-hidden motion-will-change"
   variants={scaleCard}
@@ -72,11 +82,15 @@ Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
   whileInView={reduce ? undefined : "visible"}
   transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
   viewport={{ once: true, amount: 0.20 }}
-  onAnimationComplete={() => setCardRevealed(true)}
+  onAnimationComplete={() => {
+    if (!reduce) {
+      setCardFrameDone(true);
+    }
+  }}
 >
 ```
 
-```90:98:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+```105:111:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 <motion.div
   className="absolute inset-0 motion-will-change hero-overlay opacity-0"
   variants={fadeIn}
@@ -88,20 +102,25 @@ Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
 
 Icons and content stagger
 
-```101:107:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+```113:125:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 <motion.ul
   className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8"
   role="list"
   variants={containerStagger}
   initial={reduce ? false : "hidden"}
-  animate={reduce ? undefined : (cardRevealed ? "visible" : "hidden")}
+  animate={reduce ? undefined : (cardFrameDone ? "visible" : "hidden")}
   transition={{ delay: reduce ? 0 : 0.04 }}
+  onAnimationComplete={() => {
+    if (!reduce) {
+      setCardContentVisible(true);
+    }
+  }}
 >
 ```
 
 Supporting copy, rating, heading, bullets
 
-These are gated by `cardRevealed` (using `animate={cardRevealed ? "visible" : "hidden"}`) to ensure they reveal only after the card finishes.
+These are gated by `cardContentVisible` (using `animate={cardContentVisible ? "visible" : "hidden"}`) to ensure they reveal only after the icon trio animation completes. The star rating component receives `start={cardContentVisible}` prop to trigger its sequential star fill animation.
 
 Overlay helper in CSS
 
@@ -144,35 +163,40 @@ The component renders one `motion.h1` and maps words to `.heading-word` spans. T
 
 Hero card choreography (within `app/page.tsx`):
 1. Scale animation (`scaleCard`) plays on the card shell.
-2. `cardFrameDone` flips once the scale animation completes, triggering the icon trio list to animate (`containerStagger` + `popIn`).
-3. When the icon list finishes, `cardContentVisible` flips, revealing the supporting copy, star rating (via `start` prop), plan bullets, and CTAs.
+2. `cardFrameDone` flips once the scale animation completes (via `onAnimationComplete`), triggering the icon trio list to animate (`containerStagger` + `popIn`).
+3. When the icon list finishes (via its `onAnimationComplete`), `cardContentVisible` flips, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, and CTAs.
+4. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
 
-```82:96:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
+```101:112:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
 export function useHeroTimings(headerText: string) {
-  return useMemo(() => {
-    const words = headerText.trim().split(/\s+/);
-    // Account for per-word animation duration from MotionConfig defaults
-    const WORD_ANIM_DURATION = motionDefaults.transition.duration;
-    const headerDuration = (Math.max(words.length - 1, 0) * WORD_STAGGER) + WORD_ANIM_DURATION + WORD_PAD;
+  const wordCount = Math.max(headerText.trim().split(/\s+/).length, 1);
+  const wordsCompleteAt = WORD_DELAY_OFFSET + (wordCount - 1) * WORD_STAGGER + WORD_DURATION;
+  const headerDuration = wordsCompleteAt + WORD_PAD;
 
-    // Start hero card after header fully completes
-    const cardStart = headerDuration + 0.08;
-    const cardDuration = 0.52;
-    const cardContentStart = cardStart + cardDuration + 0.06;
-    const ctaStart = cardContentStart + 0.36;
+  const cardStart = wordsCompleteAt + 0.02;
+  const cardDuration = 0.52;
+  const cardContentStart = cardStart + cardDuration + 0.06;
+  const ctaStart = cardContentStart + 0.36;
 
-    return { headerDuration, cardStart, cardContentStart, ctaStart, wordStagger: WORD_STAGGER };
-  }, [headerText]);
+  return { headerDuration, cardStart, cardContentStart, ctaStart, wordStagger: WORD_STAGGER };
 }
 ```
+
+Constants used:
+- `WORD_STAGGER = 0.05` (50ms between words)
+- `WORD_DELAY_OFFSET = 0.02` (initial delay before first word)
+- `WORD_DURATION = 0.42` (420ms per word animation)
+- `WORD_PAD = 0.2` (padding after words complete)
 
 Behavioral notes
 - Transforms/opacity only; no gradient stop animation. We fade a child overlay, preserving gradients [[memory:10223702]].
 - Hero uses `viewport={{ once: true, amount: 0.20 }}` to reveal only once.
-- Icons and supporting content are gated by `cardRevealed` so they only appear after the card finishes.
-- Reduced‑motion short‑circuits animations to static or simple fade.
+- Card frame animation completes first, then `cardFrameDone` triggers icon trio animation.
+- Icons and supporting content are gated by `cardContentVisible` so they only appear after the icon animation completes.
+- Reduced‑motion short‑circuits animations: both state variables initialize to `true` when `reduce` is true, skipping all animations.
 - Bundle‑aware: `LazyMotion` + `domAnimation` are used.
 - **Glow fix**: The heading uses a dual-layer approach where a static blurred background provides the glow effect, while the foreground text animates word-by-word. This prevents the glow from animating separately and causing a visual delay.
+- Star rating component animates sequentially (350ms per star) when `start` prop becomes true.
 
 Adjustments
 - Global transition: tweak `motionDefaults.transition` in `components/animations.tsx`.

@@ -6,58 +6,60 @@ Mapping notes
 - Voice: plainspoken/tradesman, short sentences, outcome-first. Localize naturally to “Acadiana”.
 
 1) Hero (app/page.tsx: #hero)
-- H1 options (pick one)
-  - Your Website, Live in 72 Hours — $0 Down, $199/mo (Acadiana)
-  - A 5‑Star Website for Your Business in Acadiana
-  - Get More Calls from a Faster Site. We Build It for You.
-- Subhead options
-  - We hand‑build and host your site here in Acadiana. Fast load times. Real support. No big upfront bill.
-  - Done‑for‑you website and hosting. Unlimited edits by email. Built to bring in calls.
-  - Local team. Fast builds. Plain pricing. Focus on the work—you’ll have us on call.
-- Proof bullets (beneath rating line; tighten as needed)
-  - 72‑hour go‑live from build
-  - Unlimited edits by email
-  - Managed hosting + SSL
-  - Domain included & managed
-- CTA labels (keep hrefs; change labels only)
-  - Primary (solid): Start Onboarding
-    - Microcopy (small, near CTA): Takes 2 minutes. No upfront payment.
-  - Secondary (outline): Schedule 15‑min Call
-    - Microcopy (small, near CTA): Friendly walkthrough. No pressure.
+- H1 (current): "A 5‑Star Website for Your Business in Acadiana"
+- Subhead (current): "Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls."
+- Proof bullets (beneath rating line; current implementation)
+  - "$199/mo • $0 down"
+  - "72‑hour go‑live from build"
+  - "Unlimited edit requests via the client portal"
+- Plan heading: "All‑inclusive plan"
+- CTA labels (current)
+  - Primary (solid): "Start Onboarding" → `/onboarding?utm_source=lp&cta=hero`
+  - Secondary (outline): "Schedule Call" → `ONBOARDING_CAL_LINK`
+- Icon trio labels (current)
+  - "Tell us your vision" — Schedule a call and do a deep dive on your business, brand, and goals.
+  - "We Build Your Website" — Our team designs and develops a custom, high-performance website that's built to convert.
+  - "Launch and Grow" — We handle the launch, hosting, and all future updates, so you can enjoy a worry-free online presence.
 
 2) Trust & Reviews (app/page.tsx: #trust, components/ReviewsScroller.tsx)
 - Section header
   - Trusted by local pros across Acadiana
 - Pill labels (keep current categories)
   - Plumbing • Landscaping • Painting • Home Services
-- Review scaffold (for new quotes)
-  - “They built it fast. Calls picked up right away.”
-    - Name: First L.
+- Review scaffold (current implementation in REVIEWS array)
+  - "They launched in 3 days and updates are a portal request away."
+    - Name: Alex R.
     - Role: Service Owner in Acadiana
-  - “Edits are an email away. Super easy to work with.”
-    - Name: Maria R.
-    - Role: Home Services
-  - “Site loads quick on phones. More form fills.”
-    - Name: James K.
-    - Role: Painting
+    - Rating: 5
+    - Site: landscaping example
+  - "Fast, professional build. Our phone calls picked up immediately."
+    - Name: Maya P.
+    - Role: Plumbing Services in Acadiana
+    - Rating: 5
+    - Site: plumbing example
+  - "We submit changes in the portal and they ship the same day. Couldn't be easier."
+    - Name: Jordan K.
+    - Role: Home Renovation in Acadiana
+    - Rating: 5
+    - Site: renovation example
 - Credibility nudges (small text under scroller if desired)
   - Built on modern best practices • Pages load fast on mobile • Real support by email
 
 3) How it works (components/our-plan/HowItWorks.tsx)
-- Step titles and one‑liners
-  - Step 1: Talk for 15 Minutes
-    - Tell us your business goals. We’ll map your pages and style, fast.
-  - Step 2: We Build Your Website
-    - Hand‑coded, mobile‑first, and tuned for speed. You review before launch.
-  - Step 3: Launch and Grow
-    - We host it, manage the domain, and handle edits by email anytime.
+- Step titles and one‑liners (current implementation)
+  - Step 1: "Talk for 15 Minutes"
+    - "Tell us your goals. We'll map pages and style, fast."
+  - Step 2: "We Build Your Website"
+    - "Hand‑coded, mobile‑first, and tuned for speed. You review before launch."
+  - Step 3: "Launch and Grow"
+    - "We host it, manage the domain, and handle edit requests in the client portal anytime."
 
 4) Plan inclusions (app/page.tsx: What you get)
-- Group titles (unchanged): Build & Performance; Hosting & Domain; Conversion; Support & Insights
-- Bullets (tightened; keep exactly what you offer)
+- Group titles (current): Build & Performance; Hosting & Domain; Conversion; Support & Insights
+- Bullets (current implementation)
   - Build & Performance
     - Custom 7‑page website
-    - Elite performance (aim 95+ PageSpeed)
+    - Elite performance
   - Hosting & Domain
     - Managed hosting + SSL
     - Domain included & managed
@@ -65,17 +67,18 @@ Mapping notes
     - Google Reviews widget
     - Contact form + email alerts
   - Support & Insights
-    - Unlimited edits via email
+    - Unlimited edit requests (mobile: "via the client portal")
     - Monthly analytics summary
 
 5) Performance proof (app/page.tsx: #plan-performance)
-- Caption ideas (small text near gauge)
-  - Fast pages mean more calls and form fills.
-  - Google favors quick, mobile‑first sites.
-- “Before/After” value framing (list near stat pills)
-  - Fewer bounces from slow loads
-  - More calls and form fills
-  - Built with modern best practices
+- Gauge: Shows 95% performance with animated counter
+- Stat pills (current)
+  - Before: 3.9s
+  - After: 0.9s
+- Value bullets (current)
+  - "Google favors quick, mobile‑first sites"
+  - "Fewer bounces, more calls and form fills"
+  - "Built with modern best practices"
 
 6) Comparison (table/cards)
 - Section header
@@ -91,13 +94,13 @@ Mapping notes
   - Analytics → Analytics
   - Support → Support
   - Contract term → Contract term
-- Row copy (tightened; keep existing cells but prefer shorter phrasing)
+- Row copy (current implementation)
   - Our Plan
     - $199/mo • $0 down
     - 72 hours from build
     - Included
     - Included & managed
-    - Yes — via email
+    - Yes — via client portal
     - 95+
     - Included
     - Monthly summary
@@ -116,8 +119,8 @@ Mapping notes
     - Project‑based/retainer
 
 7) FAQs (app/page.tsx: #faqs, components/faq/FaqItem.tsx)
-- Q: What does “unlimited edits” include?
-  - A: Reasonable updates like text, photos, hours, banners, sections, and small layout tweaks. Just email us anytime. Bigger redesigns get a simple scope and quote.
+- Q: What does "unlimited edits" include?
+  - A: Reasonable updates like text, photos, hours, banners, sections, and small layout tweaks. Submit requests in the client portal anytime. Bigger redesigns get a simple scope and quote.
 - Q: How fast can we launch?
   - A: Once we start the build, we aim to go live within 72 hours. Kickoff happens after we collect assets.
 - Q: Do I keep my domain?
@@ -128,27 +131,32 @@ Mapping notes
   - A: Email support. During months 1–12, the early termination policy applies. After 12 months, cancel any month before renewal.
 
 8) Final CTA (app/page.tsx: final CTA card)
-- Headline options
-  - Launch Your 5‑Star Website in Acadiana
-  - Go Live Fast. We’ll Handle the Rest.
-- Subhead (keep price and terms clear)
-  - $0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build
-  - 12‑month minimum. Renews monthly until canceled. See Terms.
-- CTAs (keep hrefs; change labels only)
-  - Primary: Start Onboarding
-  - Secondary: Schedule 15‑min Call
-  - Microcopy: Takes 2 minutes. No upfront payment.
+- Headline (current): "Launch Your 5‑Star Website"
+- Pills (current)
+  - "72‑hour go‑live"
+  - "Unlimited edits"
+  - "$0 down"
+  - "Managed hosting + SSL"
+- Subhead (current): "Everything you need to launch and grow—managed hosting, SSL, and domain included. Built for local pros in Acadiana with same‑day email support."
+- Fine print (current): "$199/mo • 12‑month minimum. Renews monthly thereafter until canceled. Early termination policy applies. See Terms."
+- CTAs (current)
+  - Primary: "Start Onboarding" → `/onboarding?utm_source=lp&cta=final`
+  - Secondary: "Schedule Call" → `ONBOARDING_CAL_LINK`
 
 9) Floating CTA Tray (components/FloatingCtaTray.tsx)
-- Short prompts (rotate or pick one)
-  - Ready to move fast? Start onboarding — 2 minutes.
-  - Got questions? Book a 15‑min call.
-  - $0 down. Go live in days, not weeks.
+- Current implementation: Logo icon expands to reveal two CTAs
+  - "Schedule Call" → `ONBOARDING_CAL_LINK`
+  - "Start Onboarding" → `/onboarding?utm_source=fab&cta=fab_tray`
+- Behavior: Appears when hero CTAs scroll out of viewport, uses IntersectionObserver
+- Animation: Morphs from circular button to horizontal bar with spring animation
 
 10) Footer (app/page.tsx: footer)
-- Copy line (keep brand tokenized if desired)
-  - © {YEAR} Your Agency • Built for local pros in Acadiana
-  - Link: Terms
+- Copyright (current): "© {YEAR} Acadiana Web Design"
+- Badges (current)
+  - "Vet Owned"
+  - "Serving Acadiana"
+  - "Local Developer"
+- Link (current): "Terms" → `/legal/terms`
 
 11) Accessibility: Alt text suggestions
 - Hero device mockups: Decorative — keep aria-hidden as is.

@@ -7,20 +7,19 @@ This plan specifies the landing page’s UX, layout, visual language, components
 - Showcase the $0 down, $199/mo, 12‑month minimum plan and the 72‑hour go‑live from build stage promise.
 - Premium, calm aesthetic with off‑white/off‑black bases, visible yet tasteful gradients, clear hierarchy, and accessible, mobile‑first UX.
 
-### Page Anatomy (order)
-1. Sticky header (all breakpoints)
-2. Hero (5‑star animation, reputation-led headline, offer bar, dual CTAs, device visuals)
-3. Local trust strip
-4. Problem → Solution
-5. What’s included (benefit grid)
-6. Speed & performance proof
-7. Showcase (before/after)
-8. How it works (72‑hour promise)
-9. Pricing (terms visible)
-10. Testimonials
-11. FAQs
-12. Final CTA
-13. Footer
+### Page Anatomy (order) — Current Implementation
+1. Sticky header (all breakpoints) — `components/global-header.tsx`
+2. Hero (`#hero`) — Word-by-word animated heading, hero card with icon trio, star rating, plan bullets, CTAs
+3. Trust & Reviews (`#trust`) — Section header, category pills, `ReviewsScroller` component
+4. Offer/Features/Comparison (`#offer`) — Combined section with:
+   - How it works (`#plan-steps`) — `HowItWorks` component
+   - What you get (`#plan-inclusions`) — Grid of 4 cards (desktop) / horizontal scroller (mobile)
+   - Performance proof (`#plan-performance`) — `PerformanceGauge` component with stat pills
+   - Comparison (`#plan-comparison`) — Table (desktop) / horizontal scroller (mobile)
+5. FAQs (`#faqs`) — `FaqItem` components in grid layout
+6. Final CTA — Section with pills, subhead, fine print, dual CTAs
+7. Footer — Copyright, badges, Terms link
+8. Floating CTA Tray — `FloatingCtaTray` component (portal-rendered)
 
 ### Global Layout & Navigation
 - Use `components/global-header.tsx` with sticky behavior already in place. On the landing route (`/`), surface in-header nav links: `Examples`, `How it works`, `Pricing`, `FAQs`, plus the primary CTA `Start for $0`.
@@ -41,139 +40,129 @@ This plan specifies the landing page’s UX, layout, visual language, components
   - Cards: `surface` (uses `--gradient-surface`).
 - Buttons: use `btn-cta` (primary) and `btn-soft`/`btn-outline-strong`/`btn-ghost` as needed. You can also wrap `components/ui/button.tsx` with these classes for the gradient look.
 
-### Components & Files (suggested)
-- `components/landing/SiteHeaderNav.tsx` (optional enhancement wrapper around `GlobalHeader` to inject landing anchors + CTA)
-- `components/landing/Hero.tsx`
-- `components/landing/LocalTrustStrip.tsx`
-- `components/landing/ProblemSolution.tsx`
-- `components/landing/FeaturesGrid.tsx`
-- `components/landing/SpeedProof.tsx`
-- `components/landing/Showcase.tsx`
-- `components/landing/HowItWorks.tsx`
-- `components/landing/Pricing.tsx`
-- `components/landing/Testimonials.tsx`
-- `components/landing/FAQs.tsx`
-- `components/landing/FinalCTA.tsx`
+### Components & Files (current implementation)
+- `app/page.tsx` — Main landing page with all sections inline
+- `components/animations.tsx` — Shared animation variants, `SplitWords`, `useHeroTimings`
+- `components/star-rating.tsx` — Animated 5-star rating component
+- `components/ReviewsScroller.tsx` — Horizontal scrolling reviews with desktop grid fallback
+- `components/our-plan/HowItWorks.tsx` — Timeline component with 3 steps
+- `components/our-plan/PerformanceGauge.tsx` — Animated circular gauge with percentage
+- `components/faq/FaqItem.tsx` — Accordion-style FAQ item with smooth animations
+- `components/FloatingCtaTray.tsx` — Floating action button that morphs to reveal CTAs
+- `components/HorizontalScroller.tsx` — Reusable horizontal scroll component for mobile
+- `components/SectionHeader.tsx` — Consistent section heading component
 
-Route composition in `app/page.tsx` can import and render the above sequentially. Keep sections as self‑contained, responsive components for reordering/experimentation.
+All sections are implemented directly in `app/page.tsx` with proper semantic HTML and anchor targets for navigation.
 
 ## Sections — Specs and Implementation Notes
 
-### 1) Hero
-- Purpose: Validate identity and pride (5‑star reputation), present the offer ($0 down, $199/mo, 12‑month minimum), and the 72‑hour go‑live (from build stage). Drive into `/onboarding` or Cal link.
+### 1) Hero (current implementation)
+- Purpose: Present the offer with animated word-by-word heading, hero card containing icon trio, plan details, and CTAs.
 - Layout
-  - Desktop (≥1024px): Two columns with ~56–72px gap; left copy, right visuals. Min-height ~80vh minus header.
-  - Mobile: Single column; keep CTAs visible within first viewport.
+  - Single column centered layout with `max-w-6xl`
+  - Hero card uses `surface` class with rounded corners
+  - Background gradient via `.page-gradient` utility class
 - Content
-  - 5‑star animation row (use `components/star-rating.tsx`) with microcopy: “Built for 5‑star local businesses with 4.5+ Google ratings.”
-  - Headline: “Your 5‑Star Reputation Deserves a 5‑Star Website”
-  - Subhead: Outcome-led statement per `landingPage.md`.
-  - Offer bar: “$0 down • $199/mo • 12‑month minimum • Go live within 72 hours once we start your build”
-  - CTAs: Primary `Start for $0` → `/onboarding?utm_source=lp&cta=hero`; Secondary `Book a 15‑min Call` → `ONBOARDING_CAL_LINK` from `lib/config.ts`.
-  - Micro trust badges row (icons/text): 95+ PageSpeed target • Managed on Vercel with SSL • Unlimited edits via email • Powered by Next.js
+  - H1: "A 5‑Star Website for Your Business in Acadiana" — animated word-by-word using `SplitWords` component
+  - Hero card contains:
+    - Icon trio (3 icons with labels): "Tell us your vision", "We Build Your Website", "Launch and Grow"
+    - Subhead: "Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls."
+    - Star rating component (animated sequentially)
+    - Plan heading: "All‑inclusive plan"
+    - Plan bullets: "$199/mo • $0 down", "72‑hour go‑live from build", "Unlimited edit requests via the client portal"
+  - CTAs: Primary "Start Onboarding" → `/onboarding?utm_source=lp&cta=hero`; Secondary "Schedule Call" → `ONBOARDING_CAL_LINK`
+  - CTAs positioned: inside card bottom-right on desktop, below card on mobile
 - Visuals
-  - Right column: Overlapping device mockups (mobile in front, laptop behind) using `.device-stack` utilities (see Styles). Use placeholder images in `public/` initially.
-  - Background: Apply `surface-hero` with subtle radial gradients.
+  - Hero card has aspect ratio `aspect-[21/9] sm:aspect-[24/9] md:aspect-[32/9]`
+  - Overlay fade animation via `.hero-overlay` class
+  - Background gradient via `.page-gradient` positioned absolutely
+- Animation
+  - Word-by-word heading reveal (50ms stagger, 420ms per word)
+  - Card scale-in animation
+  - Icon trio stagger animation
+  - Content reveal gated by `cardContentVisible` state
+  - Star rating animates sequentially (350ms per star)
 - Accessibility/Interaction
-  - `prefers-reduced-motion`: render stars statically filled.
-  - Ensure button sizes ≥44px height and clear focus rings.
+  - `prefers-reduced-motion`: static rendering, state variables initialize to `true`
+  - Proper ARIA labels and semantic HTML
+  - Viewport trigger: `amount: 0.20, once: true`
 
-Example skeleton:
-```tsx
-<section id="hero" className="relative overflow-hidden rounded-2xl surface-hero ring-1 ring-[var(--border)]">
-  <div className="mx-auto max-w-6xl px-6 py-20 md:py-28 grid gap-12 md:grid-cols-2 md:items-center">
-    <div>
-      <div className="mb-3"><StarRating /></div>
-      <p className="text-sm text-muted-foreground">Built for 5‑star local businesses with 4.5+ Google ratings.</p>
-      <h1 className="mt-4 text-4xl md:text-6xl font-semibold tracking-tight">Your 5‑Star Reputation Deserves a 5‑Star Website</h1>
-      <p className="mt-5 max-w-[60ch] text-muted-foreground">We design, build, host, and maintain a lightning‑fast professional website—and handle unlimited edits—for one simple monthly price.</p>
-      <div className="mt-5 offer-bar">
-        <span>$0 down</span><span>•</span><span>$199/mo</span><span>•</span><span>12‑month minimum</span><span>•</span><span>72‑hour go‑live from build</span>
-      </div>
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-        <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center gap-2 px-6 py-3">Start for $0</Link>
-        <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-soft inline-flex items-center gap-2 px-6 py-3">Book a 15‑min Call</Link>
-      </div>
-      <div className="mt-5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span className="badge">95+ PageSpeed target</span>
-        <span className="badge">Managed on Vercel with SSL</span>
-        <span className="badge">Unlimited edits via email</span>
-        <span className="badge">Powered by Next.js</span>
-      </div>
-    </div>
-    <div className="relative">
-      <div className="device-stack">
-        <div className="device-frame device-frame--laptop" />
-        <div className="device-frame device-frame--mobile glow-primary" />
-      </div>
-    </div>
-  </div>
-  <div className="beams-overlay" aria-hidden />
-  <span className="sr-only">Hero background illustration</span>
-  <span className="sr-only">Device mockups are decorative</span>
-  
-  {/* Reduced motion: render static filled stars via prop or media query */}
-</section>
-```
+### 2) Trust & Reviews (`#trust`) — Current Implementation
+- Section header: "Trusted by local pros across Acadiana" using `SectionHeader` component
+- Category pills: "Plumbing", "Landscaping", "Painting", "Home Services" using `.pill` class
+- Reviews: `ReviewsScroller` component with 3 reviews
+  - Desktop: 3-column grid layout
+  - Mobile: Horizontal scrolling track with snap points and dot indicators
+  - Each review card shows: screenshot image, star rating, quote, author name/role, "Visit site" link
+- Layout: `max-w-6xl` container with `px-6` padding
 
-### 2) Local Trust Strip
-- Copy: “Trusted by local service pros in [City/Region]”.
-- Visuals: Row of local logos or category icons (Plumbing, Landscaping, Painting, Consulting). Add a static 5‑star row with: “Clients love the unlimited edits.”
-- Layout: `surface-section`, centered content, `gap-6`, responsive wrapping.
-- Implementation: Use `.badge` for simple logo pills; swap real logos as available.
+### 3) Offer/Features/Comparison (`#offer`) — Current Implementation
+- Combined section with multiple subsections
+- Layout: `surface-elevated` container with `max-w-6xl`
+- Grid layout: `md:grid-cols-[1.4fr_1fr]` — narrative column + sticky proof column
 
-### 3) Problem → Solution
-- Headline: “Your Reputation Is 5‑Star. Your Website Is Holding You Back.”
-- Pains (bulleted): slow/DIY site; outdated look; no one to email for changes.
-- Solution box: “The All‑Inclusive Plan: $0 Down, $199/mo …”
-- Layout: Two-column on desktop (`grid-cols-2`), stack on mobile. Use `surface` cards with `glow-amber` sparingly for emphasis.
+### 3a) How it works (`#plan-steps`) — Current Implementation
+- Component: `HowItWorks` from `components/our-plan/HowItWorks.tsx`
+- Layout: Timeline component with 3 steps
+- Steps: "Talk for 15 Minutes", "We Build Your Website", "Launch and Grow"
+- Animation: Each step fades up on scroll with staggered delays
+- Icons: CalendarCheck2, FolderCog, Rocket from lucide-react
 
-### 4) What’s Included (Benefit Grid)
-- Headline: “Everything You Need. Nothing You Don’t.”
-- Grid: 2–3 columns responsive (`sm:grid-cols-2 md:grid-cols-3`) with `surface` tiles.
-- Include bullets from `landingPage.md` (custom 7‑page site, 95+ PageSpeed, managed hosting/SSL, domain included, reviews widget, contact form, unlimited edits, monthly analytics).
+### 3b) What you get (`#plan-inclusions`) — Current Implementation
+- Section header: "What you get"
+- Desktop: 2x2 grid (`md:grid-cols-2`) with `surface` cards
+- Mobile: Horizontal scroller using `HorizontalScroller` component
+- 4 cards: Build & Performance, Hosting & Domain, Conversion, Support & Insights
+- Each card contains title and checklist items with CheckCircle2 icons
 
-### 5) Speed & Performance Proof
-- Headline: “Fast Sites Convert More Calls”.
-- Visuals: Lighthouse-style gauge and “Old: 3.9s → New: 0.9s”.
-- Implementation: Use `.gauge` utilities (see Styles). Put a small “95+” badge inside the gauge.
+### 3c) Performance proof (`#plan-performance`) — Current Implementation
+- Component: `PerformanceGauge` from `components/our-plan/PerformanceGauge.tsx`
+- Layout: Sticky aside (`md:sticky md:top-24`) in right column
+- Gauge: Animated circular SVG gauge showing 95% performance
+- Stat pills: "Before: 3.9s" and "After: 0.9s" using `.stat-pill` classes
+- Value bullets: 3 items explaining benefits
+- Animation: Gauge animates on scroll into view (1.2s duration, easeOut)
 
-### 6) Showcase (Before/After)
-- Headline: “See the Difference”.
-- Cards: 3–6 examples (e.g., “Landscaper in Austin”), with swipeable Before → After on mobile.
-- MVP: static side-by-side; optionally a simple range‑based overlay slider later.
+### 3d) Comparison (`#plan-comparison`) — Current Implementation
+- Section header: "Our Plan vs Traditional"
+- Desktop: Table layout (`.compare-table`) with 10 comparison rows
+- Mobile: Horizontal scroller with individual comparison cards
+- Features compared: Price, Timeline, Hosting & SSL, Domain, Unlimited edits, PageSpeed target, Reviews widget, Analytics, Support, Contract term
+- Visual indicators: `badge-good` (CheckCircle2) vs `badge-bad` (XCircle) icons
 
-### 7) How It Works (with 72‑hour promise)
-- Headline: “From Sign‑Up to Live in 4 Simple Steps”.
-- Steps per `landingPage.md` with the 72‑hour go‑live explicitly tied to the Build Stage.
-- Layout: 4 columns on desktop, stacked on mobile; `surface-section` outer, `surface` tiles inner.
-- Anchor: `id="how-it-works"` with scroll margin.
+### 4) FAQs (`#faqs`) — Current Implementation
+- Section header: "FAQs" using `SectionHeader` component
+- Layout: `.faq-grid` (CSS Grid, responsive columns)
+- Component: `FaqItem` from `components/faq/FaqItem.tsx`
+- Features: Smooth accordion animation, chevron rotation, height-based expansion
+- 5 FAQ items covering: unlimited edits, launch speed, domain ownership, website ownership, cancellation
+- Animation: Spring-based height animation with opacity fade
 
-### 8) Pricing
-- Headline: “One Plan. Zero Surprises.”
-- Plan card: “The All‑Inclusive Plan — $0 down, then $199/month — 12‑month minimum”.
-- Fine print visible: minimum commitment, auto‑renewal, early termination policy; link to `/legal/terms`.
-- CTAs: Primary to `/onboarding?utm_source=lp&cta=pricing`; secondary to `ONBOARDING_CAL_LINK`.
-- Anchor: `id="pricing"`.
+### 5) Final CTA — Current Implementation
+- Section header: "Launch Your 5‑Star Website" (centered)
+- Layout: `cta-card` with `surface-elevated` styling and `beams-overlay` background
+- Content:
+  - Pills: "72‑hour go‑live", "Unlimited edits", "$0 down", "Managed hosting + SSL"
+  - Subhead: Description of offer
+  - Fine print: Pricing and terms with Terms link
+  - CTAs: Primary "Start Onboarding" → `/onboarding?utm_source=lp&cta=final`; Secondary "Schedule Call" → `ONBOARDING_CAL_LINK`
+- Layout: `md:grid-cols-[1fr_auto]` with CTAs in right column on desktop, stacked on mobile
+- Bottom gradient fade via `.page-gradient-fade` utility
 
-### 9) Testimonials
-- 3–5 quotes with static 5‑star rows and attribution.
-- Optionally reuse the animated `StarRating` component above the grid.
+### 6) Footer — Current Implementation
+- Layout: `.footer-container` with `.footer-content` wrapper
+- Copyright: "© {YEAR} Acadiana Web Design"
+- Badges: "Vet Owned", "Serving Acadiana", "Local Developer" using `.footer-badges`
+- Link: "Terms" → `/legal/terms` using `.footer-link`
 
-### 10) FAQs
-- Use top 5–6 entries from `landingPage.md`.
-- MVP: use `<details><summary>` for accessible accordions; later, upgrade to a custom accordion component if needed.
-- Anchor: `id="faqs"`.
+### 7) Floating CTA Tray — Current Implementation
+- Component: `FloatingCtaTray` from `components/FloatingCtaTray.tsx`
+- Behavior: Portal-rendered, appears when hero CTAs scroll out of viewport
+- Detection: Uses IntersectionObserver to track `[data-floating-cta-anchor]` elements
+- Animation: Morphs from circular logo button to horizontal bar with spring animation
+- CTAs: "Schedule Call" and "Start Onboarding" with proper UTM tracking
+- Accessibility: Keyboard navigation, ESC to close, focus management
 
-### 11) Final CTA
-- Headline: “Launch Your 5‑Star Website”.
-- Subhead: `$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build`.
-- Scarcity line: “Limited spots per city each month …”.
-- Dual CTAs as in Hero, with appropriate UTM (`cta=final`).
-
-### 12) Footer
-- Links: Terms (versioned), Privacy, Contact.
-- Business details (phone, email). Subtle tech badges (Next.js, Vercel, Stripe).
 
 ## Styles — Utilities (available in `app/globals.css`)
 The following utilities are added in the `@layer utilities` block and are ready to use.
