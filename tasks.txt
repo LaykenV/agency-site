@@ -92,6 +92,7 @@
 //vet owned?
 
 //footer
+small phone?
 framer motion on all
 make full ui plan
 

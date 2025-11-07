@@ -1,8 +1,8 @@
 import { clsx } from "clsx";
-import { createElement, PropsWithChildren } from "react";
+import { createElement, PropsWithChildren, ElementType } from "react";
 
 type SectionHeaderProps = PropsWithChildren<{
-  as?: keyof JSX.IntrinsicElements;
+  as?: ElementType;
   align?: "center" | "left" | "right";
   size?: "sm" | "md" | "lg";
   className?: string;
