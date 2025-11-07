@@ -1,168 +1,299 @@
-The Agency Design Plan
+## App‑Wide Design System Plan (Non‑Landing Pages)
 
-Document Version: 1.0
-Last Updated: October 31, 2025
+This document defines how to build the rest of the application (portal, subscribe, success, admin) to match the landing page’s visual language without the landing‑specific animations and hero treatments. It standardizes layout, surfaces, components, and states using the tokens and utilities already defined in `app/globals.css`.
 
-Overview
+The intent: simple, breathable UI; soft off‑white/off‑gray bases with visible yet tasteful gradients; strong contrast and clear hierarchy; minimum ornamentation on app pages.
 
-This plan defines the color tokens, gradients, and reusable UI utilities added to `app/globals.css` for the agency portal and marketing pages. It adopts the exact HSL color scheme from the previous chat app (for light/dark), adapted to this project’s flows in `agency.md`. The themes use very off‑white and off‑black bases with high‑contrast typography and refined brand accents, matching the preferences for softer backgrounds and more apparent gradients.
+### 1) Design Principles
+- Consistency over novelty: reuse the same spacing, borders, and surfaces across all screens.
+- Restraint: no hero beams or animated word reveals on app pages; use static surfaces.
+- Contrast and clarity: rely on `--foreground` and `--muted-foreground` for hierarchy; avoid low‑contrast “washed” text.
+- Motion: respect `prefers-reduced-motion`; keep app pages mostly static (subtle fades at most).
+- Performance: pure CSS, no decorative images; compositing-friendly shadows already provided by utilities.
 
-Theme Philosophy
+### 2) Tokens and Utilities (from globals.css)
+- Colors (HSL tokens, light/dark aware):
+  - Backgrounds: `--background`, `--card`, `--secondary`
+  - Text: `--foreground`, `--muted-foreground`
+  - Brand: `--primary`, `--accent`, `--brand-amber`
+  - UI chrome: `--border`, `--input`, `--ring`
+- Surfaces:
+  - `.surface` (default card), `.surface-soft` (subtle block), `.surface-elevated` (high emphasis)
+- Buttons:
+  - `.btn-cta` (primary), `.btn-secondary` (secondary), `.btn-soft`, `.btn-outline-strong`, `.btn-ghost`, `.btn-danger`
+- Badges & Pills:
+  - `.badge`, `.badge-good`, `.badge-bad`, `.badge-neutral`, `.badge-metric`, `.pill` (+ `.pill-success`, `.pill-danger`)
+- Misc:
+  - `.info-banner`, `.stat-pill`, `.progress-track` + `.progress-fill`
+- Layout helpers:
+  - `.anchor-target` (for in-page anchors), responsive utilities via Tailwind
 
-- Off‑white (light) and off‑black (dark) bases to reduce glare and improve reading comfort.
-- High‑contrast text and CTAs; brand is a luminous azure with amber as a supporting accent.
-- Subtle layered gradients and soft glows to add depth without clutter.
-- Clean borders and gentle elevation cues for strong information hierarchy.
+Recommendation: Do not introduce new color tokens. Build on the existing mapping under `@theme inline` so the whole app stays visually cohesive.
 
-Core Tokens (HSL with numeric tuples)
+### 3) Layout Standards
+- Page container
+  - Default: `mx-auto max-w-6xl px-6`
+  - Admin widescreen pages: `max-w-7xl` when dense tables/lists are present
+  - Vertical rhythm: top/bottom padding by context
+    - Top sections: `py-10 md:py-12`
+    - Inner sections: `py-6 md:py-8`
+- Sectioning
+  - Wrap content groups in `.surface` for clear separation.
+  - Use `.surface-soft` when a visual group doesn’t need elevation (filters, inline notes, small summaries).
+  - Reserve `.surface-elevated` for standout modules (confirmation panes, destructive dialogs).
+- Grids
+  - Two‑column content: `grid md:grid-cols-[1.2fr_1fr] gap-6 md:gap-8`
+  - Forms: `grid gap-4 md:grid-cols-2` for related fields; keep long text areas full width.
+  - Sticky sidebars only at `md+` (`md:sticky md:top-24`); avoid sticky on mobile.
+- Spacing scale
+  - Use Tailwind spacing consistently: 4, 6, 8, 10, 12, 16 (and 20 for page‑level blocks).
+  - Inside cards: `p-4 sm:p-6` (forms/tables can use `p-4`; summaries use `p-3`).
 
-- Background and foreground: Very light background with deep neutral foreground (light); reversed in dark.
-- Brand: `--primary` is luminous azure; amber is available for highlights.
-- Neutrals: `--secondary`, `--muted`, and `--border` shape surfaces and inputs.
-
-Key variables in `:root` (light) and `.dark`:
-
-- `--background`, `--foreground`: Page base and text.
-- `--card`, `--card-foreground`: Elevated surface base.
-- `--primary`, `--primary-foreground`: Brand and on‑primary.
-- `--secondary`, `--accent`, `--muted`: Neutral surfaces.
-- `--border`, `--input`, `--ring`: Borders, inputs, focus rings.
-- Brand helpers: `--brand-amber`, `--glow-primary`, `--glow-amber`.
-- Gradients: `--gradient-hero`, `--gradient-section`, `--gradient-surface`.
-
-Implementation note: Colors are declared as numeric HSL tuples (e.g., `--background: 225 38% 95%`) and consumed via `hsl(var(--background))` in the `@theme inline` mapping. This matches the old project and ensures accurate rendering.
-
-Gradient System
-
-- Section/hero surfaces: Use radial blends (`--gradient-hero`, `--gradient-section`) for subtle page texture.
-- Card/surface backgrounds: `--gradient-surface` pairs with `--card` for layered depth.
-
-Reusable Utilities
-
-Surfaces and Cards
-
-- `surface`: Default elevated card; soft gradient, subtle shadow, crisp border.
-- `surface-soft`: Neutral, flatter surface for secondary content.
-- `surface-elevated`: Stronger border and deeper shadow for featured blocks.
-- `card-surface`: Minimal card base (existing); good when Tailwind utilities will add layout/padding.
-
-Glows
-
-- `glow-primary`: Luminous brand glow for feature tiles, CTAs, or emphasis.
-- `glow-amber`: Warm glow for notices and highlights.
-
-Buttons
-
-- `btn-cta`: Primary call‑to‑action (gradient, glow‑ready, accessible focus ring).
-- `btn-soft`: Neutral action on tinted background.
-- `btn-outline-strong`: High‑contrast outline with brand‑tinted border.
-- `btn-ghost`: Text‑like action with brand‑tinted foreground.
-- `btn-icon` (existing): Icon button; pairs well with `glow-*` when elevated.
-
-Badges & Pills
-
-- `badge`: Neutral inline label for metadata.
-- `badge-primary`: On‑brand badge for important labels.
-- `pill`: Soft, rounded chip for statuses/filters.
-
-Progress & Stats
-
-- `progress-track` + `progress-fill`: Luminous progress with brand tint.
-- `stat-pill`, `stat-pill-label`, `stat-pill-value`: Compact stat blocks for overviews.
-
-Info Banners & Overlays
-
-- `info-banner`: Inline message/notice with subtle gradient.
-- `beams-overlay`: Non‑interactive overlay layer for ambient lines/beams.
-
-Layout Guidance
-
-- Page wrappers: Use `surface-hero` or `surface-section` on parent containers for ambient gradients.
-- Content width: Favor `max-w-5xl` to `max-w-6xl` for portal; `px-4 sm:px-6` for comfortable edges.
-- Spacing: Use `space-y-6` between sections for a calm rhythm.
-
-Accessibility & Typography
-
-- High contrast by default; brand foreground on buttons/text is automatically set.
-- Respect focus: Native focus is enhanced via `--ring`; never remove `:focus-visible` outlines.
-- Prefer larger line-height for body copy; use `leading-relaxed` and letter-spacing utilities as needed.
-
-Usage Recipes
-
-Cards and sections
-
+### 4) Page Header Pattern
+- Composition
+  - Title (H1/H2), concise description, primary and secondary actions
+  - Optional breadcrumbs when nested under `/portal` or `/admin`
+- Example
 ```tsx
-<section className="surface p-6 rounded-lg">
-  <h2 className="text-lg font-semibold">Section title</h2>
-  <p className="text-muted-foreground mt-2">Supporting copy…</p>
+export function PageHeader(props: {
+  title: string;
+  description?: string;
+  primaryAction?: React.ReactNode;
+  secondaryAction?: React.ReactNode;
+}) {
+  return (
+    <header className="mb-6 md:mb-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold text-[var(--foreground)]">{props.title}</h1>
+          {props.description ? (
+            <p className="mt-1 text-sm text-[var(--muted-foreground)]">{props.description}</p>
+          ) : null}
+        </div>
+        <div className="flex items-center gap-2">
+          {props.secondaryAction}
+          {props.primaryAction}
+        </div>
+      </div>
+    </header>
+  );
+}
+```
+- Actions
+  - Primary: `.btn-cta`
+  - Secondary: `.btn-secondary` or `.btn-outline-strong`
+
+### 5) Cards and Content Blocks
+- Default card
+  - Use `.surface rounded-xl p-4 sm:p-6`
+  - Title row: bold label with `text-[var(--muted-foreground)]` for section labels, `text-[var(--foreground)]` for content titles
+- Dense information (metrics, summaries)
+  - Use `.stat-pill` for compact numeric highlights
+  - For side‑by‑side stat groups, apply `grid grid-cols-2 md:grid-cols-4 gap-3`
+- Do not nest multiple `.surface` layers deeply; prefer sibling cards with grid layouts.
+
+### 6) Forms
+- Inputs
+  - Use `components/ui/input.tsx`, `textarea.tsx`, `label.tsx` for consistent focus, borders, and spacing.
+  - Field block spacing: wrap each in a `div` with `space-y-2` or `mb-4`
+- Groups
+  - Two or more related fields: `grid gap-4 md:grid-cols-2`
+  - Full‑width fields (URLs, long text): `md:col-span-2`
+- Actions
+  - Submit: `.btn-cta`
+  - Secondary/cancel: `.btn-secondary` or `.btn-ghost`
+- Inline help and errors
+  - Help text: `text-xs text-[var(--muted-foreground)]`
+  - Error text: `text-xs text-[hsl(var(--destructive))]`
+
+Example
+```tsx
+<form className="space-y-4">
+  <div className="grid gap-4 md:grid-cols-2">
+    <div>
+      <label className="text-sm font-medium text-[var(--foreground)]">Company name</label>
+      <input className="w-full" placeholder="Acme Services" />
+    </div>
+    <div>
+      <label className="text-sm font-medium text-[var(--foreground)]">Contact email</label>
+      <input type="email" className="w-full" placeholder="owner@example.com" />
+    </div>
+  </div>
+  <div>
+    <label className="text-sm font-medium text-[var(--foreground)]">Notes</label>
+    <textarea className="w-full" rows={4} placeholder="Anything we should know?" />
+    <p className="mt-1 text-xs text-[var(--muted-foreground)]">Keep it short and actionable.</p>
+  </div>
+  <div className="flex items-center gap-2">
+    <button type="submit" className="btn-cta inline-flex items-center gap-2 px-5 py-2.5">Save</button>
+    <button type="button" className="btn-secondary inline-flex items-center gap-2 px-5 py-2.5">Cancel</button>
+  </div>
+  {/* Validation example */}
+  {/* <p className="text-xs text-[hsl(var(--destructive))]">Email is required.</p> */}
+  {/* <p className="text-xs text-[var(--muted-foreground)]">Saved just now.</p> */}
+</form>
+```
+
+### 7) Tables and Lists
+- Use a card wrapper `.surface` and keep tables light with clear separators.
+- Mobile first: Prefer responsive lists over tables when columns exceed 3–4.
+- Pattern: “key on left, value on right” for definition‑style lists.
+
+Example table
+```tsx
+<div className="surface rounded-xl overflow-hidden">
+  <table className="w-full">
+    <thead>
+      <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+        <th className="text-left p-3 text-[var(--foreground)]">Name</th>
+        <th className="text-left p-3 text-[var(--foreground)]">Status</th>
+        <th className="text-left p-3 text-[var(--foreground)]">Updated</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr className="border-b" style={{ borderColor: "hsl(var(--border))" }}>
+        <td className="p-3">Acme Plumbing</td>
+        <td className="p-3"><span className="badge badge-good">Active</span></td>
+        <td className="p-3 text-[var(--muted-foreground)]">Today</td>
+      </tr>
+      {/* ... */}
+    </tbody>
+  </table>
+</div>
+```
+
+### 8) Buttons and Actions
+- Primary: `.btn-cta` for commit actions (Create, Save, Continue)
+- Secondary: `.btn-secondary` for neutral actions
+- Ghost/outline: for low‑emphasis or inline actions (`.btn-ghost`, `.btn-outline-strong`)
+- Destructive: `.btn-danger` for irreversible actions; pair with confirmation
+
+Sizing guidance
+- Default: `px-5 py-2.5`
+- Compact in tables/toolbars: `px-3 py-1.5 text-sm`
+
+### 9) Badges, Pills, and Inline Status
+- Status in rows/lists: `.badge-good`, `.badge-bad`, `.badge-neutral`
+- Inline filters or selection chips: `.pill` (hover styles already defined)
+- Performance metric: `.badge-metric` for bold numerics (e.g., 95+)
+
+### 10) Banners, Alerts, and Empty States
+- Informational: `.info-banner` inside a `.surface` or directly below headers
+- Empty states: centered icon + headline + helper text + primary button
+  - Container: `.surface rounded-xl p-8 text-center`
+  - Headline: `text-[var(--foreground)]`
+  - Body: `text-[var(--muted-foreground)]`
+  - Action: `.btn-cta` (create first item)
+
+### 11) Loading and Skeletons
+- Use `animate-pulse` on neutral blocks; avoid shimmer.
+- Skeleton pattern
+```tsx
+<div className="surface rounded-xl p-4 sm:p-6 animate-pulse">
+  <div className="h-5 w-40 rounded bg-[hsl(var(--secondary))]" />
+  <div className="mt-4 grid gap-3 md:grid-cols-2">
+    <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
+    <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
+  </div>
+</div>
+```
+
+### 12) Modals and Drawers
+- Modal body: `.surface-elevated rounded-xl p-6`
+- Underlay: a simple semi‑transparent scrim; avoid blur for app modals
+- Title + body + actions row (primary on the right)
+- Destructive flows use `.btn-danger` primary with clear copy
+
+### 13) Navigation Patterns
+- Portal pages (client)
+  - Top header (existing sticky global header)
+  - Page header with title/description/actions
+  - Content in stacked `.surface` cards, each with clear titles
+- Admin pages
+  - When needed: two‑column layout with a left info panel and right details panel
+  - Prefer tabular views only where scan speed is important; otherwise cards/lists
+  - Use `.badge` variants to communicate item status at a glance
+
+### 14) Typography and Iconography
+- Type scale
+  - Page titles: `text-2xl md:text-3xl` (marketing) or `text-xl md:text-2xl` (app)
+  - Section titles: `text-lg md:text-xl font-semibold`
+  - Body: `text-sm md:text-base`
+  - Meta/labels/help: `text-xs`
+- Icons
+  - Use `lucide-react`; sizes 16–20 for inline, 24 for section headers
+  - Match icon color to purpose: default `currentColor`, success uses brand via `.badge-good` etc.
+
+### 15) Accessibility
+- Always ensure focus visibility (already handled globally via outline tokens).
+- Logical headings order (h1 → h2 → h3).
+- Labels and `aria-*` attributes on form elements; link labels are descriptive.
+- Motion is minimal on app pages; rely on content clarity.
+
+### 16) Responsive Behavior
+- Mobile first stacks; convert to grids at `md+`.
+- Sticky elements only at `md+` to avoid covering content on small screens.
+- Tables degrade to lists on mobile when more than 3 columns.
+
+### 17) Page Templates
+- Agreement page (`/portal/agreement`)
+  - `PageHeader` with short summary and link to Terms
+  - Agreement card: `.surface rounded-xl p-6` with checkbox + submit (`.btn-cta`)
+  - Inline fine print uses `text-[var(--muted-foreground)] text-sm`
+- Subscribe page (`/portal/subscribe`)
+  - Plan summary card + “Continue to Checkout” primary button
+  - Secondary link to Terms
+- Payment success (`/portal/paymentSuccess`)
+  - Confirmation `.surface-elevated` with success pill and next steps
+  - Link to `/portal`
+- Portal dashboard (`/portal/[projectId]`)
+  - Header with status badge (derived from project/subscription)
+  - Cards:
+    - “Status” (pill + short copy)
+    - “Next step” CTA
+    - “Recent activity” list (activity_log)
+- Admin lists (`/admin`)
+  - Page header with filters in `.surface-soft p-3`
+  - Data presented as either:
+    - Cards grid: `grid gap-4 md:grid-cols-2 lg:grid-cols-3`
+    - Table inside `.surface` as shown above
+
+### 18) Do/Don’t Summary
+- Do
+  - Use `.surface` and `.surface-soft` for most content groupings
+  - Use `.btn-cta` for primary actions; `.btn-secondary` for secondary
+  - Keep copy concise; use `--muted-foreground` for helper text
+  - Show status via `.badge` variants and `.pill` where appropriate
+- Don’t
+  - Reuse landing hero gradients/beams/word animations on app pages
+  - Nest surfaces excessively or use mixed border radii
+  - Introduce new colors outside the token system
+
+### 19) Quick Starters
+- Standard content section
+```tsx
+<section className="mx-auto max-w-6xl px-6 py-10 md:py-12">
+  <div className="surface rounded-xl p-4 sm:p-6">
+    <h2 className="text-lg md:text-xl font-semibold text-[var(--foreground)]">Section title</h2>
+    <p className="mt-1 text-sm text-[var(--muted-foreground)]">Short description or guidance.</p>
+    {/* Content */}
+  </div>
 </section>
 ```
-
-Feature tile with glow
-
+- Toolbar with filters
 ```tsx
-<div className="surface-elevated glow-primary p-6 rounded-xl">
-  <h3 className="font-semibold">Featured</h3>
-  <p className="text-muted-foreground">Why this matters…</p>
-</div>
-```
-
-CTA button
-
-```tsx
-<button className="btn-cta inline-flex items-center gap-2 px-4 py-2">
-  <span>Get Started</span>
-</button>
-```
-
-Stats row
-
-```tsx
-<div className="flex gap-3">
-  <div className="stat-pill">
-    <div className="stat-pill-label">Leads</div>
-    <div className="stat-pill-value">124</div>
+<div className="surface-soft rounded-xl p-3 flex flex-wrap items-center gap-2">
+  {/* Filters */}
+  <input className="w-48" placeholder="Search…" />
+  <select className="w-40">
+    <option>All statuses</option>
+  </select>
+  <div className="ml-auto flex items-center gap-2">
+    <button className="btn-secondary px-4 py-2">Export</button>
+    <button className="btn-cta px-4 py-2">New</button>
   </div>
-  <div className="stat-pill">
-    <div className="stat-pill-label">Projects</div>
-    <div className="stat-pill-value">12</div>
-  </div>
-</div>
+}
 ```
 
-Inline progress
+This plan intentionally keeps non‑landing pages calm and practical, while preserving the same visual language, tokens, and component treatments established on the landing page. Adjust spacing or density per page needs, but keep surfaces, borders, and button styles consistent throughout the app.
 
-```tsx
-<div className="progress-track">
-  <div className="progress-fill" style={{ width: "68%" }} />
-  {/* Wrap your fill in relative container if you need labels */}
-</div>
-```
-
-Do / Don’t
-
-- Do: Use `surface`/`surface-elevated` for primary content blocks; reserve intense glows for a few key CTAs or highlights.
-- Do: Prefer semantic tokens (e.g., `bg-background`, `text-foreground`, `border-border`) for consistency.
-- Do: Build gradients with provided variables; avoid hardcoded colors.
-- Don’t: Overuse shadows or multiple glows on the same element.
-- Don’t: Introduce new border styles; tint existing borders via utilities if needed.
-
-Notes
-
-- Theming choices follow the user’s preference for very soft backgrounds with visible yet tasteful gradients and glows, while keeping typography highly legible. These utilities are intentionally general‑purpose and avoid chat‑specific or fixed layout patterns from the old project.
-
-
-
-## Landing Page Implementation Map
-
-- Hero: `surface-hero`, `offer-bar`, `badge`, `device-stack`, CTAs use `btn-cta` and `btn-soft`. Copy from `landingPage.md`.
-- Local trust strip: `surface-section`, `badge`, static stars text.
-- Problem → Solution: Two `surface` cards; solution card accented with `glow-amber`.
-- What’s included: Grid of `surface` tiles (2–3 columns responsive); microcopy “One plan. Zero surprises. You email; we ship.”
-- Speed & performance proof: `gauge` with inline `--value`; `stat-pill` for before/after; bullet list.
-- Showcase: `before-after` wrapper for MVP images; width/height set to prevent CLS.
-- How it works: Section id `how-it-works` with `anchor-target`; four `surface` step tiles.
-- Pricing: Section id `pricing` with `anchor-target`; CTAs with UTM; fine print links to `/legal/terms`.
-- Testimonials: Optional `StarRating` row above `surface` quote tiles; static 5‑star rows.
-- FAQs: Section id `faqs` with `anchor-target`; accessible `<details><summary>` pairs in `surface` cards.
-- Final CTA: `surface-section` with dual CTAs (`btn-cta`, `btn-soft`) and UTM `cta=final`.

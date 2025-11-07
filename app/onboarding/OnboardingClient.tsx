@@ -11,6 +11,23 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 
+const validateEmail = (value: string) => /\S+@\S+\.\S+/.test(value.trim());
+const validatePhone = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  if (!digits) return true; // optional
+  return digits.length >= 10 && digits.length <= 15;
+};
+const normalizeWebsite = (value: string) => {
+  const raw = value.trim();
+  if (!raw) return "";
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    return new URL(withScheme).toString();
+  } catch {
+    return null;
+  }
+};
+
 export function OnboardingClient() {
   return (
     <Suspense fallback={<OnboardingLoading />}>
@@ -32,6 +49,11 @@ function OnboardingLoading() {
 function OnboardingContent() {
   const [error, setError] = useState<string | null>(null);
   const [planRequested, setPlanRequested] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    contactEmail?: string;
+    phone?: string;
+    currentWebsite?: string;
+  }>({});
 
   const {
     sessionId,
@@ -63,6 +85,10 @@ function OnboardingContent() {
 
   const hasGeneratedPlan = Boolean(plan && plan.generatedAt);
   const hasUnsavedChanges = dirtyFields.size > 0;
+  const hasFieldErrors = useMemo(
+    () => Object.values(fieldErrors).some(Boolean),
+    [fieldErrors],
+  );
   const buttonLabel = useMemo(() => {
     if (isGeneratingPlan) {
       return "Generating your plan…";
@@ -79,11 +105,18 @@ function OnboardingContent() {
   const buttonDisabled = useMemo(() => {
     if (!canGeneratePlan) return true;
     if (isGeneratingPlan) return true;
+    if (hasFieldErrors) return true;
     if (hasGeneratedPlan && !hasUnsavedChanges) {
       return true;
     }
     return false;
-  }, [canGeneratePlan, hasGeneratedPlan, hasUnsavedChanges, isGeneratingPlan]);
+  }, [
+    canGeneratePlan,
+    hasGeneratedPlan,
+    hasUnsavedChanges,
+    isGeneratingPlan,
+    hasFieldErrors,
+  ]);
 
   const handleGeneratePlan = async () => {
     if (!sessionId) {
@@ -120,21 +153,23 @@ function OnboardingContent() {
   return (
     <>
       <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-10 md:px-10 md:py-16">
-          <header className="flex flex-col gap-2">
-            <h1 className="text-3xl font-semibold md:text-4xl">
+        <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-10 md:px-10 md:py-16 lg:gap-10">
+          <header className="flex flex-col gap-3">
+            <span className="section-overline text-[var(--muted-foreground)]">Onboarding</span>
+            <h1 className="heading-gradient text-3xl font-semibold md:text-4xl">
               Let&apos;s map out your website plan
             </h1>
-            <p className="text-sm text-[var(--secondary)] md:text-base">
+            <p className="text-sm text-[var(--muted-foreground)] md:text-base">
               Share a few details so we can craft the plan and help you schedule a call.
             </p>
           </header>
 
-          <section className="rounded-3xl border border-[var(--border)] bg-[var(--background)] px-6 py-8 shadow-lg shadow-black/5 md:px-10 md:py-12">
-            <div className="flex flex-col gap-8">
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <section className="surface rounded-3xl px-6 py-8 md:px-10 md:py-12 lg:px-12 lg:py-14">
+            <div className="flex flex-col gap-8 lg:gap-10">
+              <span className="section-overline text-[var(--muted-foreground)]">Your details</span>
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:gap-8">
                 <div className="flex flex-col gap-2 text-sm">
-                  <Label className="font-medium text-[var(--foreground)]" htmlFor="contactName">
+                  <Label className="form-label" htmlFor="contactName">
                     Your name
                   </Label>
                   <Input
@@ -142,24 +177,48 @@ function OnboardingContent() {
                     value={details.contactName}
                     onChange={(event) => handleFieldChange("contactName", event.target.value)}
                     required
-                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                    className="form-control rounded-lg"
                   />
                 </div>
                 <div className="flex flex-col gap-2 text-sm">
-                  <Label className="font-medium text-[var(--foreground)]" htmlFor="contactEmail">
+                  <Label className="form-label" htmlFor="contactEmail">
                     Email
                   </Label>
                   <Input
                     id="contactEmail"
                     type="email"
+                    autoComplete="email"
+                    inputMode="email"
                     value={details.contactEmail}
                     onChange={(event) => handleFieldChange("contactEmail", event.target.value)}
+                    onBlur={(event) => {
+                      const value = event.target.value;
+                      const valid = validateEmail(value);
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        contactEmail: valid ? undefined : "Enter a valid email (e.g. name@domain.com)",
+                      }));
+                    }}
                     required
-                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                    aria-invalid={Boolean(fieldErrors.contactEmail)}
+                    aria-describedby={fieldErrors.contactEmail ? "contactEmail-error" : undefined}
+                    data-invalid={Boolean(fieldErrors.contactEmail)}
+                    className="form-control rounded-lg"
                   />
+                  {fieldErrors.contactEmail ? (
+                    <p
+                      id="contactEmail-error"
+                      className="form-message form-message--error"
+                      aria-live="polite"
+                    >
+                      {fieldErrors.contactEmail}
+                    </p>
+                  ) : (
+                    <p className="form-message form-message--hint">We&apos;ll send your plan here.</p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 text-sm">
-                  <Label className="font-medium text-[var(--foreground)]" htmlFor="companyName">
+                  <Label className="form-label" htmlFor="companyName">
                     Company
                   </Label>
                   <Input
@@ -167,38 +226,100 @@ function OnboardingContent() {
                     value={details.companyName}
                     onChange={(event) => handleFieldChange("companyName", event.target.value)}
                     required
-                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                    className="form-control rounded-lg"
                   />
                 </div>
                 <div className="flex flex-col gap-2 text-sm">
-                  <Label className="font-medium text-[var(--foreground)]" htmlFor="phone">
+                  <Label className="form-label" htmlFor="phone">
                     Phone
                   </Label>
                   <Input
                     id="phone"
+                    type="tel"
+                    autoComplete="tel"
+                    inputMode="tel"
                     value={details.phone}
                     onChange={(event) => handleFieldChange("phone", event.target.value)}
+                    onBlur={(event) => {
+                      const value = event.target.value;
+                      const valid = validatePhone(value);
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        phone: valid ? undefined : "Enter a valid phone number (10–15 digits).",
+                      }));
+                    }}
                     placeholder="Optional"
-                    className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                    aria-invalid={Boolean(fieldErrors.phone)}
+                    aria-describedby={fieldErrors.phone ? "phone-error" : undefined}
+                    data-invalid={Boolean(fieldErrors.phone)}
+                    className="form-control rounded-lg"
                   />
+                  {fieldErrors.phone ? (
+                    <p
+                      id="phone-error"
+                      className="form-message form-message--error"
+                      aria-live="polite"
+                    >
+                      {fieldErrors.phone}
+                    </p>
+                  ) : (
+                    <p className="form-message form-message--hint">
+                      Optional — helps if we need a quick follow-up.
+                    </p>
+                  )}
                 </div>
               </div>
 
+              <span className="section-overline text-[var(--muted-foreground)]">Business overview</span>
               <div className="flex flex-col gap-2 text-sm">
-                <Label className="font-medium text-[var(--foreground)]" htmlFor="currentWebsite">
+                <Label className="form-label" htmlFor="currentWebsite">
                   Current website
                 </Label>
                 <Input
                   id="currentWebsite"
+                  type="url"
+                  autoComplete="url"
+                  inputMode="url"
                   value={details.currentWebsite}
                   onChange={(event) => handleFieldChange("currentWebsite", event.target.value)}
+                  onBlur={(event) => {
+                    const value = event.target.value;
+                    const normalized = normalizeWebsite(value);
+                    if (normalized === null) {
+                      setFieldErrors((prev) => ({
+                        ...prev,
+                        currentWebsite: "Enter a valid URL (domain or full link).",
+                      }));
+                    } else {
+                      setFieldErrors((prev) => ({ ...prev, currentWebsite: undefined }));
+                      if (normalized !== "" && normalized !== value) {
+                        handleFieldChange("currentWebsite", normalized);
+                      }
+                    }
+                  }}
                   placeholder="Paste a link if you have one"
-                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  aria-invalid={Boolean(fieldErrors.currentWebsite)}
+                  aria-describedby={fieldErrors.currentWebsite ? "currentWebsite-error" : undefined}
+                  data-invalid={Boolean(fieldErrors.currentWebsite)}
+                  className="form-control rounded-lg"
                 />
+                {fieldErrors.currentWebsite ? (
+                  <p
+                    id="currentWebsite-error"
+                    className="form-message form-message--error"
+                    aria-live="polite"
+                  >
+                    {fieldErrors.currentWebsite}
+                  </p>
+                ) : (
+                  <p className="form-message form-message--hint">
+                    If you have one, this helps us tailor your plan.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-2 text-sm">
-                <Label className="font-medium text-[var(--foreground)]" htmlFor="businessDescription">
+                <Label className="form-label" htmlFor="businessDescription">
                   What should we know about your business?
                 </Label>
                 <Textarea
@@ -207,12 +328,15 @@ function OnboardingContent() {
                   onChange={(event) => handleFieldChange("businessDescription", event.target.value)}
                   required
                   rows={4}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  className="form-control form-textarea rounded-lg"
                 />
+                <p className="form-message form-message--hint">
+                  Tell us your services, service area, and who you want to reach.
+                </p>
               </div>
 
               <div className="flex flex-col gap-2 text-sm">
-                <Label className="font-medium text-[var(--foreground)]" htmlFor="prospectNotes">
+                <Label className="form-label" htmlFor="prospectNotes">
                   Anything else we should keep in mind?
                 </Label>
                 <Textarea
@@ -221,7 +345,7 @@ function OnboardingContent() {
                   onChange={(event) => handleFieldChange("prospectNotes", event.target.value)}
                   placeholder="Optional context, inspiration links, requirements, etc."
                   rows={4}
-                  className="rounded-xl border border-[var(--border)] bg-[var(--muted)] px-4 py-3 text-sm text-[var(--foreground)] outline-none transition focus-visible:border-[var(--primary)] focus-visible:ring-2 focus-visible:ring-[var(--primary)]/20"
+                  className="form-control form-textarea rounded-lg"
                 />
               </div>
 
@@ -229,19 +353,15 @@ function OnboardingContent() {
                 <Button
                   type="button"
                   onClick={handleGeneratePlan}
-                  className="rounded-full bg-[var(--primary)] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:pointer-events-none disabled:opacity-60"
+                  variant="outline"
+                  className="btn-cta rounded-full px-6 py-3"
                   disabled={buttonDisabled}
                 >
                   {buttonLabel}
                 </Button>
-                {error && <span className="text-sm text-[var(--accent)]">{error}</span>}
+                {error && <div className="info-banner text-sm">{error}</div>}
                 {dirtyFields.size > 0 && !isGeneratingPlan && (
-                  <div className="inline-flex items-center gap-2 text-[var(--secondary)]">
-                    <span className="inline-flex h-2 w-2">
-                      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--accent)]" />
-                    </span>
-                    <span className="text-xs font-medium">Unsaved changes</span>
-                  </div>
+                  <span className="pill text-xs font-semibold">Unsaved changes</span>
                 )}
               </div>
 
@@ -255,28 +375,14 @@ function OnboardingContent() {
               )}
 
               {!plan && planRequested && !isGeneratingPlan && (
-                <p className="rounded-xl border border-dashed border-[var(--border)] bg-[var(--muted)] p-4 text-sm text-[var(--secondary)]">
+                <p className="info-banner text-sm">
                   We couldn&apos;t generate a plan just yet. Check your connection and try again.
                 </p>
               )}
             </div>
           </section>
 
-          {plan && (
-            <footer className="flex flex-col items-start gap-3 text-sm text-[var(--secondary)]">
-              <p>
-                Ready to talk through the details? Book a call with us and we&apos;ll align on timeline and deliverables.
-              </p>
-              <Link
-                href={ONBOARDING_CAL_LINK}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center rounded-full border border-[var(--primary)] bg-[var(--background)] px-5 py-3 text-sm font-semibold text-[var(--primary)] transition hover:bg-[var(--primary)] hover:text-white"
-              >
-                Schedule a call
-              </Link>
-            </footer>
-          )}
+          {/* CTA moved into the plan card for a cohesive experience */}
         </div>
       </div>
     </>
