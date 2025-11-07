@@ -5,7 +5,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
-import { Megaphone } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 export function FloatingCtaTray() {
   const prefersReduced = useReducedMotion();
@@ -155,7 +155,8 @@ export function FloatingCtaTray() {
                     }
                     aria-hidden
                   >
-                    <Megaphone className="floating-cta__trigger-icon" aria-hidden />
+                    {/* <Smile className="floating-cta__trigger-icon" aria-hidden /> */}
+                    <Logo size="xl" className="floating-cta__trigger-icon" aria-hidden />
                   </motion.span>
                 )}
               </AnimatePresence>
@@ -167,7 +168,7 @@ export function FloatingCtaTray() {
                   target="_blank"
                   rel="noreferrer"
                 >
-                  Schedule Call
+                  Schedule 15‑min Call
                 </a>
                 <Link
                   className="btn-cta w-full md:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 text-center whitespace-nowrap"

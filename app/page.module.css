@@ -1,0 +1,38 @@
+/* app/page.module.css */
+.heroTitle {
+  background: linear-gradient(
+    180deg,
+    color-mix(in hsl, hsl(var(--foreground)) 70%, hsl(var(--primary)) 30%) 0%,
+    color-mix(in hsl, hsl(var(--primary)) 84%, hsl(var(--accent)) 10%) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Required for proper background-clip:text in WebKit (prevents solid rectangle) */
+  -webkit-text-fill-color: transparent;
+  /* Smoother rendering and subtle glow (no stroke to avoid artifacts) */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  text-shadow:
+    0 12px 28px hsl(var(--primary) / 0.30),
+    0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 52%);
+}
+
+/* Dark theme: slightly softer gradient and glow while retaining clarity */
+:global(.dark) .heroTitle {
+  background: linear-gradient(
+    180deg,
+    color-mix(in hsl, hsl(var(--foreground)) 86%, hsl(var(--primary)) 14%) 0%,
+    color-mix(in hsl, hsl(var(--primary)) 72%, hsl(var(--foreground)) 28%) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  text-shadow:
+    0 12px 28px hsl(var(--primary) / 0.28),
+    0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 50%);
+}
+
+

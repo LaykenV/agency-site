@@ -1,27 +1,42 @@
 import Link from "next/link";
-import Image from "next/image";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
-import { CheckCircle2, Clock } from "lucide-react";
+import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
 import { ReviewsScroller } from "@/components/ReviewsScroller";
 import { HorizontalScroller } from "@/components/HorizontalScroller";
+import { HowItWorks } from "@/components/our-plan/HowItWorks";
+import { PerformanceGauge } from "@/components/our-plan/PerformanceGauge";
+import { FaqItem } from "@/components/faq/FaqItem";
+import { SectionHeader } from "@/components/SectionHeader";
 
 const REVIEWS = [
   {
-    quote: "They launched in 3 days and updates are an email away.",
+    quote: "They launched in 3 days and updates are a portal request away.",
     name: "Alex R.",
-    role: "Landscaping Owner",
+    role: "Service Owner in Acadiana",
+    rating: 5,
+    siteUrl: "https://example.com/greenscape",
+    imageSrc: "/placeholders/sites/landscaping.svg",
+    imageAlt: "GreenScape Landscaping website homepage",
   },
   {
     quote: "Fast, professional build. Our phone calls picked up immediately.",
     name: "Maya P.",
-    role: "Plumbing Services",
+    role: "Plumbing Services in Acadiana",
+    rating: 5,
+    siteUrl: "https://example.com/pro-plumb",
+    imageSrc: "/placeholders/sites/plumbing.svg",
+    imageAlt: "ProPlumb Services website homepage",
   },
   {
-    quote: "We email changes and they ship the same day. Couldn’t be easier.",
+    quote: "We submit changes in the portal and they ship the same day. Couldn’t be easier.",
     name: "Jordan K.",
-    role: "Home Renovation",
+    role: "Home Renovation in Acadiana",
+    rating: 5,
+    siteUrl: "https://example.com/reno-co",
+    imageSrc: "/placeholders/sites/renovation.svg",
+    imageAlt: "RenoCo website homepage",
   },
 ] as const;
 
@@ -32,8 +47,8 @@ export default function Home() {
       {/* Hero */}
       <section id="hero" className="anchor-target relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-6 pt-6 md:pt-12 pb-10 md:pb-16">
-          <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight text-[var(--hero-foreground)] mx-auto max-w-[22ch]">
-            A 5‑Star Website for Your Business
+          <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
+            A 5‑Star Website for Your Business in Acadiana
           </h1>
 
           <div className="mt-8 md:mt-12">
@@ -115,7 +130,7 @@ export default function Home() {
               <div className="p-6 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
                 <div>
                   <p className="text-lg md:text-xl font-semibold text-[var(--foreground)]">
-                    Done‑for‑you website and hosting.
+                    Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
                   </p>
                   <div className="mt-2">
                     <StarRating align="left" />
@@ -123,12 +138,16 @@ export default function Home() {
                   <h2 className="mt-4 font-semibold text-[var(--foreground)]">All‑inclusive plan</h2>
                   <ul className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]">
                     <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-[var(--primary)]" />
+                    <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>$199/mo • $0 down</span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <Clock className="h-4 w-4 text-[var(--primary)]" />
+                    <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />
                       <span>72‑hour go‑live from build</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
+                      <span>Unlimited edit requests via the client portal</span>
                     </li>
                   </ul>
                 </div>
@@ -136,7 +155,7 @@ export default function Home() {
                 <div className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end">
                   <div className="flex flex-row items-center gap-3">
                     <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                      Schedule Call
+                      Schedule 15‑min Call
                     </Link>
                     <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                       Start Onboarding
@@ -150,7 +169,7 @@ export default function Home() {
             <div className="mt-4 md:hidden">
               <div className="grid grid-cols-2 gap-3">
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
-                  Schedule Call
+                  Schedule 15‑min Call
                 </Link>
                 <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Start Onboarding
@@ -168,12 +187,11 @@ export default function Home() {
       {/* Trust & Reviews */}
       <section id="trust" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-8 md:py-12">
-          <div className="text-center text-sm text-[var(--muted-foreground)] section-overline">Trusted by local service pros</div>
+          <SectionHeader as="h2">Trusted by local pros across Acadiana</SectionHeader>
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <span className="pill">Plumbing</span>
             <span className="pill">Landscaping</span>
             <span className="pill">Painting</span>
-            <span className="pill">Consulting</span>
             <span className="pill">Home Services</span>
           </div>
           <ReviewsScroller reviews={REVIEWS} className="mt-6" />
@@ -183,32 +201,17 @@ export default function Home() {
       {/* Offer / Features / Comparison */}
       <section id="offer" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
+          <SectionHeader as="h2" className="mb-6">Our Plan</SectionHeader>
           <div className="surface-elevated rounded-xl p-6 md:p-8">
 
             {/* Main grid: narrative + sticky proof */}
             <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
               {/* Narrative column */}
               <div className="space-y-8 min-w-0">
-                {/* Overview */}
-                <section id="plan-overview">
-                <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
-                  <p className="mt-2 text-[var(--muted-foreground)]">Done‑for‑you website and hosting tailored to convert.</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="pill">$199/mo • $0 down</span>
-                    <span className="pill">72‑hour go‑live</span>
-                    <span className="pill">12‑month minimum</span>
-                  </div>
-                </section>
-
                 {/* Steps */}
                 <section id="plan-steps">
-                  <h3 className="mt-2 text-xl font-semibold text-[var(--foreground)]">How it works</h3>
-                  <ol className="mt-3 grid grid-cols-1 gap-2 text-sm text-[var(--muted-foreground)] md:grid-cols-2">
-                    <li className="surface-soft rounded-md p-3">1) Start Onboarding — accept terms and subscribe securely.</li>
-                    <li className="surface-soft rounded-md p-3">2) Kickoff — share details, brand, and inspiration; upload assets.</li>
-                    <li className="surface-soft rounded-md p-3">3) Build Stage — we build; your site goes live within 72 hours.</li>
-                    <li className="surface-soft rounded-md p-3">4) Launch & Ongoing Support — unlimited edits via email.</li>
-                  </ol>
+                  <h3 className="text-xl font-semibold text-[var(--foreground)]">How it works</h3>
+                  <HowItWorks />
                 </section>
 
                 {/* Inclusions */}
@@ -219,29 +222,29 @@ export default function Home() {
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Custom 7‑page website</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Elite performance</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & Domain</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Managed hosting + SSL</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Domain included & managed</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Conversion</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Google Reviews widget</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Contact form + email alerts</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests via the client portal</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly analytics summary</span></li>
                       </ul>
                     </div>
                   </div>
@@ -251,29 +254,29 @@ export default function Home() {
                       <div>
                         <div className="plan-card-title">Build & Performance</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Custom 7‑page website</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Elite performance (95+ PageSpeed target)</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Custom 7‑page website</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Elite performance</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Hosting & Domain</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Managed hosting + SSL</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Domain included & managed</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Managed hosting + SSL</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Domain included & managed</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Conversion</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Google Reviews widget</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Contact form + email alerts</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Google Reviews widget</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Contact form + email alerts</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Support & Insights</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Unlimited edits via email</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[var(--primary)]" /><span>Monthly analytics summary</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests via the client portal</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly analytics summary</span></li>
                         </ul>
                       </div>
                     </HorizontalScroller>
@@ -285,16 +288,7 @@ export default function Home() {
               <aside id="plan-performance" className="self-start md:sticky md:top-24">
                 <div className="surface rounded-xl p-6">
                 <div className="flex items-center gap-6">
-                  <div className="gauge">
-                    <svg className="gauge-svg" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg">
-                      <circle className="gauge-track" cx="80" cy="80" r="74" />
-                      <circle className="gauge-progress" cx="80" cy="80" r="74" style={{ "--value": 95 } as React.CSSProperties & Record<string, number>} />
-                    </svg>
-                    <div className="gauge-label">
-                      <div className="gauge-value">95%</div>
-                      <div className="gauge-subtitle">Performance</div>
-                    </div>
-                  </div>
+                  <PerformanceGauge value={95} />
                   <div>
                     <div className="stat-pill">
                       <div className="stat-pill-label">Before</div>
@@ -307,7 +301,7 @@ export default function Home() {
                   </div>
                 </div>
                 <ul className="mt-4 space-y-2 text-[var(--muted-foreground)]">
-                  <li>Google prioritizes fast, mobile‑first experiences</li>
+                  <li>Google favors quick, mobile‑first sites</li>
                   <li>Fewer bounces, more calls and form fills</li>
                   <li>Built with modern best practices</li>
                 </ul>
@@ -317,79 +311,79 @@ export default function Home() {
 
             {/* Comparison */}
             <section id="plan-comparison" className="mt-8">
-              <h3 className="text-xl font-semibold text-[var(--foreground)]">All‑Inclusive vs Traditional</h3>
+              <h3 className="text-xl font-semibold text-[var(--foreground)]">Our Plan vs Traditional</h3>
 
               {/* Mobile: horizontal scroller for comparison cards */}
               <div className="mt-4 md:hidden">
                 <HorizontalScroller trackClassName="plan-hscroll" cardClassName="plan-hscroll-card surface rounded-lg p-4 plan-compare-card" ariaLabel="Plan comparison">
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Price</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Price</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>$199/mo • $0 down</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>$3–5k+ upfront + retainers</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> $199/mo • $0 down</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> $3–5k+ upfront + retainers</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Timeline to live</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><Clock className="h-5 w-5 text-[hsl(var(--primary))]" aria-hidden /> Timeline to live</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>72 hours from build</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>4–8 weeks</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 72 hours from build</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> 4–8 weeks</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & SSL</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17a4 4 0 0 0 4-4V9a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2"/><path d="M5 11h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8Z" stroke="currentColor" strokeWidth="2"/></svg>Hosting & SSL</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Billed separately</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Billed separately</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Domain</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="2"/><path d="M2.1 9h19.8M2.1 15h19.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor" strokeWidth="2"/></svg>Domain</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included & managed</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Bring your own</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included & managed</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Bring your own</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Unlimited edits</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Yes — via email</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Typically billed hourly</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Yes — via client portal</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Typically billed hourly</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">PageSpeed target</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>PageSpeed target</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>95+</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Varies (often 60–80)</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 95+</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Varies (often 60–80)</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Reviews widget</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17.3 6.18 21l1.57-6.73L2 8.97l6.9-.6L12 2l3.1 6.37 6.9.6-5.75 5.3L17.82 21 12 17.3Z" stroke="currentColor" strokeWidth="2"/></svg>Reviews widget</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Included</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Often extra</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Often extra</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Analytics</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 3v18h18" stroke="currentColor" strokeWidth="2"/><path d="M7 15v3M11 10v8M15 6v12M19 12v6" stroke="currentColor" strokeWidth="2"/></svg>Analytics</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Monthly summary</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>DIY</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Monthly summary</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> DIY</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>Email support, same‑day</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Ticket queues</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Email support, same‑day</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Ticket queues</span></div></div>
                     </div>
                   </div>
                   <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]">Contract term</div>
+                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">All‑Inclusive</div><div>12‑month minimum</div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional</div><div>Project‑based/retainer</div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 12‑month minimum</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Project‑based/retainer</span></div></div>
                     </div>
                   </div>
                 </HorizontalScroller>
@@ -398,64 +392,144 @@ export default function Home() {
               {/* Desktop: table comparison */}
               <div className="mt-4 hidden md:block overflow-x-auto">
               <table className="compare-table w-full">
-                <caption className="sr-only">All‑Inclusive Plan vs Traditional Agency</caption>
+                <caption className="sr-only">Our Plan vs Traditional Agency</caption>
                 <thead>
                   <tr>
                     <th className="text-left">Feature</th>
-                    <th className="text-left">All‑Inclusive Plan</th>
+                    <th className="text-left">Our Plan</th>
                     <th className="text-left">Traditional Agency</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
-                    <th scope="row">Price</th>
-                    <td>$199/mo • $0 down</td>
-                    <td>$3–5k+ upfront + retainers</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Price</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> $199/mo • $0 down
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> $3–5k+ upfront + retainers
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Timeline to live</th>
-                    <td>72 hours from build</td>
-                    <td>4–8 weeks</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><Clock className="h-5 w-5 text-[hsl(var(--primary))]" aria-hidden /> Timeline to live</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> 72 hours from build
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> 4–8 weeks
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Hosting & SSL</th>
-                    <td>Included</td>
-                    <td>Billed separately</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17a4 4 0 0 0 4-4V9a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2"/><path d="M5 11h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8Z" stroke="currentColor" strokeWidth="2"/></svg>Hosting & SSL</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Included
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Billed separately
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Domain</th>
-                    <td>Included & managed</td>
-                    <td>Bring your own</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="2"/><path d="M2.1 9h19.8M2.1 15h19.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor" strokeWidth="2"/></svg>Domain</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Included & managed
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Bring your own
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Unlimited edits</th>
-                    <td>Yes — via email</td>
-                    <td>Typically billed hourly</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Yes — via client portal
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Typically billed hourly
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">PageSpeed target</th>
-                    <td>95+</td>
-                    <td>Varies (often 60–80)</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>PageSpeed target</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> 95+
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Varies (often 60–80)
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Reviews widget</th>
-                    <td>Included</td>
-                    <td>Often extra</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17.3 6.18 21l1.57-6.73L2 8.97l6.9-.6L12 2l3.1 6.37 6.9.6-5.75 5.3L17.82 21 12 17.3Z" stroke="currentColor" strokeWidth="2"/></svg>Reviews widget</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Included
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Often extra
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Analytics</th>
-                    <td>Monthly summary</td>
-                    <td>DIY</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 3v18h18" stroke="currentColor" strokeWidth="2"/><path d="M7 15v3M11 10v8M15 6v12M19 12v6" stroke="currentColor" strokeWidth="2"/></svg>Analytics</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Monthly summary
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> DIY
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Support</th>
-                    <td>Email support, same‑day</td>
-                    <td>Ticket queues</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> Email support, same‑day
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Ticket queues
+                      </span>
+                    </td>
                   </tr>
                   <tr>
-                    <th scope="row">Contract term</th>
-                    <td>12‑month minimum</td>
-                    <td>Project‑based/retainer</td>
+                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></th>
+                    <td>
+                      <span className="badge badge-good inline-flex items-center gap-1">
+                        <CheckCircle2 aria-hidden className="inline-block" /> 12‑month minimum
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-bad inline-flex items-center gap-1">
+                        <XCircle aria-hidden className="inline-block" /> Project‑based/retainer
+                      </span>
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -468,32 +542,27 @@ export default function Home() {
       {/* FAQs */}
       <section id="faqs" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
-          <h2 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">FAQs</h2>
-          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">What does &quot;unlimited edits&quot; include?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">Non‑material updates like text, photos, hours, banners, sections, and minor layout tweaks. Fair, reasonable use; larger redesigns are scoped separately.</p>
-            </details>
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">How fast can we launch?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">Once we enter the build stage, we go live within 72 hours. The build stage begins after kickoff and assets are received.</p>
-            </details>
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">Do I keep my domain?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">We include and manage it while subscribed. After the minimum term and if your account is in good standing, we can transfer per Terms.</p>
-            </details>
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">Who owns the website?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">You own your original content. We license the implementation during the term. See Terms for details.</p>
-            </details>
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">I already pay for hosting—do I still need it?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">Hosting, SSL, and management are included to ensure speed, security, and simplicity.</p>
-            </details>
-            <details className="surface rounded-xl p-6">
-              <summary className="font-semibold cursor-pointer">How do I cancel?</summary>
-              <p className="mt-2 text-sm text-[var(--muted-foreground)]">Contact support. During months 1–12, the early termination policy applies. After 12 months, cancel any month before renewal.</p>
-            </details>
+          <SectionHeader as="h2">FAQs</SectionHeader>
+          <div className="mt-6 faq-grid">
+            <FaqItem question='What does "unlimited edits" include?'>
+              <p className="text-sm">Reasonable updates like text, photos, hours, banners, sections, and small layout tweaks. Submit requests in the client portal anytime. Bigger redesigns get a simple scope and quote.</p>
+            </FaqItem>
+
+            <FaqItem question="How fast can we launch?">
+              <p className="text-sm">Once we start the build, we aim to go live within 72 hours. Kickoff happens after we collect assets.</p>
+            </FaqItem>
+
+            <FaqItem question="Do I keep my domain?">
+              <p className="text-sm">We include and manage your domain while subscribed. After the 12‑month minimum and if your account is in good standing, we can transfer per the Terms.</p>
+            </FaqItem>
+
+            <FaqItem question="Who owns the website?">
+              <p className="text-sm">You own your original content (copy, images, logo). We license the implementation during the term. Details are in the Terms.</p>
+            </FaqItem>
+
+            <FaqItem question="How do I cancel?">
+              <p className="text-sm">Email support. During months 1–12, the early termination policy applies. After 12 months, cancel any month before renewal.</p>
+            </FaqItem>
           </div>
         </div>
       </section>
@@ -501,16 +570,23 @@ export default function Home() {
       {/* Final CTA / pricing */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
-          <div className="cta-card surface-elevated rounded-xl mx-auto max-w-4xl p-8 md:p-10">
-            <div className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
-              <div>
-                <h3 className="text-2xl md:text-3xl font-semibold text-[var(--foreground)]">Launch Your 5‑Star Website</h3>
-                <p className="mt-2 text-[var(--muted-foreground)]">$0 down • $199/mo • Unlimited edits • 72‑hour go‑live from build</p>
-                <p className="mt-2 text-xs text-[var(--muted-foreground)]">12&nbsp;month minimum commitment. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
+          <SectionHeader as="h2" align="center" className="mb-6">Launch Your 5‑Star Website</SectionHeader>
+          <div className="cta-card surface-elevated rounded-xl mx-auto max-w-4xl p-6 sm:p-8 md:p-10 relative overflow-hidden">
+            <div className="absolute inset-0 beams-overlay" aria-hidden />
+            <div className="relative z-[1] flex flex-col gap-6 md:grid md:grid-cols-[1fr_auto] md:items-center">
+              <div className="text-center md:text-left">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3 sm:mb-4">
+                  <span className="pill"><Clock className="h-4 w-4 text-[hsl(var(--primary))]" aria-hidden /> 72‑hour go‑live</span>
+                  <span className="pill"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" aria-hidden /> Unlimited edits</span>
+                  <span className="pill"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" aria-hidden /> $0 down</span>
+                  <span className="pill"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" aria-hidden /> Managed hosting + SSL</span>
+                </div>
+                <p className="text-[var(--muted-foreground)] text-sm md:text-base">Everything you need to launch and grow—managed hosting, SSL, and domain included. Built for local pros in Acadiana with same‑day email support.</p>
+                <p className="mt-2 text-xs text-[var(--muted-foreground)]">$199/mo • 12‑month minimum. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
               </div>
-              <div className="flex flex-col gap-3 w-full md:max-w-[280px]">
+              <div className="flex flex-col gap-3 w-full md:w-auto md:max-w-[320px]">
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                  Schedule Call
+                  Schedule 15‑min Call
                 </Link>
                 <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                   Start Onboarding
@@ -524,10 +600,17 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="mx-auto w-full max-w-5xl px-6 relative z-10">
-        <div className="flex flex-col items-center justify-between gap-3 py-6 text-sm text-[var(--muted-foreground)] md:flex-row">
-          <p>© {new Date().getFullYear()} Your Agency</p>
-          <Link href="/legal/terms" className="hover:text-[var(--foreground)]">Terms</Link>
+      <footer className="footer-container">
+        <div className="footer-content">
+          <div className="footer-info">
+            <p className="footer-copyright">© {new Date().getFullYear()} Acadiana Web Design</p>
+            <div className="footer-badges">
+              <span>Vet Owned</span>
+              <span>Serving Acadiana</span>
+              <span>Local Developer</span>
+            </div>
+          </div>
+          <Link href="/legal/terms" className="footer-link">Terms</Link>
         </div>
       </footer>
       <FloatingCtaTray />

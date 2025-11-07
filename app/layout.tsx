@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Agency Site Builder",
-  description: "Build your professional website with AI-powered tools",
+  title: "Websites for Local Service Companies in Acadiana | $0 Down, $199/mo",
+  description: "Get a fast, done‑for‑you website in Acadiana. $0 down, $199/mo. 72‑hour go‑live, hosting, domain included, unlimited edit requests in the client portal.",
   icons: {
     icon: "/convex.svg",
   },

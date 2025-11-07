@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-label="Placeholder: Landscaping website homepage">
+  <defs>
+    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6f7fb"/>
+      <stop offset="100%" stop-color="#e9eefc"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#g1)"/>
+  <rect x="80" y="80" width="1440" height="320" rx="20" fill="#dfe7fb"/>
+  <rect x="80" y="440" width="440" height="300" rx="16" fill="#e7ecf9"/>
+  <rect x="560" y="440" width="440" height="300" rx="16" fill="#e7ecf9"/>
+  <rect x="1040" y="440" width="480" height="300" rx="16" fill="#e7ecf9"/>
+  <rect x="80" y="770" width="1040" height="100" rx="12" fill="#e7ecf9"/>
+  <g fill="#9ab57e">
+    <circle cx="1400" cy="840" r="90"/>
+    <rect x="1300" y="860" width="200" height="24" rx="12"/>
+  </g>
+  <text x="120" y="200" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="54" fill="#2b3a55">GreenScape Landscaping</text>
+  <text x="120" y="255" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="28" fill="#4a5a7a">Beautiful lawns, fast. Project preview placeholder.</text>
+</svg>
+
+

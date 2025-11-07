@@ -9,7 +9,7 @@
   --background: 225 38% 95%;
   --foreground: 225 30% 35%;
   /* Hero heading color tuned to the page gradient */
-  --hero-foreground: color-mix(in hsl, hsl(var(--foreground)) 90%, hsl(var(--primary)) 10%);
+  --hero-foreground: 222 72% 28%;
   --card: 225 33% 96%;
   --card-foreground: 225 28% 38%;
   --popover: 225 33% 96%;
@@ -278,6 +278,71 @@ body {
       0 28px 64px -24px var(--glow-amber);
   }
 
+  /* Reusable gradient heading */
+  .heading-gradient {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--foreground)) 70%, hsl(var(--primary)) 30%) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 84%, hsl(var(--accent)) 10%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.30),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 52%);
+  }
+  .dark .heading-gradient {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--foreground)) 84%, hsl(var(--primary)) 16%) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 66%, hsl(var(--foreground)) 34%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.22),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 38%);
+  }
+
+  /* Softer variant for section headers (non-hero) */
+  .heading-gradient-soft {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--foreground)) 84%, hsl(var(--primary)) 16%) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 58%, hsl(var(--foreground)) 42%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    text-shadow:
+      0 8px 20px hsl(var(--primary) / 0.20),
+      0 4px 10px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 44%);
+  }
+  .dark .heading-gradient-soft {
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--foreground)) 90%, hsl(var(--primary)) 10%) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 56%, hsl(var(--foreground)) 44%) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    text-shadow:
+      0 8px 20px hsl(var(--primary) / 0.16),
+      0 4px 10px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 34%);
+  }
   /* Beautiful CTA button (use with inline-flex items-center gap-2) */
   .btn-cta {
     position: relative;
@@ -381,6 +446,43 @@ body {
     background: linear-gradient(180deg, color-mix(in hsl, hsl(var(--primary)) 85%, transparent) 0%, color-mix(in hsl, hsl(var(--primary)) 65%, transparent) 100%);
     color: var(--primary-foreground);
   }
+
+  /* Badge variants */
+  .badge-good {
+    border-color: color-mix(in hsl, hsl(var(--primary)), hsl(var(--border)) 35%);
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--primary)) 75%, transparent) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 55%, transparent) 100%
+    );
+    color: hsl(var(--primary-foreground)) !important;
+  }
+  .badge-bad {
+    border-color: color-mix(in hsl, hsl(var(--destructive)), hsl(var(--border)) 25%);
+    background: linear-gradient(
+      180deg,
+      hsl(var(--destructive) / 0.90) 0%,
+      hsl(var(--destructive) / 0.80) 100%
+    );
+    color: hsl(var(--destructive-foreground)) !important;
+  }
+  .badge-neutral {
+    border-color: var(--border);
+    background: color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 6%);
+    color: hsl(var(--primary-foreground)) !important;
+  }
+  .badge-metric {
+    border-color: color-mix(in hsl, hsl(var(--primary)), hsl(var(--border)) 30%);
+    background: linear-gradient(
+      180deg,
+      color-mix(in hsl, hsl(var(--primary)) 18%, hsl(var(--card))) 0%,
+      color-mix(in hsl, hsl(var(--primary)) 10%, hsl(var(--card))) 100%
+    );
+    color: hsl(var(--primary-foreground)) !important;
+    font-weight: 700;
+  }
+  /* Compact icon in badges */
+  .badge > svg { width: 14px; height: 14px; opacity: 0.95; }
 
   /* Pills - elegant, subtle elevation */
   .pill {
@@ -579,7 +681,7 @@ body {
   .dark .floating-cta__trigger {
     color: hsl(var(--primary));
   }
-  .floating-cta__trigger-icon { width: 24px; height: 24px; }
+  .floating-cta__trigger-icon { width: 32px; height: 32px; }
   .floating-cta__shell[data-expanded="true"] .floating-cta__trigger { display: none; }
   /* Content appears only when expanded */
   .floating-cta__content { display: none; gap: 0.75rem; align-items: center; flex: 1 1 auto; }
@@ -659,7 +761,7 @@ body {
 
   /* Gauge: SVG ring progress style with rounded caps */
   .gauge {
-    --value: 95;
+    --value: 0;
     --size: 160px;
     width: var(--size);
     height: var(--size);
@@ -687,8 +789,7 @@ body {
     stroke-width: 12;
     stroke-linecap: round;
     stroke-dasharray: 465;
-    stroke-dashoffset: calc(465 - (465 * var(--value) / 100));
-    transition: stroke-dashoffset 0.6s ease;
+    /* dashoffset driven by Framer Motion */
   }
   .gauge::after {
     content: "";
@@ -802,6 +903,28 @@ body {
     .compare-table tbody td { padding-top: 0.5rem; }
   }
 
+  /* Comparison table polish: sticky first column on desktop */
+  @media (min-width: 768px) {
+    .compare-table tbody th[scope="row"] {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: inherit; /* allow row styles to flow under sticky cell */
+    }
+    .compare-table thead th:first-child {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      background: color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%);
+    }
+  }
+
+  /* Stronger zebra for readability */
+  .compare-table tbody tr:nth-child(odd) td,
+  .compare-table tbody tr:nth-child(odd) th[scope="row"] {
+    background: color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%);
+  }
+
   /* Offer section: add a tasteful color overlay to the elevated surface */
   #offer .surface-elevated {
     position: relative;
@@ -889,6 +1012,43 @@ body {
     border-left-color: hsl(var(--primary));
   }
 
+  /* How it works timeline */
+  .timeline { position: relative; }
+  .timeline > ol { display: grid; gap: 0.75rem; }
+  .timeline-step { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 0.75rem; align-items: start; }
+  .timeline-step > div { display: contents; }
+  .timeline-connector {
+    grid-column: 1 / 2;
+    margin-left: calc(1.25rem - 1px);
+    width: 2px;
+    height: 1.75rem;
+    background: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 24%);
+    border-radius: 999px;
+  }
+  .step-index {
+    grid-column: 1 / 2;
+    display: grid; place-items: center;
+    width: 2.5rem; height: 2.5rem;
+    border-radius: 999px;
+    /* Always show the stronger hover-like border/background */
+    border: 1px solid color-mix(in hsl, hsl(var(--primary)), hsl(var(--border)) 18%);
+    background: color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 14%);
+    color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 10%);
+    font-weight: 800;
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.25);
+  }
+  .step-body { grid-column: 2 / -1; }
+  .step-title { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; color: var(--foreground); }
+  .step-desc { margin-top: 0.25rem; color: hsl(var(--muted-foreground)); font-size: 0.9rem; }
+
+  /* Hover effect removed (state is always-on) */
+
+  @media (min-width: 768px) {
+    .timeline > ol { gap: 1rem; }
+    .timeline-connector { height: 2rem; }
+    .step-index { width: 2.75rem; height: 2.75rem; }
+  }
+
   /* Performance: light radial wash */
   #offer #plan-performance .surface {
     position: relative;
@@ -913,6 +1073,119 @@ body {
   /* Transparent footer to show page gradient */
   footer {
     background: transparent;
+  }
+
+  /* Footer layout and typography */
+  .footer-container {
+    width: 100%;
+    max-width: 88rem;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+    padding-top: clamp(1.5rem, 3vw, 2rem);
+    padding-bottom: clamp(0.75rem, 1.5vw, 1rem);
+    position: relative;
+    z-index: 10;
+  }
+
+  .footer-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1.25rem, 3vw, 2rem);
+    text-align: center;
+  }
+
+  .footer-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1rem);
+  }
+
+  .footer-copyright {
+    font-size: clamp(0.8rem, 1.8vw, 0.875rem);
+    font-weight: 500;
+    color: color-mix(in hsl, hsl(var(--muted-foreground)), hsl(var(--foreground)) 15%);
+    letter-spacing: 0.01em;
+  }
+
+  .footer-badges {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(0.5rem, 1.5vw, 0.75rem);
+    font-size: clamp(0.7rem, 1.6vw, 0.75rem);
+    color: hsl(var(--muted-foreground));
+  }
+
+  .footer-badges > span {
+    position: relative;
+    padding-inline: clamp(0.5rem, 1.2vw, 0.625rem);
+    font-weight: 500;
+    opacity: 0.85;
+    transition: opacity 0.2s ease, color 0.2s ease;
+  }
+
+  .footer-badges > span:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 0.875rem;
+    background: color-mix(in hsl, hsl(var(--border)), transparent 40%);
+  }
+
+  .footer-badges > span:hover {
+    opacity: 1;
+    color: color-mix(in hsl, hsl(var(--muted-foreground)), hsl(var(--primary)) 20%);
+  }
+
+  .footer-link {
+    font-size: clamp(0.8rem, 1.8vw, 0.875rem);
+    font-weight: 500;
+    color: color-mix(in hsl, hsl(var(--muted-foreground)), hsl(var(--foreground)) 10%);
+    text-decoration: none;
+    transition: color 0.2s ease, transform 0.2s ease;
+    letter-spacing: 0.01em;
+  }
+
+  .footer-link:hover {
+    color: hsl(var(--foreground));
+    transform: translateY(-1px);
+  }
+
+  .footer-link:focus-visible {
+    outline: none;
+    color: hsl(var(--primary));
+  }
+
+  /* Desktop layout */
+  @media (min-width: 640px) {
+    .footer-content {
+      flex-direction: row;
+      justify-content: space-between;
+      text-align: left;
+    }
+
+    .footer-info {
+      align-items: flex-start;
+    }
+
+    .footer-badges {
+      justify-content: flex-start;
+    }
+  }
+
+  /* Extra breathing room on larger screens */
+  @media (min-width: 1024px) {
+    .footer-container {
+      padding-top: clamp(1.75rem, 3vw, 2.25rem);
+      padding-bottom: clamp(0.875rem, 1.5vw, 1.125rem);
+    }
   }
 
   /* Bottom gradient fade-out for smooth transition to footer */
@@ -1038,6 +1311,21 @@ body {
     background: color-mix(in hsl, hsl(var(--primary)) 65%, hsl(var(--secondary)) 35%);
     border-color: color-mix(in hsl, hsl(var(--primary)), hsl(var(--border)) 18%);
   }
+
+  /* Review screenshot header with overlay action */
+  .review-screenshot {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-radius: 0.75rem;
+    border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 16%);
+    background: color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 6%);
+  }
+  .review-screenshot-img {
+    object-fit: cover;
+  }
+  /* Footer row: author left, CTA button right (pinned to bottom via margin-top:auto) */
+  .review-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: auto; }
 
   /* Index pill overlay */
   .reviews-index {
@@ -1275,6 +1563,53 @@ body {
     word-wrap: break-word;
     hyphens: auto;
   }
+}
+
+/* FAQ styles */
+.faq-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+
+.faq-item {
+  border-radius: var(--radius);
+  border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 18%);
+  background: linear-gradient(180deg, hsl(var(--card)) 0%, color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%) 100%);
+  box-shadow:
+    0 18px 44px -28px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
+    inset 0 1px 0 hsl(0 0% 100% / 0.35);
+}
+.faq-item[open] { border-color: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 28%); }
+
+.faq-summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: clamp(0.9rem, 1.5vw + 0.6rem, 1.25rem) clamp(1rem, 1.8vw + 0.5rem, 1.5rem);
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.faq-summary::-webkit-details-marker { display: none; }
+.faq-summary::marker { content: ""; }
+.faq-summary:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px hsl(var(--background)),
+    0 0 0 4px hsl(var(--ring));
+  border-radius: calc(var(--radius) - 4px);
+}
+
+/* Chevron icon shown at end of summary; actual rotation is handled via Framer Motion */
+.faq-chevron { width: 20px; height: 20px; color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 22%); flex: 0 0 auto; }
+
+
+.faq-answer {
+  padding: 0 1.25rem 0;
+}
+.faq-answer p { margin-top: 0.5rem; color: hsl(var(--muted-foreground)); }
+
+@media (prefers-reduced-motion: reduce) {
+  .faq-answer { transition: none; }
 }
 
 /* Custom animations for portal success view */

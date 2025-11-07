@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState, useEffect, UIEvent } from "react";
+import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
@@ -9,6 +10,9 @@ type Review = {
   name: string;
   role: string;
   rating?: number;
+  siteUrl: string;
+  imageSrc: string;
+  imageAlt: string;
 };
 
 interface ReviewsScrollerProps {
@@ -39,6 +43,22 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
       newIndex = Math.max(0, Math.min(items.length - 1, newIndex));
       if (newIndex !== activeIndex) {
         setActiveIndex(newIndex);
+      }
+    },
+    [activeIndex, items.length]
+  );
+
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (items.length === 0) return;
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        const next = Math.min(items.length - 1, activeIndex + 1);
+        if (next !== activeIndex) scrollToIndex(next);
+      } else if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        const prev = Math.max(0, activeIndex - 1);
+        if (prev !== activeIndex) scrollToIndex(prev);
       }
     },
     [activeIndex, items.length]
@@ -77,14 +97,37 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
             key={`${review.name}-${index}`}
             className="review-card surface"
           >
+            <div className="review-screenshot">
+              <a href={review.siteUrl} target="_blank" rel="noopener noreferrer" aria-label={`Visit ${review.name}'s website`} className="block h-full w-full">
+                <Image
+                  src={review.imageSrc}
+                  alt={review.imageAlt}
+                  fill
+                  sizes="(max-width: 768px) 90vw, (max-width: 1200px) 33vw, 360px"
+                  className="review-screenshot-img"
+                  priority={index === 0}
+                />
+              </a>
+            </div>
             <div className="review-rating" aria-hidden>
               {"★".repeat(review.rating ?? 5)}
             </div>
             <blockquote className="review-quote">“{review.quote}”</blockquote>
-            <figcaption className="review-author">
-              {review.name}
-              {review.role ? <span>, {review.role}</span> : null}
-            </figcaption>
+            <div className="review-footer">
+              <figcaption className="review-author">
+                {review.name}
+                {review.role ? <span>, {review.role}</span> : null}
+              </figcaption>
+              <a
+                href={review.siteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
+                aria-label={`Visit ${review.name}'s website`}
+              >
+                Visit site <span aria-hidden>↗</span>
+              </a>
+            </div>
           </figure>
         ))}
       </div>
@@ -94,6 +137,7 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
           <div
             ref={trackRef}
             onScroll={handleScroll}
+            onKeyDown={handleKeyDown}
             className={cn(
               "reviews-track",
               // Center snapping like the example + hide scrollbar on iOS
@@ -109,14 +153,36 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
                 id={`review-card-${index}`}
                 className="review-card review-card-mobile surface"
               >
+                <div className="review-screenshot">
+                  <a href={review.siteUrl} target="_blank" rel="noopener noreferrer" aria-label={`Visit ${review.name}'s website`} className="block h-full w-full">
+                    <Image
+                      src={review.imageSrc}
+                      alt={review.imageAlt}
+                      fill
+                      sizes="90vw"
+                      className="review-screenshot-img"
+                    />
+                  </a>
+                </div>
                 <div className="review-rating" aria-hidden>
                   {"★".repeat(review.rating ?? 5)}
                 </div>
                 <blockquote className="review-quote">“{review.quote}”</blockquote>
-                <figcaption className="review-author">
-                  {review.name}
-                  {review.role ? <span>, {review.role}</span> : null}
-                </figcaption>
+                <div className="review-footer">
+                  <figcaption className="review-author">
+                    {review.name}
+                    {review.role ? <span>, {review.role}</span> : null}
+                  </figcaption>
+                  <a
+                    href={review.siteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
+                    aria-label={`Visit ${review.name}'s website`}
+                  >
+                    Visit site <span aria-hidden>↗</span>
+                  </a>
+                </div>
               </figure>
             ))}
           </div>

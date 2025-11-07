@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-label="Placeholder: Plumbing services website homepage">
+  <defs>
+    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f5f9ff"/>
+      <stop offset="100%" stop-color="#e6f0ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#g2)"/>
+  <rect x="100" y="100" width="1400" height="300" rx="20" fill="#dbe9ff"/>
+  <rect x="100" y="440" width="900" height="280" rx="16" fill="#e8f1ff"/>
+  <rect x="1020" y="440" width="480" height="280" rx="16" fill="#e8f1ff"/>
+  <rect x="100" y="760" width="1200" height="100" rx="12" fill="#e8f1ff"/>
+  <g fill="#2b7cee">
+    <rect x="1240" y="780" width="260" height="40" rx="20"/>
+    <circle cx="1160" cy="800" r="20"/>
+  </g>
+  <text x="140" y="220" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="54" fill="#284e84">ProPlumb Services</text>
+  <text x="140" y="275" font-family="system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-size="28" fill="#4b648f">Emergency repairs and installs. Project preview placeholder.</text>
+</svg>
+
+

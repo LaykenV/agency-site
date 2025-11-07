@@ -82,21 +82,23 @@
 //full plan for lg or mobile
 //landing page plan
 
-build full landing ui 
-fine tune sections w components
-hero copy
+//build full landing ui 
+//fine tune sections w components
+//reviews link w preview
+//faq
+//icon for cta
+//header font / color
+//hero copy
+//vet owned?
 
-header
-hero
-reviews
-table comparison
-faq
-cta
-footer
+//footer
+framer motion on all
+make full ui plan
 
-veteran owned?
+//veteran owned?
 
 full ui / refinement of portal pages
+header and footer on all pages
 
 ux improvements
 
