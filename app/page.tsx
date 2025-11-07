@@ -43,10 +43,10 @@ const REVIEWS = [
 export default function Home() {
   return (
     <main className="w-full flex flex-col relative">
-      <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[56vh] md:h-[68vh] pointer-events-none" />
+      <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[90vh] sm:h-[78vh] md:h-[68vh] pointer-events-none" />
       {/* Hero */}
       <section id="hero" className="anchor-target relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-6 pt-6 md:pt-12 pb-10 md:pb-16">
+        <div className="mx-auto max-w-6xl px-6 pt-2 md:pt-4 pb-10 md:pb-16">
           <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
             A 5‑Star Website for Your Business in Acadiana
           </h1>
@@ -127,7 +127,7 @@ export default function Home() {
                     </ul>
                 </div>
               </div>
-              <div className="p-6 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
+              <div className="pt-6 px-6 pb-4 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
                 <div>
                   <p className="text-lg md:text-xl font-semibold text-[var(--foreground)]">
                     Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
@@ -152,7 +152,10 @@ export default function Home() {
                   </ul>
                 </div>
                 {/* CTAs on large screens inside the card, bottom-right */}
-                <div className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end">
+                <div
+                  data-floating-cta-anchor
+                  className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end"
+                >
                   <div className="flex flex-row items-center gap-3">
                     <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
                       Schedule Call
@@ -162,12 +165,14 @@ export default function Home() {
                     </Link>
                   </div>
                 </div>
-                <div id="cta-hero-desktop-sentinel" aria-hidden />
               </div>
             </div>
             {/* CTAs on mobile below the card */}
             <div className="mt-4 md:hidden">
-              <div className="grid grid-cols-2 gap-3">
+              <div
+                data-floating-cta-anchor
+                className="grid grid-cols-2 gap-3"
+              >
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Schedule Call
                 </Link>
@@ -175,7 +180,6 @@ export default function Home() {
                   Start Onboarding
                 </Link>
               </div>
-              <div id="cta-hero-mobile-sentinel" aria-hidden />
             </div>
           </div>
 
@@ -202,7 +206,7 @@ export default function Home() {
       <section id="offer" className="anchor-target">
         <div className="mx-auto max-w-6xl px-6 py-12 md:py-16">
           <SectionHeader as="h2" className="mb-6">Our Plan</SectionHeader>
-          <div className="surface-elevated rounded-xl p-6 md:p-8">
+          <div className="surface-elevated rounded-xl p-4 sm:p-6 md:p-8 overflow-hidden">
 
             {/* Main grid: narrative + sticky proof */}
             <div className="grid gap-8 md:grid-cols-[1.4fr_1fr]">
@@ -210,7 +214,7 @@ export default function Home() {
               <div className="space-y-8 min-w-0">
                 {/* Steps */}
                 <section id="plan-steps">
-                  <h3 className="text-xl font-semibold text-[var(--foreground)]">How it works</h3>
+                  <h3 className="text-xl font-semibold text-[var(--foreground)] pb-2 md:pb-3">How it works</h3>
                   <HowItWorks />
                 </section>
 
@@ -250,7 +254,7 @@ export default function Home() {
                   </div>
                   {/* Mobile scroller */}
                   <div className="mt-3 md:hidden">
-                  <HorizontalScroller trackClassName="plan-hscroll" cardClassName="plan-hscroll-card surface rounded-lg p-4" ariaLabel="What you get">
+                  <HorizontalScroller trackClassName="hscroll-track--contained" cardClassName="plan-hscroll-card surface rounded-lg p-4" ariaLabel="What you get">
                       <div>
                         <div className="plan-card-title">Build & Performance</div>
                         <ul className="mt-3 list-checks">
@@ -315,7 +319,7 @@ export default function Home() {
 
               {/* Mobile: horizontal scroller for comparison cards */}
               <div className="mt-4 md:hidden">
-                <HorizontalScroller trackClassName="plan-hscroll" cardClassName="plan-hscroll-card surface rounded-lg p-4 plan-compare-card" ariaLabel="Plan comparison">
+                <HorizontalScroller trackClassName="hscroll-track--contained" cardClassName="plan-hscroll-card surface rounded-lg p-4 plan-compare-card" ariaLabel="Plan comparison">
                   <div>
                     <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Price</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">

@@ -12,6 +12,7 @@ export function FloatingCtaTray() {
   const [mounted, setMounted] = useState(false);
   const [visible, setVisible] = useState(false); // hero CTAs scrolled out
   const [expanded, setExpanded] = useState(false);
+  const [anchorVersion, setAnchorVersion] = useState(0);
   const shellRef = useRef<HTMLDivElement | null>(null);
   const firstCtaRef = useRef<HTMLAnchorElement | null>(null);
   const pathname = usePathname();
@@ -19,60 +20,80 @@ export function FloatingCtaTray() {
 
   useEffect(() => setMounted(true), []);
 
+  useEffect(() => {
+    const onResize = () => setAnchorVersion((v) => v + 1);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
   // Close on route change
   useEffect(() => {
     setExpanded(false);
   }, [pathname]);
 
-  // IntersectionObserver for sentinels (robust to hidden/mobile-only elements)
+  // IntersectionObserver for CTA anchors (robust to hidden/mobile-only elements)
   useEffect(() => {
-    const desktop = document.getElementById("cta-hero-desktop-sentinel") as HTMLElement | null;
-    const mobile = document.getElementById("cta-hero-mobile-sentinel") as HTMLElement | null;
+    const anchors = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-floating-cta-anchor]")
+    );
+    const usableAnchors = anchors.filter((anchor) => anchor.offsetParent !== null);
 
-    if (!desktop && !mobile) {
-      // If no sentinels, fallback to always visible after scroll start
-      setVisible(true);
-      return;
+    const isInViewport = (el: HTMLElement) => {
+      const rect = el.getBoundingClientRect();
+      const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      const verticallyInView = rect.top < viewportHeight && rect.bottom > 0;
+      const horizontallyInView = rect.left < viewportWidth && rect.right >= 0;
+      return verticallyInView && horizontallyInView;
+    };
+
+    if (usableAnchors.length === 0) {
+      const onScroll = () => {
+        setVisible(window.scrollY > 160);
+      };
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+      return () => window.removeEventListener("scroll", onScroll);
     }
 
-    const isUsable = (el: HTMLElement | null) => !!el && el.offsetParent !== null;
-    const isInViewport = (el: HTMLElement) => {
-      const r = el.getBoundingClientRect();
-      const vh = window.innerHeight || document.documentElement.clientHeight;
-      const vw = window.innerWidth || document.documentElement.clientWidth;
-      return !(r.bottom <= 0 || r.right <= 0 || r.top >= vh || r.left >= vw);
-    };
-
-    const desktopUsable = isUsable(desktop);
-    const mobileUsable = isUsable(mobile);
-
-    const status = {
-      desktop: desktopUsable && desktop ? isInViewport(desktop) : false,
-      mobile: mobileUsable && mobile ? isInViewport(mobile) : false,
-    };
-
+    const visibility = new Map<HTMLElement, boolean>();
     const recompute = () => {
-      const anyIn = (desktopUsable && status.desktop) || (mobileUsable && status.mobile);
-      setVisible(!anyIn);
+      const anyVisible = usableAnchors.some((anchor) => {
+        if (anchor.offsetParent === null) {
+          visibility.set(anchor, false);
+          return false;
+        }
+        return visibility.get(anchor) ?? false;
+      });
+      setVisible(!anyVisible);
     };
 
-    const onIntersect: IntersectionObserverCallback = (entries) => {
-      for (const e of entries) {
-        if (e.target.id === "cta-hero-desktop-sentinel") status.desktop = e.isIntersecting;
-        if (e.target.id === "cta-hero-mobile-sentinel") status.mobile = e.isIntersecting;
-      }
-      recompute();
-    };
-
-    const io = new IntersectionObserver(onIntersect, { root: null, threshold: 0 });
-    if (desktopUsable && desktop) io.observe(desktop);
-    if (mobileUsable && mobile) io.observe(mobile);
-
-    // Initial computation
+    usableAnchors.forEach((anchor) => {
+      visibility.set(anchor, isInViewport(anchor));
+    });
     recompute();
 
-    return () => io.disconnect();
-  }, []);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        let changed = false;
+        for (const entry of entries) {
+          const target = entry.target as HTMLElement;
+          if (!visibility.has(target)) continue;
+          const inView = entry.isIntersecting || isInViewport(target);
+          if (visibility.get(target) !== inView) {
+            visibility.set(target, inView);
+            changed = true;
+          }
+        }
+        if (changed) recompute();
+      },
+      { root: null, threshold: 0 }
+    );
+
+    usableAnchors.forEach((anchor) => observer.observe(anchor));
+
+    return () => observer.disconnect();
+  }, [anchorVersion]);
 
   // Keyboard ESC and focus management
   useEffect(() => {

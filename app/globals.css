@@ -1394,6 +1394,13 @@ body {
     max-width: none;
   }
 
+  /* Ensure plan mobile cards fit inside contained tracks */
+  .hscroll-track--contained > .plan-hscroll-card {
+    min-width: 100%;
+    width: 100%;
+    max-width: none;
+  }
+
   .hscroll-dots {
     position: relative;
     inset-inline: 0;
