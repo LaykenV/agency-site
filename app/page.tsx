@@ -109,7 +109,7 @@ export default function Home() {
                       animate={reduce ? undefined : "visible"}
                       transition={{ delay: reduce ? 0 : t.cardStart + 0.06 }}
                     />
-                    <div className="absolute inset-0 flex items-center">
+                    <div className="absolute inset-0 flex items-center md:py-2">
                       <motion.ul
                         className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8"
                         role="list"
@@ -194,7 +194,7 @@ export default function Home() {
                       </motion.ul>
                     </div>
                   </div>
-                  <div className="pt-6 px-6 pb-4 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
+                  <div className="pt-6 px-6 pb-4 md:pt-2 md:pb-3 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
                 <div>
                   <motion.p
                     className="text-lg md:text-xl font-semibold text-[var(--foreground)] opacity-0"

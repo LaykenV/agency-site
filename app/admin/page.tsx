@@ -6,6 +6,11 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
 import Link from "next/link";
 import Image from "next/image";
+import { SectionHeader } from "@/components/SectionHeader";
+import { clsx } from "clsx";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -66,50 +71,54 @@ export default function AdminPage() {
       </Unauthenticated>
 
       <Authenticated>
-        <div className="min-h-screen bg-gray-50 p-8">
+        <div className="min-h-screen px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-4xl font-bold text-gray-900 mb-8">Admin</h1>
+            <SectionHeader as="h1" align="left" size="md" className="mb-6 max-w-none mx-0">Admin</SectionHeader>
 
-            {/* Tabs */}
-            <div className="border-b border-gray-200 mb-6">
-              <nav className="flex space-x-8" aria-label="Tabs">
+            {/* Underline Tabs */}
+            <div className="mb-6 border-b border-[hsl(var(--border))]">
+              <nav className="flex gap-4 md:gap-6 overflow-x-auto" aria-label="Tabs">
                 <button
                   onClick={() => setActiveTab("prospects")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={clsx(
+                    "px-1.5 py-3 text-sm font-semibold -mb-px border-b-2",
                     activeTab === "prospects"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "border-[hsl(var(--primary))] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
                 >
                   Prospects
                 </button>
                 <button
                   onClick={() => setActiveTab("projects")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={clsx(
+                    "px-1.5 py-3 text-sm font-semibold -mb-px border-b-2",
                     activeTab === "projects"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "border-[hsl(var(--primary))] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
                 >
                   Projects
                 </button>
                 <button
                   onClick={() => setActiveTab("calls")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={clsx(
+                    "px-1.5 py-3 text-sm font-semibold -mb-px border-b-2",
                     activeTab === "calls"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "border-[hsl(var(--primary))] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
                 >
                   Scheduled Calls
                 </button>
                 <button
                   onClick={() => setActiveTab("requests")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={clsx(
+                    "px-1.5 py-3 text-sm font-semibold -mb-px border-b-2",
                     activeTab === "requests"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                  }`}
+                      ? "border-[hsl(var(--primary))] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
                 >
                   Edit Requests
                 </button>
@@ -268,117 +277,93 @@ function ProspectsTab() {
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-semibold text-gray-900">Prospects</h2>
+        <h2 className="text-2xl font-semibold text-[var(--foreground)]">Prospects</h2>
         <button
           onClick={handleCreateNew}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow-md transition"
+          className="btn-cta px-6 py-2"
         >
           + Add New Prospect
         </button>
       </div>
 
       {showCreateForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[hsl(var(--background)/0.6)] dark:bg-black/50 backdrop-blur-sm">
+          <div className="surface-elevated rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-[var(--foreground)] mb-2">
                 {editingProspectId ? "Edit Prospect" : "Create New Prospect"}
               </h2>
 
-              <div className="grid grid-cols-2 gap-4">
+                  <div className="surface rounded-lg p-4 sm:p-5">
+                    <div className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Name *
-                  </label>
-                  <input
-                    type="text"
+                      <Label className="mb-1 text-[var(--foreground)]">Contact Name *</Label>
+                      <Input
                     value={formData.contactName}
                     onChange={(e) => handleInputChange(e, "contactName")}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email *
-                  </label>
-                  <input
+                      <Label className="mb-1 text-[var(--foreground)]">Email *</Label>
+                      <Input
                     type="email"
                     value={formData.contactEmail}
                     onChange={(e) => handleInputChange(e, "contactEmail")}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company Name *
-                  </label>
-                  <input
-                    type="text"
+                      <Label className="mb-1 text-[var(--foreground)]">Company Name *</Label>
+                      <Input
                     value={formData.companyName}
                     onChange={(e) => handleInputChange(e, "companyName")}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
+                      <Label className="mb-1 text-[var(--foreground)]">Phone</Label>
+                      <Input
                     type="tel"
                     value={formData.phone}
                     onChange={(e) => handleInputChange(e, "phone")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Website
-                  </label>
-                  <input
+                    <div className="md:col-span-2">
+                      <Label className="mb-1 text-[var(--foreground)]">Website</Label>
+                      <Input
                     type="url"
                     value={formData.currentWebsite}
                     onChange={(e) => handleInputChange(e, "currentWebsite")}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Business Description *
-                  </label>
-                  <textarea
+                    <div className="md:col-span-2">
+                      <Label className="mb-1 text-[var(--foreground)]">Business Description *</Label>
+                      <Textarea
                     value={formData.businessDescription}
                     onChange={(e) => handleInputChange(e, "businessDescription")}
                     required
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prospect Notes
-                  </label>
-                  <textarea
+                    <div className="md:col-span-2">
+                      <Label className="mb-1 text-[var(--foreground)]">Prospect Notes</Label>
+                      <Textarea
                     value={formData.prospectNotes}
                     onChange={(e) => handleInputChange(e, "prospectNotes")}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
-                <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Prospect My Notes (private)
-                  </label>
-                  <textarea
+                    <div className="md:col-span-2">
+                      <Label className="mb-1 text-[var(--foreground)]">Prospect My Notes (private)</Label>
+                      <Textarea
                     value={formData.myNotes || ""}
                     onChange={(e) => handleInputChange(e, "myNotes")}
                     rows={2}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="Admin-only notes (not visible to client)"
                   />
                 </div>
+                    </div>
               </div>
 
               <div className="flex gap-3 pt-4 border-t">
@@ -386,14 +371,14 @@ function ProspectsTab() {
                   type="button"
                   onClick={handleCancel}
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-md hover:bg-gray-50 transition disabled:opacity-50"
+                  className="flex-1 btn-outline-strong"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-md transition disabled:opacity-50"
+                  className="flex-1 btn-cta"
                 >
                   {isSubmitting ? "Saving..." : editingProspectId ? "Update" : "Create"}
                 </button>
@@ -406,10 +391,10 @@ function ProspectsTab() {
       <div className="space-y-6">
         {prospects.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No prospects yet</p>
+            <p className="text-[var(--muted-foreground)] text-lg">No prospects yet</p>
             <button
               onClick={handleCreateNew}
-              className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+              className="mt-4 btn-secondary px-4 py-2"
             >
               Create the first one →
             </button>
@@ -418,20 +403,20 @@ function ProspectsTab() {
           prospects.map((prospect) => (
             <div
               key={prospect.sessionId}
-              className="border border-gray-300 rounded-lg p-6 bg-white shadow-sm hover:shadow-md transition"
+              className="surface rounded-xl p-6 transition"
             >
-              <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
+                  <h2 className="text-xl font-semibold text-[var(--foreground)]">
                     {prospect.details.contactName}
                   </h2>
-                  <p className="text-sm text-gray-500">{prospect.sessionId}</p>
+                  <p className="text-sm text-[var(--muted-foreground)]">{prospect.sessionId}</p>
                 </div>
                 <div className="text-right flex gap-2 justify-end">
                   <button
                     onClick={() => handleSendMagicLink(prospect)}
                     disabled={cooldowns[prospect._id] > 0}
-                    className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="btn-cta px-4 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {cooldowns[prospect._id] > 0
                       ? `Wait ${cooldowns[prospect._id]}s`
@@ -439,11 +424,11 @@ function ProspectsTab() {
                   </button>
                   <button
                     onClick={() => handleEdit(prospect)}
-                    className="px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-medium rounded-md transition"
+                    className="btn-secondary px-4 py-2 transition"
                   >
                     Edit
                   </button>
-                  <p className="text-sm font-medium text-gray-700 self-center">
+                  <p className="text-sm font-medium text-[var(--muted-foreground)] self-center">
                     {prospect.planGenerationInProgress
                       ? "🔄 Generating Plan..."
                       : "✓ Ready"}
@@ -451,37 +436,37 @@ function ProspectsTab() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4 border-t pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 border-t pt-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Company</p>
-                  <p className="text-sm text-gray-900">{prospect.details.companyName}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Company</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.companyName}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Email</p>
-                  <p className="text-sm text-gray-900">{prospect.details.contactEmail}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Email</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.contactEmail}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Phone</p>
-                  <p className="text-sm text-gray-900">{prospect.details.phone || "N/A"}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Phone</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.phone || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Website</p>
-                  <p className="text-sm text-gray-900">{prospect.details.currentWebsite || "N/A"}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Website</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.currentWebsite || "N/A"}</p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Business Description</p>
-                  <p className="text-sm text-gray-900">{prospect.details.businessDescription}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Business Description</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.businessDescription}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-4 border-t pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 border-t pt-4">
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Prospect Notes</p>
-                  <p className="text-sm text-gray-900">{prospect.details.prospectNotes || "N/A"}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Prospect Notes</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.prospectNotes || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-gray-500 uppercase">Prospect My Notes (private)</p>
-                  <p className="text-sm text-gray-900">{prospect.details.myNotes || "N/A"}</p>
+                  <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase">Prospect My Notes (private)</p>
+                  <p className="text-sm text-[var(--foreground)]">{prospect.details.myNotes || "N/A"}</p>
                 </div>
               </div>
 
@@ -515,7 +500,7 @@ function ProspectsTab() {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-500 border-t pt-4">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-2 text-xs text-gray-500 border-t pt-4">
                 <div>
                   <p className="font-semibold">Created</p>
                   <p>{new Date(prospect.createdAt).toLocaleDateString()}</p>
@@ -648,28 +633,246 @@ function ProjectsTab() {
 
       {projects.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No projects yet</p>
+          <p className="text-[var(--muted-foreground)] text-lg">No projects yet</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {projects.map((project) => (
+              <div key={project._id} className="surface rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <Link href={`/portal/${project.projectId}`} className="text-[hsl(var(--primary))] font-medium">
+                    {project.projectId.slice(0, 8)}...
+                  </Link>
+                  <select
+                    value={project.projectStatus || ""}
+                    onChange={(e) => handleStatusChange(project._id, e.target.value as typeof PROJECT_STATUSES[number])}
+                    disabled={saving[project._id]}
+                    className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
+                  >
+                    {PROJECT_STATUSES.map(s => (
+                      <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-2 text-sm">
+                  <div className="text-[var(--muted-foreground)]">
+                    <span className="text-[var(--muted-foreground)]">Headline:</span>{" "}
+                    <span className="text-[var(--foreground)]">{project.buildDetails?.headline || "-"}</span>
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[var(--muted-foreground)]">Assets:</span>{" "}
+                    {project.buildDetails?.brandAssetsUploaded ? (
+                      <span className="text-emerald-600">✓</span>
+                    ) : (
+                      <span className="text-[var(--muted-foreground)]">-</span>
+                    )}
+                  </div>
+                  <div className="mt-1">
+                    <span className="text-[var(--muted-foreground)]">Updated:</span>{" "}
+                    <span className="text-[var(--foreground)]">
+                      {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : "-"}
+                    </span>
+                  </div>
+                  {(project.deployment?.liveUrl || project.deployment?.stagingUrl) && (
+                    <div className="mt-1 space-y-1">
+                      {project.deployment?.liveUrl && (() => {
+                        const url = project.deployment.liveUrl!;
+                        const absoluteUrl = url.startsWith("http") ? url : `https://${url}`;
+                        return (
+                          <div>
+                            <span className="text-[var(--muted-foreground)]">Live:</span>{" "}
+                            <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline">
+                              {url.slice(0, 24)}...
+                            </a>
+                          </div>
+                        );
+                      })()}
+                      {project.deployment?.stagingUrl && (() => {
+                        const url = project.deployment.stagingUrl!;
+                        const absoluteUrl = url.startsWith("http") ? url : `https://${url}`;
+                        return (
+                          <div>
+                            <span className="text-[var(--muted-foreground)]">Staging:</span>{" "}
+                            <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline">
+                              {url.slice(0, 24)}...
+                            </a>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-3">
+                  <button
+                    onClick={() => setExpandedProjectId(expandedProjectId === project._id ? null : project._id)}
+                    className="text-[hsl(var(--primary))] text-sm font-medium"
+                  >
+                    {expandedProjectId === project._id ? "Hide" : "Manage"}
+                  </button>
+                </div>
+                {expandedProjectId === project._id && (() => {
+                  const storageIds: Id<"_storage">[] = [];
+                  if (project.buildDetails?.brand?.logoStorageId) {
+                    storageIds.push(project.buildDetails.brand.logoStorageId);
+                  }
+                  if (project.buildDetails?.brand?.imageStorageIds) {
+                    storageIds.push(...project.buildDetails.brand.imageStorageIds);
+                  }
+                  return (
+                    <div className="mt-3 border-t pt-3 space-y-4">
+                      {storageIds.length > 0 && (
+                        <ProjectFileUrlsFetcher projectId={project._id} storageIds={storageIds} />
+                      )}
+                      {project.buildDetails && (
+                        <div>
+                          <label className="block text-sm font-medium text-[var(--foreground)] mb-3">Build Details</label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-2">
+                            <div>
+                              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Headline</p>
+                              <p className="text-sm text-[var(--foreground)]">{project.buildDetails.headline || "-"}</p>
+                            </div>
+                            <div>
+                              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Domain Preference</p>
+                              <p className="text-sm text-[var(--foreground)]">{project.buildDetails.domainPreference || "-"}</p>
+                            </div>
+                          </div>
+                          {(project.buildDetails.brand.logoStorageId || (project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0)) && (
+                            <div className="mt-2">
+                              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-2">Brand Assets</p>
+                              <div className="flex flex-wrap gap-2">
+                                {project.buildDetails.brand.logoStorageId && (() => {
+                                  const logoUrl = cachedFileUrls[project._id]?.[project.buildDetails.brand.logoStorageId!];
+                                  return logoUrl ? (
+                                    <a href={logoUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                      <Image
+                                        src={logoUrl}
+                                        alt="Logo"
+                                        width={64}
+                                        height={64}
+                                        unoptimized
+                                        className="h-16 w-16 object-contain border rounded"
+                                      />
+                                    </a>
+                                  ) : null;
+                                })()}
+                                {project.buildDetails.brand.imageStorageIds?.map((storageId) => {
+                                  const imageUrl = cachedFileUrls[project._id]?.[storageId];
+                                  return imageUrl ? (
+                                    <a key={storageId} href={imageUrl} target="_blank" rel="noopener noreferrer" className="inline-block">
+                                      <Image
+                                        src={imageUrl}
+                                        alt="Brand image"
+                                        width={64}
+                                        height={64}
+                                        unoptimized
+                                        className="h-16 w-16 object-cover rounded border"
+                                      />
+                                    </a>
+                                  ) : null;
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-2">My Notes</label>
+                        <textarea
+                          value={editingNotes[project._id] || project.buildDetails?.myNotes || ""}
+                          onChange={(e) => setEditingNotes(prev => ({ ...prev, [project._id]: e.target.value }))}
+                          rows={4}
+                          className="form-control form-textarea"
+                          placeholder="Admin notes (not visible to client)..."
+                        />
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={() => handleNotesSave(project._id)}
+                            disabled={saving[`notes-${project._id}`]}
+                            className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
+                          >
+                            {saving[`notes-${project._id}`] ? "Saving..." : "Save Notes"}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Deployment</label>
+                        <div className="grid grid-cols-1 gap-3">
+                          <div>
+                            <label className="block text-xs text-[var(--muted-foreground)] mb-1">Live URL</label>
+                            <input
+                              type="url"
+                              value={editingDeployment[project._id]?.liveUrl || project.deployment?.liveUrl || ""}
+                              onChange={(e) => setEditingDeployment(prev => ({
+                                ...prev,
+                                [project._id]: { ...prev[project._id], liveUrl: e.target.value }
+                              }))}
+                              className="form-control text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[var(--muted-foreground)] mb-1">Staging URL</label>
+                            <input
+                              type="url"
+                              value={editingDeployment[project._id]?.stagingUrl || project.deployment?.stagingUrl || ""}
+                              onChange={(e) => setEditingDeployment(prev => ({
+                                ...prev,
+                                [project._id]: { ...prev[project._id], stagingUrl: e.target.value }
+                              }))}
+                              className="form-control text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-[var(--muted-foreground)] mb-1">Vercel Project ID</label>
+                            <input
+                              type="text"
+                              value={editingDeployment[project._id]?.vercelProjectId || project.deployment?.vercelProjectId || ""}
+                              onChange={(e) => setEditingDeployment(prev => ({
+                                ...prev,
+                                [project._id]: { ...prev[project._id], vercelProjectId: e.target.value }
+                              }))}
+                              className="form-control text-sm"
+                            />
+                          </div>
+                        </div>
+                        <div className="mt-2">
+                          <button
+                            onClick={() => handleDeploymentSave(project._id)}
+                            disabled={saving[`deploy-${project._id}`]}
+                            className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
+                          >
+                            {saving[`deploy-${project._id}`] ? "Saving..." : "Save Deployment"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block surface rounded-xl overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Headline</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assets</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deployment</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Updated</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Project</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Headline</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Assets</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Deployment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Updated</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {projects.map((project) => (
                 <Fragment key={project._id}>
-                  <tr className="hover:bg-gray-50">
+                  <tr className="hover:bg-[hsl(var(--primary)/0.06)] dark:hover:bg-[hsl(var(--accent)/0.16)]">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Link href={`/portal/${project.projectId}`} className="text-blue-600 hover:text-blue-800 font-medium">
+                      <Link href={`/portal/${project.projectId}`} className="text-[hsl(var(--primary))] hover:underline font-medium">
                         {project.projectId.slice(0, 8)}...
                       </Link>
                     </td>
@@ -678,7 +881,7 @@ function ProjectsTab() {
                         value={project.projectStatus || ""}
                         onChange={(e) => handleStatusChange(project._id, e.target.value as typeof PROJECT_STATUSES[number])}
                         disabled={saving[project._id]}
-                        className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
                       >
                         {PROJECT_STATUSES.map(s => (
                           <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
@@ -686,7 +889,7 @@ function ProjectsTab() {
                       </select>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm text-gray-900 max-w-xs truncate">
+                      <div className="text-sm text-[var(--foreground)] max-w-xs truncate">
                         {project.buildDetails?.headline || "-"}
                       </div>
                     </td>
@@ -694,7 +897,7 @@ function ProjectsTab() {
                       {project.buildDetails?.brandAssetsUploaded ? (
                         <span className="text-emerald-600">✓</span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-[var(--muted-foreground)]">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-sm">
@@ -705,8 +908,8 @@ function ProjectsTab() {
                             const absoluteUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
                             return (
                               <div>
-                                <span className="text-gray-500">Live:</span>{" "}
-                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                <span className="text-[var(--muted-foreground)]">Live:</span>{" "}
+                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline">
                                   {url.slice(0, 20)}...
                                 </a>
                               </div>
@@ -717,8 +920,8 @@ function ProjectsTab() {
                             const absoluteUrl = url.startsWith('http://') || url.startsWith('https://') ? url : `https://${url}`;
                             return (
                               <div>
-                                <span className="text-gray-500">Staging:</span>{" "}
-                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                <span className="text-[var(--muted-foreground)]">Staging:</span>{" "}
+                                <a href={absoluteUrl} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline">
                                   {url.slice(0, 20)}...
                                 </a>
                               </div>
@@ -726,16 +929,16 @@ function ProjectsTab() {
                           })()}
                         </div>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-[var(--muted-foreground)]">-</span>
                       )}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--muted-foreground)]">
                       {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString() : "-"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => setExpandedProjectId(expandedProjectId === project._id ? null : project._id)}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        className="text-[hsl(var(--primary))] hover:underline text-sm font-medium"
                       >
                         {expandedProjectId === project._id ? "Hide" : "Manage"}
                       </button>
@@ -758,28 +961,28 @@ function ProjectsTab() {
                           <ProjectFileUrlsFetcher projectId={project._id} storageIds={storageIds} />
                         )}
                         <tr>
-                          <td colSpan={7} className="px-6 py-4 bg-gray-50 border-t">
+                          <td colSpan={7} className="px-6 py-4">
                             <div className="space-y-4">
                               {/* Build Details Section */}
                               {project.buildDetails && (
                                 <div>
-                                  <label className="block text-sm font-medium text-gray-700 mb-3">Build Details</label>
+                                  <label className="block text-sm font-medium text-[var(--foreground)] mb-3">Build Details</label>
                                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                                     <div>
-                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Headline</p>
-                                      <p className="text-sm text-gray-900">{project.buildDetails.headline || "-"}</p>
+                                      <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Headline</p>
+                                      <p className="text-sm text-[var(--foreground)]">{project.buildDetails.headline || "-"}</p>
                                     </div>
                                     <div>
-                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Domain Preference</p>
-                                      <p className="text-sm text-gray-900">{project.buildDetails.domainPreference || "-"}</p>
+                                      <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Domain Preference</p>
+                                      <p className="text-sm text-[var(--foreground)]">{project.buildDetails.domainPreference || "-"}</p>
                                     </div>
                                     {project.buildDetails.inspirationLinks && project.buildDetails.inspirationLinks.length > 0 && (
                                       <div className="md:col-span-2">
-                                        <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Inspiration Links</p>
+                                        <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Inspiration Links</p>
                                         <ul className="list-disc list-inside space-y-1">
                                           {project.buildDetails.inspirationLinks.map((link, i) => (
                                             <li key={i} className="text-sm">
-                                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                              <a href={link} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline">
                                                 {link}
                                               </a>
                                             </li>
@@ -788,15 +991,14 @@ function ProjectsTab() {
                                       </div>
                                     )}
                                     <div>
-                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Color Scheme</p>
+                                      <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Color Scheme</p>
                                       <div className="flex gap-2 mt-1">
-                                        <div className="flex items-center gap-1">
                                           <div 
                                             className="w-6 h-6 rounded border border-gray-300"
                                             style={{ backgroundColor: project.buildDetails.brand.colorScheme.primary }}
                                             title={`Primary: ${project.buildDetails.brand.colorScheme.primary}`}
                                           />
-                                          <span className="text-xs text-gray-600">Primary</span>
+                                          <span className="text-xs text-[var(--muted-foreground)]">Primary</span>
                                           <span> {project.buildDetails.brand.colorScheme.primary}</span>
                                         </div>
                                         <div className="flex items-center gap-1">
@@ -805,9 +1007,8 @@ function ProjectsTab() {
                                             style={{ backgroundColor: project.buildDetails.brand.colorScheme.accent }}
                                             title={`Accent: ${project.buildDetails.brand.colorScheme.accent}`}
                                           />
-                                          <span className="text-xs text-gray-600">Accent</span>
+                                          <span className="text-xs text-[var(--muted-foreground)]">Accent</span>
                                           <span> {project.buildDetails.brand.colorScheme.accent}</span>
-                                        </div>
                                       </div>
                                     </div>
                                   </div>
@@ -815,14 +1016,14 @@ function ProjectsTab() {
                                   {/* Brand Assets Section */}
                                   {(project.buildDetails.brand.logoStorageId || (project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0)) && (
                                     <div className="mb-4 border-t pt-4">
-                                      <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Brand Assets</p>
+                                      <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-2">Brand Assets</p>
                                       <div className="flex flex-wrap gap-3">
                                         {/* Logo */}
                                         {project.buildDetails.brand.logoStorageId && (() => {
                                           const logoUrl = cachedFileUrls[project._id]?.[project.buildDetails.brand.logoStorageId!];
                                           return logoUrl ? (
                                             <div>
-                                              <p className="text-xs text-gray-600 mb-1">Logo</p>
+                                              <p className="text-xs text-[var(--muted-foreground)] mb-1">Logo</p>
                                               <a
                                                 href={logoUrl}
                                                 target="_blank"
@@ -835,7 +1036,7 @@ function ProjectsTab() {
                                                   width={80}
                                                   height={80}
                                                   unoptimized
-                                                  className="h-20 w-20 object-contain border border-gray-300 rounded hover:border-blue-500 transition"
+                                                  className="h-20 w-20 object-contain border rounded hover:border-blue-500 transition"
                                                 />
                                               </a>
                                             </div>
@@ -844,7 +1045,7 @@ function ProjectsTab() {
                                         {/* Images */}
                                         {project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0 && (
                                           <div>
-                                            <p className="text-xs text-gray-600 mb-1">Images</p>
+                                            <p className="text-xs text-[var(--muted-foreground)] mb-1">Images</p>
                                             <div className="flex flex-wrap gap-2">
                                               {project.buildDetails.brand.imageStorageIds.map((storageId) => {
                                                 const imageUrl = cachedFileUrls[project._id]?.[storageId];
@@ -862,7 +1063,7 @@ function ProjectsTab() {
                                                       width={80}
                                                       height={80}
                                                       unoptimized
-                                                      className="h-20 w-20 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
+                                                      className="h-20 w-20 object-cover rounded border hover:border-blue-500 transition"
                                                     />
                                                   </a>
                                                 ) : null;
@@ -877,29 +1078,29 @@ function ProjectsTab() {
                               )}
 
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">My Notes</label>
+                                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">My Notes</label>
                                 <textarea
                                   value={editingNotes[project._id] || project.buildDetails?.myNotes || ""}
                                   onChange={(e) => setEditingNotes(prev => ({ ...prev, [project._id]: e.target.value }))}
                                   rows={4}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                  className="form-control form-textarea"
                                   placeholder="Admin notes (not visible to client)..."
                                 />
                                 <div className="mt-2 flex gap-2">
                                   <button
                                     onClick={() => handleNotesSave(project._id)}
                                     disabled={saving[`notes-${project._id}`]}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
+                                    className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
                                   >
                                     {saving[`notes-${project._id}`] ? "Saving..." : "Save Notes"}
                                   </button>
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">Deployment</label>
+                                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Deployment</label>
                                 <div className="grid grid-cols-1 gap-3">
                                   <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Live URL</label>
+                                    <label className="block text-xs text-[var(--muted-foreground)] mb-1">Live URL</label>
                                     <input
                                       type="url"
                                       value={editingDeployment[project._id]?.liveUrl || project.deployment?.liveUrl || ""}
@@ -907,11 +1108,11 @@ function ProjectsTab() {
                                         ...prev,
                                         [project._id]: { ...prev[project._id], liveUrl: e.target.value }
                                       }))}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                      className="form-control text-sm"
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Staging URL</label>
+                                    <label className="block text-xs text-[var(--muted-foreground)] mb-1">Staging URL</label>
                                     <input
                                       type="url"
                                       value={editingDeployment[project._id]?.stagingUrl || project.deployment?.stagingUrl || ""}
@@ -919,11 +1120,11 @@ function ProjectsTab() {
                                         ...prev,
                                         [project._id]: { ...prev[project._id], stagingUrl: e.target.value }
                                       }))}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                      className="form-control text-sm"
                                     />
                                   </div>
                                   <div>
-                                    <label className="block text-xs text-gray-600 mb-1">Vercel Project ID</label>
+                                    <label className="block text-xs text-[var(--muted-foreground)] mb-1">Vercel Project ID</label>
                                     <input
                                       type="text"
                                       value={editingDeployment[project._id]?.vercelProjectId || project.deployment?.vercelProjectId || ""}
@@ -931,7 +1132,7 @@ function ProjectsTab() {
                                         ...prev,
                                         [project._id]: { ...prev[project._id], vercelProjectId: e.target.value }
                                       }))}
-                                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                      className="form-control text-sm"
                                     />
                                   </div>
                                 </div>
@@ -939,7 +1140,7 @@ function ProjectsTab() {
                                   <button
                                     onClick={() => handleDeploymentSave(project._id)}
                                     disabled={saving[`deploy-${project._id}`]}
-                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition disabled:opacity-50"
+                                    className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
                                   >
                                     {saving[`deploy-${project._id}`] ? "Saving..." : "Save Deployment"}
                                   </button>
@@ -956,6 +1157,7 @@ function ProjectsTab() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
@@ -993,31 +1195,31 @@ function ScheduledCallsTab() {
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6">Scheduled Calls</h2>
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Scheduled Calls</h2>
 
       {calls.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No scheduled calls</p>
+          <p className="text-[var(--muted-foreground)] text-lg">No scheduled calls</p>
         </div>
       ) : (
         <div className="space-y-6">
           {sortedDates.map((date) => (
-            <div key={date} className="border border-gray-200 rounded-lg bg-white p-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">{date}</h3>
+            <div key={date} className="surface rounded-xl p-6">
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">{date}</h3>
               <div className="space-y-4">
                 {groupedByDate[date].map((call) => (
-                  <div key={call._id} className="border-l-4 border-blue-500 pl-4 py-2">
+                  <div key={call._id} className="surface-soft border-l-2 border-[hsl(var(--primary))] pl-4 py-2">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium text-gray-900">{call.title || call.type}</p>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="font-medium text-[var(--foreground)]">{call.title || call.type}</p>
+                        <p className="text-sm text-[var(--muted-foreground)] mt-1">
                           {new Date(call.startTime).toLocaleTimeString()} - {new Date(call.endTime).toLocaleTimeString()}
                         </p>
-                        <p className="text-xs text-gray-400 mt-1">
+                        <p className="text-xs text-[var(--muted-foreground)] mt-1">
                           Type: {call.type} • Status: {call.status}
                         </p>
                         {call.meetingUrl && (
-                          <a href={call.meetingUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-sm mt-1 inline-block">
+                          <a href={call.meetingUrl} target="_blank" rel="noopener noreferrer" className="text-[hsl(var(--primary))] hover:underline text-sm mt-1 inline-block">
                             Join Meeting →
                           </a>
                         )}
@@ -1026,13 +1228,13 @@ function ScheduledCallsTab() {
                         {call.projectId && (() => {
                           const projectIdString = getProjectIdString(call.projectId);
                           return projectIdString ? (
-                            <Link href={`/portal/${projectIdString}`} className="text-blue-600 hover:text-blue-800">
+                            <Link href={`/portal/${projectIdString}`} className="text-[hsl(var(--primary))] hover:underline">
                               View Project →
                             </Link>
                           ) : null;
                         })()}
                         {call.prospectId && (
-                          <p className="text-gray-500 mt-1">Prospect ID: {call.prospectId.slice(0, 8)}...</p>
+                          <p className="text-[var(--muted-foreground)] mt-1">Prospect ID: {call.prospectId.slice(0, 8)}...</p>
                         )}
                       </div>
                     </div>
@@ -1166,26 +1368,18 @@ function EditRequestsTab() {
     }
   };
 
-  const getStatusColor = (status: typeof EDIT_REQUEST_STATUSES[number]) => {
-    switch (status) {
-      case "open":
-        return "bg-blue-500/10 text-blue-500";
-      case "in_progress":
-        return "bg-purple-500/10 text-purple-500";
-      case "waiting_on_client":
-        return "bg-amber-500/10 text-amber-500";
-      case "resolved":
-        return "bg-emerald-500/10 text-emerald-500";
-      case "closed":
-        return "bg-gray-500/10 text-gray-500";
-      default:
-        return "bg-gray-500/10 text-gray-500";
-    }
-  };
+  const statusClass = (status: typeof EDIT_REQUEST_STATUSES[number]) =>
+    ({
+      open: "pill text-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.10)]",
+      in_progress: "pill text-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.10)]",
+      waiting_on_client: "pill text-[hsl(var(--brand-amber))] bg-[hsl(var(--brand-amber)/0.10)]",
+      resolved: "pill-success",
+      closed: "pill",
+    }[status]);
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-6">Edit Requests</h2>
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Edit Requests</h2>
 
       {/* Fetch URLs for unique projects */}
       {uniqueProjects.map(({ projectId, storageIds }) => (
@@ -1194,27 +1388,116 @@ function EditRequestsTab() {
 
       {requests.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No edit requests</p>
+          <p className="text-[var(--muted-foreground)] text-lg">No edit requests</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
+        <>
+          {/* Mobile cards */}
+          <div className="md:hidden space-y-3">
+            {requests.map((request) => (
+              <div key={request._id} className="surface rounded-xl p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-medium text-[var(--foreground)]">{request.title}</div>
+                    <div className="text-xs text-[var(--muted-foreground)] mt-1">{new Date(request.createdAt).toLocaleDateString()}</div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <select
+                      value={request.status}
+                      onChange={(e) => handleStatusChange(request._id, e.target.value as typeof EDIT_REQUEST_STATUSES[number])}
+                      disabled={saving[request._id]}
+                      className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
+                    >
+                      {EDIT_REQUEST_STATUSES.map(s => (
+                        <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                      ))}
+                    </select>
+                    <select
+                      value={request.priority}
+                      onChange={(e) => handlePriorityChange(request._id, e.target.value as typeof PRIORITIES[number])}
+                      disabled={saving[`priority-${request._id}`]}
+                      className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
+                    >
+                      {PRIORITIES.map(p => (
+                        <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {request.details && (
+                  <div className="mt-2 text-sm text-[var(--muted-foreground)]">{request.details}</div>
+                )}
+                {request.attachments && request.attachments.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {request.attachments.slice(0, 3).map((storageId) => {
+                      const url = cachedFileUrls[request.projectId]?.[storageId];
+                      if (!url) return null;
+                      return (
+                        <a
+                          key={storageId}
+                          href={url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-block"
+                        >
+                          <Image
+                            src={url}
+                            alt="Attachment"
+                            width={48}
+                            height={48}
+                            unoptimized
+                            className="h-12 w-12 object-cover rounded border"
+                          />
+                        </a>
+                      );
+                    })}
+                    {request.attachments.length > 3 && (
+                      <span className="text-xs text-[var(--muted-foreground)] self-center">
+                        +{request.attachments.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                )}
+                <div className="mt-3 text-sm">
+                  {(() => {
+                    const projectIdString = getProjectIdString(request.projectId);
+                    return projectIdString ? (
+                      <Link href={`/portal/${projectIdString}`} className="text-[hsl(var(--primary))] hover:underline">
+                        View Project →
+                      </Link>
+                    ) : (
+                      <span className="text-[var(--muted-foreground)]">No project link</span>
+                    );
+                  })()}
+                </div>
+                <div className="mt-3">
+                  <span className={statusClass(request.status)}>
+                    {request.status.replace(/_/g, " ")}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+        <div className="hidden md:block surface rounded-xl overflow-x-auto">
+          <table className="min-w-full">
+            <thead className="">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Priority</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Priority</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Project</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Created</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {requests.map((request) => (
-                <tr key={request._id} className="hover:bg-gray-50">
+                <tr key={request._id} className="hover:bg-[hsl(var(--primary)/0.06)] dark:hover:bg-[hsl(var(--accent)/0.16)]">
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{request.title}</div>
-                    <div className="text-xs text-gray-500 mt-1 max-w-md truncate">{request.details}</div>
+                    <div className="text-sm font-medium text-[var(--foreground)]">{request.title}</div>
+                    <div className="text-xs text-[var(--muted-foreground)] mt-1 max-w-md truncate">{request.details}</div>
                     {/* Attachment thumbnails */}
                     {request.attachments && request.attachments.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-2">
@@ -1235,13 +1518,13 @@ function EditRequestsTab() {
                                 width={48}
                                 height={48}
                                 unoptimized
-                                className="h-12 w-12 object-cover rounded border border-gray-300 hover:border-blue-500 transition"
+                                className="h-12 w-12 object-cover rounded border hover:border-blue-500 transition"
                               />
                             </a>
                           );
                         })}
                         {request.attachments.length > 3 && (
-                          <span className="text-xs text-gray-500 self-center">
+                          <span className="text-xs text-[var(--muted-foreground)] self-center">
                             +{request.attachments.length - 3} more
                           </span>
                         )}
@@ -1253,7 +1536,7 @@ function EditRequestsTab() {
                       value={request.status}
                       onChange={(e) => handleStatusChange(request._id, e.target.value as typeof EDIT_REQUEST_STATUSES[number])}
                       disabled={saving[request._id]}
-                      className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
                     >
                       {EDIT_REQUEST_STATUSES.map(s => (
                         <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
@@ -1265,7 +1548,7 @@ function EditRequestsTab() {
                       value={request.priority}
                       onChange={(e) => handlePriorityChange(request._id, e.target.value as typeof PRIORITIES[number])}
                       disabled={saving[`priority-${request._id}`]}
-                      className="text-sm border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      className="form-control !h-8 !py-1 !text-sm disabled:opacity-50"
                     >
                       {PRIORITIES.map(p => (
                         <option key={p} value={p}>{p.charAt(0).toUpperCase() + p.slice(1)}</option>
@@ -1276,19 +1559,19 @@ function EditRequestsTab() {
                     {(() => {
                       const projectIdString = getProjectIdString(request.projectId);
                       return projectIdString ? (
-                        <Link href={`/portal/${projectIdString}`} className="text-blue-600 hover:text-blue-800 text-sm">
+                        <Link href={`/portal/${projectIdString}`} className="text-[hsl(var(--primary))] hover:underline text-sm">
                           View Project →
                         </Link>
                       ) : (
-                        <span className="text-gray-400 text-sm">-</span>
+                        <span className="text-[var(--muted-foreground)] text-sm">-</span>
                       );
                     })()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--muted-foreground)]">
                     {new Date(request.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(request.status)}`}>
+                    <span className={statusClass(request.status)}>
                       {request.status.replace(/_/g, " ")}
                     </span>
                   </td>
@@ -1297,6 +1580,7 @@ function EditRequestsTab() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

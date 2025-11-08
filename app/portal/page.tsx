@@ -13,6 +13,9 @@ import { CheckCircle2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
 const MAGIC_LINK_STORAGE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -185,71 +188,33 @@ function UnauthenticatedView() {
   // Success view - replaces entire form
   if (status === "sent" && submittedEmail) {
     return (
-      <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-6 text-[var(--foreground)]">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--card)_0%,transparent_60%)] opacity-60" />
-        <div className="relative z-10 w-full max-w-lg rounded-3xl border border-[var(--border)] bg-[var(--card)]/80 p-10 shadow-xl backdrop-blur animate-[fadeIn_0.3s_ease-in]">
-          <div className="mb-8 text-center">
-            <div className="mb-6 flex justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-[var(--primary)]/20 animate-ping" />
-                <CheckCircle2 className="relative h-16 w-16 text-[var(--primary)] animate-[zoomIn_0.5s_ease-out]" />
-              </div>
-            </div>
-            <p className="text-xs uppercase tracking-[0.35em] text-[var(--secondary)]">
+      <div className="min-h-dvh flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
+        <div className="w-full max-w-lg surface rounded-3xl p-6 sm:p-8" role="status" aria-live="polite">
+          <div className="mb-6 text-center">
+            <CheckCircle2 className="mx-auto h-12 w-12 text-[hsl(var(--primary))]" />
+            <p className="mt-2 text-xs uppercase tracking-[0.35em] text-[var(--muted-foreground)]">
               Magic Link Sent
             </p>
-            <h1 className="mt-3 text-3xl font-semibold">Check your inbox</h1>
-            <p className="mt-3 text-sm text-[var(--secondary)]">
+            <h1 className="mt-2 text-xl md:text-2xl font-semibold">Check your inbox</h1>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
               We&apos;ve sent a secure sign-in link to
             </p>
-            <p className="mt-2 text-base font-medium text-[var(--foreground)]">
-              {submittedEmail}
-            </p>
+            <p className="mt-1 text-base font-medium">{submittedEmail}</p>
           </div>
 
-          <div className="space-y-4">
-            {errorMessage && (
-              <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-600 dark:text-red-400">
-                {errorMessage}
-              </div>
-            )}
-
-            <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)]/40 p-4 text-sm text-[var(--secondary)]">
-              <p className="font-medium text-[var(--foreground)] mb-2">
-                What&apos;s next?
-              </p>
-              <ul className="space-y-1.5 text-xs">
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5">•</span>
-                  <span>Check your inbox for an email from us</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5">•</span>
-                  <span>Click the sign-in link in the email</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-0.5">•</span>
-                  <span>Don&apos;t see it? Check your spam folder</span>
-                </li>
-              </ul>
+          {errorMessage && (
+            <div className="mb-4 info-banner text-sm" role="alert">
+              {errorMessage}
             </div>
+          )}
 
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleResend}
-                disabled={isResending}
-                className="flex w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isResending ? "Sending..." : "Resend email"}
-              </button>
-              <button
-                onClick={handleTryDifferentEmail}
-                disabled={isResending}
-                className="flex w-full items-center justify-center rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-sm font-medium text-[var(--secondary)] transition hover:border-[var(--primary)] hover:text-[var(--primary)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Try different email
-              </button>
-            </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Button onClick={handleResend} disabled={isResending} className="w-full sm:flex-1">
+              {isResending ? "Sending..." : "Resend email"}
+            </Button>
+            <Button onClick={handleTryDifferentEmail} variant="outline" disabled={isResending} className="w-full sm:flex-1">
+              Try different email
+            </Button>
           </div>
         </div>
       </div>
@@ -258,62 +223,51 @@ function UnauthenticatedView() {
 
   // Login form view
   return (
-    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden bg-[var(--background)] px-6 text-[var(--foreground)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--card)_0%,transparent_60%)] opacity-60" />
-      <div className="relative z-10 w-full max-w-lg rounded-3xl border border-[var(--border)] bg-[var(--card)]/80 p-10 shadow-xl backdrop-blur">
-        <div className="mb-8 text-center">
-          <p className="text-xs uppercase tracking-[0.35em] text-[var(--secondary)]">
+    <div className="min-h-dvh flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
+      <div className="w-full max-w-lg surface rounded-xl p-6 sm:p-8">
+        <div className="mb-6 text-center">
+          <p className="text-xs uppercase tracking-[0.35em] text-[var(--muted-foreground)]">
             Client Portal Access
           </p>
-          <h1 className="mt-3 text-3xl font-semibold">Already a client?</h1>
-          <p className="mt-3 text-sm text-[var(--secondary)]">
+          <h1 className="mt-2 text-xl md:text-2xl font-semibold">Already a client?</h1>
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
             Enter the email you use with us and we&apos;ll send a secure sign-in link.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm font-medium text-[var(--secondary)]">
-            Email address
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="portal-email">Email address</Label>
+            <Input
+              id="portal-email"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="mt-2 w-full rounded-xl border border-[var(--border)] bg-[var(--background)]/90 px-4 py-3 text-[var(--foreground)] shadow-inner focus:border-[var(--primary)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40"
               placeholder="you@company.com"
               required
               disabled={status === "loading"}
             />
-          </label>
+          </div>
 
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="flex w-full items-center justify-center rounded-xl bg-[var(--primary)] px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-[var(--primary)]/30 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <Button type="submit" disabled={status === "loading"} className="w-full">
             {status === "loading" ? "Sending magic link..." : "Send magic link"}
-          </button>
+          </Button>
         </form>
 
         {statusCopy && (
-          <div className="mt-6 rounded-xl border border-[var(--border)] bg-[var(--muted)]/40 p-4 text-sm text-[var(--secondary)]">
+          <div role="status" aria-live="polite" className="mt-6 info-banner text-sm">
             {statusCopy}
           </div>
         )}
 
         {status === "unknown" && (
-          <div className="mt-6 flex flex-col gap-3 text-sm text-[var(--secondary)]">
-            <a
-              href="/onboarding"
-              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-center font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
-              Start onboarding
-            </a>
-            <a
-              href={ONBOARDING_CAL_LINK}
-              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 text-center font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
-              Schedule a call
-            </a>
+          <div className="mt-6 grid gap-2 sm:grid-cols-2">
+            <Button asChild variant="outline">
+              <a href="/onboarding">Start onboarding</a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={ONBOARDING_CAL_LINK}>Schedule a call</a>
+            </Button>
           </div>
         )}
       </div>
@@ -387,29 +341,19 @@ function AuthenticatedPortalRedirect() {
 
   if (showFallback) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
-        <div className="max-w-md text-center space-y-4">
-          <h1 className="text-2xl font-semibold">Welcome to your portal</h1>
-          <p className="text-sm text-[var(--secondary)]">
+      <section className="mx-auto max-w-6xl px-6 py-10 md:py-12">
+        <div className="surface rounded-xl p-6">
+          <h1 className="text-xl md:text-2xl font-semibold text-[var(--foreground)]">Welcome to your portal</h1>
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
             We couldn&apos;t find an active project yet. If you recently signed up, check your email for your
             agreement link or start the onboarding flow below.
           </p>
-          <div className="flex flex-col gap-3 text-sm">
-            <a
-              href="/onboarding"
-              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
-              Start onboarding
-            </a>
-            <a
-              href="https://cal.com/acadianawebdesign"
-              className="rounded-xl border border-[var(--border)] bg-[var(--background)] px-4 py-2 font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-            >
-              Schedule a call
-            </a>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+            <Button asChild variant="outline"><a href="/onboarding">Start onboarding</a></Button>
+            <Button asChild variant="outline"><a href="https://cal.com/acadianawebdesign">Schedule a call</a></Button>
           </div>
         </div>
-      </div>
+      </section>
     );
   }
 
