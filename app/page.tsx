@@ -17,7 +17,7 @@ import {
   motionDefaults,
   containerStagger,
   fadeUp,
-  scaleCard,
+  floatCard,
   popIn,
   fadeIn,
   SplitWords,
@@ -89,10 +89,10 @@ export default function Home() {
               <div className="mt-8 md:mt-12">
                 <motion.div
                   className="surface rounded-xl overflow-hidden motion-will-change"
-                  variants={scaleCard}
+                  variants={floatCard}
                   initial={reduce ? false : "hidden"}
                   whileInView={reduce ? undefined : "visible"}
-                  transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
+                  custom={reduce ? 0 : t.cardStart}
                   viewport={{ once: true, amount: 0.20 }}
                   onAnimationComplete={() => {
                     if (!reduce) {

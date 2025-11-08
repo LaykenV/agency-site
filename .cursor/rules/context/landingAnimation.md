@@ -5,7 +5,7 @@ This documents the hero animation we implemented with Framer Motion. It’s tast
 Summary
 - Header animates from the bottom with a single gradient heading that reveals word-by-word (50 ms stagger, ~420 ms per word), using the `.heading-word` utility for a synced glow.
 - Hero card lands ~20ms after the final word finishes animating, so it follows immediately without overlap.
-- Card frame scales in first (`scaleCard` variant), then icon trio animates in with stagger (`containerStagger` + `popIn`).
+- Card frame floats in first (`floatCard` variant) with a soft spring and brief de‑blur, then icon trio animates in with stagger (`containerStagger` + `popIn`).
 - Supporting copy, star rating, plan bullets, and CTAs wait for `cardContentVisible` state (set after icon animation completes) before revealing.
 - State management: `cardFrameDone` tracks card scale completion, `cardContentVisible` gates content reveal.
 - Overlay fades shortly after the card lands (non‑destructive).
@@ -28,7 +28,7 @@ import {
   motionDefaults,
   containerStagger,
   fadeUp,
-  scaleCard,
+  floatCard,
   popIn,
   fadeIn,
   SplitWords,
@@ -57,7 +57,7 @@ export default function Home() {
 Header: word‑by‑word (reduced‑motion fallback is static)
 
 The `SplitWords` component renders a single gradient heading and relies on the `.heading-word` helper (pseudo-element glow) for each word. Word-by-word animation is driven by a 50 ms stagger and ~420 ms word duration so the glow and text move in lockstep.
-The hero card sequencing runs in phases: (1) card frame scales in, (2) icon trio animates sequentially, (3) supporting content and star rating fade up once the icons complete.
+The hero card sequencing runs in phases: (1) card frame floats in on a spring, (2) icon trio animates sequentially, (3) supporting content and star rating fade up once the icons complete.
 
 ```64:77:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 {reduce ? (
@@ -77,10 +77,10 @@ Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
 ```90:102:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 <motion.div
   className="surface rounded-xl overflow-hidden motion-will-change"
-  variants={scaleCard}
+  variants={floatCard}
   initial={reduce ? false : "hidden"}
   whileInView={reduce ? undefined : "visible"}
-  transition={{ ...motionDefaults.transition, delay: reduce ? 0 : t.cardStart }}
+  custom={reduce ? 0 : t.cardStart}
   viewport={{ once: true, amount: 0.20 }}
   onAnimationComplete={() => {
     if (!reduce) {
@@ -162,7 +162,7 @@ export const containerStagger: Variants = {
 The component renders one `motion.h1` and maps words to `.heading-word` spans. The pseudo-element on `.heading-word` recreates the glow, so both glow and gradient share the same animation timeline, while the 50 ms stagger and ~420 ms word duration define the pacing.
 
 Hero card choreography (within `app/page.tsx`):
-1. Scale animation (`scaleCard`) plays on the card shell.
+1. Float-in spring (`floatCard`) plays on the card shell (y+scale with soft overshoot and blur → crisp).
 2. `cardFrameDone` flips once the scale animation completes (via `onAnimationComplete`), triggering the icon trio list to animate (`containerStagger` + `popIn`).
 3. When the icon list finishes (via its `onAnimationComplete`), `cardContentVisible` flips, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, and CTAs.
 4. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
@@ -190,6 +190,7 @@ Constants used:
 
 Behavioral notes
 - Transforms/opacity only; no gradient stop animation. We fade a child overlay, preserving gradients [[memory:10223702]].
+- Card uses a spring-based float-in (y+scale) with a light de‑blur for an airy feel.
 - Hero uses `viewport={{ once: true, amount: 0.20 }}` to reveal only once.
 - Card frame animation completes first, then `cardFrameDone` triggers icon trio animation.
 - Icons and supporting content are gated by `cardContentVisible` so they only appear after the icon animation completes.

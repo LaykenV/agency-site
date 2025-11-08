@@ -45,6 +45,24 @@ export const scaleCard: Variants = {
   visible: { opacity: 1, scale: 1 },
 };
 
+export const floatCard: Variants = {
+  hidden: { opacity: 0, y: 22, scale: 0.985, filter: "blur(8px)" },
+  visible: (delay: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    filter: "blur(0px)",
+    transition: {
+      type: "spring",
+      damping: 18,
+      stiffness: 160,
+      mass: 0.9,
+      delay,
+      opacity: { duration: 0.2, delay },
+    },
+  }),
+};
+
 export const popIn: Variants = {
   hidden: { opacity: 0, scale: 0.9, y: 6 },
   visible: { opacity: 1, scale: 1, y: 0 },
