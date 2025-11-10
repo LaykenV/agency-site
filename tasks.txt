@@ -94,18 +94,27 @@
 //footer
 //small phone?
 //framer motion on all
-make full ui plan
+//make full ui plan
 
 //veteran owned?
 
+subtext and move up cta button
+bigger gradient
+better text color and apply to name and theme toggle
+card?
+new style for schedule call button
+
 full ui / refinement of portal pages
 header and footer on all pages
+redirect to / messes up animation
 
 ux improvements
 
 email? voip?
 
 test everything
+
+template
 
 google business profile
 live stripe

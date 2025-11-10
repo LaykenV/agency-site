@@ -247,14 +247,9 @@ export default function Home() {
                   animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
                   transition={{ delay: reduce ? 0 : 0.36 }}
                 >
-                  <div className="flex flex-row items-center gap-3">
-                    <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                      Schedule Call
-                    </Link>
-                    <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                      Start Onboarding
-                    </Link>
-                  </div>
+                  <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
+                    Schedule Call
+                  </Link>
                 </motion.div>
                   </div>
                 </motion.div>
@@ -265,13 +260,9 @@ export default function Home() {
             <div className="mt-4 md:hidden">
               <div
                 data-floating-cta-anchor
-                className="grid grid-cols-2 gap-3"
               >
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
                   Schedule Call
-                </Link>
-                <Link href="/onboarding?utm_source=lp&cta=hero" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
-                  Start Onboarding
                 </Link>
               </div>
             </div>
@@ -681,11 +672,11 @@ export default function Home() {
                 <p className="mt-2 text-xs text-[var(--muted-foreground)]">$199/mo • 12‑month minimum. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline">Terms</Link>.</p>
               </div>
               <div className="flex flex-col gap-3 w-full md:w-auto md:max-w-[320px]">
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                  Schedule Call
+                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
+                  Get Your Tailored Plan
                 </Link>
-                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                  Start Onboarding
+                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
+                  Schedule Call
                 </Link>
               </div>
             </div>

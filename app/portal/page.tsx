@@ -263,7 +263,7 @@ function UnauthenticatedView() {
         {status === "unknown" && (
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <Button asChild variant="outline">
-              <a href="/onboarding">Start onboarding</a>
+              <a href="/onboarding">Get Your Tailored Plan</a>
             </Button>
             <Button asChild variant="outline">
               <a href={ONBOARDING_CAL_LINK}>Schedule a call</a>
