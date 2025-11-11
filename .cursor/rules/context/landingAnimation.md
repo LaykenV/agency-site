@@ -4,12 +4,14 @@ This documents the hero animation we implemented with Framer Motion. It’s tast
 
 Summary
 - Header animates from the bottom with a single gradient heading that reveals word-by-word (50 ms stagger, ~420 ms per word), using the `.heading-word` utility for a synced glow.
-- Hero card lands ~20ms after the final word finishes animating, so it follows immediately without overlap.
+- Hero subtext fades up after the heading completes.
+- Hero CTA fades up after the subtext.
+- The card begins only after the CTA has finished animating, then all card content follows.
 - Card frame floats in first (`floatCard` variant) with a soft spring and brief de‑blur, then icon trio animates in with stagger (`containerStagger` + `popIn`).
 - Supporting copy, star rating, plan bullets, and CTAs wait for `cardContentVisible` state (set after icon animation completes) before revealing.
 - State management: `cardFrameDone` tracks card scale completion, `cardContentVisible` gates content reveal.
 - Overlay fades shortly after the card lands (non‑destructive).
-- Icons, supporting copy, and bullets stagger in; CTAs animate last.
+- Icons, supporting copy, and bullets stagger in.
 - Motion respects reduced‑motion; hero/card viewport amount is 0.20 and runs once.
 
 Dependencies
@@ -161,11 +163,14 @@ export const containerStagger: Variants = {
 
 The component renders one `motion.h1` and maps words to `.heading-word` spans. The pseudo-element on `.heading-word` recreates the glow, so both glow and gradient share the same animation timeline, while the 50 ms stagger and ~420 ms word duration define the pacing.
 
-Hero card choreography (within `app/page.tsx`):
-1. Float-in spring (`floatCard`) plays on the card shell (y+scale with soft overshoot and blur → crisp).
-2. `cardFrameDone` flips once the scale animation completes (via `onAnimationComplete`), triggering the icon trio list to animate (`containerStagger` + `popIn`).
-3. When the icon list finishes (via its `onAnimationComplete`), `cardContentVisible` flips, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, and CTAs.
-4. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
+Hero choreography and order (within `app/page.tsx`):
+1. Heading reveals word‑by‑word.
+2. Hero subtext fades up.
+3. Hero CTA fades up.
+4. Float-in spring (`floatCard`) plays on the card shell after the CTA completes (y+scale with soft overshoot and blur → crisp).
+5. `cardFrameDone` flips once the card scale animation completes (via `onAnimationComplete`), triggering the icon trio list to animate (`containerStagger` + `popIn`).
+6. When the icon list finishes (via its `onAnimationComplete`), `cardContentVisible` flips, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, etc.
+7. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
 
 ```101:112:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
 export function useHeroTimings(headerText: string) {
@@ -173,7 +178,13 @@ export function useHeroTimings(headerText: string) {
   const wordsCompleteAt = WORD_DELAY_OFFSET + (wordCount - 1) * WORD_STAGGER + WORD_DURATION;
   const headerDuration = wordsCompleteAt + WORD_PAD;
 
-  const cardStart = wordsCompleteAt + 0.02;
+  // Ensure visible order: h1 -> subtext -> CTA -> card -> card content
+  const HERO_SUBTEXT_DELAY = 0.10;
+  const HERO_CTA_DELAY = 0.20;
+  const AFTER_CTA_PAD = 0.04; // buffer to let CTA settle before card begins
+
+  // Start card after CTA completes its fadeUp transition
+  const cardStart = headerDuration + HERO_CTA_DELAY + motionDefaults.transition.duration + AFTER_CTA_PAD;
   const cardDuration = 0.52;
   const cardContentStart = cardStart + cardDuration + 0.06;
   const ctaStart = cardContentStart + 0.36;
@@ -192,6 +203,7 @@ Behavioral notes
 - Transforms/opacity only; no gradient stop animation. We fade a child overlay, preserving gradients [[memory:10223702]].
 - Card uses a spring-based float-in (y+scale) with a light de‑blur for an airy feel.
 - Hero uses `viewport={{ once: true, amount: 0.20 }}` to reveal only once.
+- Order is: heading → subtext → CTA → card → card content.
 - Card frame animation completes first, then `cardFrameDone` triggers icon trio animation.
 - Icons and supporting content are gated by `cardContentVisible` so they only appear after the icon animation completes.
 - Reduced‑motion short‑circuits animations: both state variables initialize to `true` when `reduce` is true, skipping all animations.

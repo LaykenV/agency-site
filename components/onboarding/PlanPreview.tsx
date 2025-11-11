@@ -16,7 +16,7 @@ export function PlanPreview({ headline, summary, highlights, nextSteps }: PlanPr
     <div className="surface rounded-2xl p-6 md:p-8">
       <div className="flex flex-col gap-2">
         <span className="section-overline text-[var(--muted-foreground)]">Your plan</span>
-        <h2 className="heading-gradient-soft text-2xl font-semibold">{headline}</h2>
+        <h2 className="hero-title text-[hsl(var(--hero-foreground))] text-2xl font-semibold">{headline}</h2>
         <p className="text-sm text-[var(--muted-foreground)]">{summary}</p>
       </div>
 

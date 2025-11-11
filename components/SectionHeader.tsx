@@ -27,7 +27,7 @@ export function SectionHeader({
     as,
     {
       className: clsx(
-        "font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient-soft",
+        "font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] hero-title text-[hsl(var(--hero-foreground))]",
         sizeClasses,
         alignClasses,
         className

@@ -71,7 +71,7 @@ export const AnimatedThemeToggler = ({ className, duration = 400 }: AnimatedThem
   // Prevent flash during SSR
   if (!mounted) {
     return (
-      <button ref={buttonRef} className={cn('btn-icon', className)} aria-label="Toggle theme">
+      <button ref={buttonRef} className={cn('btn-icon text-[hsl(var(--hero-foreground))] hover:text-[hsl(var(--hero-foreground))]', className)} aria-label="Toggle theme">
         <Sun />
       </button>
     )
@@ -80,7 +80,7 @@ export const AnimatedThemeToggler = ({ className, duration = 400 }: AnimatedThem
   const isDark = resolvedTheme === 'dark'
 
   return (
-    <button ref={buttonRef} onClick={toggleTheme} className={cn('btn-icon', className)} aria-label="Toggle theme">
+    <button ref={buttonRef} onClick={toggleTheme} className={cn('btn-icon text-[hsl(var(--hero-foreground))] hover:text-[hsl(var(--hero-foreground))]', className)} aria-label="Toggle theme">
       {isDark ? <Sun /> : <Moon />}
     </button>
   )

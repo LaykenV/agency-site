@@ -55,10 +55,41 @@
 
   /* Page backdrop gradients (light) */
   --gradient-page:
-    linear-gradient(180deg, hsl(var(--primary) / 0.26) 0%, transparent 36%),
-    radial-gradient(1800px 760px at 50% -10%, hsl(var(--primary) / 0.38) 0%, transparent 68%),
-    radial-gradient(1500px 640px at 0% 0%, hsl(var(--primary) / 0.34) 0%, transparent 68%),
-    radial-gradient(1500px 640px at 100% 0%, hsl(var(--accent) / 0.30) 0%, transparent 68%);
+    /* Center-top wash with smooth falloff to avoid banding */
+    radial-gradient(
+      1600px 1100px at 50% -18%,
+      hsl(var(--primary) / 0.42) 0%,
+      hsl(var(--primary) / 0.24) 42%,
+      hsl(var(--primary) / 0.10) 74%,
+      transparent 90%
+    ),
+    /* Gentle vertical carry to extend down the middle */
+    linear-gradient(
+      180deg,
+      hsl(var(--primary) / 0.20) 0%,
+      hsl(var(--primary) / 0.12) 24%,
+      transparent 62%
+    ),
+    /* Deep center emphasis that reaches further down the hero */
+    radial-gradient(
+      1100px 1500px at 50% 0%,
+      hsl(var(--accent) / 0.20) 0%,
+      hsl(var(--accent) / 0.12) 55%,
+      transparent 92%
+    ),
+    /* Side washes with softer falloff */
+    radial-gradient(
+      1600px 760px at 0% 0%,
+      hsl(var(--primary) / 0.20) 0%,
+      hsl(var(--primary) / 0.12) 64%,
+      transparent 92%
+    ),
+    radial-gradient(
+      1600px 760px at 100% 0%,
+      hsl(var(--accent) / 0.18) 0%,
+      hsl(var(--accent) / 0.10) 64%,
+      transparent 92%
+    );
 }
 
 /* Dark theme */
@@ -107,10 +138,10 @@
 
   /* Page backdrop gradients (dark) */
   --gradient-page:
-    linear-gradient(180deg, hsl(var(--primary) / 0.32) 0%, transparent 38%),
-    radial-gradient(1800px 760px at 50% -10%, hsl(var(--primary) / 0.46) 0%, transparent 70%),
-    radial-gradient(1500px 640px at 0% 0%, hsl(var(--primary) / 0.40) 0%, transparent 68%),
-    radial-gradient(1500px 640px at 100% 0%, hsl(var(--accent) / 0.36) 0%, transparent 68%);
+    radial-gradient(1400px 900px at 50% -18%, hsl(var(--primary) / 0.46) 0%, transparent 74%),
+    linear-gradient(180deg, hsl(var(--primary) / 0.28) 0%, transparent 40%),
+    radial-gradient(1600px 700px at 0% 0%, hsl(var(--primary) / 0.34) 0%, transparent 70%),
+    radial-gradient(1600px 700px at 100% 0%, hsl(var(--accent) / 0.30) 0%, transparent 70%);
 }
 
 @theme inline {
@@ -347,7 +378,15 @@ body {
 /* Reusable elevated surfaces, cards, glows, and CTAs */
 @layer utilities {
   /* Optional utility if needed for nested wrappers */
-  .page-gradient { background-image: var(--gradient-page); background-repeat: no-repeat; background-size: cover; }
+  .page-gradient {
+    background-image: var(--gradient-page);
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: top center;
+    /* Fade-out at bottom to avoid visible edge where overlay ends */
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0) 100%);
+            mask-image: linear-gradient(to bottom, #000 0%, #000 72%, rgba(0,0,0,0) 100%);
+  }
 
   /* Core surfaces */
   .surface {
@@ -388,6 +427,18 @@ body {
     box-shadow:
       0 0 0 3px color-mix(in hsl, hsl(var(--background)), hsl(var(--brand-amber)) 26%),
       0 28px 64px -24px var(--glow-amber);
+  }
+
+  /* Hero title: solid color with pop */
+  .hero-title {
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.20),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 52%);
+  }
+  .dark .hero-title {
+    text-shadow:
+      0 12px 28px hsl(var(--primary) / 0.22),
+      0 6px 16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 38%);
   }
 
   /* Reusable gradient heading */
@@ -511,6 +562,75 @@ body {
       inset 0 1px 0 hsl(0 0% 100% / 0.30);
   }
   /* Elegant secondary button that pairs with primary CTA */
+  /* Standalone high-contrast CTA button */
+  .schedule-call-btn {
+    position: relative;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid hsl(215 70% 50%);
+    background:
+      /* Pure deep blue body (no purple shift) */
+      linear-gradient(180deg,
+        hsl(215 86% 54%) 0%,
+        hsl(215 86% 42%) 100%),
+      /* Diagonal blue sheen */
+      linear-gradient(135deg,
+        hsl(215 90% 60% / 0.16),
+        hsl(215 90% 60% / 0.08)),
+      /* Soft top highlight to enhance depth */
+      radial-gradient(120% 140% at 20% 0%, hsl(0 0% 100% / 0.14), transparent 60%);
+    color: hsl(var(--primary-foreground));
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.24),
+      0 14px 34px -18px hsl(215 90% 58% / 0.25),
+      0 28px 84px -28px hsl(215 90% 60% / 0.35);
+    will-change: transform, filter, box-shadow;
+    transition: box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease, border-color 0.18s ease;
+  }
+  .schedule-call-btn:hover {
+    border-color: hsl(215 72% 54%);
+    filter: saturate(1.05) brightness(1.02);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.26),
+      0 22px 50px -22px hsl(215 90% 58% / 0.28),
+      0 38px 92px -34px hsl(215 90% 60% / 0.38);
+  }
+  .schedule-call-btn:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(var(--ring)),
+      inset 0 1px 0 hsl(0 0% 100% / 0.30);
+  }
+  .schedule-call-btn:active {
+    transform: translateY(1px);
+    filter: saturate(1.01);
+  }
+  .dark .schedule-call-btn {
+    /* Use explicit deep-blue hues to avoid any purple shift */
+    border-color: hsl(215 68% 46%);
+    background:
+      linear-gradient(180deg,
+        hsl(215 80% 44%) 0%,
+        hsl(215 82% 32%) 100%),
+      linear-gradient(140deg,
+        hsl(215 76% 50% / 0.16),
+        hsl(215 76% 50% / 0.08)),
+      radial-gradient(120% 140% at 20% 0%, hsl(0 0% 100% / 0.06), transparent 60%);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.18),
+      0 18px 44px -22px hsl(215 90% 60% / 0.28),
+      0 36px 84px -32px hsl(215 90% 60% / 0.36);
+  }
+  .dark .schedule-call-btn:hover {
+    border-color: hsl(215 70% 50%);
+    filter: saturate(1.06) brightness(1.03);
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.24),
+      0 22px 54px -24px hsl(215 90% 60% / 0.30),
+      0 40px 98px -34px hsl(215 90% 60% / 0.36);
+  }
   .btn-secondary {
     border-radius: calc(var(--radius) - 2px);
     border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 22%);
@@ -1946,6 +2066,10 @@ html.dark .mobile-menu-panel {
 
 .heading-word.heading-gradient {
   text-shadow: none;
+}
+
+.heading-word.hero-title {
+  color: hsl(var(--primary-foreground));
 }
 
 .heading-word::before {

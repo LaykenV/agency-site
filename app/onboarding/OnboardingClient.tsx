@@ -156,7 +156,7 @@ function OnboardingContent() {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-10 md:px-10 md:py-16 lg:gap-10">
           <header className="flex flex-col gap-3">
             <span className="section-overline text-[var(--muted-foreground)]">Onboarding</span>
-            <h1 className="heading-gradient text-3xl font-semibold md:text-4xl">
+            <h1 className="hero-title text-[hsl(var(--hero-foreground))] text-3xl font-semibold md:text-4xl">
               Let&apos;s map out your website plan
             </h1>
             <p className="text-sm text-[var(--muted-foreground)] md:text-base">

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
+import { ShinyLink } from "@/components/ui/shiny-button";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
 import { ReviewsScroller } from "@/components/ReviewsScroller";
@@ -69,22 +70,52 @@ export default function Home() {
   }, [reduce]);
   return (
     <main className="w-full flex flex-col relative">
-      <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[90vh] sm:h-[78vh] md:h-[68vh] pointer-events-none" />
+      <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[120vh] sm:h-[110vh] md:h-[100vh] pointer-events-none" />
       {/* Hero */}
       <motion.section id="hero" className="anchor-target relative overflow-hidden" viewport={{ once: true, amount: 0.20 }}>
         <div className="mx-auto max-w-6xl px-6 pt-2 md:pt-4 pb-10 md:pb-16">
           <LazyMotion features={domAnimation} strict>
             <MotionConfig transition={motionDefaults.transition}>
               {reduce ? (
-                <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] heading-gradient">
+                <h1 className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]">
                   {TITLE}
                 </h1>
               ) : (
                 <SplitWords
                   text={TITLE}
-                  className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch]"
+                  className="text-center text-4xl md:text-6xl font-semibold tracking-tight leading-tight mx-auto max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]"
                 />
               )}
+
+              {/* Hero subcopy */}
+              <motion.p
+                className="text-center text-base md:text-lg text-[hsl(var(--primary-foreground))] mt-6 md:mt-8 mx-auto max-w-[42ch] opacity-0"
+                variants={fadeUp}
+                initial={reduce ? false : "hidden"}
+                animate={reduce ? undefined : "visible"}
+                transition={{ delay: reduce ? 0 : t.headerDuration + 0.1 }}
+              >
+                Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
+              </motion.p>
+
+              {/* Centered CTA */}
+              <motion.div
+                data-floating-cta-anchor
+                className="flex justify-center mt-6 md:mt-8 opacity-0"
+                variants={fadeUp}
+                initial={reduce ? false : "hidden"}
+                animate={reduce ? undefined : "visible"}
+                transition={{ delay: reduce ? 0 : t.headerDuration + 0.2 }}
+              >
+                <ShinyLink
+                  href={ONBOARDING_CAL_LINK}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="schedule-call-btn inline-flex items-center justify-center gap-3 px-6 py-3 font-bold whitespace-nowrap"
+                >
+                  Schedule Call
+                </ShinyLink>
+              </motion.div>
 
               <div className="mt-8 md:mt-12">
                 <motion.div
@@ -194,17 +225,8 @@ export default function Home() {
                       </motion.ul>
                     </div>
                   </div>
-                  <div className="pt-6 px-6 pb-4 md:pt-2 md:pb-3 md:grid md:grid-cols-[1fr_auto] md:gap-6 md:items-end">
+                  <div className="pt-6 px-6 pb-4 md:pt-2 md:pb-3">
                 <div>
-                  <motion.p
-                    className="text-lg md:text-xl font-semibold text-[var(--foreground)] opacity-0"
-                    variants={fadeUp}
-                    initial={reduce ? false : "hidden"}
-                    animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
-                    transition={{ delay: reduce ? 0 : 0.08 }}
-                  >
-                    Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
-                  </motion.p>
                   <div className="mt-2">
                     <StarRating align="left" start={reduce ? true : cardContentVisible ?? undefined} />
                   </div>
@@ -238,34 +260,11 @@ export default function Home() {
                     </motion.li>
                   </motion.ul>
                 </div>
-                {/* CTAs on large screens inside the card, bottom-right */}
-                <motion.div
-                  data-floating-cta-anchor
-                  className="hidden md:flex flex-col items-end gap-3 md:justify-self-end md:self-end opacity-0"
-                  variants={fadeUp}
-                  initial={reduce ? false : "hidden"}
-                  animate={reduce ? undefined : (cardContentVisible ? "visible" : "hidden")}
-                  transition={{ delay: reduce ? 0 : 0.36 }}
-                >
-                  <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                    Schedule Call
-                  </Link>
-                </motion.div>
                   </div>
                 </motion.div>
               </div>
             </MotionConfig>
           </LazyMotion>
-            {/* CTAs on mobile below the card */}
-            <div className="mt-4 md:hidden">
-              <div
-                data-floating-cta-anchor
-              >
-                <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-2 whitespace-nowrap">
-                  Schedule Call
-                </Link>
-              </div>
-            </div>
           </div>
         <span className="sr-only">Hero background illustration</span>
         <span className="sr-only">Device mockups are decorative</span>

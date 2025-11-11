@@ -105,7 +105,7 @@ export function SplitWords({ text, className }: SplitWordsProps) {
           <motion.span
             key={`word-${i}`}
             data-text={textWithSpace}
-            className="heading-word heading-gradient inline-block motion-will-change"
+            className="heading-word hero-title inline-block motion-will-change"
             variants={wordVariants}
           >
             {textWithSpace}
@@ -121,7 +121,13 @@ export function useHeroTimings(headerText: string) {
   const wordsCompleteAt = WORD_DELAY_OFFSET + (wordCount - 1) * WORD_STAGGER + WORD_DURATION;
   const headerDuration = wordsCompleteAt + WORD_PAD;
 
-  const cardStart = wordsCompleteAt + 0.02;
+  // Ensure visible order: h1 -> subtext -> CTA -> card -> card content
+  const HERO_SUBTEXT_DELAY = 0.10;
+  const HERO_CTA_DELAY = 0.20;
+  const AFTER_CTA_PAD = 0.04; // buffer to let CTA settle before card begins
+
+  // Start card after CTA completes its fadeUp transition
+  const cardStart = headerDuration + HERO_CTA_DELAY + motionDefaults.transition.duration + AFTER_CTA_PAD;
   const cardDuration = 0.52;
   const cardContentStart = cardStart + cardDuration + 0.06;
   const ctaStart = cardContentStart + 0.36;

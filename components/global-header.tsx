@@ -52,7 +52,7 @@ export function GlobalHeader() {
           className="group flex items-center gap-2"
         >
           <Logo size="sm" className="" />
-          <span className="whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none text-[var(--foreground)] group-hover:text-[var(--primary)] transition-colors">
+          <span className="whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none text-[hsl(var(--hero-foreground))] group-hover:text-[var(--primary)] transition-colors">
             Acadiana Web Design
           </span>
         </Link>

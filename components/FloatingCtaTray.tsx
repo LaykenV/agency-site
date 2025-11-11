@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { ShinyLink } from "@/components/ui/shiny-button";
 
 export function FloatingCtaTray() {
   const prefersReduced = useReducedMotion();
@@ -93,14 +94,14 @@ export function FloatingCtaTray() {
           exit={{ opacity: 0, y: 8, scale: 0.98 }}
           transition={prefersReduced ? { duration: 0.12 } : { duration: 0.2, ease: "easeOut" }}
         >
-          <a
+          <ShinyLink
             href={ONBOARDING_CAL_LINK}
             target="_blank"
             rel="noreferrer"
-            className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap"
+            className="schedule-call-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-base md:text-lg font-bold whitespace-nowrap"
           >
             Schedule Call
-          </a>
+          </ShinyLink>
         </motion.div>
       )}
     </AnimatePresence>,
