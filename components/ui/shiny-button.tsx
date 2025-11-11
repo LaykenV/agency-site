@@ -5,8 +5,8 @@ import { m as motion, type MotionProps } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 const animationProps = {
-  initial: { ["--x" as any]: "100%", scale: 0.8 },
-  animate: { ["--x" as any]: "-100%", scale: 1 },
+  initial: { ["--x" as string]: "100%", scale: 0.8 },
+  animate: { ["--x" as string]: "-100%", scale: 1 },
   whileTap: { scale: 0.95 },
   transition: {
     repeat: Infinity,

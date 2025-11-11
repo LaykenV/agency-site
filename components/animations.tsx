@@ -122,7 +122,6 @@ export function useHeroTimings(headerText: string) {
   const headerDuration = wordsCompleteAt + WORD_PAD;
 
   // Ensure visible order: h1 -> subtext -> CTA -> card -> card content
-  const HERO_SUBTEXT_DELAY = 0.10;
   const HERO_CTA_DELAY = 0.20;
   const AFTER_CTA_PAD = 0.04; // buffer to let CTA settle before card begins
 

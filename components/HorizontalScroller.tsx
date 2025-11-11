@@ -95,6 +95,7 @@ export function HorizontalScroller({
           <button
             key={`hscroll-dot-${index}`}
             type="button"
+            role="tab"
             className={cn("hscroll-dot", index === activeIndex && "hscroll-dot-active")}
             aria-label={`Show item ${index + 1}`}
             aria-selected={index === activeIndex}

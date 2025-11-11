@@ -48,6 +48,15 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
     [activeIndex, items.length]
   );
 
+  const scrollToIndex = useCallback((index: number) => {
+    const container = trackRef.current;
+    if (!container) return;
+    const card = container.children[index] as HTMLElement | undefined;
+    if (!card) return;
+    card.scrollIntoView({ behavior: "smooth", inline: "center" });
+    setActiveIndex(index);
+  }, []);
+
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLDivElement>) => {
       if (items.length === 0) return;
@@ -61,17 +70,8 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
         if (prev !== activeIndex) scrollToIndex(prev);
       }
     },
-    [activeIndex, items.length]
+    [activeIndex, items.length, scrollToIndex]
   );
-
-  const scrollToIndex = useCallback((index: number) => {
-    const container = trackRef.current;
-    if (!container) return;
-    const card = container.children[index] as HTMLElement | undefined;
-    if (!card) return;
-    card.scrollIntoView({ behavior: "smooth", inline: "center" });
-    setActiveIndex(index);
-  }, []);
 
   // Ensure the active index is correct on mount and when items change
   useEffect(() => {
@@ -191,6 +191,7 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
               <button
                 key={`dot-${index}`}
                 type="button"
+                role="tab"
                 className={cn(
                   "reviews-dot",
                   index === activeIndex && "reviews-dot-active"
