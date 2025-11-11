@@ -1,11 +1,9 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import Link from "next/link";
 import { useOnboardingSession } from "@/lib/onboarding/useOnboardingSession";
 import { PlanPreview } from "@/components/onboarding/PlanPreview";
 import type { ProspectField } from "@/types/prospect";
-import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";

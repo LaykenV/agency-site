@@ -9,9 +9,10 @@ import { cn } from '@/lib/utils'
 interface AnimatedThemeTogglerProps {
   className?: string
   duration?: number
+  onLanding?: boolean
 }
 
-export const AnimatedThemeToggler = ({ className, duration = 400 }: AnimatedThemeTogglerProps) => {
+export const AnimatedThemeToggler = ({ className, duration = 400, onLanding = false }: AnimatedThemeTogglerProps) => {
   const { theme, setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
   const buttonRef = useRef<HTMLButtonElement>(null)
@@ -70,17 +71,23 @@ export const AnimatedThemeToggler = ({ className, duration = 400 }: AnimatedThem
 
   // Prevent flash during SSR
   if (!mounted) {
+    const textColorClass = onLanding 
+      ? '!text-white dark:!text-[hsl(var(--hero-foreground))] hover:!text-white dark:hover:!text-[hsl(var(--hero-foreground))]'
+      : ''
     return (
-      <button ref={buttonRef} className={cn('btn-icon text-[hsl(var(--hero-foreground))] hover:text-[hsl(var(--hero-foreground))]', className)} aria-label="Toggle theme">
+      <button ref={buttonRef} className={cn('btn-icon', textColorClass, className)} aria-label="Toggle theme">
         <Sun />
       </button>
     )
   }
 
   const isDark = resolvedTheme === 'dark'
+  const textColorClass = onLanding 
+    ? '!text-white dark:!text-[hsl(var(--hero-foreground))] hover:!text-white dark:hover:!text-[hsl(var(--hero-foreground))]'
+    : ''
 
   return (
-    <button ref={buttonRef} onClick={toggleTheme} className={cn('btn-icon text-[hsl(var(--hero-foreground))] hover:text-[hsl(var(--hero-foreground))]', className)} aria-label="Toggle theme">
+    <button ref={buttonRef} onClick={toggleTheme} className={cn('btn-icon', textColorClass, className)} aria-label="Toggle theme">
       {isDark ? <Sun /> : <Moon />}
     </button>
   )

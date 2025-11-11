@@ -15,6 +15,7 @@ export function GlobalHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isPortal = pathname.startsWith("/portal");
+  const onLanding = pathname === "/";
   const decision = useQuery(api.auth.getPortalDecision);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -43,7 +44,7 @@ export function GlobalHeader() {
   return (
     <header
       className={
-        `sticky top-0 z-50 backdrop-blur-sm transition-colors bg-transparent`
+        `z-50 backdrop-blur-sm transition-colors bg-transparent`
       }
     >
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4">
@@ -52,7 +53,13 @@ export function GlobalHeader() {
           className="group flex items-center gap-2"
         >
           <Logo size="sm" className="" />
-          <span className="whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none text-[hsl(var(--hero-foreground))] group-hover:text-[var(--primary)] transition-colors">
+          <span
+            className={`whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none transition-colors ${
+              onLanding
+                ? "text-white dark:text-[hsl(var(--hero-foreground))]"
+                : "text-[hsl(var(--hero-foreground))]"
+            }`}
+          >
             Acadiana Web Design
           </span>
         </Link>
@@ -61,7 +68,7 @@ export function GlobalHeader() {
         <nav className="hidden items-center gap-4 md:flex">
           {!isPortal ? (
             <>
-              <AnimatedThemeToggler />
+              <AnimatedThemeToggler onLanding={onLanding} />
               <Link
                 href="/portal"
                 className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
@@ -72,30 +79,25 @@ export function GlobalHeader() {
             </>
           ) : decision?.authed ? (
             <>
-              <AnimatedThemeToggler />
-              <div className="flex items-center gap-3">
-                <Link
-                  href="/portal"
-                  className="flex items-center gap-3 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-1.5 text-sm font-semibold text-[var(--foreground)] transition hover:border-[var(--primary)] hover:text-[var(--primary)]"
-                >
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-semibold uppercase text-[var(--foreground)]">
-                    {initials}
-                  </span>
-                  <span>Account {decision?.user?.email}</span>
-                </Link>
+              <AnimatedThemeToggler onLanding={onLanding} />
+              <div className="inline-flex items-center gap-3 btn-secondary px-3 py-2 text-sm font-semibold cursor-default">
+                <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-semibold uppercase text-[var(--foreground)]">
+                  {initials}
+                </span>
+                <span>Account {decision?.user?.email}</span>
                 <button
                   onClick={handleSignOut}
-                  className="flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm font-semibold text-[var(--foreground)] transition hover:border-red-500 hover:text-red-500"
+                  className="btn-danger inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold ml-2 cursor-pointer"
                   aria-label="Sign out"
                 >
-                  <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
+                  <LogOut className="h-4 w-4" />
                 </button>
               </div>
             </>
           ) : (
             <>
-              <AnimatedThemeToggler />
+              <AnimatedThemeToggler onLanding={onLanding} />
               <Link
                 href="/portal"
                 className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
@@ -127,7 +129,7 @@ export function GlobalHeader() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-sm font-semibold opacity-80">Menu</span>
-                <AnimatedThemeToggler className="btn-icon" />
+                <AnimatedThemeToggler className="btn-icon" onLanding={onLanding} />
               </div>
               <div className="h-px" style={{ background: "hsl(var(--border))" }} />
 

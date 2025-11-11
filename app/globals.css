@@ -55,40 +55,43 @@
 
   /* Page backdrop gradients (light) */
   --gradient-page:
-    /* Center-top wash with smooth falloff to avoid banding */
+    /* Center-top wash with smooth falloff - more prominent */
     radial-gradient(
-      1600px 1100px at 50% -18%,
-      hsl(var(--primary) / 0.42) 0%,
-      hsl(var(--primary) / 0.24) 42%,
-      hsl(var(--primary) / 0.10) 74%,
-      transparent 90%
+      1800px 1000px at 50% -15%,
+      hsl(var(--primary) / 0.62) 0%,
+      hsl(var(--primary) / 0.40) 38%,
+      hsl(var(--primary) / 0.22) 60%,
+      hsl(var(--primary) / 0.05) 75%,
+      transparent 82%
     ),
-    /* Gentle vertical carry to extend down the middle */
+    /* Strong vertical carry - shorter reach */
     linear-gradient(
       180deg,
-      hsl(var(--primary) / 0.20) 0%,
-      hsl(var(--primary) / 0.12) 24%,
-      transparent 62%
+      hsl(var(--primary) / 0.36) 0%,
+      hsl(var(--primary) / 0.24) 15%,
+      hsl(var(--primary) / 0.12) 28%,
+      transparent 45%
     ),
-    /* Deep center emphasis that reaches further down the hero */
+    /* Deep center emphasis - shorter vertical reach */
     radial-gradient(
-      1100px 1500px at 50% 0%,
-      hsl(var(--accent) / 0.20) 0%,
-      hsl(var(--accent) / 0.12) 55%,
-      transparent 92%
+      1400px 1400px at 50% 3%,
+      hsl(var(--primary) / 0.38) 0%,
+      hsl(var(--primary) / 0.24) 35%,
+      hsl(var(--primary) / 0.10) 55%,
+      transparent 70%
     ),
-    /* Side washes with softer falloff */
+    /* Side washes - minimal, fade out very early */
     radial-gradient(
-      1600px 760px at 0% 0%,
-      hsl(var(--primary) / 0.20) 0%,
-      hsl(var(--primary) / 0.12) 64%,
-      transparent 92%
+      1200px 300px at 0% -10%,
+      hsl(var(--primary) / 0.06) 0%,
+      hsl(var(--primary) / 0.02) 25%,
+      transparent 38%
     ),
     radial-gradient(
-      1600px 760px at 100% 0%,
-      hsl(var(--accent) / 0.18) 0%,
-      hsl(var(--accent) / 0.10) 64%,
-      transparent 92%
+      1200px 300px at 100% -10%,
+      hsl(var(--accent) / 0.05) 0%,
+      hsl(var(--accent) / 0.02) 25%,
+      transparent 38%
     );
 }
 
@@ -909,6 +912,9 @@ body {
 
   /* Floating CTA tray */
   .floating-cta { position: fixed; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 70; }
+  @media (min-width: 768px) {
+    .floating-cta { bottom: auto; top: calc(1rem + env(safe-area-inset-top)); }
+  }
   .floating-cta__scrim { position: fixed; inset: 0; z-index: 60; }
   /* Single morphing shell (circle ↔ bar) */
   .floating-cta__shell {
