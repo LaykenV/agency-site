@@ -103,6 +103,7 @@
 //better text color and apply to name and theme toggle
 card?
 fix copy
+mobile menu
 //new style for schedule call button
 
 full ui / refinement of portal pages

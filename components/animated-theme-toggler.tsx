@@ -72,7 +72,7 @@ export const AnimatedThemeToggler = ({ className, duration = 400, onLanding = fa
   // Prevent flash during SSR
   if (!mounted) {
     const textColorClass = onLanding 
-      ? '!text-white dark:!text-[hsl(var(--hero-foreground))] hover:!text-white dark:hover:!text-[hsl(var(--hero-foreground))]'
+      ? 'md:!text-white md:dark:!text-[hsl(var(--hero-foreground))] md:hover:!text-white md:dark:hover:!text-[hsl(var(--hero-foreground))]'
       : ''
     return (
       <button ref={buttonRef} className={cn('btn-icon', textColorClass, className)} aria-label="Toggle theme">
@@ -83,7 +83,7 @@ export const AnimatedThemeToggler = ({ className, duration = 400, onLanding = fa
 
   const isDark = resolvedTheme === 'dark'
   const textColorClass = onLanding 
-    ? '!text-white dark:!text-[hsl(var(--hero-foreground))] hover:!text-white dark:hover:!text-[hsl(var(--hero-foreground))]'
+    ? 'md:!text-white md:dark:!text-[hsl(var(--hero-foreground))] md:hover:!text-white md:dark:hover:!text-[hsl(var(--hero-foreground))]'
     : ''
 
   return (

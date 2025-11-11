@@ -110,7 +110,7 @@ export function GlobalHeader() {
         </nav>
 
         {/* Mobile hamburger + menu */}
-        <div className="md:hidden">
+        <div className="md:hidden relative">
           <label className="hamburger" aria-label="Open menu">
             <input
               type="checkbox"

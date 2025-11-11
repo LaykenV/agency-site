@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type MobileMenuProps = {
   open: boolean;
@@ -10,6 +11,33 @@ type MobileMenuProps = {
 
 export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [mounted, setMounted] = useState(false);
+  const [position, setPosition] = useState({ top: 0, right: 0 });
+
+  useEffect(() => setMounted(true), []);
+
+  // Calculate position based on hamburger button
+  const updatePosition = () => {
+    const hamburger = document.querySelector("label.hamburger") as HTMLLabelElement;
+    if (hamburger) {
+      const rect = hamburger.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 12,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!open || !mounted) return;
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
+  }, [open, mounted]);
 
   // ESC to close
   useEffect(() => {
@@ -43,12 +71,16 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
     };
   }, [open, onClose]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  const menuContent = (
     <div
       id="mobile-menu"
-      className="md:hidden absolute right-4 top-[calc(100%+12px)] w-[min(92vw,20rem)]"
+      className="md:hidden fixed w-[min(92vw,20rem)] z-[100]"
+      style={{
+        top: `${position.top}px`,
+        right: `${position.right}px`,
+      }}
       ref={panelRef}
       aria-modal="true"
       role="dialog"
@@ -62,6 +94,8 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
       </div>
     </div>
   );
+
+  return createPortal(menuContent, document.body);
 }
 
 
