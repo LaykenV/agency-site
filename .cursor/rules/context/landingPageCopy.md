@@ -6,15 +6,15 @@ Mapping notes
 - Voice: plainspoken/tradesman, short sentences, outcome-first. Localize naturally to “Acadiana”.
 
 1) Hero (app/page.tsx: #hero)
-- H1 (current): "A 5‑Star Website for Your Business in Acadiana"
-- Subhead (current): "Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls."
+- H1 (current): "Get More Calls in Acadiana with a 5‑Star Website"
+- Subhead (current): "Done‑for‑you website, hosting, and domain. $0 down. 72‑hour go‑live. Unlimited edit requests in the client portal."
 - Proof bullets (beneath rating line; current implementation)
   - "$199/mo • $0 down"
   - "72‑hour go‑live from build"
   - "Unlimited edit requests via the client portal"
 - Plan heading: "All‑inclusive plan"
 - CTA (current)
-  - Centered CTA: "Schedule Call" → `ONBOARDING_CAL_LINK`
+  - Centered CTA: "Schedule 15‑Min Call" → `ONBOARDING_CAL_LINK`
 - Hero image (current)
   - Single image `/heroimg.png` rendered inside the hero card (`aspect-[16/9]` at all breakpoints). Alt: "Website preview" (or empty alt if purely decorative).
 - Visibility behavior
@@ -43,7 +43,7 @@ Mapping notes
     - Rating: 5
     - Site: renovation example
 - Credibility nudges (small text under scroller if desired)
-  - Built on modern best practices • Pages load fast on mobile • Real support by email
+  - Built on modern best practices • Pages load fast on mobile • Same‑day email support
 
 3) How it works (components/our-plan/HowItWorks.tsx)
 - Step titles and one‑liners (current implementation)
@@ -59,7 +59,7 @@ Mapping notes
 - Bullets (current implementation)
   - Build & Performance
     - Custom 7‑page website
-    - Elite performance
+    - Loads fast on mobile (95+ PageSpeed)
   - Hosting & Domain
     - Managed hosting + SSL
     - Domain included & managed
@@ -67,7 +67,7 @@ Mapping notes
     - Google Reviews widget
     - Contact form + email alerts
   - Support & Insights
-    - Unlimited edit requests (mobile: "via the client portal")
+    - Unlimited edit requests via the client portal
     - Monthly analytics summary
 
 5) Performance proof (app/page.tsx: #plan-performance)
@@ -140,8 +140,8 @@ Mapping notes
 - Subhead (current): "Everything you need to launch and grow—managed hosting, SSL, and domain included. Built for local pros in Acadiana with same‑day email support."
 - Fine print (current): "$199/mo • 12‑month minimum. Renews monthly thereafter until canceled. Early termination policy applies. See Terms."
 - CTAs (current)
-  - Primary: "Start Onboarding" → `/onboarding?utm_source=lp&cta=final`
-  - Secondary: "Schedule Call" → `ONBOARDING_CAL_LINK`
+  - Primary: "Get Your Tailored Plan" → `/onboarding?utm_source=lp&cta=final`
+  - Secondary: "Schedule 15‑Min Call" → `ONBOARDING_CAL_LINK`
 
 9) Floating CTA Tray (components/FloatingCtaTray.tsx)
 - Current implementation: Logo icon expands to reveal two CTAs

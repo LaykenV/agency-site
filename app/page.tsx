@@ -57,7 +57,7 @@ const REVIEWS = [
 
 export default function Home() {
   const reduce = useReducedMotion();
-  const TITLE = "A 5‑Star Website for Your Business in Acadiana";
+  const TITLE = "Get More Calls in Acadiana with a 5‑Star Website";
   const t = useHeroTimings(TITLE);
   const [cardContentVisible, setCardContentVisible] = useState(reduce);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -103,7 +103,7 @@ export default function Home() {
                 animate={reduce ? undefined : "visible"}
                 transition={{ delay: reduce ? 0 : t.headerDuration + 0.1 }}
               >
-                Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls.
+                Done‑for‑you website, hosting, and domain. $0 down. 72‑hour go‑live. Unlimited edit requests in the client portal.
               </motion.p>
 
               {/* Centered CTA */}
@@ -121,7 +121,7 @@ export default function Home() {
                   rel="noreferrer"
                   className="schedule-call-btn inline-flex items-center justify-center gap-3 px-4 py-2 font-bold whitespace-nowrap"
                 >
-                  Schedule Call
+                  Schedule 15‑Min Call
                 </ShinyLink>
               </motion.div>
 
@@ -207,6 +207,9 @@ export default function Home() {
             <span className="pill">Home Services</span>
           </div>
           <ReviewsScroller reviews={REVIEWS} className="mt-6" />
+          <p className="mt-2 text-xs text-[var(--muted-foreground)] text-center">
+            Built on modern best practices • Pages load fast on mobile • Same‑day support
+          </p>
         </div>
       </section>
 
@@ -235,7 +238,7 @@ export default function Home() {
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
                       <ul className="mt-3 list-checks">
                         <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Custom 7‑page website</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Elite performance</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Loads fast on mobile (95+ PageSpeed)</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-lg p-4">
@@ -255,7 +258,7 @@ export default function Home() {
                     <div className="surface rounded-lg p-4">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
                       <ul className="mt-3 list-checks">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests via the client portal</span></li>
                         <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly analytics summary</span></li>
                       </ul>
                     </div>
@@ -267,7 +270,7 @@ export default function Home() {
                         <div className="plan-card-title">Build & Performance</div>
                         <ul className="mt-3 list-checks">
                           <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Custom 7‑page website</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Elite performance</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Loads fast on mobile (95+ PageSpeed)</span></li>
                         </ul>
                       </div>
                       <div>
@@ -601,7 +604,7 @@ export default function Home() {
                   Get Your Tailored Plan
                 </Link>
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 whitespace-nowrap">
-                  Schedule Call
+                  Schedule 15‑Min Call
                 </Link>
               </div>
             </div>

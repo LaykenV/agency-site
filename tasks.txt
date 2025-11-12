@@ -101,7 +101,7 @@
 //subtext and move up cta button
 //bigger gradient
 //better text color and apply to name and theme toggle
-card? gen imgs
+//card? gen imgs
 fix copy
 //mobile menu
 //new style for schedule call button
