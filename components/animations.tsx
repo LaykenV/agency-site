@@ -151,10 +151,8 @@ export function useIsMdUp() {
       mql.addEventListener("change", handler);
       return () => mql.removeEventListener("change", handler);
     } else {
-      // @ts-expect-error - for older browsers
       mql.addListener(handler);
       return () => {
-        // @ts-expect-error - for older browsers
         mql.removeListener(handler);
       };
     }
