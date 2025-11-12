@@ -921,7 +921,7 @@ body {
   .anchor-target { scroll-margin-top: 76px; }
 
   /* Floating CTA tray */
-  .floating-cta { position: fixed; right: 1rem; bottom: calc(1rem + env(safe-area-inset-bottom)); z-index: 70; }
+  .floating-cta { position: fixed; right: 0.25rem; bottom: calc(0.25rem + env(safe-area-inset-bottom)); z-index: 70; }
   @media (min-width: 768px) {
     .floating-cta { bottom: auto; top: calc(1rem + env(safe-area-inset-top)); }
   }
