@@ -102,7 +102,7 @@
 //bigger gradient
 //better text color and apply to name and theme toggle
 //card? gen imgs
-fix copy
+//fix copy
 //mobile menu
 //new style for schedule call button
 

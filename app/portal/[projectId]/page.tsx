@@ -10,7 +10,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { CAL_KICKOFF_URL, CAL_REVIEW_URL } from "@/lib/config";
@@ -53,6 +53,54 @@ type EditRequest = {
   details?: string;
   attachments?: Id<"_storage">[];
 };
+
+// ============================================================================
+// UI UTILITIES
+// ============================================================================
+const pillBase =
+  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm";
+
+function toTitleCase(text: string): string {
+  return text
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function projectStatusPill(status: string): { className: string; label: string } {
+  const mapping: Record<string, string> = {
+    ARCHIVED: `${pillBase} bg-rose-600 text-white`,
+    LIVE: `${pillBase} bg-emerald-600 text-white`,
+    IN_PROGRESS: `${pillBase} bg-blue-600 text-white`,
+    IN_REVIEW: `${pillBase} bg-slate-700 text-white`,
+    AWAITING_ASSETS: `${pillBase} bg-amber-600 text-white`,
+    AWAITING_PAYMENT: `${pillBase} bg-amber-600 text-white`,
+    AWAITING_AGREEMENT: `${pillBase} bg-amber-600 text-white`,
+  };
+  const className = mapping[status] ?? `${pillBase} bg-slate-500 text-white`;
+  const label =
+    status === "AWAITING_ASSETS"
+      ? "Awaiting Assets"
+      : status === "IN_PROGRESS"
+      ? "In Progress"
+      : status === "IN_REVIEW"
+      ? "In Review"
+      : toTitleCase(status || "Unknown");
+  return { className, label };
+}
+
+function requestStatusPill(
+  status: EditRequest["status"]
+): { className: string; label: string } {
+  const mapping: Record<EditRequest["status"], string> = {
+    open: `${pillBase} bg-sky-600 text-white`,
+    in_progress: `${pillBase} bg-indigo-600 text-white`,
+    waiting_on_client: `${pillBase} bg-amber-600 text-white`,
+    resolved: `${pillBase} bg-emerald-600 text-white`,
+    closed: `${pillBase} bg-slate-600 text-white`,
+  };
+  return { className: mapping[status], label: toTitleCase(status) };
+}
 
 export default function ProjectPage() {
   return (
@@ -139,27 +187,9 @@ function AuthenticatedProjectView() {
   }, [isArchived, status]);
 
   const statusBadge = useMemo(() => {
-    const label = status ?? "Unknown";
-    const baseClass = "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold";
-    if (isArchived) {
-      return (
-        <span className={`${baseClass} bg-red-500/10 text-red-500`}>Archived</span>
-      );
-    }
-    if (status === "LIVE") {
-      return <span className={`${baseClass} bg-emerald-500/10 text-emerald-500`}>Live</span>;
-    }
-    if (status === "IN_PROGRESS") {
-      return <span className={`${baseClass} bg-blue-500/10 text-blue-500`}>In Progress</span>;
-    }
-    if (status === "IN_REVIEW") {
-      return <span className={`${baseClass} bg-amber-500/10 text-amber-500`}>In Review</span>;
-    }
-    if (status === "AWAITING_ASSETS") {
-      return <span className={`${baseClass} bg-purple-500/10 text-purple-500`}>Awaiting Assets</span>;
-    }
-    return <span className={`${baseClass} bg-[var(--muted)] text-[var(--foreground)]`}>{label}</span>;
-  }, [isArchived, status]);
+    const { className, label } = projectStatusPill(status);
+    return <span className={className}>{label}</span>;
+  }, [status]);
 
   useEffect(() => {
     if (!project || !decision) return;
@@ -191,56 +221,57 @@ function AuthenticatedProjectView() {
   return (
     <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)] px-6 py-12">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <div className="rounded-3xl border border-[var(--border)] bg-[var(--card)]/80 p-8 shadow-lg backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-[var(--secondary)]">
-                Client Portal
-              </p>
-              <h1 className="mt-3 text-3xl font-semibold">{heading}</h1>
-              <p className="mt-2 text-sm text-[var(--secondary)]">
-                Project ID: {project.projectId}
-              </p>
+        <div className="hero-glass p-6 md:p-8 rounded-2xl relative overflow-hidden">
+          <div className="beams-overlay" aria-hidden="true" style={{ opacity: 0.38, filter: "saturate(110%) blur(8px)" }} />
+          <div className="relative z-10">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <p className="section-overline">Client Portal</p>
+                <h1 className="mt-3 text-3xl font-semibold">{heading}</h1>
+                <p className="mt-2 text-sm text-[var(--secondary)]">
+                  Project ID: {project.projectId}
+                </p>
+              </div>
+              {statusBadge}
             </div>
-            {statusBadge}
-          </div>
 
-          {isArchived ? (
-            <div className="mt-8 rounded-2xl border border-red-200 bg-red-500/10 p-6 text-sm text-red-500">
-              This project is archived. Reach out to support if you&apos;d like to re-open it or discuss next
-              steps.
-            </div>
-          ) : (
-            <div className="mt-8">
-              {status === "AWAITING_ASSETS" && (
-                <AwaitingAssetsSection 
-                  projectId={project._id}
-                  buildDetails={project.buildDetails}
-                  calKickoffBooking={project.calKickoffBooking}
-                />
-              )}
-              
-              {status === "IN_PROGRESS" && (
-                <InProgressSection calKickoffBooking={project.calKickoffBooking} />
-              )}
-              
-              {status === "IN_REVIEW" && (
-                <ReviewSection 
-                  stagingUrl={project.deployment?.stagingUrl}
-                  reviewBooking={project.calReviewBooking}
-                />
-              )}
-              
-              {status === "LIVE" && (
-                <LiveSupportPanel
-                  projectId={project._id}
-                  liveUrl={project.deployment?.liveUrl}
-                  domainPreference={project.buildDetails?.domainPreference ?? undefined}
-                  editRequests={editRequests ?? []}
-                />
-              )}
-            </div>
-          )}
+            {isArchived ? (
+              <div className="mt-8 rounded-2xl border border-red-200 bg-red-500/10 p-6 text-sm text-red-500">
+                This project is archived. Reach out to support if you&apos;d like to re-open it or discuss next
+                steps.
+              </div>
+            ) : (
+              <div className="mt-8">
+                {status === "AWAITING_ASSETS" && (
+                  <AwaitingAssetsSection 
+                    projectId={project._id}
+                    buildDetails={project.buildDetails}
+                    calKickoffBooking={project.calKickoffBooking}
+                  />
+                )}
+                
+                {status === "IN_PROGRESS" && (
+                  <InProgressSection calKickoffBooking={project.calKickoffBooking} />
+                )}
+                
+                {status === "IN_REVIEW" && (
+                  <ReviewSection 
+                    stagingUrl={project.deployment?.stagingUrl}
+                    reviewBooking={project.calReviewBooking}
+                  />
+                )}
+                
+                {status === "LIVE" && (
+                  <LiveSupportPanel
+                    projectId={project._id}
+                    liveUrl={project.deployment?.liveUrl}
+                    domainPreference={project.buildDetails?.domainPreference ?? undefined}
+                    editRequests={editRequests ?? []}
+                  />
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-[var(--secondary)]">
@@ -282,7 +313,7 @@ function AwaitingAssetsSection({
   return (
     <div className="space-y-6">
       {buildDetails && !showForm ? (
-        <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
+        <div className="surface-soft p-6 rounded-2xl">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold">Build Details Submitted ✓</h2>
             <Button
@@ -313,6 +344,9 @@ function AwaitingAssetsSection({
           onSuccess={() => {
             setShowForm(false);
           }}
+          onCancel={() => {
+            setShowForm(false);
+          }}
         />
       )}
 
@@ -331,10 +365,12 @@ function BuildDetailsForm({
   projectId,
   initialValues,
   onSuccess,
+  onCancel,
 }: {
   projectId: Id<"projects">;
   initialValues?: Partial<BuildDetailsFormData>;
   onSuccess?: () => void;
+  onCancel?: () => void;
 }) {
   const [pending, setPending] = useState(false);
   const [formData, setFormData] = useState<BuildDetailsFormData>({
@@ -356,6 +392,91 @@ function BuildDetailsForm({
 
   const upsertBuildDetails = useMutation(api.projects.upsertBuildDetails);
   const generateUploadUrl = useMutation(api.files.generateUploadUrl);
+
+  // Contrast helpers for preview
+  const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
+    const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
+    const valid = normalized.length === 3 || normalized.length === 6;
+    if (!valid) return null;
+    const value =
+      normalized.length === 3
+        ? normalized
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : normalized;
+    const num = Number.parseInt(value, 16);
+    return {
+      r: (num >> 16) & 255,
+      g: (num >> 8) & 255,
+      b: num & 255,
+    };
+  };
+  const relativeLuminance = (r: number, g: number, b: number) => {
+    const srgb = [r, g, b].map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+  };
+  const getContrastingTextColor = (hex: string): "#000" | "#fff" => {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return "#000";
+    const L = relativeLuminance(rgb.r, rgb.g, rgb.b);
+    // Threshold around mid-luminance for contrast against background
+    return L > 0.4 ? "#000" : "#fff";
+  };
+  const coerceHexInput = (value: string) => {
+    let v = value.trim();
+    if (!v.startsWith("#")) v = `#${v}`;
+    if (v.length > 7) v = v.slice(0, 7);
+    return v;
+  };
+
+  // Track initial snapshot to detect dirty state and to reset on cancel
+  const initialSnapshot = useMemo(() => {
+    const headline = (initialValues?.headline ?? "").trim();
+    const domainPreference = (initialValues?.domainPreference ?? "").trim();
+    const inspirationLinks = (initialValues?.inspirationLinks ?? []).map((u) => u.trim());
+    const primary = (initialValues?.brand?.colorScheme?.primary ?? "#111827").trim();
+    const accent = (initialValues?.brand?.colorScheme?.accent ?? "#6EE7B7").trim();
+    const logoStorageId = initialValues?.brand?.logoStorageId;
+    const imageStorageIds = initialValues?.brand?.imageStorageIds ?? [];
+    return {
+      headline,
+      domainPreference,
+      inspirationLinks,
+      brand: {
+        colorScheme: { primary, accent },
+        logoStorageId,
+        imageStorageIds,
+      },
+      newLogoSelected: false,
+      newImageCount: 0,
+    };
+  }, [initialValues]);
+
+  const normalizedNow = useMemo(() => {
+    return {
+      headline: formData.headline.trim(),
+      domainPreference: formData.domainPreference.trim(),
+      inspirationLinks: formData.inspirationLinks.map((u) => u.trim()),
+      brand: {
+        colorScheme: {
+          primary: formData.brand.colorScheme.primary.trim(),
+          accent: formData.brand.colorScheme.accent.trim(),
+        },
+        logoStorageId: formData.brand.logoStorageId,
+        imageStorageIds: formData.brand.imageStorageIds ?? [],
+      },
+      newLogoSelected: !!formData.brand.logoFile,
+      newImageCount: formData.brand.imageFiles?.length ?? 0,
+    };
+  }, [formData]);
+
+  const isDirty = useMemo(() => {
+    return JSON.stringify(initialSnapshot) !== JSON.stringify(normalizedNow);
+  }, [initialSnapshot, normalizedNow]);
 
   // Fetch signed URLs for existing storage files
   const storageIds = useMemo(() => {
@@ -456,7 +577,7 @@ function BuildDetailsForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6 space-y-6">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div>
         <h2 className="text-lg font-semibold mb-2">Project Details</h2>
         <p className="text-sm text-[var(--secondary)]">
@@ -466,7 +587,7 @@ function BuildDetailsForm({
 
       <div className="space-y-4">
         <div>
-          <Label htmlFor="headline">Project Headline *</Label>
+          <Label htmlFor="headline" className="mb-1.5 inline-block">Project Headline *</Label>
           <Input
             id="headline"
             value={formData.headline}
@@ -480,7 +601,7 @@ function BuildDetailsForm({
         </div>
 
         <div>
-          <Label htmlFor="domain">Domain Preference</Label>
+          <Label htmlFor="domain" className="mb-1.5 inline-block">Domain Preference</Label>
           <Input
             id="domain"
             value={formData.domainPreference}
@@ -490,12 +611,14 @@ function BuildDetailsForm({
         </div>
 
         <div>
-          <Label htmlFor="inspiration">Inspiration Links</Label>
-          <UrlChipsInput
-            value={formData.inspirationLinks}
-            onChange={(urls) => setFormData({ ...formData, inspirationLinks: urls })}
-            placeholder="Enter URLs of sites you like, separated by commas..."
-          />
+          <Label htmlFor="inspiration" className="mb-1.5 inline-block">Inspiration Links</Label>
+          <div className="mt-1.5">
+            <UrlChipsInput
+              value={formData.inspirationLinks}
+              onChange={(urls) => setFormData({ ...formData, inspirationLinks: urls })}
+              placeholder="Enter URLs of sites you like, separated by commas..."
+            />
+          </div>
           <p className="mt-1 text-xs text-[var(--secondary)]">
             Share examples of designs or features you love
           </p>
@@ -506,61 +629,135 @@ function BuildDetailsForm({
         <h3 className="font-semibold">Brand Assets</h3>
 
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="primaryColor">Primary Color</Label>
-            <input
-              type="color"
-              id="primaryColor"
-              value={formData.brand.colorScheme.primary}
-              onChange={(e) => setFormData({
-                ...formData,
-                brand: { 
-                  ...formData.brand, 
-                  colorScheme: { ...formData.brand.colorScheme, primary: e.target.value }
-                }
-              })}
-              className="h-10 w-24 rounded border border-[var(--border)] cursor-pointer"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div className="space-y-4 md:col-span-1">
+              <div>
+                <Label htmlFor="primaryColor" className="mb-1.5 inline-block">Primary Color</Label>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="primaryColor"
+                    value={formData.brand.colorScheme.primary}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        brand: {
+                          ...formData.brand,
+                          colorScheme: { ...formData.brand.colorScheme, primary: e.target.value },
+                        },
+                      })
+                    }
+                    className="h-10 w-12 rounded border border-[var(--border)] cursor-pointer"
+                  />
+                  <Input
+                    aria-label="Primary color hex"
+                    value={formData.brand.colorScheme.primary}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        brand: {
+                          ...formData.brand,
+                          colorScheme: {
+                            ...formData.brand.colorScheme,
+                            primary: coerceHexInput(e.target.value),
+                          },
+                        },
+                      })
+                    }
+                    className="h-10 w-28 font-mono text-xs"
+                    placeholder="#000000"
+                  />
+                </div>
+              </div>
 
-          <div>
-            <Label htmlFor="accentColor">Accent Color</Label>
-            <input
-              type="color"
-              id="accentColor"
-              value={formData.brand.colorScheme.accent}
-              onChange={(e) => setFormData({
-                ...formData,
-                brand: { 
-                  ...formData.brand, 
-                  colorScheme: { ...formData.brand.colorScheme, accent: e.target.value }
-                }
-              })}
-              className="h-10 w-24 rounded border border-[var(--border)] cursor-pointer"
-            />
-          </div>
+              <div>
+                <Label htmlFor="accentColor" className="mb-1.5 inline-block">Accent Color</Label>
+                <div className="mt-1.5 flex items-center gap-3">
+                  <input
+                    type="color"
+                    id="accentColor"
+                    value={formData.brand.colorScheme.accent}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        brand: {
+                          ...formData.brand,
+                          colorScheme: { ...formData.brand.colorScheme, accent: e.target.value },
+                        },
+                      })
+                    }
+                    className="h-10 w-12 rounded border border-[var(--border)] cursor-pointer"
+                  />
+                  <Input
+                    aria-label="Accent color hex"
+                    value={formData.brand.colorScheme.accent}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        brand: {
+                          ...formData.brand,
+                          colorScheme: {
+                            ...formData.brand.colorScheme,
+                            accent: coerceHexInput(e.target.value),
+                          },
+                        },
+                      })
+                    }
+                    className="h-10 w-28 font-mono text-xs"
+                    placeholder="#6EE7B7"
+                  />
+                </div>
+              </div>
+            </div>
 
-          <div>
-            <Label>Color Preview</Label>
-            <div className="rounded-xl h-32 p-4 flex items-end" style={{
-              background: `linear-gradient(135deg, ${formData.brand.colorScheme.primary}, ${formData.brand.colorScheme.accent})`
-            }}>
-              <span className="px-3 py-1 rounded-full text-sm font-medium" style={{
-                backgroundColor: formData.brand.colorScheme.primary,
-                color: '#fff'
-              }}>
-                Preview
-              </span>
+            <div className="md:col-span-2">
+              <Label className="mb-1.5 inline-block">Color Preview</Label>
+              <div
+                className="rounded-xl h-40 md:h-48 p-6 flex items-end justify-between overflow-hidden"
+                style={{
+                  background: `linear-gradient(135deg, ${formData.brand.colorScheme.primary}, ${formData.brand.colorScheme.accent})`,
+                }}
+              >
+                <div className="space-y-2">
+                  <span
+                    className="inline-flex px-3 py-1 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: formData.brand.colorScheme.primary,
+                      color: getContrastingTextColor(formData.brand.colorScheme.primary),
+                    }}
+                  >
+                    Preview
+                  </span>
+                  <p
+                    className="text-sm font-medium"
+                    style={{ color: getContrastingTextColor(formData.brand.colorScheme.primary) }}
+                  >
+                    Sample headline
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="px-3 py-1.5 rounded-md text-xs font-medium shadow-sm"
+                  style={{
+                    backgroundColor: formData.brand.colorScheme.accent,
+                    color: getContrastingTextColor(formData.brand.colorScheme.accent),
+                  }}
+                  aria-label="Sample button"
+                >
+                  Sample Button
+                </button>
+              </div>
             </div>
           </div>
         </div>
 
         <div>
-          <Label htmlFor="logoFile">Logo Upload</Label>
+          <Label htmlFor="logoFile" className="mb-1.5 inline-block">Logo Upload</Label>
           <Input
             id="logoFile"
             type="file"
             accept="image/*,.svg"
+            className="mt-1.5"
             onChange={(e) => {
               const file = e.target.files?.[0] || null;
               
@@ -611,12 +808,13 @@ function BuildDetailsForm({
         </div>
 
         <div>
-          <Label htmlFor="imageFiles">Brand Images Upload</Label>
+          <Label htmlFor="imageFiles" className="mb-1.5 inline-block">Brand Images Upload</Label>
           <Input
             id="imageFiles"
             type="file"
             accept="image/*"
             multiple
+            className="mt-1.5"
             onChange={(e) => {
               const files = Array.from(e.target.files || []);
               
@@ -677,7 +875,41 @@ function BuildDetailsForm({
       </div>
 
       <div className="flex justify-end gap-3 pt-4 border-t border-[var(--border)]">
-        <Button type="submit" disabled={pending}>
+        {onCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={() => {
+              // Reset form to initial snapshot
+              const next: BuildDetailsFormData = {
+                headline: initialSnapshot.headline,
+                domainPreference: initialSnapshot.domainPreference,
+                inspirationLinks: initialSnapshot.inspirationLinks,
+                brand: {
+                  colorScheme: {
+                    primary: initialSnapshot.brand.colorScheme.primary,
+                    accent: initialSnapshot.brand.colorScheme.accent,
+                  },
+                  logoFile: null,
+                  imageFiles: [],
+                  logoStorageId: initialSnapshot.brand.logoStorageId,
+                  imageStorageIds: initialSnapshot.brand.imageStorageIds,
+                },
+              };
+              // Cleanup previews
+              if (logoPreviewUrl) URL.revokeObjectURL(logoPreviewUrl);
+              imagePreviewUrls.forEach((u) => URL.revokeObjectURL(u));
+              setLogoPreviewUrl(null);
+              setImagePreviewUrls([]);
+              setFormData(next);
+              onCancel();
+            }}
+          >
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" disabled={pending || !isDirty}>
           {pending ? "Saving..." : "Save Build Details"}
         </Button>
       </div>
@@ -743,7 +975,7 @@ function CallCtaOrSummary({
   }
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+    <div className="surface p-6 rounded-2xl">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center gap-2">
@@ -756,7 +988,7 @@ function CallCtaOrSummary({
               : "Walk through the staging site with us and share your feedback."}
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="schedule-call-btn">
           <a href={calUrl} target="_blank" rel="noopener noreferrer">
             Schedule {icon}
           </a>
@@ -769,7 +1001,7 @@ function CallCtaOrSummary({
 function InProgressSection({ calKickoffBooking }: { calKickoffBooking?: CalBooking }) {
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
+      <div className="surface-soft p-6 rounded-2xl">
         <h2 className="text-lg font-semibold mb-2">Build in Progress 🚀</h2>
         <p className="text-sm text-[var(--secondary)]">
           We&apos;re actively building your site. You&apos;ll receive an update once it&apos;s ready for review. 
@@ -803,7 +1035,7 @@ function ReviewSection({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
+      <div className="surface p-6 rounded-2xl">
         <h2 className="text-lg font-semibold mb-2">Ready for Review</h2>
         <p className="text-sm text-[var(--secondary)] mb-4">
           Your project is staged and ready for your feedback. Take a look and schedule a review call
@@ -851,7 +1083,7 @@ function LiveSupportPanel({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6">
+      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
         <h2 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
           Your Site is Live! 🎉
         </h2>
@@ -877,7 +1109,7 @@ function LiveSupportPanel({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+      <div className="surface p-6 rounded-2xl">
         <h3 className="text-lg font-semibold mb-4">Request Edits or Support</h3>
         <SupportRequestForm projectId={projectId} />
       </div>
@@ -1019,35 +1251,37 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <Label htmlFor="support-title">Title *</Label>
+        <Label htmlFor="support-title" className="mb-1.5 inline-block">Title *</Label>
         <Input
           id="support-title"
           value={formData.title}
           onChange={(e) => setFormData({ ...formData, title: e.target.value })}
           placeholder="Brief description of your request"
+          className="mt-1.5"
           required
         />
       </div>
 
       <div>
-        <Label htmlFor="support-details">Details *</Label>
+        <Label htmlFor="support-details" className="mb-1.5 inline-block">Details *</Label>
         <Textarea
           id="support-details"
           value={formData.details}
           onChange={(e) => setFormData({ ...formData, details: e.target.value })}
           placeholder="Describe what you'd like changed or what issue you're experiencing..."
           rows={4}
+          className="mt-1.5"
           required
         />
       </div>
 
       <div>
-        <Label htmlFor="support-priority">Priority</Label>
+        <Label htmlFor="support-priority" className="mb-1.5 inline-block">Priority</Label>
         <select
           id="support-priority"
           value={formData.priority}
           onChange={(e) => setFormData({ ...formData, priority: e.target.value as "low" | "normal" | "high" })}
-          className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] dark:bg-input/30"
+          className="form-control mt-1.5 h-10 w-full text-sm"
         >
           <option value="low">Low - Nice to have</option>
           <option value="normal">Normal - Standard request</option>
@@ -1056,12 +1290,13 @@ function SupportRequestForm({ projectId }: { projectId: Id<"projects"> }) {
       </div>
 
       <div>
-        <Label htmlFor="support-attachments">Attachments (Optional)</Label>
+        <Label htmlFor="support-attachments" className="mb-1.5 inline-block">Attachments (Optional)</Label>
         <Input
           id="support-attachments"
           type="file"
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           multiple
+          className="mt-1.5"
           onChange={handleFileChange}
         />
         <p className="mt-1 text-xs text-[var(--secondary)]">
@@ -1133,7 +1368,7 @@ function EditRequestsList({
 
   if (editRequests.length === 0) {
     return (
-      <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6 text-center">
+      <div className="surface-soft p-6 rounded-2xl text-center">
         <p className="text-sm text-[var(--secondary)]">
           No support requests yet. Submit one above if you need any changes!
         </p>
@@ -1141,30 +1376,13 @@ function EditRequestsList({
     );
   }
 
-  const getStatusColor = (status: EditRequest["status"]) => {
-    switch (status) {
-      case "open":
-        return "bg-blue-500/10 text-blue-500";
-      case "in_progress":
-        return "bg-purple-500/10 text-purple-500";
-      case "waiting_on_client":
-        return "bg-amber-500/10 text-amber-500";
-      case "resolved":
-        return "bg-emerald-500/10 text-emerald-500";
-      case "closed":
-        return "bg-gray-500/10 text-gray-500";
-      default:
-        return "bg-[var(--muted)] text-[var(--foreground)]";
-    }
-  };
-
   const getPriorityLabel = (priority: EditRequest["priority"]) => {
     const labels = { low: "Low", normal: "Normal", high: "High" };
     return labels[priority];
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6">
+    <div className="surface p-6 rounded-2xl">
       <h3 className="text-lg font-semibold mb-4">Your Requests</h3>
       <div className="space-y-3">
         {editRequests.map((request) => {
@@ -1179,15 +1397,16 @@ function EditRequestsList({
           return (
             <div
               key={request._id}
-              className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-4"
+              className="surface p-4 rounded-lg"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <h4 className="font-medium text-sm">{request.title}</h4>
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${getStatusColor(request.status)}`}>
-                      {request.status.replace("_", " ")}
-                    </span>
+                    {(() => {
+                      const { className, label } = requestStatusPill(request.status);
+                      return <span className={className}>{label}</span>;
+                    })()}
                     <span className="text-xs text-[var(--secondary)]">
                       {getPriorityLabel(request.priority)} priority
                     </span>

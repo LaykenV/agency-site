@@ -30,6 +30,15 @@ The intent: simple, breathable UI; soft off‑white/off‑gray bases with visibl
 
 Recommendation: Do not introduce new color tokens. Build on the existing mapping under `@theme inline` so the whole app stays visually cohesive.
 
+Status pill color guidance
+- Prefer the existing `.badge`/`.pill` variants when a semantic match exists.
+- When using utility classes for status, pair saturated backgrounds with white text for contrast:
+  - Success: `bg-emerald-600 text-white`
+  - Info/Progress: `bg-blue-600 text-white` or `bg-sky-600 text-white`
+  - Attention/Waiting: `bg-amber-600 text-white`
+  - Neutral/Review/Closed: `bg-slate-600 text-white` or `bg-slate-700 text-white`
+  - Error/Archived: `bg-rose-600 text-white`
+
 ### 3) Layout Standards
 - Page container
   - Default: `mx-auto max-w-6xl px-6`
@@ -106,6 +115,10 @@ export function PageHeader(props: {
   - Help text: `text-xs text-[var(--muted-foreground)]`
   - Error text: `text-xs text-[hsl(var(--destructive))]`
 
+Selects and truncation
+- Use `h-10 w-full text-sm` on selects to avoid option text clipping; pair with our `form-control` base.
+- Keep option strings concise; where longer helper text is needed, mirror it below as help text rather than inside the option.
+
 Example
 ```tsx
 <form className="space-y-4">
@@ -177,6 +190,24 @@ Sizing guidance
 - Inline filters or selection chips: `.pill` (hover styles already defined)
 - Performance metric: `.badge-metric` for bold numerics (e.g., 95+)
 
+Recommended status mappings
+- Project status → pill:
+  - `LIVE`: `bg-emerald-600 text-white` (or `.badge-good`)
+  - `IN_PROGRESS`: `bg-blue-600 text-white`
+  - `IN_REVIEW`: `bg-slate-700 text-white`
+  - `AWAITING_ASSETS` / `AWAITING_PAYMENT` / `AWAITING_AGREEMENT`: `bg-amber-600 text-white`
+  - `ARCHIVED`: `bg-rose-600 text-white` (or `.badge-bad`)
+- Edit request status → pill:
+  - `open`: `bg-sky-600 text-white`
+  - `in_progress`: `bg-indigo-600 text-white`
+  - `waiting_on_client`: `bg-amber-600 text-white`
+  - `resolved`: `bg-emerald-600 text-white`
+  - `closed`: `bg-slate-600 text-white`
+
+Implementation note
+- Pills should be compact and readable: `inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium`.
+- Always ensure at least AA contrast; prefer white text on saturated pills unless legibility is better with dark text.
+
 ### 10) Banners, Alerts, and Empty States
 - Informational: `.info-banner` inside a `.surface` or directly below headers
 - Empty states: centered icon + headline + helper text + primary button
@@ -184,6 +215,12 @@ Sizing guidance
   - Headline: `text-[var(--foreground)]`
   - Body: `text-[var(--muted-foreground)]`
   - Action: `.btn-cta` (create first item)
+
+Success/Live panel pattern
+- For prominent success states (e.g., live site confirmation), use a soft green gradient with visible but tasteful emphasis:
+  - Container: `rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6`
+  - Title: `text-emerald-600 dark:text-emerald-400`
+  - Buttons: outline or default depending on emphasis; keep contrast strong against the tinted background.
 
 ### 11) Loading and Skeletons
 - Use `animate-pulse` on neutral blocks; avoid shimmer.
@@ -294,6 +331,42 @@ Sizing guidance
   </div>
 }
 ```
+
+ - Brand assets color picker + preview
+```tsx
+<div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+  <div className="space-y-4 md:col-span-1">
+    <div>
+      <label className="text-sm font-medium text-[var(--foreground)]">Primary color</label>
+      <div className="mt-1.5 flex items-center gap-3">
+        <input type="color" className="h-10 w-12 rounded border border-[hsl(var(--border))]" />
+        <input className="h-10 w-28 font-mono text-xs" placeholder="#111827" />
+      </div>
+    </div>
+    <div>
+      <label className="text-sm font-medium text-[var(--foreground)]">Accent color</label>
+      <div className="mt-1.5 flex items-center gap-3">
+        <input type="color" className="h-10 w-12 rounded border border-[hsl(var(--border))]" />
+        <input className="h-10 w-28 font-mono text-xs" placeholder="#6EE7B7" />
+      </div>
+    </div>
+  </div>
+  <div className="md:col-span-2">
+    <label className="text-sm font-medium text-[var(--foreground)]">Preview</label>
+    <div
+      className="rounded-xl h-40 md:h-48 p-6 flex items-end justify-between overflow-hidden"
+      style={{ background: `linear-gradient(135deg, var(--primary), var(--accent))` }}
+    >
+      <span className="inline-flex px-3 py-1 rounded-full text-xs font-medium">Preview</span>
+      <button className="px-3 py-1.5 rounded-md text-xs font-medium shadow-sm">Sample Button</button>
+    </div>
+    <p className="mt-2 text-xs text-[var(--muted-foreground)]">Ensure text has sufficient contrast against chosen colors.</p>
+  </div>
+</div>
+```
+
+Accessibility note for color previews
+- Compute readable text color against chosen swatches using relative luminance. Prefer white on dark/saturated colors and near-black on light colors.
 
 This plan intentionally keeps non‑landing pages calm and practical, while preserving the same visual language, tokens, and component treatments established on the landing page. Adjust spacing or density per page needs, but keep surfaces, borders, and button styles consistent throughout the app.
 

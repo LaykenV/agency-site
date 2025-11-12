@@ -6,6 +6,8 @@ import {
   TERMS_VERSION,
 } from "@/lib/legal/terms";
 import { type Metadata } from "next";
+import { PageHeader } from "@/components/PageHeader";
+import { PrintButton } from "@/components/PrintButton";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -47,8 +49,8 @@ const TableOfContents = () => (
 
 const renderSectionContent = () =>
   TERMS_SECTIONS.map((section) => (
-    <section key={section.anchor} id={section.anchor} className="scroll-mt-32">
-      <h2 className="text-2xl font-semibold text-[var(--foreground)]">{section.title}</h2>
+    <section key={section.anchor} id={section.anchor} className="anchor-target scroll-mt-32">
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] heading-gradient-soft">{section.title}</h2>
       <div className="mt-4 space-y-4 text-base leading-7 text-[var(--secondary)]">
         {section.blocks.map((block, index) => {
           if (block.type === "paragraph") {
@@ -98,49 +100,53 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
   }
 
   return (
-    <div
-      className="relative min-h-dvh bg-[var(--background)] text-[var(--foreground)]"
-      data-terms-version={TERMS_VERSION}
-    >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,var(--muted)_0%,transparent_70%)] opacity-40" />
-      <div className="relative z-10 mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-16">
-        <header className="rounded-3xl border border-[var(--border)] bg-[var(--card)]/90 p-10 shadow-2xl backdrop-blur">
-          <p className="text-xs uppercase tracking-[0.4em] text-[var(--secondary)]">Terms of Service</p>
-          <h1 className="mt-3 text-4xl font-semibold">Website-as-a-Service Agreement</h1>
-          <p className="mt-3 text-sm text-[var(--secondary)]">Version {TERMS_VERSION} • Last updated {TERMS_LAST_UPDATED}</p>
-          <p className="mt-4 text-base text-[var(--secondary)]">
-            These terms govern your Website-as-a-Service subscription. They outline the deliverables, ongoing support, billing obligations, and commitments for both parties.
-          </p>
-          <div className="mt-8">
-            <div className="rounded-2xl border border-[var(--border)] bg-gradient-to-br from-[var(--muted)]/60 to-[var(--card)]/80 p-8 shadow-lg">
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--secondary)]">
-                Conspicuous Summary
-              </p>
-              <div className="mt-6">
-                <SummaryList />
-              </div>
-              <p className="mt-6 text-sm text-[var(--secondary)]">
-                Refer to the full agreement below for details, including order summary, scope of service, unlimited edits policy, and early termination terms.
-              </p>
-            </div>
-          </div>
-        </header>
+    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]" data-terms-version={TERMS_VERSION}>
+      <div className="mx-auto max-w-6xl px-6 py-16">
+        <PageHeader
+          title="Terms of Service"
+          description="Website-as-a-Service Agreement"
+          secondaryAction={<PrintButton className="btn-secondary px-4 py-2 lg:hidden">Print</PrintButton>}
+        />
 
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <article className="rounded-3xl border border-[var(--border)] bg-[var(--card)]/85 p-10 shadow-xl backdrop-blur">
-            <div className="space-y-12">{renderSectionContent()}</div>
-            <footer className="mt-10 rounded-2xl border border-[var(--border)] bg-[var(--muted)]/40 p-6 text-sm text-[var(--secondary)]">
-              <p>
-                Questions? Email <a className="text-[var(--primary)]" href="mailto:support@acadianawebdesign.com">support@acadianawebdesign.com</a>.
+          <div className="space-y-6">
+            <div className="surface rounded-3xl p-8 glow-primary">
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Version {TERMS_VERSION} • Last updated {TERMS_LAST_UPDATED}
               </p>
-              <p className="mt-2">Version {TERMS_VERSION}</p>
-            </footer>
-          </article>
+              <p className="mt-4 text-base text-[var(--muted-foreground)]">
+                These terms govern your Website-as-a-Service subscription. They outline the deliverables, ongoing support, billing obligations, and commitments for both parties.
+              </p>
+              <div className="mt-8 surface-soft rounded-2xl p-6 glow-primary">
+                <p className="text-sm font-semibold uppercase tracking-[0.3em] text-[var(--muted-foreground)]">
+                 Key Terms
+                </p>
+                <div className="mt-6">
+                  <SummaryList />
+                </div>
+                <p className="mt-6 text-sm text-[var(--muted-foreground)]">
+                  Refer to the full agreement below for details, including order summary, scope of service, unlimited edits policy, and early termination terms.
+                </p>
+              </div>
+            </div>
+
+            <article className="surface rounded-3xl p-10 shadow-xl glow-primary">
+              <div className="space-y-12">{renderSectionContent()}</div>
+              <footer className="mt-10 surface-soft rounded-2xl p-6 text-sm text-[var(--muted-foreground)]">
+                <p>
+                  Questions? Email <a className="text-[var(--primary)]" href="mailto:support@acadianawebdesign.com">support@acadianawebdesign.com</a>.
+                </p>
+                <p className="mt-2">Version {TERMS_VERSION}</p>
+              </footer>
+            </article>
+          </div>
+
           <aside className="space-y-6">
-            <TableOfContents />
-            <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]/80 p-6 text-sm text-[var(--secondary)]">
-              <p className="font-semibold text-[var(--foreground)]">Need a printable version?</p>
-              <p className="mt-1">Open this page with <span className="font-mono">?print=1</span> to view a print-friendly layout.</p>
+            <div className="surface-soft rounded-2xl p-6 md:sticky md:top-24 glow-primary">
+              <TableOfContents />
+              <div className="mt-6 hidden lg:block">
+                <PrintButton className="btn-secondary w-full px-4 py-2">Print</PrintButton>
+              </div>
             </div>
           </aside>
         </div>
