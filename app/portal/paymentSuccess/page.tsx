@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Authenticated, Unauthenticated } from "convex/react";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function PaymentSuccessPage() {
   return (
@@ -95,24 +96,26 @@ function PaymentSuccessContent() {
   }
 
   return (
-    <section className="mx-auto max-w-6xl px-6 py-10 md:py-12 text-[var(--foreground)]">
-      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-lg md:text-xl font-semibold text-emerald-700 dark:text-emerald-400">
-              Payment successful
-            </h1>
-            <p className="mt-1 text-sm text-[var(--foreground)]/80">
-              {syncing ? statusMessage : "Redirecting to your portal..."}
-            </p>
-            <div className="mt-3 flex items-center gap-2 text-sm text-[var(--foreground)]/70">
-              <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
-              <span>Please wait</span>
+    <section className="mx-auto max-w-6xl px-6 py-10 md:py-12 text-[var(--foreground)] w-full">
+      <div className="w-full max-w-xl mx-auto">
+        <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            <div>
+              <h1 className="text-lg md:text-xl font-semibold text-emerald-700 dark:text-emerald-400">
+                Payment successful
+              </h1>
+              <p className="mt-1 text-sm text-[var(--foreground)]/80">
+                {syncing ? statusMessage : "Redirecting to your portal..."}
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-sm text-[var(--foreground)]/70">
+                <Loader2 className="h-4 w-4 animate-spin text-[var(--primary)]" />
+                <span>Please wait</span>
+              </div>
             </div>
+            <Link href="/portal" className="btn-secondary px-4 py-2 self-start md:self-auto">
+              View my portal
+            </Link>
           </div>
-          <Link href="/portal" className="btn-secondary px-4 py-2">
-            View my portal
-          </Link>
         </div>
       </div>
     </section>

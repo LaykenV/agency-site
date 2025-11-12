@@ -89,41 +89,43 @@ function AuthenticatedSubscribeView() {
   }, [decision]);
   
   return (
-    <section className="mx-auto max-w-6xl px-6 py-10 md:py-12 text-[var(--foreground)]">
-      <PageHeader title="Subscribe" description={statusMessage} />
+    <section className="mx-auto max-w-6xl px-6 py-10 md:py-12 text-[var(--foreground)] w-full">
+      <div className="w-full max-w-xl mx-auto">
+        <PageHeader title="Subscribe" description={statusMessage} />
 
-      <div className="surface rounded-xl p-4 sm:p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
-            <p className="mt-1 text-sm text-[var(--muted-foreground)]">$199/mo · 12‑month minimum</p>
+        <div className="surface rounded-xl p-4 sm:p-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div>
+              <h2 className="text-lg md:text-xl font-semibold text-[var(--foreground)]">The All‑Inclusive Plan</h2>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">$199/mo · 12‑month minimum</p>
+            </div>
+            <button
+              disabled={loading}
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  const { url } = await createCheckout({});
+                  window.location.href = url;
+                } catch (err) {
+                  console.error(err);
+                  alert("Could not start checkout. Please sign in and try again.");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="btn-cta px-5 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? "Starting checkout..." : "Continue to Checkout"}
+            </button>
           </div>
-          <button
-            disabled={loading}
-            onClick={async () => {
-              try {
-                setLoading(true);
-                const { url } = await createCheckout({});
-                window.location.href = url;
-              } catch (err) {
-                console.error(err);
-                alert("Could not start checkout. Please sign in and try again.");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="btn-cta px-5 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? "Starting checkout..." : "Continue to Checkout"}
-          </button>
+          <p className="mt-3 text-xs text-[var(--muted-foreground)]">
+            By continuing you agree to our{" "}
+            <Link href="/legal/terms" className="underline hover:opacity-90">
+              Terms
+            </Link>
+            .
+          </p>
         </div>
-        <p className="mt-3 text-xs text-[var(--muted-foreground)]">
-          By continuing you agree to our{" "}
-          <Link href="/legal/terms" className="underline hover:opacity-90">
-            Terms
-          </Link>
-          .
-        </p>
       </div>
     </section>
   );
