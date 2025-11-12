@@ -6,13 +6,91 @@ Summary
 - Header animates from the bottom with a single gradient heading that reveals word-by-word (50 ms stagger, ~420 ms per word), using the `.heading-word` utility for a synced glow.
 - Hero subtext fades up after the heading completes.
 - Hero CTA fades up after the subtext.
-- The card begins only after the CTA has finished animating, then all card content follows.
-- Card frame floats in first (`floatCard` variant) with a soft spring and brief de‑blur, then icon trio animates in with stagger (`containerStagger` + `popIn`).
-- Supporting copy, star rating, plan bullets, and CTAs wait for `cardContentVisible` state (set after icon animation completes) before revealing.
-- State management: `cardFrameDone` tracks card scale completion, `cardContentVisible` gates content reveal.
-- Overlay fades shortly after the card lands (non‑destructive).
-- Icons, supporting copy, and bullets stagger in.
+- The card begins only after the CTA has finished animating, then supporting content follows.
+- Card frame floats in first (`floatCard` variant) with a soft spring and brief de‑blur; the hero image renders statically inside the card (no inner animations).
+- Supporting copy, star rating, and plan bullets:
+  - Mobile (<md): reveal after the card float‑in completes via `cardContentVisible`.
+  - md+ (≥768px): wait until scrolled into view using `useInView` with `inViewDefaults`.
+- State management: `cardContentVisible` gates content reveal; `cardFrameDone` has been removed.
+- No overlay fade is used inside the hero media; gradients remain static.
+- Supporting copy and bullets still use subtle staggered fades.
 - Motion respects reduced‑motion; hero/card viewport amount is 0.20 and runs once.
+
+md+ in‑view gating (star line + lower panel)
+
+- On mobile (<md): after the card float‑in completes, `cardContentVisible` gates the star line, heading, and bullets (unchanged).
+- On md+ (≥768px): the lower panel content (star rating, “All‑inclusive plan” heading, and bullets) waits until it is scrolled into view, using `useInView` and a breakpoint hook.
+- This ensures the star animation and related text don’t play until the user scrolls to that area on larger screens.
+
+Key helpers
+
+```12:40:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
+export function useIsMdUp() {
+  const [mdUp, setMdUp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 768px)");
+    const apply = () => setMdUp(mql.matches);
+    apply();
+    const handler = (e: MediaQueryListEvent) => setMdUp(e.matches);
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", handler);
+      return () => mql.removeEventListener("change", handler);
+    } else {
+      // @ts-expect-error - legacy
+      mql.addListener(handler);
+      return () => {
+        // @ts-expect-error - legacy
+        mql.removeListener(handler);
+      };
+    }
+  }, []);
+  return mdUp;
+}
+
+export const inViewDefaults = { once: true, amount: 0.45 } as const;
+```
+
+Usage in `app/page.tsx`
+
+```152:176:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+const contentRef = useRef<HTMLDivElement | null>(null);
+const mdUp = useIsMdUp();
+const isInView = useInView(contentRef, inViewDefaults);
+
+const contentMotionProps =
+  reduce
+    ? { initial: false }
+    : mdUp
+    ? ({ initial: "hidden", whileInView: "visible", viewport: inViewDefaults })
+    : ({ initial: "hidden", animate: (cardContentVisible ? "visible" : "hidden") as "visible" | "hidden" });
+```
+
+Star rating start trigger and gated content
+
+```156:176:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
+<div ref={contentRef} className="relative z-[1]">
+  <div className="mt-2">
+    <StarRating align="left" start={reduce ? true : !!(mdUp ? isInView : cardContentVisible)} />
+  </div>
+  <motion.h2
+    className="mt-4 font-semibold text-[var(--foreground)] opacity-0"
+    variants={fadeUp}
+    {...contentMotionProps}
+    transition={{ delay: reduce ? 0 : 0.16 }}
+  >
+    All‑inclusive plan
+  </motion.h2>
+  <motion.ul
+    className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]"
+    variants={containerStagger}
+    {...contentMotionProps}
+    transition={{ delay: reduce ? 0 : 0.20 }}
+  >
+    {/* li items */}
+  </motion.ul>
+</div>
+```
 
 Dependencies
 - `framer-motion` (installed with bun): `bun add framer-motion` [[memory:10223697]].
@@ -20,7 +98,7 @@ Dependencies
 Key files
 - `components/animations.tsx`: shared variants, `SplitWords`, and `useHeroTimings`.
 - `app/page.tsx`: hero wired with `LazyMotion`, `MotionConfig`, and variants.
-- `app/globals.css`: `.hero-overlay` helper to fade the hero overlay instead of animating gradients.
+- `app/globals.css`: gradients remain static; no `.hero-overlay` animation inside the hero media.
 
 Core imports in `app/page.tsx`
 
@@ -31,8 +109,6 @@ import {
   containerStagger,
   fadeUp,
   floatCard,
-  popIn,
-  fadeIn,
   SplitWords,
   useHeroTimings,
 } from "@/components/animations";
@@ -45,12 +121,10 @@ export default function Home() {
   const reduce = useReducedMotion();
   const TITLE = "A 5‑Star Website for Your Business in Acadiana";
   const t = useHeroTimings(TITLE);
-  const [cardFrameDone, setCardFrameDone] = useState(reduce);
   const [cardContentVisible, setCardContentVisible] = useState(reduce);
 
   useEffect(() => {
     if (reduce) {
-      setCardFrameDone(true);
       setCardContentVisible(true);
     }
   }, [reduce]);
@@ -59,7 +133,7 @@ export default function Home() {
 Header: word‑by‑word (reduced‑motion fallback is static)
 
 The `SplitWords` component renders a single gradient heading and relies on the `.heading-word` helper (pseudo-element glow) for each word. Word-by-word animation is driven by a 50 ms stagger and ~420 ms word duration so the glow and text move in lockstep.
-The hero card sequencing runs in phases: (1) card frame floats in on a spring, (2) icon trio animates sequentially, (3) supporting content and star rating fade up once the icons complete.
+The hero card sequencing runs in phases: (1) card frame floats in on a spring, (2) supporting content and star rating fade up once the card completes. The image inside the card is static (no inner animations).
 
 ```64:77:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 {reduce ? (
@@ -74,7 +148,7 @@ The hero card sequencing runs in phases: (1) card frame floats in on a spring, (
 )}
 ```
 
-Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
+Hero card land; hero image renders statically
 
 ```90:102:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
 <motion.div
@@ -86,39 +160,33 @@ Hero card land + overlay fade (we fade a child overlay, not gradient tokens)
   viewport={{ once: true, amount: 0.20 }}
   onAnimationComplete={() => {
     if (!reduce) {
-      setCardFrameDone(true);
-    }
-  }}
->
-```
-
-```105:111:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
-<motion.div
-  className="absolute inset-0 motion-will-change hero-overlay opacity-0"
-  variants={fadeIn}
-  initial={reduce ? false : "hidden"}
-  animate={reduce ? undefined : "visible"}
-  transition={{ delay: reduce ? 0 : t.cardStart + 0.06 }}
-/>
-```
-
-Icons and content stagger
-
-```113:125:/Users/laykenvarholdt/projects/agency-site/app/page.tsx
-<motion.ul
-  className="w-full relative z-[1] grid grid-cols-3 gap-3 sm:gap-6 md:gap-8 px-4 sm:px-6 md:px-8"
-  role="list"
-  variants={containerStagger}
-  initial={reduce ? false : "hidden"}
-  animate={reduce ? undefined : (cardFrameDone ? "visible" : "hidden")}
-  transition={{ delay: reduce ? 0 : 0.04 }}
-  onAnimationComplete={() => {
-    if (!reduce) {
       setCardContentVisible(true);
     }
   }}
 >
 ```
+
+Hero media markup:
+
+```tsx
+<div className="relative w-full aspect-[16/9] md:aspect-[16/9] hero-media">
+  <picture>
+    <img
+      src="/heroimg.png"
+      alt="Website preview"
+      className="absolute inset-0 h-full w-full object-cover"
+      decoding="async"
+    />
+  </picture>
+  {/* Image is decorative; no inner animations */}
+  {/* CTA and heading are outside this container */}
+  {/* Lower panel content is gated as described below */}
+</div>
+```
+
+Supporting content timing (mobile vs md+)
+
+When the card's `onAnimationComplete` fires, `cardContentVisible` becomes `true` on mobile; downstream elements (rating line, plan heading, bullets) animate in with `fadeUp`. On md+, the same elements are gated by `useInView` and reveal only when scrolled into view. Both modes use small staggered delays.
 
 Supporting copy, rating, heading, bullets
 
@@ -126,14 +194,7 @@ These are gated by `cardContentVisible` (using `animate={cardContentVisible ? "v
 
 Overlay helper in CSS
 
-```234:239:/Users/laykenvarholdt/projects/agency-site/app/globals.css
-.hero-overlay {
-  background:
-    linear-gradient(180deg, hsl(var(--background) / 0.00) 0%, hsl(var(--background) / 0.00) 70%, hsl(var(--background) / 0.06) 100%),
-    radial-gradient(100% 60% at 50% 0%, hsl(var(--primary) / 0.10) 0%, transparent 70%);
-  pointer-events: none;
-}
-```
+No animated overlay is used in the hero media; gradients remain static.
 
 Shared animation primitives (`components/animations.tsx`)
 
@@ -168,9 +229,8 @@ Hero choreography and order (within `app/page.tsx`):
 2. Hero subtext fades up.
 3. Hero CTA fades up.
 4. Float-in spring (`floatCard`) plays on the card shell after the CTA completes (y+scale with soft overshoot and blur → crisp).
-5. `cardFrameDone` flips once the card scale animation completes (via `onAnimationComplete`), triggering the icon trio list to animate (`containerStagger` + `popIn`).
-6. When the icon list finishes (via its `onAnimationComplete`), `cardContentVisible` flips, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, etc.
-7. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
+5. On card completion, `cardContentVisible` flips to true, revealing the supporting copy, star rating (via `start={cardContentVisible}` prop), plan bullets, etc.
+6. Each content element uses `fadeUp` variant with increasing delays (0.08s, 0.16s, 0.20s, 0.36s) for staggered reveal.
 
 ```101:112:/Users/laykenvarholdt/projects/agency-site/components/animations.tsx
 export function useHeroTimings(headerText: string) {
@@ -200,12 +260,11 @@ Constants used:
 - `WORD_PAD = 0.2` (padding after words complete)
 
 Behavioral notes
-- Transforms/opacity only; no gradient stop animation. We fade a child overlay, preserving gradients [[memory:10223702]].
+- Transforms/opacity only; no gradient stop animation. No inner overlay fade; gradients remain static [[memory:10223702]].
 - Card uses a spring-based float-in (y+scale) with a light de‑blur for an airy feel.
 - Hero uses `viewport={{ once: true, amount: 0.20 }}` to reveal only once.
 - Order is: heading → subtext → CTA → card → card content.
-- Card frame animation completes first, then `cardFrameDone` triggers icon trio animation.
-- Icons and supporting content are gated by `cardContentVisible` so they only appear after the icon animation completes.
+- Card frame animation completes first, then `cardContentVisible` gates the supporting content.
 - Reduced‑motion short‑circuits animations: both state variables initialize to `true` when `reduce` is true, skipping all animations.
 - Bundle‑aware: `LazyMotion` + `domAnimation` are used.
 - **Glow fix**: The heading uses a dual-layer approach where a static blurred background provides the glow effect, while the foreground text animates word-by-word. This prevents the glow from animating separately and causing a visual delay.
@@ -225,5 +284,5 @@ Not added by default; you can enable a compositor hint class:
 
 Testing checklist
 - With reduced‑motion enabled, hero renders statically (or subtle fades only).
-- Normal motion: header words → card lands/overlay fades → icons/copy → CTAs.
+- Normal motion: header words → card lands → content reveals → CTAs.
 - Visuals match the brand’s soft gradients; no flicker or harsh transitions.

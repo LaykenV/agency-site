@@ -13,13 +13,13 @@ Mapping notes
   - "72‑hour go‑live from build"
   - "Unlimited edit requests via the client portal"
 - Plan heading: "All‑inclusive plan"
-- CTA labels (current)
-  - Primary (solid): "Start Onboarding" → `/onboarding?utm_source=lp&cta=hero`
-  - Secondary (outline): "Schedule Call" → `ONBOARDING_CAL_LINK`
-- Icon trio labels (current)
-  - "Tell us your vision" — Schedule a call and do a deep dive on your business, brand, and goals.
-  - "We Build Your Website" — Our team designs and develops a custom, high-performance website that's built to convert.
-  - "Launch and Grow" — We handle the launch, hosting, and all future updates, so you can enjoy a worry-free online presence.
+- CTA (current)
+  - Centered CTA: "Schedule Call" → `ONBOARDING_CAL_LINK`
+- Hero image (current)
+  - Single image `/heroimg.png` rendered inside the hero card (`aspect-[16/9]` at all breakpoints). Alt: "Website preview" (or empty alt if purely decorative).
+- Visibility behavior
+  - Mobile (<md): Rating line, plan heading, and bullets reveal after the card float‑in completes.
+  - md+ (≥768px): Rating line, plan heading, and bullets wait until they are scrolled into view.
 
 2) Trust & Reviews (app/page.tsx: #trust, components/ReviewsScroller.tsx)
 - Section header
@@ -159,13 +159,9 @@ Mapping notes
 - Link (current): "Terms" → `/legal/terms`
 
 11) Accessibility: Alt text suggestions
+- Hero image inside hero card:
+  - Alt: "Website preview" (or `alt=""` if purely decorative)
 - Hero device mockups: Decorative — keep aria-hidden as is.
-- Icon 1 (“Tell us your vision”):
-  - Alt: Phone consultation icon
-- Icon 2 (“We Build Your Website”):
-  - Alt: Desktop and mobile website icon
-- Icon 3 (“Launch and Grow”):
-  - Alt: Wrench and gear icon for launch and updates
 - Placeholder site images (landscaping, plumbing, renovation):
   - Landscaping: Example landscaping website homepage
   - Plumbing: Example plumbing services website homepage

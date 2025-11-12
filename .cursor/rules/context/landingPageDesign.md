@@ -9,7 +9,7 @@ This plan specifies the landing page’s UX, layout, visual language, components
 
 ### Page Anatomy (order) — Current Implementation
 1. Sticky header (all breakpoints) — `components/global-header.tsx`
-2. Hero (`#hero`) — Word-by-word animated heading, hero card with icon trio, star rating, plan bullets, CTAs
+2. Hero (`#hero`) — Word-by-word animated heading, hero card with responsive hero image (32:9 on md+ and 16:9 on mobile), star rating, plan bullets, CTAs
 3. Trust & Reviews (`#trust`) — Section header, category pills, `ReviewsScroller` component
 4. Offer/Features/Comparison (`#offer`) — Combined section with:
    - How it works (`#plan-steps`) — `HowItWorks` component
@@ -57,7 +57,7 @@ All sections are implemented directly in `app/page.tsx` with proper semantic HTM
 ## Sections — Specs and Implementation Notes
 
 ### 1) Hero (current implementation)
-- Purpose: Present the offer with animated word-by-word heading, hero card containing icon trio, plan details, and CTAs.
+- Purpose: Present the offer with animated word-by-word heading, hero card containing a responsive image, plan details, and CTAs.
 - Layout
   - Single column centered layout with `max-w-6xl`
   - Hero card uses `surface` class with rounded corners
@@ -65,22 +65,25 @@ All sections are implemented directly in `app/page.tsx` with proper semantic HTM
 - Content
   - H1: "A 5‑Star Website for Your Business in Acadiana" — animated word-by-word using `SplitWords` component
   - Hero card contains:
-    - Icon trio (3 icons with labels): "Tell us your vision", "We Build Your Website", "Launch and Grow"
+    - Hero image displayed via a single `<img src="/heroimg.png">`:
+      - Aspect ratio: `aspect-[16/9]` at all breakpoints
     - Subhead: "Done‑for‑you website and hosting. Unlimited edit requests via the client portal. Built to bring in calls."
     - Star rating component (animated sequentially)
     - Plan heading: "All‑inclusive plan"
     - Plan bullets: "$199/mo • $0 down", "72‑hour go‑live from build", "Unlimited edit requests via the client portal"
-  - CTAs: Primary "Start Onboarding" → `/onboarding?utm_source=lp&cta=hero`; Secondary "Schedule Call" → `ONBOARDING_CAL_LINK`
-  - CTAs positioned: inside card bottom-right on desktop, below card on mobile
+  - CTAs: Centered "Schedule Call" → `ONBOARDING_CAL_LINK`
+  - CTA positioning: centered above the hero card
 - Visuals
-  - Hero card has aspect ratio `aspect-[21/9] sm:aspect-[24/9] md:aspect-[32/9]`
-  - Overlay fade animation via `.hero-overlay` class
+  - Hero card media uses `aspect-[16/9] md:aspect-[16/9]`
+  - No animated overlay inside the media; image renders statically with the card
   - Background gradient via `.page-gradient` positioned absolutely
 - Animation
   - Word-by-word heading reveal (50ms stagger, 420ms per word)
   - Card scale-in animation
-  - Icon trio stagger animation
-  - Content reveal gated by `cardContentVisible` state
+  - No inner animations for the media (no icon trio); the image simply renders with the card
+  - Content reveal (rating, headings, bullets):
+    - Mobile (<md): gated by `cardContentVisible`, which flips to `true` when the card’s float-in completes
+    - md+ (≥768px): gated by `useInView` with `inViewDefaults` and a `useIsMdUp` breakpoint check
   - Star rating animates sequentially (350ms per star)
 - Accessibility/Interaction
   - `prefers-reduced-motion`: static rendering, state variables initialize to `true`

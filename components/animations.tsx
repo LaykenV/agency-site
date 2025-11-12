@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { m as motion } from "framer-motion";
 import type { Variants } from "framer-motion";
 
@@ -135,3 +136,30 @@ export function useHeroTimings(headerText: string) {
 }
 
 
+
+// Breakpoint + in-view helpers
+export function useIsMdUp() {
+  const [mdUp, setMdUp] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mql = window.matchMedia("(min-width: 768px)");
+    const apply = () => setMdUp(mql.matches);
+    apply();
+    const handler = (e: MediaQueryListEvent) => setMdUp(e.matches);
+    // addEventListener is preferred; older Safari requires addListener
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", handler);
+      return () => mql.removeEventListener("change", handler);
+    } else {
+      // @ts-expect-error - for older browsers
+      mql.addListener(handler);
+      return () => {
+        // @ts-expect-error - for older browsers
+        mql.removeListener(handler);
+      };
+    }
+  }, []);
+  return mdUp;
+}
+
+export const inViewDefaults = { once: true, amount: 0.45 } as const;

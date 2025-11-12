@@ -101,9 +101,9 @@
 //subtext and move up cta button
 //bigger gradient
 //better text color and apply to name and theme toggle
-card?
+card? gen imgs
 fix copy
-mobile menu
+//mobile menu
 //new style for schedule call button
 
 full ui / refinement of portal pages
