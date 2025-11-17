@@ -106,9 +106,9 @@
 //mobile menu
 //new style for schedule call button
 
-full ui / refinement of portal pages
-header and footer on all pages
-redirect to / messes up animation
+//full ui / refinement of portal pages
+//header and footer on all pages
+//redirect to / messes up animation
 
 ux improvements
 
