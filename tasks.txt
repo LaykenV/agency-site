@@ -111,15 +111,18 @@
 //redirect to / messes up animation
 
 ux improvements
+go through each page with gemini
 
-email? voip?
+email? voip? resend inbound
 
-test everything
+test everything, total
+live stripe
 
-template
+template nextjs
 
 google business profile
-live stripe
+
+get user
 
 marketing // use atlas outbound, get them to sign up
 bandit signs

@@ -111,7 +111,14 @@ export function GlobalHeader() {
 
         {/* Mobile hamburger + menu */}
         <div className="md:hidden relative">
-          <label className="hamburger" aria-label="Open menu">
+          <label 
+            className={`hamburger transition-colors ${
+              onLanding
+                ? "text-white dark:text-[hsl(var(--hero-foreground))]"
+                : "text-[hsl(var(--hero-foreground))]"
+            }`}
+            aria-label="Open menu"
+          >
             <input
               type="checkbox"
               checked={menuOpen}
