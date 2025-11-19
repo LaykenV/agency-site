@@ -18,7 +18,7 @@ export const sendTestEmail = internalAction({
     console.log("[emails] sending test email", { to: args.to });
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <welcome@notifications.acadianawebdesign.com>",
+      from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
       to: args.to,
       subject: "Test Email",
       html: `<p>Test email from the system</p>`,
@@ -148,7 +148,7 @@ export const sendWelcomeEmail = internalAction({
     `;
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <welcome@notifications.acadianawebdesign.com>",
+      from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
       to: args.userEmail,
       subject: `Welcome Aboard, ${args.userName}! Your Website Project Starts Now`,
       html: htmlContent,

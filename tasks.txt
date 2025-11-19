@@ -113,12 +113,13 @@
 ux improvements
 go through each page with gemini
 
-email? voip? resend inbound
+voip? resend inbound
+
+template nextjs
 
 test everything, total
 live stripe
 
-template nextjs
 
 google business profile
 
@@ -131,7 +132,6 @@ cold call
 get first client
 
 LLC
-support inbound email
 
 
 

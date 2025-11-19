@@ -29,7 +29,7 @@ const sendMagicLinkEmail = async (
   }
 ) => {
   await resend.sendEmail(ctx, {
-    from: "Acadiana Web Design <welcome@notifications.acadianawebdesign.com>",
+    from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
     to,
     subject: "Your secure sign-in link",
     html: `
