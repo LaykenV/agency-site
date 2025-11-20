@@ -112,16 +112,19 @@
 
 ux improvements
 go through each page with gemini
-
-voip? resend inbound
-
-template nextjs
-
+//SEO [x]
 test everything, total
 live stripe
+stripe img
 
-
+//voip?
 google business profile
+bandit signs 
+//resend inbound
+
+template nextjs
+update reviews with examples
+
 
 get user
 

@@ -118,7 +118,7 @@ export const sendWelcomeEmail = internalAction({
                 </div>
                 
                 <div style="text-align: center; margin: 32px 0;">
-                  <a href="${process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL}/portal" 
+                  <a href="${process.env.NEXT_PUBLIC_APP_URL ? `https://${process.env.NEXT_PUBLIC_APP_URL}` : (process.env.SITE_URL ?? "http://localhost:3000")}/portal" 
                      style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
                     Go to Your Portal
                   </a>
