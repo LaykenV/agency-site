@@ -110,19 +110,35 @@
 //header and footer on all pages
 //redirect to / messes up animation
 
-ux improvements
-go through each page with gemini
+//ux improvements
+//go through each page with gemini
 //SEO [x]
+
+leads and analytics tables
+analytics webhook
+leads webhook
+update portal to show leads and analytics
+
+make token expiry longer
+
+style emails
+
+remove 'join meeting' 'back to portal home'
+'accept and continue payment' 'continue to checkout' cursor pointer
+'atypically takes 5-7 days'
+remove hover on card
+
+clean up all code
+
 test everything, total
 live stripe
 stripe img
 
-//voip?
 google business profile
 bandit signs 
 //resend inbound
 
-template nextjs
+//template nextjs
 update reviews with examples
 
 
