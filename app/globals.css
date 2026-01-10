@@ -1537,12 +1537,26 @@ body {
   .review-card {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding: 1.5rem;
-    border-radius: calc(var(--radius) + 2px);
+    gap: 0.75rem;
+    padding: 1rem;
+    border-radius: calc(var(--radius) + 4px);
     box-shadow:
       0 18px 44px -28px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
       inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  }
+
+  @media (min-width: 640px) {
+    .review-card {
+      gap: 1rem;
+      padding: 1.25rem;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .review-card {
+      padding: 1.5rem;
+      border-radius: calc(var(--radius) + 6px);
+    }
   }
 
   .review-card.surface {
@@ -1552,11 +1566,18 @@ body {
 
   .review-card-mobile {
     flex: 0 0 auto;
-    min-width: clamp(260px, 78vw, 360px);
-    max-width: 360px;
+    min-width: clamp(240px, 75vw, 340px);
+    max-width: 340px;
     scroll-snap-align: center;
     position: relative;
     isolation: isolate;
+  }
+
+  @media (min-width: 400px) {
+    .review-card-mobile {
+      min-width: clamp(260px, 78vw, 360px);
+      max-width: 360px;
+    }
   }
 
   .reviews-track > .review-card-mobile:first-child {
@@ -1569,23 +1590,49 @@ body {
 
   .review-rating {
     color: hsl(var(--brand-amber));
-    font-size: 1.15rem;
-    letter-spacing: 0.15em;
+    font-size: 1rem;
+    letter-spacing: 0.12em;
     font-weight: 700;
   }
 
+  @media (min-width: 640px) {
+    .review-rating {
+      font-size: 1.15rem;
+      letter-spacing: 0.15em;
+    }
+  }
+
   .review-quote {
-    font-size: 1.05rem;
-    line-height: 1.65;
+    font-size: 0.9rem;
+    line-height: 1.6;
     color: hsl(var(--foreground));
     font-weight: 500;
   }
 
+  @media (min-width: 640px) {
+    .review-quote {
+      font-size: 0.95rem;
+      line-height: 1.65;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .review-quote {
+      font-size: 1.05rem;
+    }
+  }
+
   .review-author {
     margin-top: auto;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: hsl(var(--muted-foreground));
     font-weight: 600;
+  }
+
+  @media (min-width: 640px) {
+    .review-author {
+      font-size: 0.9rem;
+    }
   }
 
   .review-author span {
@@ -1881,29 +1928,59 @@ body {
 }
 
 /* FAQ styles */
-.faq-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.faq-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .faq-grid { gap: 1rem; }
+}
 
 .faq-item {
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) + 4px);
   border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 18%);
   background: linear-gradient(180deg, hsl(var(--card)) 0%, color-mix(in hsl, hsl(var(--card)), hsl(var(--primary)) 6%) 100%);
   box-shadow:
     0 18px 44px -28px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
     inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-.faq-item[open] { border-color: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 28%); }
+.faq-item[open] {
+  border-color: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 28%);
+  box-shadow:
+    0 22px 50px -26px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 50%),
+    inset 0 1px 0 hsl(0 0% 100% / 0.38);
+}
 
 .faq-summary {
   list-style: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: clamp(0.9rem, 1.5vw + 0.6rem, 1.25rem) clamp(1rem, 1.8vw + 0.5rem, 1.5rem);
+  gap: 0.5rem;
+  padding: 0.875rem 1rem;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.875rem;
   color: var(--foreground);
 }
+
+@media (min-width: 640px) {
+  .faq-summary {
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .faq-summary {
+    padding: 1.125rem 1.5rem;
+  }
+}
+
 .faq-summary::-webkit-details-marker { display: none; }
 .faq-summary::marker { content: ""; }
 .faq-summary:focus-visible {
@@ -1914,13 +1991,36 @@ body {
   border-radius: calc(var(--radius) - 4px);
 }
 
+.faq-question {
+  flex: 1;
+  line-height: 1.4;
+}
+
 /* Chevron icon shown at end of summary; actual rotation is handled via Framer Motion */
-.faq-chevron { width: 20px; height: 20px; color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 22%); flex: 0 0 auto; }
+.faq-chevron {
+  width: 18px;
+  height: 18px;
+  color: color-mix(in hsl, hsl(var(--foreground)), hsl(var(--primary)) 22%);
+  flex: 0 0 auto;
+}
+
+@media (min-width: 640px) {
+  .faq-chevron { width: 20px; height: 20px; }
+}
 
 
 .faq-answer {
-  padding: 0 1.25rem 0;
+  padding: 0 1rem 0;
 }
+
+@media (min-width: 640px) {
+  .faq-answer { padding: 0 1.25rem 0; }
+}
+
+@media (min-width: 768px) {
+  .faq-answer { padding: 0 1.5rem 0; }
+}
+
 .faq-answer p { margin-top: 0.5rem; color: hsl(var(--muted-foreground)); }
 
 @media (prefers-reduced-motion: reduce) {
