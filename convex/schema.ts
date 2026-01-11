@@ -111,5 +111,34 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"]),
 
+  client_leads: defineTable({
+    projectId: v.string(), // Human-readable slug, matches waas.projectId in template config
+    status: v.union(
+      v.literal("new"),
+      v.literal("contacted"),
+      v.literal("qualified"),
+      v.literal("won"),
+      v.literal("lost")
+    ),
+    source: v.string(), // "contact-form", "footer-form", "phone"
+    data: v.object({
+      name: v.string(),
+      email: v.string(),
+      phone: v.optional(v.string()),
+      message: v.optional(v.string()),
+    }),
+    createdAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_projectId_and_status", ["projectId", "status"])
+    .index("by_createdAt", ["createdAt"]),
+
+  client_analytics: defineTable({
+    projectId: v.string(), // Human-readable slug
+    date: v.string(), // YYYY-MM-DD
+    pageViews: v.number(),
+    topPages: v.array(v.object({ path: v.string(), views: v.number() })),
+  }).index("by_projectId_and_date", ["projectId", "date"]),
+
   //errorReports - future
 });
