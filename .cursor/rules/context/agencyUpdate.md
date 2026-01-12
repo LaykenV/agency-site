@@ -116,20 +116,39 @@ import { rateLimiter } from "./rateLimiter";
 
 const http = httpRouter();
 
-// Helper to build CORS headers using project's liveUrl
-function getCorsHeaders(liveUrl: string | null | undefined, origin: string | null) {
-  // Validate origin matches the project's liveUrl
-  const allowedOrigin = liveUrl && origin && (
-    origin === `https://${liveUrl}` || 
-    origin === `https://www.${liveUrl}` ||
-    origin.endsWith('.vercel.app') // Allow staging previews
-  ) ? origin : null;
+// Helper to build CORS headers using project's liveUrl and stagingUrl
+// SECURITY: We validate against explicit URLs only - no wildcards
+function getCorsHeaders(
+  liveUrl: string | null | undefined,
+  stagingUrl: string | null | undefined,
+  origin: string | null
+) {
+  if (!origin) {
+    return {
+      "Access-Control-Allow-Origin": "",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      Vary: "Origin",
+    };
+  }
+
+  // Check if origin matches the project's liveUrl (with or without www)
+  const matchesLive =
+    liveUrl &&
+    (origin === `https://${liveUrl}` || origin === `https://www.${liveUrl}`);
+
+  // Check if origin matches the project's configured stagingUrl exactly
+  const matchesStaging =
+    stagingUrl &&
+    (origin === `https://${stagingUrl}` || origin === stagingUrl);
+
+  const allowedOrigin = matchesLive || matchesStaging ? origin : null;
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin || "",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
@@ -142,21 +161,33 @@ http.route({
     const body = await request.json();
     const projectId = body.projectId as string;
     
-    // 1. Validate projectId exists and is LIVE
-    const project = await ctx.runQuery(internal.projects.getByProjectId, {
+    // 1. Validate projectId exists and is LIVE or IN_REVIEW
+    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
       projectId,
     });
     
-    if (!project || ["LIVE", "IN_REVIEW"].includes(project.projectStatus ?? "")) {
+    if (!project) {
       return new Response(JSON.stringify({ error: "Invalid project" }), { 
         status: 400, 
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    const corsHeaders = getCorsHeaders(project.deployment?.liveUrl, origin);
+    const allowedStatuses = ["LIVE", "IN_REVIEW"];
+    if (!allowedStatuses.includes(project.projectStatus ?? "")) {
+      return new Response(JSON.stringify({ error: "Project not accepting leads" }), { 
+        status: 400, 
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const corsHeaders = getCorsHeaders(
+      project.deployment?.liveUrl,
+      project.deployment?.stagingUrl,
+      origin
+    );
     
-    // 2. Validate origin matches project's liveUrl
+    // 2. Validate origin matches project's liveUrl or stagingUrl
     if (!corsHeaders["Access-Control-Allow-Origin"]) {
       return new Response(JSON.stringify({ error: "Forbidden" }), { 
         status: 403, 
@@ -181,19 +212,22 @@ http.route({
     }
 
     // 4. Insert lead
-    await ctx.runMutation(internal.clientLeads.create, {
+    const leadId = await ctx.runMutation(internal.clientLeads.create, {
       projectId,
-      source: body.source,
+      source: body.source || "contact-form",
       data: body.data,
     });
 
-    // 5. Trigger email notification (via Resend)
-    await ctx.runAction(internal.emails.sendLeadNotification, {
+    // 5. Trigger email notification (fire and forget)
+    ctx.runAction(internal.emails.sendLeadNotification, {
       projectId,
-      lead: body.data,
+      leadId,
+      leadData: body.data,
+    }).catch((err) => {
+      console.error("[http] Failed to send lead notification email:", err);
     });
 
-    return new Response(JSON.stringify({ success: true }), {
+    return new Response(JSON.stringify({ success: true, leadId }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -210,7 +244,7 @@ http.route({
     const projectId = body.projectId as string;
     
     // Validate projectId exists
-    const project = await ctx.runQuery(internal.projects.getByProjectId, {
+    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
       projectId,
     });
     
@@ -218,7 +252,11 @@ http.route({
       return new Response(null, { status: 400 });
     }
 
-    const corsHeaders = getCorsHeaders(project.deployment?.liveUrl, origin);
+    const corsHeaders = getCorsHeaders(
+      project.deployment?.liveUrl,
+      project.deployment?.stagingUrl,
+      origin
+    );
     
     // Validate origin
     if (!corsHeaders["Access-Control-Allow-Origin"]) {
@@ -237,7 +275,7 @@ http.route({
     // Record page view
     await ctx.runMutation(internal.clientAnalytics.recordPageView, {
       projectId,
-      path: body.path,
+      path: body.path || "/",
     });
 
     return new Response(null, { status: 204, headers: corsHeaders });
@@ -245,10 +283,10 @@ http.route({
 });
 
 // CORS Preflight handler (shared for both endpoints)
-const handlePreflight = httpAction(async (ctx, request) => {
+// Note: Preflight is intentionally permissive since projectId is in POST body.
+// The actual POST handlers perform strict origin validation.
+const handleClientApiPreflight = httpAction(async (_ctx, request) => {
   const origin = request.headers.get("origin");
-  // For preflight, we need to check projectId from a query param or just allow .vercel.app
-  // In practice, the actual POST will validate properly
   const headers = {
     "Access-Control-Allow-Origin": origin || "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -258,8 +296,8 @@ const handlePreflight = httpAction(async (ctx, request) => {
   return new Response(null, { status: 204, headers });
 });
 
-http.route({ path: "/api/ingest-lead", method: "OPTIONS", handler: handlePreflight });
-http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handlePreflight });
+http.route({ path: "/api/ingest-lead", method: "OPTIONS", handler: handleClientApiPreflight });
+http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
 
 export default http;
 ```
@@ -816,27 +854,29 @@ RESEND_API_KEY=re_...
 
 ## IX. Execution Checklist
 
-### Schema Updates
-- [ ] Add `client_leads` table to `convex/schema.ts`
-- [ ] Add `client_analytics` table to `convex/schema.ts`
-- [ ] Run `npx convex dev` to deploy schema changes
+### Schema Updates ✅
+- [x] Add `client_leads` table to `convex/schema.ts`
+- [x] Add `client_analytics` table to `convex/schema.ts`
+- [x] Run `npx convex dev` to deploy schema changes
 
-### Rate Limiter
-- [ ] Install: `bun add @convex-dev/rate-limiter`
-- [ ] Create `convex/convex.config.ts` with rate limiter component
-- [ ] Create `convex/rateLimiter.ts` with rate limit definitions
+### Rate Limiter ✅
+- [x] Install: `bun add @convex-dev/rate-limiter`
+- [x] Create `convex/convex.config.ts` with rate limiter component
+- [x] Create `convex/rateLimiter.ts` with rate limit definitions
 
-### HTTP Actions
-- [ ] Create/update `convex/http.ts` with lead and analytics endpoints
-- [ ] Add CORS validation using project's `liveUrl`
+### HTTP Actions ✅
+- [x] Create/update `convex/http.ts` with lead and analytics endpoints
+- [x] Add CORS validation using project's `liveUrl` and `stagingUrl` (no wildcards)
 
-### Internal Functions
-- [ ] Create `convex/clientLeads.ts` with create, list, and count functions
-- [ ] Create `convex/clientAnalytics.ts` with recordPageView and getSummary
-- [ ] Add `getByProjectId` internal query to `convex/projects.ts`
+### Internal Functions ✅
+- [x] Create `convex/clientLeads.ts` with create, list, and count functions
+- [x] Create `convex/clientAnalytics.ts` with recordPageView and getSummary
+- [x] Add `getByProjectIdSlug` internal query to `convex/projects.ts`
 
-### Email Notifications
-- [ ] Add `sendLeadNotification` action to `convex/emails.ts`
+### Email Notifications ✅
+- [x] Add `sendLeadNotification` action to `convex/emails.ts`
+- [x] Beautiful HTML template with quick actions and pro tip
+- [x] Fire-and-forget trigger from HTTP endpoint
 
 ### Portal Components
 - [ ] Create `AnalyticsSummary` component
@@ -851,7 +891,7 @@ RESEND_API_KEY=re_...
 
 ---
 
-## X. Phase 2 Enhancements
+## X. Future Enhancements
 
 1. **Unique Visitor Tracking:** Add fingerprinting for accurate unique visitor counts
 2. **Lead Scoring:** Automatic lead quality scoring based on message content
@@ -861,7 +901,7 @@ RESEND_API_KEY=re_...
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** January 3, 2026  
-**Status:** Ready to Implement
+**Document Version:** 1.1  
+**Last Updated:** January 11, 2026  
+**Status:** Backend Complete (Phases 1-4), Portal UI Pending (Phase 5)
 

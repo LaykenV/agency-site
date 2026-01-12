@@ -114,9 +114,9 @@
 //go through each page with gemini
 //SEO [x]
 
-leads and analytics tables
-analytics webhook
-leads webhook
+//leads and analytics tables
+//analytics webhook
+//leads webhook
 update portal to show leads and analytics
 
 make token expiry longer

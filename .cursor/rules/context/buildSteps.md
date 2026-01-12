@@ -520,17 +520,36 @@ import { rateLimiter } from "./rateLimiter";
 // ============================================================================
 // CORS HELPER FOR CLIENT SITES
 // ============================================================================
+// SECURITY: Validate against explicit liveUrl and stagingUrl only.
+// Do NOT use wildcards like .vercel.app - that would allow any Vercel
+// deployment to submit leads/analytics for any project.
+// ============================================================================
 
-function getCorsHeaders(liveUrl: string | null | undefined, origin: string | null) {
-  // Validate origin matches the project's liveUrl
-  const allowedOrigin =
+function getCorsHeaders(
+  liveUrl: string | null | undefined,
+  stagingUrl: string | null | undefined,
+  origin: string | null
+) {
+  if (!origin) {
+    return {
+      "Access-Control-Allow-Origin": "",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      Vary: "Origin",
+    };
+  }
+
+  // Check if origin matches the project's liveUrl (with or without www)
+  const matchesLive =
     liveUrl &&
-    origin &&
-    (origin === `https://${liveUrl}` ||
-      origin === `https://www.${liveUrl}` ||
-      origin.endsWith(".vercel.app")) // Allow staging previews
-      ? origin
-      : null;
+    (origin === `https://${liveUrl}` || origin === `https://www.${liveUrl}`);
+
+  // Check if origin matches the project's configured stagingUrl exactly
+  const matchesStaging =
+    stagingUrl &&
+    (origin === `https://${stagingUrl}` || origin === stagingUrl);
+
+  const allowedOrigin = matchesLive || matchesStaging ? origin : null;
 
   return {
     "Access-Control-Allow-Origin": allowedOrigin || "",
@@ -589,9 +608,13 @@ http.route({
       });
     }
 
-    const corsHeaders = getCorsHeaders(project.deployment?.liveUrl, origin);
+    const corsHeaders = getCorsHeaders(
+      project.deployment?.liveUrl,
+      project.deployment?.stagingUrl,
+      origin
+    );
 
-    // 2. Validate origin matches project's liveUrl
+    // 2. Validate origin matches project's liveUrl or stagingUrl
     if (!corsHeaders["Access-Control-Allow-Origin"]) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
@@ -695,7 +718,11 @@ http.route({
       return new Response(null, { status: 400 });
     }
 
-    const corsHeaders = getCorsHeaders(project.deployment?.liveUrl, origin);
+    const corsHeaders = getCorsHeaders(
+      project.deployment?.liveUrl,
+      project.deployment?.stagingUrl,
+      origin
+    );
 
     // Validate origin
     if (!corsHeaders["Access-Control-Allow-Origin"]) {
@@ -724,6 +751,15 @@ http.route({
 // ============================================================================
 // CORS PREFLIGHT HANDLERS
 // ============================================================================
+// Note: Preflight handlers are intentionally permissive because we cannot
+// validate the origin against project-specific URLs during OPTIONS requests
+// (the projectId is in the POST body, not the URL). The actual POST handlers
+// perform strict origin validation using getCorsHeaders() and return 403 +
+// empty CORS headers for invalid origins. Browsers will block the response
+// from JavaScript when CORS headers don't match, preventing data exfiltration.
+// Non-browser clients bypass CORS anyway, so server-side validation in POST
+// handlers is the real security boundary.
+// ============================================================================
 
 const handleClientApiPreflight = httpAction(async (_ctx, request) => {
   const origin = request.headers.get("origin");
@@ -744,23 +780,30 @@ http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleCli
 
 ---
 
-## Phase 4: Email Notifications
+## Phase 4: Email Notifications ✅ COMPLETED
 
-**Files to modify:**
-- `convex/emails.ts`
+**Status:** Implemented on January 11, 2026
 
-**Files to create:**
-- None
+**Files modified:**
+- `convex/emails.ts` - Added `sendLeadNotification` internal action
+- `convex/http.ts` - Wired up email trigger in lead ingestion endpoint
 
-### Step 4.1: Add Lead Notification Email
+### Implementation Summary
 
-Add to `convex/emails.ts`:
+The `sendLeadNotification` action sends a beautiful HTML email to clients when new leads are submitted:
+
+**Email Features:**
+- Green gradient header with celebration emoji
+- Personalized greeting using client's name
+- Lead details in a clean card layout (Name, Email, Phone, Message)
+- Quick action buttons: "Reply to [Name]" and "Call Now" (if phone provided)
+- Dark "View All Leads in Portal" CTA button
+- Pro tip callout about responding within 5 minutes for 9x conversion
+- HTML escaping to prevent XSS attacks from malicious lead data
+
+**Key Implementation Details:**
 
 ```typescript
-// Add to imports at top if not present
-import { internal } from "./_generated/api";
-
-// Add this action
 export const sendLeadNotification = internalAction({
   args: {
     projectId: v.string(),
@@ -773,136 +816,33 @@ export const sendLeadNotification = internalAction({
     }),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, leadData }) => {
-    console.log("[emails] sending lead notification", { projectId, leadName: leadData.name });
-
-    // Get project to find the prospect/client email
-    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, { projectId });
-    if (!project || !project.prospectId) {
-      console.warn("[emails] No project or prospect found for lead notification");
-      return null;
-    }
-
-    // Get prospect details
-    const prospect = await ctx.runQuery(internal.prospects.get, { id: project.prospectId });
-    if (!prospect) {
-      console.warn("[emails] Prospect not found for lead notification");
-      return null;
-    }
-
-    const clientEmail = prospect.details.contactEmail;
-    const clientName = prospect.details.contactName;
-    const companyName = prospect.details.companyName;
-
-    const portalUrl = process.env.NEXT_PUBLIC_APP_URL
-      ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-      : process.env.SITE_URL ?? "http://localhost:3000";
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="utf-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>New Lead from Your Website</title>
-        </head>
-        <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
-          <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
-            <div style="background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden;">
-              <!-- Header -->
-              <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 24px; text-align: center;">
-                <h1 style="margin: 0; color: white; font-size: 24px; font-weight: 600;">
-                  🎉 New Lead from Your Website!
-                </h1>
-              </div>
-              
-              <!-- Content -->
-              <div style="padding: 32px 24px;">
-                <p style="margin: 0 0 16px 0; font-size: 16px; color: #111827;">
-                  Hi ${clientName},
-                </p>
-                
-                <p style="margin: 0 0 24px 0; font-size: 16px; color: #6b7280; line-height: 1.6;">
-                  Great news! Someone just submitted a contact form on your ${companyName} website.
-                </p>
-                
-                <div style="background: #f9fafb; border-radius: 8px; padding: 20px; margin: 24px 0;">
-                  <h2 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 600; color: #111827;">
-                    Lead Details
-                  </h2>
-                  <table style="width: 100%; border-collapse: collapse;">
-                    <tr>
-                      <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Name</td>
-                      <td style="padding: 8px 0; color: #111827; font-size: 14px; font-weight: 500;">${leadData.name}</td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Email</td>
-                      <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                        <a href="mailto:${leadData.email}" style="color: #2563eb; text-decoration: none;">${leadData.email}</a>
-                      </td>
-                    </tr>
-                    ${leadData.phone ? `
-                    <tr>
-                      <td style="padding: 8px 0; color: #6b7280; font-size: 14px;">Phone</td>
-                      <td style="padding: 8px 0; color: #111827; font-size: 14px;">
-                        <a href="tel:${leadData.phone}" style="color: #2563eb; text-decoration: none;">${leadData.phone}</a>
-                      </td>
-                    </tr>
-                    ` : ""}
-                  </table>
-                  ${leadData.message ? `
-                  <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 14px;">Message</p>
-                    <p style="margin: 0; color: #111827; font-size: 14px; line-height: 1.6; white-space: pre-wrap;">${leadData.message}</p>
-                  </div>
-                  ` : ""}
-                </div>
-                
-                <div style="text-align: center; margin: 32px 0;">
-                  <a href="${portalUrl}/portal" 
-                     style="display: inline-block; background: #2563eb; color: white; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
-                    View All Leads in Portal
-                  </a>
-                </div>
-                
-                <p style="margin: 24px 0 0 0; font-size: 14px; color: #6b7280; line-height: 1.6; text-align: center;">
-                  We recommend reaching out within 24 hours for the best conversion rates.
-                </p>
-              </div>
-              
-              <!-- Footer -->
-              <div style="background: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                <p style="margin: 0; font-size: 12px; color: #9ca3af;">
-                  © ${new Date().getFullYear()} Acadiana Web Design. All rights reserved.
-                </p>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <leads@acadianawebdesign.com>",
-      to: clientEmail,
-      subject: `🎉 New Lead: ${leadData.name} - ${companyName}`,
-      html: htmlContent,
+  handler: async (ctx, args) => {
+    // 1. Get project to find prospectId
+    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
+      projectId: args.projectId,
     });
 
-    return null;
+    // 2. Get prospect details using existing internalGetProspectById
+    const prospect = await ctx.runQuery(internal.prospects.internalGetProspectById, {
+      prospectId: project.prospectId,
+    });
+
+    // 3. Build beautiful HTML email with escaped lead data
+    // 4. Send via resend.sendEmail()
   },
 });
 ```
 
-**Note:** You may need to add an internal query to `convex/prospects.ts` if one doesn't exist:
+**HTTP Endpoint Integration (fire and forget):**
 
 ```typescript
-// Add to convex/prospects.ts if not present
-export const get = internalQuery({
-  args: { id: v.id("prospects") },
-  handler: async (ctx, { id }) => {
-    return await ctx.db.get(id);
-  },
+// In lead ingestion endpoint, after inserting lead:
+ctx.runAction(internal.emails.sendLeadNotification, {
+  projectId,
+  leadId,
+  leadData: { name, email, phone, message },
+}).catch((err) => {
+  console.error("[http] Failed to send lead notification email:", err);
 });
 ```
 
@@ -1145,29 +1085,32 @@ function LiveSupportPanel({
 
 ## Final Checklist
 
-### Schema
-- [ ] Added `client_leads` table
-- [ ] Added `client_analytics` table
-- [ ] Deployed schema changes
+### Schema (Phase 1) ✅
+- [x] Added `client_leads` table
+- [x] Added `client_analytics` table
+- [x] Deployed schema changes
 
-### Rate Limiter
-- [ ] Installed `@convex-dev/rate-limiter`
-- [ ] Updated `convex.config.ts`
-- [ ] Created `rateLimiter.ts`
+### Rate Limiter (Phase 2) ✅
+- [x] Installed `@convex-dev/rate-limiter`
+- [x] Updated `convex.config.ts`
+- [x] Created `rateLimiter.ts`
 
-### HTTP Endpoints
-- [ ] Added `getByProjectIdSlug` to projects.ts
-- [ ] Created `clientLeads.ts` with CRUD functions
-- [ ] Created `clientAnalytics.ts` with recording and summary functions
-- [ ] Added `/api/ingest-lead` endpoint with CORS and rate limiting
-- [ ] Added `/api/analytics/pixel` endpoint with CORS and rate limiting
-- [ ] Added OPTIONS handlers for preflight requests
+### HTTP Endpoints (Phase 3) ✅
+- [x] Added `getByProjectIdSlug` to projects.ts
+- [x] Created `clientLeads.ts` with CRUD functions
+- [x] Created `clientAnalytics.ts` with recording and summary functions
+- [x] Added `/api/ingest-lead` endpoint with CORS and rate limiting
+- [x] Added `/api/analytics/pixel` endpoint with CORS and rate limiting
+- [x] Added OPTIONS handlers for preflight requests
+- [x] **Security fix:** CORS validates against explicit `stagingUrl` (no wildcards)
 
-### Email Notifications
-- [ ] Added `sendLeadNotification` action to emails.ts
-- [ ] Verified email template renders correctly
+### Email Notifications (Phase 4) ✅
+- [x] Added `sendLeadNotification` action to emails.ts
+- [x] Beautiful HTML template with quick actions and pro tip
+- [x] HTML escaping for XSS prevention
+- [x] Fire-and-forget trigger from HTTP endpoint
 
-### Portal UI
+### Portal UI (Phase 5)
 - [ ] Created `AnalyticsSummary` component
 - [ ] Created `RecentLeads` component
 - [ ] Updated LIVE project portal to show analytics and leads
@@ -1185,14 +1128,16 @@ function LiveSupportPanel({
 
 1. **Client Site Configuration:** Each deployed client site needs `NEXT_PUBLIC_WAAS_API_URL` set to your Convex deployment URL.
 
-2. **CORS Validation:** Leads will only be accepted from origins matching the project's `deployment.liveUrl` or `.vercel.app` staging URLs.
+2. **CORS Validation:** Leads will only be accepted from origins matching the project's `deployment.liveUrl` or `deployment.stagingUrl`. No wildcards are used for security.
 
 3. **Rate Limiting:** Leads are limited to 5/minute per project+IP. Analytics are 60/minute per project.
 
 4. **Email From Address:** Update `leads@acadianawebdesign.com` if using a different domain.
 
+5. **Preflight Handlers:** CORS preflight (OPTIONS) is permissive by design since projectId is in POST body. Actual POST handlers perform strict validation.
+
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** January 9, 2026  
-**Status:** Ready to Execute
+**Document Version:** 1.1  
+**Last Updated:** January 11, 2026  
+**Status:** Phases 1-4 Complete, Phase 5 Pending

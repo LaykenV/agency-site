@@ -16,6 +16,8 @@ import type * as agreementActions from "../agreementActions.js";
 import type * as auth from "../auth.js";
 import type * as cal from "../cal.js";
 import type * as calWebhook from "../calWebhook.js";
+import type * as clientAnalytics from "../clientAnalytics.js";
+import type * as clientLeads from "../clientLeads.js";
 import type * as emails from "../emails.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
@@ -51,6 +53,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   cal: typeof cal;
   calWebhook: typeof calWebhook;
+  clientAnalytics: typeof clientAnalytics;
+  clientLeads: typeof clientLeads;
   emails: typeof emails;
   files: typeof files;
   http: typeof http;

@@ -165,6 +165,39 @@ export const internalGetProjectById = internalQuery({
   },
 });
 
+// Internal: Get project by projectId slug (for HTTP actions - lead ingestion, analytics)
+export const getByProjectIdSlug = internalQuery({
+  args: { projectId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("projects"),
+      projectId: v.string(),
+      projectStatus: v.optional(projectStatusValidator),
+      authUserId: v.string(),
+      prospectId: v.optional(v.id("prospects")),
+      deployment: v.optional(deploymentValidator),
+    }),
+    v.null()
+  ),
+  handler: async (ctx, { projectId }) => {
+    const project = await ctx.db
+      .query("projects")
+      .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
+      .first();
+
+    if (!project) return null;
+
+    return {
+      _id: project._id,
+      projectId: project.projectId,
+      projectStatus: project.projectStatus,
+      authUserId: project.authUserId,
+      prospectId: project.prospectId,
+      deployment: project.deployment,
+    };
+  },
+});
+
 export const getPortalProject = query({
   args: {
     projectId: v.string(),
