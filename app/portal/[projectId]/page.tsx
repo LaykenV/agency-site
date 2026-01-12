@@ -21,6 +21,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { UrlChipsInput } from "@/components/ui/url-chips-input";
 import { Toaster, toast } from "sonner";
 import { ExternalLink, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { DashboardStats } from "@/components/portal/DashboardStats";
+import { PageViewsChart } from "@/components/portal/PageViewsChart";
+import { TopPages } from "@/components/portal/TopPages";
+import { RecentLeads } from "@/components/portal/RecentLeads";
 
 // Types based on validators
 type CalBooking = {
@@ -264,6 +268,7 @@ function AuthenticatedProjectView() {
                 {status === "LIVE" && (
                   <LiveSupportPanel
                     projectId={project._id}
+                    projectSlug={projectId}
                     liveUrl={project.deployment?.liveUrl}
                     domainPreference={project.buildDetails?.domainPreference ?? undefined}
                     editRequests={editRequests ?? []}
@@ -1066,11 +1071,13 @@ function ReviewSection({
 
 function LiveSupportPanel({
   projectId,
+  projectSlug,
   liveUrl,
   domainPreference,
   editRequests = [],
 }: {
   projectId: Id<"projects">;
+  projectSlug: string;
   liveUrl?: string;
   domainPreference?: string;
   editRequests?: EditRequest[];
@@ -1083,6 +1090,7 @@ function LiveSupportPanel({
 
   return (
     <div className="space-y-6">
+      {/* Live Banner */}
       <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
         <h2 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
           Your Site is Live! 🎉
@@ -1109,11 +1117,25 @@ function LiveSupportPanel({
         </div>
       </div>
 
+      {/* KPI Stats Row */}
+      <DashboardStats projectId={projectSlug} />
+
+      {/* Analytics Section: Chart + Top Pages */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <PageViewsChart projectId={projectSlug} days={30} />
+        <TopPages projectId={projectSlug} limit={5} />
+      </div>
+
+      {/* Recent Leads */}
+      <RecentLeads projectId={projectSlug} limit={10} />
+
+      {/* Support Request Form */}
       <div className="surface p-6 rounded-2xl">
         <h3 className="text-lg font-semibold mb-4">Request Edits or Support</h3>
         <SupportRequestForm projectId={projectId} />
       </div>
 
+      {/* Edit Requests List */}
       <EditRequestsList projectId={projectId} editRequests={editRequests} />
     </div>
   );

@@ -120,6 +120,7 @@
 update portal to show leads and analytics
 
 make token expiry longer
+remove payment page, auto link from sign agreement
 
 style emails
 
