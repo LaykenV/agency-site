@@ -6,7 +6,15 @@ import { query, ActionCtx } from "./_generated/server";
 import { betterAuth } from "better-auth";
 import { v, Infer } from "convex/values";
 import { magicLink } from "better-auth/plugins";
-import { resend } from "./emails";
+import { 
+  resend, 
+  getEmailHeader, 
+  getEmailFooter, 
+  getCtaButton, 
+  getEmailWrapper,
+  EMAIL_STYLES,
+  COMPANY_NAME
+} from "./emails";
 import { projectStatusValidator } from "./validators";
 const siteUrl = process.env.SITE_URL!;
 
@@ -28,16 +36,45 @@ const sendMagicLinkEmail = async (
     url: string;
   }
 ) => {
+  const htmlContent = getEmailWrapper(`
+    ${getEmailHeader('Sign In to Your Portal', 'Secure magic link access')}
+    
+    <div style="padding: 32px 24px;">
+      <p style="margin: 0 0 16px 0; font-size: 16px; color: ${EMAIL_STYLES.textDark};">
+        Hello,
+      </p>
+      
+      <p style="margin: 0 0 24px 0; font-size: 16px; color: ${EMAIL_STYLES.textMuted}; line-height: 1.6;">
+        Click the button below to securely sign in to your ${COMPANY_NAME} portal. This link is valid for 24 hours.
+      </p>
+      
+      <div style="text-align: center; margin: 32px 0;">
+        ${getCtaButton('Sign In Now', url)}
+      </div>
+      
+      <p style="margin: 24px 0 0 0; font-size: 14px; color: ${EMAIL_STYLES.textMuted}; line-height: 1.6; text-align: center;">
+        If you didn't request this link, you can safely ignore this email.
+      </p>
+      
+      <div style="margin: 32px 0 0 0; padding: 16px; background: ${EMAIL_STYLES.background}; border-radius: 8px; text-align: center;">
+        <p style="margin: 0; font-size: 12px; color: ${EMAIL_STYLES.textLight}; line-height: 1.5;">
+          For security, this link will expire in 24 hours.<br/>
+          If the button doesn't work, copy and paste this URL into your browser:
+        </p>
+        <p style="margin: 8px 0 0 0; font-size: 11px; color: ${EMAIL_STYLES.primaryColor}; word-break: break-all;">
+          ${url}
+        </p>
+      </div>
+    </div>
+    
+    ${getEmailFooter(new Date().getFullYear())}
+  `);
+
   await resend.sendEmail(ctx, {
     from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
     to,
-    subject: "Your secure sign-in link",
-    html: `
-      <h2>Welcome to Acadiana Web Design</h2>
-      <p>Click the button below to sign in. This link expires in 24 hours.</p>
-      <p><a href="${url}" style="display:inline-block;padding:10px 16px;background:#111;color:#fff;border-radius:6px;text-decoration:none;">Sign in</a></p>
-      <p>If you didn't request this, you can safely ignore this email.</p>
-    `,
+    subject: "Your Secure Sign-In Link - Acadiana Web Design",
+    html: htmlContent,
   });
 };
 
