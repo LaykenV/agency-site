@@ -1781,7 +1781,7 @@ Fill in the complete `identity` block including:
 - Google Maps link for footer
 
 ## 3. Deployment Checklist
-- [ ] Ensure `waas.projectId` matches the project slug in admin portal
+- [ ] Ensure `waas.projectId` matches the project's `projects.projectId` value in the agency portal/admin (currently a generated UUID string)
 - [ ] Run `bun run validate` to verify config is type-safe
 - [ ] Run `bun run build` to generate static pages
 - [ ] Set env vars on Vercel:
@@ -1935,7 +1935,7 @@ Use this checklist for every new client deployment to ensure consistency and avo
 
 ```markdown
 ## Client: [CLIENT NAME]
-## Project ID: proj_[slug]
+## Project ID: [projects.projectId from agency portal]
 ## Date Started: YYYY-MM-DD
 
 ### 1. Asset Collection

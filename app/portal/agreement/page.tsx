@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
-import { useMutation } from "convex/react";
+import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
@@ -82,6 +82,7 @@ function AuthenticatedAgreementView() {
 
   const findOrCreateProject = useMutation(api.projects.findOrCreateProjectForProspect);
   const createFromClickwrap = useMutation(api.agreement.createFromClickwrap);
+  const createCheckout = useAction(api.stripeActions.createCheckoutSession);
 
   // Get prospect by sessionId
   const prospect = useQuery(
@@ -227,12 +228,23 @@ function AuthenticatedAgreementView() {
         termsHash,
         userAgent,
       });
+
+      // Try to redirect directly to Stripe checkout for frictionless happy path
+      try {
+        const { url } = await createCheckout({});
+        window.location.href = url;
+        return; // Exit early on success
+      } catch (checkoutErr) {
+        console.error("[portal] checkout creation failed, falling back to subscribe page", checkoutErr);
+      }
+
+      // Fallback: redirect to subscribe page if checkout creation fails
       router.replace("/portal/subscribe");
     } catch (err) {
       console.error("[portal] failed to accept agreement", err);
       setAcceptanceError("We couldn't capture your agreement. Please try again.");
+      setIsAccepting(false);
     }
-    setIsAccepting(false);
   };
 
   // Early returns after all hooks

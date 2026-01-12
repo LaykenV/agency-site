@@ -34,7 +34,7 @@ const sendMagicLinkEmail = async (
     subject: "Your secure sign-in link",
     html: `
       <h2>Welcome to Acadiana Web Design</h2>
-      <p>Click the button below to sign in. This link expires in 15 minutes.</p>
+      <p>Click the button below to sign in. This link expires in 24 hours.</p>
       <p><a href="${url}" style="display:inline-block;padding:10px 16px;background:#111;color:#fff;border-radius:6px;text-decoration:none;">Sign in</a></p>
       <p>If you didn't request this, you can safely ignore this email.</p>
     `,
@@ -79,10 +79,14 @@ export const createAuth = (
       },
       storage: "memory",
     },
+    session: {
+      expiresIn: 60 * 60 * 24 * 365, // 1 year in seconds
+      updateAge: 60 * 60 * 24, // Refresh session every 24 hours of activity
+    },
     plugins: [
       convex(),
       magicLink({
-        expiresIn: 900, // 15 minutes
+        expiresIn: 60 * 60 * 24, // 24 hours
         disableSignUp: false,
         storeToken: "hashed",
         sendMagicLink: async ({ email, url }) => {

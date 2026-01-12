@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.4
-Last Updated: January 28, 2025
+Document Version: 2.5
+Last Updated: January 12, 2026
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -83,7 +83,7 @@ IV. The Golden Path (End-to-End Client Journey)
   - AWAITING_ASSETS: Submit build details form (headline, domain preference, inspiration links, brand color scheme with live preview, logo/images via Convex storage with instant previews), then schedule 45-min kickoff call
   - IN_PROGRESS: View kickoff call details and build progress message
   - IN_REVIEW: Access staging site link and schedule 30-min review call
-  - LIVE: View live site URL, submit edit/support requests, and view request history with status tracking
+  - LIVE: View live site URL, view analytics (page views + top pages), view recent leads, and submit edit/support requests (request history + status tracking)
 
 8) Kickoff Call
 - Deep dive into brand, target audience, content, and assets.
@@ -115,6 +115,26 @@ V. Legal & Policy (MVP)
 
 VI. Application Architecture
 - Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions + file storage), Cal.com (scheduling).
+- Authentication (better-auth):
+  - Magic link tokens valid for 24 hours (users can click the link within a day of receiving it)
+  - Session expiry: 1 year with 24-hour sliding refresh (active users stay logged in indefinitely)
+- Hub ↔ Spokes (Client Template Sites):
+  - Client sites (Spokes) send leads + analytics to this Convex backend (Hub).
+  - Public client endpoints (Convex HTTP router):
+    - POST `/api/ingest-lead`: accepts `{ projectId, source, data }` (contact form submission)
+    - POST `/api/analytics/pixel`: accepts `{ projectId, path }` (page view)
+  - Security model (no per-client secrets):
+    - `projectId` is a public identifier (currently a generated UUID string stored in `projects.projectId`, and used by template sites as `waas.projectId`)
+    - Hub validates:
+      - Project exists (lookup by `projects.projectId`)
+      - Project status allows ingestion (LIVE or IN_REVIEW for testing)
+      - Request Origin matches `projects.deployment.liveUrl` (with/without www) or `projects.deployment.stagingUrl`
+      - Rate limiting (per project, and per project+IP for leads)
+- Analytics design:
+  - Store daily aggregates per project (pageViews) plus top pages (by path) for “what content is working,” not just a total counter.
+- Leads design:
+  - Leads are stored centrally in `client_leads`.
+  - Lead status exists in the data model for optional pipeline workflows, but we do not need to render lead-status UI in the client portal initially.
 - Routing highlights:
   - /portal/agreement (gated first step)
   - /portal (dashboard)
@@ -136,7 +156,7 @@ VI. Application Architecture
   - Dunning and failed payment notices
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; new agreements, activity_log, scheduled_calls, and edit_requests tables; add Stripe KV tables (`stripe_customers`, `stripe_subscription_cache`); no local subscriptions table.
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; agreements, activity_log, scheduled_calls, and edit_requests tables; plus client template Hub tables for leads and analytics (`client_leads`, `client_analytics`). `projects.projectId` is the public project identifier used by the portal route and by template sites (currently a generated UUID string; can be made human-readable later if desired).
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -172,7 +192,7 @@ export default defineSchema({
 
   projects: defineTable({
     authUserId: v.string(),
-    projectId: v.string(), // human-readable slug
+    projectId: v.string(), // public project identifier (currently generated UUID string)
     prospectId: v.optional(v.id("prospects")),
     projectStatus: v.optional(projectStatusValidator),
     buildDetails: v.optional(buildDetailsValidator),
@@ -239,6 +259,37 @@ export default defineSchema({
     .index("by_status_and_projectId", ["status", "projectId"])
     .index("by_status", ["status"])
     .index("by_createdAt", ["createdAt"]),
+
+  // Hub-wide: Client template lead ingestion (cross-client)
+  client_leads: defineTable({
+    projectId: v.string(), // must match template site waas.projectId
+    status: v.union(
+      v.literal("new"),
+      v.literal("contacted"),
+      v.literal("qualified"),
+      v.literal("won"),
+      v.literal("lost")
+    ),
+    source: v.string(), // e.g., "contact-form"
+    data: v.object({
+      name: v.string(),
+      email: v.string(),
+      phone: v.optional(v.string()),
+      message: v.optional(v.string()),
+    }),
+    createdAt: v.number(),
+  })
+    .index("by_projectId", ["projectId"])
+    .index("by_projectId_and_status", ["projectId", "status"])
+    .index("by_createdAt", ["createdAt"]),
+
+  // Hub-wide: Client template analytics (daily aggregate, cross-client)
+  client_analytics: defineTable({
+    projectId: v.string(), // must match template site waas.projectId
+    date: v.string(), // YYYY-MM-DD
+    pageViews: v.number(),
+    topPages: v.array(v.object({ path: v.string(), views: v.number() })), // top 10
+  }).index("by_projectId_and_date", ["projectId", "date"]),
 });
 
 KV Tables (Stripe)
@@ -457,7 +508,7 @@ Client Portal (/portal/[projectId])
   - AWAITING_ASSETS: Build details form + kickoff scheduling CTA
   - IN_PROGRESS: Progress message + kickoff call summary
   - IN_REVIEW: Staging site access + review call scheduling CTA
-  - LIVE: Live site link + edit request form + request history list
+  - LIVE: Live site link + analytics summary (page views + top pages) + recent leads + edit request form + request history list
   - ARCHIVED: Read-only notice with support contact
 - Build Details Form (`projects.upsertBuildDetails`):
   - Client fields: headline, domainPreference, inspirationLinks, brand.colorScheme (primary/accent hex colors with native color pickers and live gradient preview)

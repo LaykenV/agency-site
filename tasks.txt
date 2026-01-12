@@ -117,12 +117,16 @@
 //leads and analytics tables
 //analytics webhook
 //leads webhook
-update portal to show leads and analytics
+//update portal to show leads and analytics
+//human readable slug?
+//top pages?
+//dont need status on leads
 
-make token expiry longer
-remove payment page, auto link from sign agreement
-
-style emails
+//make token expiry longer
+//remove payment page, auto link from sign agreement
+update live dashboard ui (cc)
+style emails (login)
+customer portal link after 12 months
 
 remove 'join meeting' 'back to portal home'
 'accept and continue payment' 'continue to checkout' cursor pointer
@@ -152,6 +156,8 @@ cold call
 get first client
 
 LLC
+Sentry
+npm package for template + cli for onboarding
 
 
 

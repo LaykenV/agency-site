@@ -24,7 +24,7 @@ Centralized storage for leads submitted from all client sites.
 // convex/schema.ts - Add to existing schema
 
 client_leads: defineTable({
-  projectId: v.string(), // Human-readable slug, matches waas.projectId in template config
+  projectId: v.string(), // Public project identifier (currently a generated UUID string), matches waas.projectId in template config
   status: v.union(
     v.literal("new"), 
     v.literal("contacted"), 
@@ -54,7 +54,7 @@ Daily aggregates for page views from client sites.
 // convex/schema.ts - Add to existing schema
 
 client_analytics: defineTable({
-  projectId: v.string(), // Human-readable slug
+  projectId: v.string(), // Public project identifier (currently a generated UUID string)
   date: v.string(), // YYYY-MM-DD
   pageViews: v.number(),
   topPages: v.array(v.object({ path: v.string(), views: v.number() })),
@@ -655,7 +655,7 @@ When a project status is `LIVE`, add these sections to the client portal:
 
 // 2. Recent Leads Card  
 <RecentLeads projectId={project.projectId} limit={5} />
-// Shows: Last 5 leads with name, email, date, status badge
+// Shows: Last 5 leads with name, email, date (no lead status UI initially)
 
 // 3. Leads List (expandable)
 <LeadsList projectId={project.projectId} />
@@ -725,14 +725,6 @@ interface RecentLeadsProps {
   limit?: number;
 }
 
-const statusColors = {
-  new: "bg-blue-100 text-blue-800",
-  contacted: "bg-yellow-100 text-yellow-800",
-  qualified: "bg-purple-100 text-purple-800",
-  won: "bg-green-100 text-green-800",
-  lost: "bg-gray-100 text-gray-800",
-};
-
 export function RecentLeads({ projectId, limit = 5 }: RecentLeadsProps) {
   const leads = useQuery(api.clientLeads.listByProject, { projectId, limit });
 
@@ -758,9 +750,6 @@ export function RecentLeads({ projectId, limit = 5 }: RecentLeadsProps) {
               <p className="text-sm text-gray-500">{lead.data.email}</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`px-2 py-1 rounded text-xs font-medium ${statusColors[lead.status]}`}>
-                {lead.status}
-              </span>
               <span className="text-xs text-gray-400">
                 {new Date(lead.createdAt).toLocaleDateString()}
               </span>
