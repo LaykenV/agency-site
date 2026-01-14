@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.6
-Last Updated: January 14, 2026
+Document Version: 2.7
+Last Updated: January 13, 2026
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -119,7 +119,10 @@ VI. Application Architecture
   - Magic link tokens valid for 24 hours (users can click the link within a day of receiving it)
   - Magic link tokens stored server-side (hashed in database), NOT in the browser—links work cross-device
   - Session expiry: 1 year with 24-hour sliding refresh (active users stay logged in indefinitely)
-  - Server-side token pre-fetch via `initialToken` prop on `ConvexBetterAuthProvider` for instant auth hydration (prevents mobile loading delays)
+  - Rate limiting: 3 magic link sends/min, 10 verifications/min, 100 total requests/min
+  - Session cookie caching: 5-minute cache reduces DB validation calls
+  - Server-side token pre-fetch via `initialToken` prop on `ConvexBetterAuthProvider` for instant auth hydration
+  - **Mobile cross-tab fix**: After sending magic link, redirect to static HTML (`/link-sent.html`) instead of Next.js route to destroy WebSocket/BroadcastChannel and prevent session contention
 - Hub ↔ Spokes (Client Template Sites):
   - Client sites (Spokes) send leads + analytics to this Convex backend (Hub).
   - Public client endpoints (Convex HTTP router):
@@ -598,10 +601,13 @@ XI. Roadmap
   - Activity logging for all admin actions ✅
   - Server-side access gating via layout.tsx ✅
   - Convex RBAC guard for all admin functions ✅
-- V1.5: Mobile auth hydration fix ✅
-  - Server-side token pre-fetch in root layout via `getToken()` from `lib/auth-server.ts`
-  - Pass `initialToken` to `ConvexBetterAuthProvider` for instant session recognition
-  - Fixes infinite loading skeleton on magic link redirects and `/portal` access on mobile
+- V1.5: Mobile auth fix ✅
+  - **Problem**: Mobile browsers hung on magic link auth due to cross-tab WebSocket/BroadcastChannel contention
+  - **Root cause**: Next.js route group layouts nest inside root layout—can't escape `ConvexClientProvider`
+  - **Solution**: Redirect "Check your inbox" tab to static HTML (`/link-sent.html`) to completely destroy JS context
+  - Server-side token pre-fetch via `getToken()` → `initialToken` prop for instant session hydration
+  - Rate limiting configured: 3 sends/min, 10 verifications/min
+  - Session cookie caching (5 min) to reduce DB calls
 
 Example high-level flow (pseudo)
 - GET /portal/agreement

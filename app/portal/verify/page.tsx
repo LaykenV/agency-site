@@ -1,6 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { Loader2 } from "lucide-react";
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
@@ -49,7 +50,7 @@ function VerifyPageContent() {
 function VerifyLoadingView({ message }: { message: string }) {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-      <span className="inline-flex h-12 w-12 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+      <Loader2 className="h-12 w-12 animate-spin text-[var(--primary)]" />
       <p className="mt-6 text-sm text-[var(--muted-foreground)]">{message}</p>
     </div>
   );

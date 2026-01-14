@@ -87,7 +87,7 @@ function PaymentSuccessContent() {
           <h1 className="text-2xl font-bold mb-2">Payment Successful</h1>
           <p className="text-[var(--secondary)] mb-4">{error}</p>
           <div className="flex items-center justify-center gap-2 text-sm text-[var(--secondary)]">
-            <span className="inline-flex h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+            <Loader2 className="h-4 w-4 animate-spin text-[var(--primary)]" />
             <span>Redirecting to portal...</span>
           </div>
         </div>

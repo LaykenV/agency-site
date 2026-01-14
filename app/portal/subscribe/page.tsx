@@ -6,6 +6,7 @@ import {
   AuthLoading,
   useQuery,
 } from "convex/react";
+import { Loader2 } from "lucide-react";
 import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
@@ -19,7 +20,7 @@ export default function SubscribePage() {
       <AuthLoading>
         <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           </div>
         </div>
       </AuthLoading>

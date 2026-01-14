@@ -1,6 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { Loader2 } from "lucide-react";
 import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -18,15 +19,9 @@ export default function AgreementPage() {
   return (
     <>
       <AuthLoading>
-        <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-          <div className="mx-auto max-w-6xl px-6 py-16">
-            <div className="surface rounded-xl p-6 animate-pulse">
-              <div className="h-5 w-40 rounded bg-[hsl(var(--secondary))]" />
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-                <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-              </div>
-            </div>
+        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           </div>
         </div>
       </AuthLoading>
@@ -263,16 +258,10 @@ function AuthenticatedAgreementView() {
 
   if (!prospect) {
     return (
-      <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="surface rounded-xl p-6 animate-pulse">
-            <div className="h-5 w-56 rounded bg-[hsl(var(--secondary))]" />
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-              <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-            </div>
-            <div className="mt-4 h-28 rounded bg-[hsl(var(--secondary))]" />
-          </div>
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+          <p className="text-sm text-[var(--muted-foreground)]">Loading agreement...</p>
         </div>
       </div>
     );
@@ -280,18 +269,11 @@ function AuthenticatedAgreementView() {
 
   if (!isInitialized) {
     return (
-      <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-        <div className="mx-auto max-w-6xl px-6 py-16">
-          <div className="surface rounded-xl p-6">
-            <div className="animate-pulse">
-              <div className="h-5 w-40 rounded bg-[hsl(var(--secondary))]" />
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
-                <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-                <div className="h-9 rounded bg-[hsl(var(--secondary))]" />
-              </div>
-            </div>
-            {errorMessage && <p className="mt-4 text-sm text-red-600">{errorMessage}</p>}
-          </div>
+      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+          <p className="text-sm text-[var(--muted-foreground)]">Preparing your agreement...</p>
+          {errorMessage && <p className="mt-2 text-sm text-red-600">{errorMessage}</p>}
         </div>
       </div>
     );

@@ -128,8 +128,8 @@ update live dashboard ui (cc)
 //style emails (login)
 //mobile magic link
 //update admin welcome email to system invite. change login to /login? and no signup
-token check on landing page?
-better loading spinner on portal
+//token check on landing page?
+//better loading spinner on portal
 customer portal link after 12 months
 
 remove 'join meeting' 'back to portal home'

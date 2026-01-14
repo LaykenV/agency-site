@@ -20,7 +20,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UrlChipsInput } from "@/components/ui/url-chips-input";
 import { Toaster, toast } from "sonner";
-import { ExternalLink, Calendar, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, Calendar, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { DashboardStats } from "@/components/portal/DashboardStats";
 import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
@@ -113,7 +113,7 @@ export default function ProjectPage() {
       <AuthLoading>
         <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           </div>
         </div>
       </AuthLoading>
@@ -215,7 +215,7 @@ function AuthenticatedProjectView() {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-          <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+          <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           <p>Loading your project...</p>
         </div>
       </div>

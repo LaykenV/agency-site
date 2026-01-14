@@ -15,6 +15,7 @@ import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
 
 const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
 
@@ -24,7 +25,7 @@ export default function PortalPage() {
       <AuthLoading>
         <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <span className="inline-flex h-10 w-10 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           </div>
         </div>
       </AuthLoading>
@@ -253,7 +254,7 @@ function AuthenticatedPortalRedirect() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-      <span className="inline-flex h-12 w-12 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+      <Loader2 className="h-12 w-12 animate-spin text-[var(--primary)]" />
       <p className="mt-6 text-sm text-[var(--secondary)]">{statusMessage}</p>
     </div>
   );
