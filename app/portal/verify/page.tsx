@@ -1,7 +1,7 @@
 "use client";
 
 import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 
@@ -18,6 +18,14 @@ import { api } from "@/convex/_generated/api";
  * Supports optional `sid` query parameter for agreement flows.
  */
 export default function VerifyPage() {
+  return (
+    <Suspense fallback={<VerifyLoadingView message="Verifying your sign-in link..." />}>
+      <VerifyPageContent />
+    </Suspense>
+  );
+}
+
+function VerifyPageContent() {
   const searchParams = useSearchParams();
   const sid = searchParams.get("sid");
 
