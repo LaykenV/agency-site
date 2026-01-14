@@ -97,8 +97,8 @@ function UnauthenticatedView() {
 
       await authClient.signIn.magicLink({
         email: trimmed,
-        callbackURL: "/portal",
-        newUserCallbackURL: "/portal",
+        callbackURL: "/portal/verify",
+        newUserCallbackURL: "/portal/verify",
         errorCallbackURL: "/portal/autherror?error=magic_link",
       });
 
@@ -134,8 +134,8 @@ function UnauthenticatedView() {
     try {
       await authClient.signIn.magicLink({
         email: submittedEmail,
-        callbackURL: "/portal",
-        newUserCallbackURL: "/portal",
+        callbackURL: "/portal/verify",
+        newUserCallbackURL: "/portal/verify",
         errorCallbackURL: "/portal/autherror?error=magic_link",
       });
 

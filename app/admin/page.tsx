@@ -229,8 +229,8 @@ function ProspectsTab() {
         {
           email: prospect.details.contactEmail,
           name: prospect.details.contactName,
-          callbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
-          newUserCallbackURL: `/portal/agreement?sid=${prospect.sessionId}`,
+          callbackURL: `/portal/verify?sid=${prospect.sessionId}`,
+          newUserCallbackURL: `/portal/verify?sid=${prospect.sessionId}`,
           errorCallbackURL: `/portal/autherror?sid=${prospect.sessionId}&error=magic_link`,
         },
         {
