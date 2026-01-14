@@ -9,7 +9,6 @@ import {
 } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
@@ -18,7 +17,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
-const MAGIC_LINK_STORAGE_TTL = 5 * 60 * 1000; // 5 minutes
 
 export default function PortalPage() {
   return (
@@ -44,34 +42,10 @@ export default function PortalPage() {
 
 function UnauthenticatedView() {
   const convex = useConvex();
+  const router = useRouter();
   const [email, setEmail] = useState("");
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "unknown" | "sent" | "error"
-  >("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "unknown" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isResending, setIsResending] = useState(false);
-
-  // Restore success state from localStorage on mount
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    try {
-      const stored = localStorage.getItem(MAGIC_LINK_STORAGE_KEY);
-      if (stored) {
-        const { email: storedEmail, timestamp } = JSON.parse(stored);
-        const now = Date.now();
-        if (now - timestamp < MAGIC_LINK_STORAGE_TTL) {
-          setSubmittedEmail(storedEmail);
-          setStatus("sent");
-        } else {
-          localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
-        }
-      }
-    } catch (error) {
-      console.error("[portal] failed to restore success state", error);
-    }
-  }, []);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -83,7 +57,6 @@ function UnauthenticatedView() {
 
     setErrorMessage(null);
     setStatus("loading");
-    setSubmittedEmail(trimmed);
 
     try {
       const known = await convex.query(api.prospects.isKnownEmail, {
@@ -117,58 +90,13 @@ function UnauthenticatedView() {
         }
       }
 
-      setStatus("sent");
+      // CRITICAL: Redirect to link-sent page which has NO auth components
+      // This prevents cross-tab session contention when user clicks magic link
+      router.replace(`/portal/link-sent?email=${encodeURIComponent(trimmed)}`);
     } catch (error) {
       console.error("[portal] failed to send magic link", error);
       setErrorMessage("We couldn't send a magic link. Please try again.");
       setStatus("error");
-    }
-  };
-
-  const handleResend = async () => {
-    if (!submittedEmail) return;
-
-    setIsResending(true);
-    setErrorMessage(null);
-
-    try {
-      await authClient.signIn.magicLink({
-        email: submittedEmail,
-        callbackURL: "/portal/verify",
-        newUserCallbackURL: "/portal/verify",
-        errorCallbackURL: "/portal/autherror?error=magic_link",
-      });
-
-      setIsResending(false);
-      // Update localStorage timestamp
-      if (typeof window !== "undefined") {
-        try {
-          localStorage.setItem(
-            MAGIC_LINK_STORAGE_KEY,
-            JSON.stringify({
-              email: submittedEmail,
-              timestamp: Date.now(),
-            }),
-          );
-        } catch (error) {
-          console.error("[portal] failed to persist success state", error);
-        }
-      }
-    } catch (error) {
-      console.error("[portal] failed to resend magic link", error);
-      setErrorMessage("We couldn't send a magic link. Please try again.");
-      setIsResending(false);
-      // Keep status as "sent" to stay in success view, but show error message
-    }
-  };
-
-  const handleTryDifferentEmail = () => {
-    setEmail("");
-    setSubmittedEmail(null);
-    setStatus("idle");
-    setErrorMessage(null);
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(MAGIC_LINK_STORAGE_KEY);
     }
   };
 
@@ -184,42 +112,6 @@ function UnauthenticatedView() {
     }
     return null;
   }, [status, errorMessage]);
-
-  // Success view - replaces entire form
-  if (status === "sent" && submittedEmail) {
-    return (
-      <div className="min-h-dvh flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
-        <div className="w-full max-w-lg surface rounded-3xl p-6 sm:p-8" role="status" aria-live="polite">
-          <div className="mb-6 text-center">
-            <CheckCircle2 className="mx-auto h-12 w-12 text-[hsl(var(--primary))]" />
-            <p className="mt-2 text-xs uppercase tracking-[0.35em] text-[var(--muted-foreground)]">
-              Magic Link Sent
-            </p>
-            <h1 className="mt-2 text-xl md:text-2xl font-semibold">Check your inbox</h1>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              We&apos;ve sent a secure sign-in link to
-            </p>
-            <p className="mt-1 text-base font-medium">{submittedEmail}</p>
-          </div>
-
-          {errorMessage && (
-            <div className="mb-4 info-banner text-sm" role="alert">
-              {errorMessage}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button onClick={handleResend} disabled={isResending} className="w-full sm:flex-1">
-              {isResending ? "Sending..." : "Resend email"}
-            </Button>
-            <Button onClick={handleTryDifferentEmail} variant="outline" disabled={isResending} className="w-full sm:flex-1">
-              Try different email
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // Login form view
   return (
