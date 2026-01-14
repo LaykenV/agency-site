@@ -90,9 +90,9 @@ function UnauthenticatedView() {
         }
       }
 
-      // CRITICAL: Redirect to link-sent page which has NO auth components
-      // This prevents cross-tab session contention when user clicks magic link
-      router.replace(`/portal/link-sent?email=${encodeURIComponent(trimmed)}`);
+      // CRITICAL: Redirect to link-sent page in auth-free route group
+      // This page has NO ConvexBetterAuthProvider, preventing cross-tab session contention
+      router.replace(`/link-sent?email=${encodeURIComponent(trimmed)}`);
     } catch (error) {
       console.error("[portal] failed to send magic link", error);
       setErrorMessage("We couldn't send a magic link. Please try again.");
