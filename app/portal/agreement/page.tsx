@@ -14,6 +14,7 @@ import {
   TERMS_HASH_INPUT,
 } from "@/lib/legal/terms";
 import { PageHeader } from "@/components/PageHeader";
+import { ProgressTimeline } from "@/components/portal";
 
 export default function AgreementPage() {
   return (
@@ -281,7 +282,10 @@ function AuthenticatedAgreementView() {
 
   return (
     <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
-      <div className="mx-auto max-w-6xl px-6 py-16">
+      <div className="mx-auto max-w-6xl px-6 py-10 lg:py-16">
+        {/* Progress Timeline */}
+        <ProgressTimeline currentStatus="AWAITING_AGREEMENT" className="mb-8" />
+
         <PageHeader
           title="Service Agreement"
           description={`Hi ${prospect.details.contactName}, review and approve your onboarding agreement to move forward.`}

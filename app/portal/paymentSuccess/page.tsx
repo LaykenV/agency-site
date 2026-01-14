@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Authenticated, Unauthenticated } from "convex/react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import { ProgressTimeline } from "@/components/portal";
 
 export default function PaymentSuccessPage() {
   return (
@@ -97,25 +98,81 @@ function PaymentSuccessContent() {
 
   return (
     <section className="mx-auto max-w-6xl px-6 py-10 md:py-12 text-[var(--foreground)] w-full">
-      <div className="w-full max-w-xl mx-auto">
-        <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-            <div>
-              <h1 className="text-lg md:text-xl font-semibold text-emerald-700 dark:text-emerald-400">
-                Payment successful
-              </h1>
-              <p className="mt-1 text-sm text-[var(--foreground)]/80">
-                {syncing ? statusMessage : "Redirecting to your portal..."}
-              </p>
-              <div className="mt-3 flex items-center gap-2 text-sm text-[var(--foreground)]/70">
-                <Loader2 className="h-4 w-4 animate-spin text-[var(--primary)]" />
-                <span>Please wait</span>
+      <div className="w-full max-w-2xl mx-auto space-y-8">
+        {/* Progress Timeline - Shows payment complete, assets next */}
+        <ProgressTimeline currentStatus="AWAITING_ASSETS" className="" />
+
+        {/* Success Card */}
+        <div className="surface-elevated rounded-2xl p-6 lg:p-8 relative overflow-hidden">
+          {/* Celebration gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-[hsl(var(--primary)/0.05)]" />
+          
+          <div className="relative">
+            <div className="flex flex-col items-center text-center">
+              {/* Success icon with pulse animation */}
+              <div className="relative mb-4">
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10 ring-4 ring-emerald-500/20">
+                  <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+                </div>
+                <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                </span>
               </div>
+
+              <h1 className="text-xl md:text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                Payment Successful!
+              </h1>
+              <p className="mt-2 text-sm text-[var(--muted-foreground)] max-w-md">
+                {syncing 
+                  ? "Setting up your account..." 
+                  : "Your subscription is active. Let's get your brand details next!"}
+              </p>
+
+              {/* Progress indicator */}
+              <div className="mt-6 flex items-center gap-3 px-4 py-3 rounded-xl bg-[var(--muted)]/30">
+                {syncing ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin text-[hsl(var(--primary))]" />
+                    <span className="text-sm">{statusMessage}</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowRight className="h-5 w-5 text-emerald-500" />
+                    <span className="text-sm">Redirecting to share your brand assets...</span>
+                  </>
+                )}
+              </div>
+
+              {/* Manual link fallback */}
+              <Link 
+                href="/portal" 
+                className="mt-4 text-sm text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1"
+              >
+                Go to portal now
+                <ArrowRight className="h-3.5 w-3.5" />
+              </Link>
             </div>
-            <Link href="/portal" className="btn-secondary px-4 py-2 self-start md:self-auto">
-              View my portal
-            </Link>
           </div>
+        </div>
+
+        {/* What's next card */}
+        <div className="surface-soft rounded-xl p-5">
+          <h3 className="font-semibold text-sm mb-3">What happens next?</h3>
+          <ul className="space-y-2 text-xs text-[var(--muted-foreground)]">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5 font-bold">1.</span>
+              <span>Share your brand colors, logo, and inspiration</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5 font-bold">2.</span>
+              <span>We&apos;ll start building your custom website</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5 font-bold">3.</span>
+              <span>Review and approve before we go live</span>
+            </li>
+          </ul>
         </div>
       </div>
     </section>

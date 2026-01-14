@@ -32,10 +32,8 @@ import {
   FileCheck,
   Clock,
   CheckCircle2,
-  ArrowRight,
   Palette,
   Link2,
-  Upload,
   Send,
   BarChart3,
   FileText,
@@ -46,6 +44,7 @@ import { DashboardStats } from "@/components/portal/DashboardStats";
 import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
 import { RecentLeads } from "@/components/portal/RecentLeads";
+import { ProgressTimeline } from "@/components/portal";
 
 // Types based on validators
 type CalBooking = {
@@ -90,28 +89,6 @@ function toTitleCase(text: string): string {
     .replace(/_/g, " ")
     .toLowerCase()
     .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function projectStatusPill(status: string): { className: string; label: string } {
-  const mapping: Record<string, string> = {
-    ARCHIVED: `${pillBase} bg-rose-600 text-white`,
-    LIVE: `${pillBase} bg-emerald-600 text-white`,
-    IN_PROGRESS: `${pillBase} bg-blue-600 text-white`,
-    IN_REVIEW: `${pillBase} bg-slate-700 text-white`,
-    AWAITING_ASSETS: `${pillBase} bg-amber-600 text-white`,
-    AWAITING_PAYMENT: `${pillBase} bg-amber-600 text-white`,
-    AWAITING_AGREEMENT: `${pillBase} bg-amber-600 text-white`,
-  };
-  const className = mapping[status] ?? `${pillBase} bg-slate-500 text-white`;
-  const label =
-    status === "AWAITING_ASSETS"
-      ? "Awaiting Assets"
-      : status === "IN_PROGRESS"
-      ? "In Progress"
-      : status === "IN_REVIEW"
-      ? "In Review"
-      : toTitleCase(status || "Unknown");
-  return { className, label };
 }
 
 function requestStatusPill(
@@ -220,16 +197,6 @@ function AuthenticatedProjectView() {
     );
   }
 
-  // Status configuration for timeline
-  const statusConfig = {
-    AWAITING_ASSETS: { step: 1, icon: Upload, label: "Submit Assets" },
-    IN_PROGRESS: { step: 2, icon: Rocket, label: "Building" },
-    IN_REVIEW: { step: 3, icon: FileCheck, label: "Review" },
-    LIVE: { step: 4, icon: Globe, label: "Live" },
-  };
-
-  const currentStep = statusConfig[status as keyof typeof statusConfig]?.step ?? 0;
-
   return (
     <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
       {/* Main content */}
@@ -251,12 +218,11 @@ function AuthenticatedProjectView() {
           </div>
         ) : (
           <>
-            {/* Progress Timeline - Only show for non-live statuses */}
-            {status !== "LIVE" && (
-              <div className="mb-8">
-                <ProgressTimeline currentStep={currentStep} />
-              </div>
-            )}
+            {/* Progress Timeline - Component handles visibility based on status */}
+            <ProgressTimeline 
+              currentStatus={status as "AWAITING_AGREEMENT" | "AWAITING_PAYMENT" | "AWAITING_ASSETS" | "IN_PROGRESS" | "IN_REVIEW" | "LIVE" | "ARCHIVED"} 
+              className="mb-8" 
+            />
 
             {/* Status-specific content */}
             {status === "AWAITING_ASSETS" && (
@@ -295,89 +261,6 @@ function AuthenticatedProjectView() {
   );
 }
 
-// Status pill component
-function StatusPill({ status }: { status: string }) {
-  const { className, label } = projectStatusPill(status);
-  return <span className={className}>{label}</span>;
-}
-
-// Progress Timeline Component
-function ProgressTimeline({ currentStep }: { currentStep: number }) {
-  const steps = [
-    { step: 1, icon: Upload, label: "Submit Assets", description: "Share your brand details" },
-    { step: 2, icon: Rocket, label: "Building", description: "We're crafting your site" },
-    { step: 3, icon: FileCheck, label: "Review", description: "Preview and feedback" },
-    { step: 4, icon: Globe, label: "Live", description: "Your site is live" },
-  ];
-
-  return (
-    <div className="surface-elevated p-4 sm:p-6 rounded-2xl">
-      <div className="flex items-center justify-center sm:justify-between">
-        {steps.map((step, index) => {
-          const Icon = step.icon;
-          const isCompleted = currentStep > step.step;
-          const isCurrent = currentStep === step.step;
-
-          return (
-            <div key={step.step} className="flex items-center flex-1 justify-center sm:justify-start">
-              {/* Step indicator */}
-              <div className="flex flex-col items-center">
-                <div
-                  className={`
-                    flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 transition-all
-                    ${isCompleted
-                      ? "border-emerald-500 bg-emerald-500 text-white"
-                      : isCurrent
-                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white shadow-lg shadow-[hsl(var(--primary)/0.3)]"
-                        : "border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)]"
-                    }
-                  `}
-                >
-                  {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />
-                  ) : (
-                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                  )}
-                </div>
-                <div className="mt-2 text-center hidden sm:block">
-                  <p className={`text-xs font-medium ${isCurrent ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
-                    {step.label}
-                  </p>
-                  <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5 max-w-[80px]">
-                    {step.description}
-                  </p>
-                </div>
-              </div>
-
-              {/* Connector line */}
-              {index < steps.length - 1 && (
-                <div className="flex-1 mx-2 sm:mx-4 hidden sm:block">
-                  <div
-                    className={`h-0.5 rounded-full transition-all ${
-                      currentStep > step.step
-                        ? "bg-emerald-500"
-                        : "bg-[var(--border)]"
-                    }`}
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Mobile step label */}
-      <div className="mt-4 text-center sm:hidden">
-        <p className="text-sm font-medium">
-          Step {currentStep}: {steps.find(s => s.step === currentStep)?.label}
-        </p>
-        <p className="text-xs text-[var(--muted-foreground)]">
-          {steps.find(s => s.step === currentStep)?.description}
-        </p>
-      </div>
-    </div>
-  );
-}
 
 // ============================================================================
 // SUB-COMPONENTS
