@@ -11,7 +11,7 @@ import {
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { CAL_KICKOFF_URL, CAL_REVIEW_URL } from "@/lib/config";
@@ -21,7 +21,27 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { UrlChipsInput } from "@/components/ui/url-chips-input";
 import { Toaster, toast } from "sonner";
-import { ExternalLink, Calendar, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import {
+  ExternalLink,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  Globe,
+  Rocket,
+  FileCheck,
+  Clock,
+  CheckCircle2,
+  ArrowRight,
+  Palette,
+  Link2,
+  Upload,
+  Send,
+  BarChart3,
+  FileText,
+  Settings,
+  HelpCircle
+} from "lucide-react";
 import { DashboardStats } from "@/components/portal/DashboardStats";
 import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
@@ -147,7 +167,7 @@ function AuthenticatedProjectView() {
 
   const decision = useQuery(api.auth.getPortalDecision);
   const project = useQuery(api.projects.getPortalProject, projectId ? { projectId } : "skip");
-  const editRequests = useQuery(api.projects.listEditRequests, 
+  const editRequests = useQuery(api.projects.listEditRequests,
     project?._id ? { projectId: project._id } : "skip"
   );
   const subscription = useQuery(api.stripeHelpers.getMySubscription);
@@ -172,30 +192,6 @@ function AuthenticatedProjectView() {
   const isArchived = status === "ARCHIVED";
   const isAwaitingPayment = status === "AWAITING_PAYMENT";
   const isAwaitingAgreement = status === "AWAITING_AGREEMENT";
-
-  const heading = useMemo(() => {
-    if (isArchived) {
-      return "Project (Archived)";
-    }
-    if (status === "IN_PROGRESS") {
-      return "Project in Progress";
-    }
-    if (status === "AWAITING_ASSETS") {
-      return "We're ready for your assets";
-    }
-    if (status === "IN_REVIEW") {
-      return "Review your project";
-    }
-    if (status === "LIVE") {
-      return "Live project";
-    }
-    return "Project";
-  }, [isArchived, status]);
-
-  const statusBadge = useMemo(() => {
-    const { className, label } = projectStatusPill(status);
-    return <span className={className}>{label}</span>;
-  }, [status]);
 
   useEffect(() => {
     if (!project || !decision) return;
@@ -224,67 +220,160 @@ function AuthenticatedProjectView() {
     );
   }
 
-  return (
-    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)] px-6 py-12">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
-        <div className="hero-glass p-6 md:p-8 rounded-2xl relative overflow-hidden">
-          <div className="beams-overlay" aria-hidden="true" style={{ opacity: 0.38, filter: "saturate(110%) blur(8px)" }} />
-          <div className="relative z-10">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="section-overline">Client Portal</p>
-                <h1 className="mt-3 text-3xl font-semibold">{heading}</h1>
-                <p className="mt-2 text-sm text-[var(--secondary)]">
-                  Project ID: {project.projectId}
-                </p>
-              </div>
-              {statusBadge}
-            </div>
+  // Status configuration for timeline
+  const statusConfig = {
+    AWAITING_ASSETS: { step: 1, icon: Upload, label: "Submit Assets" },
+    IN_PROGRESS: { step: 2, icon: Rocket, label: "Building" },
+    IN_REVIEW: { step: 3, icon: FileCheck, label: "Review" },
+    LIVE: { step: 4, icon: Globe, label: "Live" },
+  };
 
-            {isArchived ? (
-              <div className="mt-8 rounded-2xl border border-red-200 bg-red-500/10 p-6 text-sm text-red-500">
-                This project is archived. Reach out to support if you&apos;d like to re-open it or discuss next
-                steps.
+  const currentStep = statusConfig[status as keyof typeof statusConfig]?.step ?? 0;
+
+  return (
+    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
+      {/* Main content */}
+      <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
+        {isArchived ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center">
+              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10">
+                <Clock className="h-6 w-6 text-red-500" />
               </div>
-            ) : (
-              <div className="mt-8">
-                {status === "AWAITING_ASSETS" && (
-                  <AwaitingAssetsSection 
-                    projectId={project._id}
-                    buildDetails={project.buildDetails}
-                    calKickoffBooking={project.calKickoffBooking}
-                  />
-                )}
-                
-                {status === "IN_PROGRESS" && (
-                  <InProgressSection calKickoffBooking={project.calKickoffBooking} />
-                )}
-                
-                {status === "IN_REVIEW" && (
-                  <ReviewSection 
-                    stagingUrl={project.deployment?.stagingUrl}
-                    reviewBooking={project.calReviewBooking}
-                  />
-                )}
-                
-                {status === "LIVE" && (
-                  <LiveSupportPanel
-                    projectId={project._id}
-                    projectSlug={projectId}
-                    liveUrl={project.deployment?.liveUrl}
-                    domainPreference={project.buildDetails?.domainPreference ?? undefined}
-                    editRequests={editRequests ?? []}
-                    subscriptionCreatedAt={subscription?._creationTime}
-                  />
-                )}
+              <h2 className="text-xl font-semibold text-red-500 mb-2">Project Archived</h2>
+              <p className="text-sm text-[var(--muted-foreground)]">
+                This project is archived. Reach out to support if you&apos;d like to re-open it or discuss next steps.
+              </p>
+              <Button asChild className="mt-6" variant="outline">
+                <a href="mailto:support@acadianawebdesign.com">Contact Support</a>
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Progress Timeline - Only show for non-live statuses */}
+            {status !== "LIVE" && (
+              <div className="mb-8">
+                <ProgressTimeline currentStep={currentStep} />
               </div>
             )}
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center justify-end gap-4 text-xs text-[var(--secondary)]">
-          <span>Need help? <a href="mailto:support@acadianawebdesign.com" className="text-[var(--primary)] hover:underline">Contact support</a>.</span>
-        </div>
+            {/* Status-specific content */}
+            {status === "AWAITING_ASSETS" && (
+              <AwaitingAssetsSection
+                projectId={project._id}
+                buildDetails={project.buildDetails}
+                calKickoffBooking={project.calKickoffBooking}
+              />
+            )}
+
+            {status === "IN_PROGRESS" && (
+              <InProgressSection calKickoffBooking={project.calKickoffBooking} />
+            )}
+
+            {status === "IN_REVIEW" && (
+              <ReviewSection
+                stagingUrl={project.deployment?.stagingUrl}
+                reviewBooking={project.calReviewBooking}
+              />
+            )}
+
+            {status === "LIVE" && (
+              <LiveSupportPanel
+                projectId={project._id}
+                projectSlug={projectId}
+                liveUrl={project.deployment?.liveUrl}
+                domainPreference={project.buildDetails?.domainPreference ?? undefined}
+                editRequests={editRequests ?? []}
+                subscriptionCreatedAt={subscription?._creationTime}
+              />
+            )}
+          </>
+        )}
+      </main>
+    </div>
+  );
+}
+
+// Status pill component
+function StatusPill({ status }: { status: string }) {
+  const { className, label } = projectStatusPill(status);
+  return <span className={className}>{label}</span>;
+}
+
+// Progress Timeline Component
+function ProgressTimeline({ currentStep }: { currentStep: number }) {
+  const steps = [
+    { step: 1, icon: Upload, label: "Submit Assets", description: "Share your brand details" },
+    { step: 2, icon: Rocket, label: "Building", description: "We're crafting your site" },
+    { step: 3, icon: FileCheck, label: "Review", description: "Preview and feedback" },
+    { step: 4, icon: Globe, label: "Live", description: "Your site is live" },
+  ];
+
+  return (
+    <div className="surface-elevated p-4 sm:p-6 rounded-2xl">
+      <div className="flex items-center justify-center sm:justify-between">
+        {steps.map((step, index) => {
+          const Icon = step.icon;
+          const isCompleted = currentStep > step.step;
+          const isCurrent = currentStep === step.step;
+
+          return (
+            <div key={step.step} className="flex items-center flex-1 justify-center sm:justify-start">
+              {/* Step indicator */}
+              <div className="flex flex-col items-center">
+                <div
+                  className={`
+                    flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full border-2 transition-all
+                    ${isCompleted
+                      ? "border-emerald-500 bg-emerald-500 text-white"
+                      : isCurrent
+                        ? "border-[hsl(var(--primary))] bg-[hsl(var(--primary))] text-white shadow-lg shadow-[hsl(var(--primary)/0.3)]"
+                        : "border-[var(--border)] bg-[var(--background)] text-[var(--muted-foreground)]"
+                    }
+                  `}
+                >
+                  {isCompleted ? (
+                    <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6" />
+                  ) : (
+                    <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                  )}
+                </div>
+                <div className="mt-2 text-center hidden sm:block">
+                  <p className={`text-xs font-medium ${isCurrent ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
+                    {step.label}
+                  </p>
+                  <p className="text-[10px] text-[var(--muted-foreground)] mt-0.5 max-w-[80px]">
+                    {step.description}
+                  </p>
+                </div>
+              </div>
+
+              {/* Connector line */}
+              {index < steps.length - 1 && (
+                <div className="flex-1 mx-2 sm:mx-4 hidden sm:block">
+                  <div
+                    className={`h-0.5 rounded-full transition-all ${
+                      currentStep > step.step
+                        ? "bg-emerald-500"
+                        : "bg-[var(--border)]"
+                    }`}
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mobile step label */}
+      <div className="mt-4 text-center sm:hidden">
+        <p className="text-sm font-medium">
+          Step {currentStep}: {steps.find(s => s.step === currentStep)?.label}
+        </p>
+        <p className="text-xs text-[var(--muted-foreground)]">
+          {steps.find(s => s.step === currentStep)?.description}
+        </p>
       </div>
     </div>
   );
@@ -316,52 +405,157 @@ function AwaitingAssetsSection({
   const [showForm, setShowForm] = useState(!buildDetails);
 
   return (
-    <div className="space-y-6">
-      {buildDetails && !showForm ? (
-        <div className="surface-soft p-6 rounded-2xl">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Build Details Submitted ✓</h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowForm(true)}
-            >
-              Edit Details
-            </Button>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main content - spans 2 columns on large screens */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Welcome/Instructions Card */}
+        <div className="surface-elevated p-6 lg:p-8 rounded-2xl">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 flex h-12 w-12 items-center justify-center rounded-xl bg-[hsl(var(--primary)/0.1)]">
+              <Palette className="h-6 w-6 text-[hsl(var(--primary))]" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xl font-semibold">Share Your Brand Details</h2>
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                Help us understand your vision. Fill out the form below with your brand colors,
+                logo, and any inspiration. The more detail you provide, the better we can bring your site to life.
+              </p>
+            </div>
           </div>
-          <p className="mt-2 text-sm text-[var(--secondary)]">
-            Your project details have been submitted. We&apos;ll review them and reach out if we need anything else.
-          </p>
         </div>
-      ) : (
-        <BuildDetailsForm
-          projectId={projectId}
-          initialValues={buildDetails ? {
-            headline: buildDetails.headline ?? "",
-            domainPreference: buildDetails.domainPreference ?? "",
-            inspirationLinks: buildDetails.inspirationLinks,
-            brand: {
-              colorScheme: buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
-              logoStorageId: buildDetails.brand.logoStorageId,
-              imageStorageIds: buildDetails.brand.imageStorageIds,
-            },
-          } : undefined}
-          onSuccess={() => {
-            setShowForm(false);
-          }}
-          onCancel={() => {
-            setShowForm(false);
-          }}
-        />
-      )}
 
-      {buildDetails && (
-        <CallCtaOrSummary
-          kind="kickoff"
-          booking={calKickoffBooking}
-          calUrl={CAL_KICKOFF_URL}
-        />
-      )}
+        {/* Form or Submitted State */}
+        {buildDetails && !showForm ? (
+          <div className="surface p-6 rounded-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Build Details Submitted</h3>
+                  <p className="text-xs text-[var(--muted-foreground)]">We&apos;ll review and reach out if needed</p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowForm(true)}
+              >
+                Edit Details
+              </Button>
+            </div>
+
+            {/* Summary of submitted details */}
+            <div className="mt-4 pt-4 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {buildDetails.headline && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Headline</p>
+                  <p className="text-sm mt-1">{buildDetails.headline}</p>
+                </div>
+              )}
+              {buildDetails.domainPreference && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Domain</p>
+                  <p className="text-sm mt-1 font-mono">{buildDetails.domainPreference}</p>
+                </div>
+              )}
+              <div>
+                <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Colors</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <div
+                    className="h-6 w-6 rounded-full border border-[var(--border)]"
+                    style={{ backgroundColor: buildDetails.brand.colorScheme.primary }}
+                  />
+                  <div
+                    className="h-6 w-6 rounded-full border border-[var(--border)]"
+                    style={{ backgroundColor: buildDetails.brand.colorScheme.accent }}
+                  />
+                </div>
+              </div>
+              {buildDetails.inspirationLinks.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Inspiration</p>
+                  <p className="text-sm mt-1">{buildDetails.inspirationLinks.length} link{buildDetails.inspirationLinks.length !== 1 ? "s" : ""}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <BuildDetailsForm
+            projectId={projectId}
+            initialValues={buildDetails ? {
+              headline: buildDetails.headline ?? "",
+              domainPreference: buildDetails.domainPreference ?? "",
+              inspirationLinks: buildDetails.inspirationLinks,
+              brand: {
+                colorScheme: buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
+                logoStorageId: buildDetails.brand.logoStorageId,
+                imageStorageIds: buildDetails.brand.imageStorageIds,
+              },
+            } : undefined}
+            onSuccess={() => {
+              setShowForm(false);
+            }}
+            onCancel={buildDetails ? () => {
+              setShowForm(false);
+            } : undefined}
+          />
+        )}
+      </div>
+
+      {/* Sidebar - right column on large screens */}
+      <div className="lg:col-span-1 space-y-4">
+        {/* Kickoff Call Card */}
+        {buildDetails && (
+          <CallCtaOrSummary
+            kind="kickoff"
+            booking={calKickoffBooking}
+            calUrl={CAL_KICKOFF_URL}
+          />
+        )}
+
+        {/* Tips Card */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+            <FileText className="h-4 w-4 text-[hsl(var(--primary))]" />
+            Quick Tips
+          </h4>
+          <ul className="space-y-2 text-xs text-[var(--muted-foreground)]">
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5">•</span>
+              Upload a high-resolution logo (SVG or PNG preferred)
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5">•</span>
+              Choose colors that reflect your brand identity
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5">•</span>
+              Share 2-3 inspiration sites you love
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-emerald-500 mt-0.5">•</span>
+              Be specific about your domain preference
+            </li>
+          </ul>
+        </div>
+
+        {/* Contact Card */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-2">Need Help?</h4>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            Have questions about what to submit? We&apos;re here to help.
+          </p>
+          <a
+            href="mailto:support@acadianawebdesign.com"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:underline"
+          >
+            <Send className="h-3.5 w-3.5" />
+            Contact Support
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -994,22 +1188,140 @@ function CallCtaOrSummary({
 
 function InProgressSection({ calKickoffBooking }: { calKickoffBooking?: CalBooking }) {
   return (
-    <div className="space-y-6">
-      <div className="surface-soft p-6 rounded-2xl">
-        <h2 className="text-lg font-semibold mb-2">Build in Progress 🚀</h2>
-        <p className="text-sm text-[var(--secondary)]">
-          We&apos;re actively building your site. You&apos;ll receive an update once it&apos;s ready for review. 
-          Typically this takes 2-3 business days depending on complexity.
-        </p>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main content */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Hero status card */}
+        <div className="surface-elevated p-6 lg:p-8 rounded-2xl relative overflow-hidden">
+          {/* Animated background effect */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary)/0.05)] to-transparent" />
+
+          <div className="relative">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0 relative">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--primary)/0.1)]">
+                  <Rocket className="h-7 w-7 text-[hsl(var(--primary))]" />
+                </div>
+                {/* Pulsing indicator */}
+                <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[hsl(var(--primary))] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-4 w-4 bg-[hsl(var(--primary))]"></span>
+                </span>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">Your Site is Being Built</h2>
+                <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                  Our team is actively working on your website. We&apos;re crafting every detail to match your vision
+                  and brand. You&apos;ll receive an update once it&apos;s ready for review.
+                </p>
+              </div>
+            </div>
+
+            {/* Progress indicators */}
+            <div className="mt-6 grid grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-xl bg-[var(--background)]/50">
+                <p className="text-2xl font-bold text-[hsl(var(--primary))]">2-3</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">Business Days</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-[var(--background)]/50">
+                <p className="text-2xl font-bold text-emerald-500">Active</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">Build Status</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-[var(--background)]/50">
+                <p className="text-2xl font-bold">Soon</p>
+                <p className="text-xs text-[var(--muted-foreground)] mt-1">Preview Ready</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* What's happening card */}
+        <div className="surface p-6 rounded-2xl">
+          <h3 className="font-semibold mb-4">What&apos;s Happening Now</h3>
+          <div className="space-y-3">
+            {[
+              { icon: Palette, label: "Designing your unique layout and visuals", done: true },
+              { icon: Settings, label: "Building responsive components", done: false },
+              { icon: Globe, label: "Setting up your domain and hosting", done: false },
+              { icon: BarChart3, label: "Integrating analytics and forms", done: false },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className="flex items-center gap-3">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${
+                    item.done
+                      ? "bg-emerald-500/10 text-emerald-500"
+                      : "bg-[var(--muted)] text-[var(--muted-foreground)]"
+                  }`}>
+                    {item.done ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                  </div>
+                  <span className={`text-sm ${item.done ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"}`}>
+                    {item.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      {calKickoffBooking && (
-        <CallCtaOrSummary
-          kind="kickoff"
-          booking={calKickoffBooking}
-          calUrl={CAL_KICKOFF_URL}
-        />
-      )}
+      {/* Sidebar */}
+      <div className="lg:col-span-1 space-y-4">
+        {/* Kickoff call card */}
+        {calKickoffBooking && (
+          <CallCtaOrSummary
+            kind="kickoff"
+            booking={calKickoffBooking}
+            calUrl={CAL_KICKOFF_URL}
+          />
+        )}
+
+        {/* What to expect card */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-3">What to Expect Next</h4>
+          <ul className="space-y-3 text-xs text-[var(--muted-foreground)]">
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-[10px] font-bold">
+                1
+              </div>
+              <span>We&apos;ll send you a staging link to preview</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-[10px] font-bold">
+                2
+              </div>
+              <span>Schedule a review call for feedback</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-[10px] font-bold">
+                3
+              </div>
+              <span>We make revisions based on your input</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))] text-[10px] font-bold">
+                4
+              </div>
+              <span>Your site goes live!</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Contact card */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-2">Questions?</h4>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            We&apos;re here if you need to discuss anything about your build.
+          </p>
+          <a
+            href="mailto:support@acadianawebdesign.com"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:underline"
+          >
+            <Send className="h-3.5 w-3.5" />
+            Get in Touch
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1028,32 +1340,132 @@ function ReviewSection({
     : undefined;
 
   return (
-    <div className="space-y-6">
-      <div className="surface p-6 rounded-2xl">
-        <h2 className="text-lg font-semibold mb-2">Ready for Review</h2>
-        <p className="text-sm text-[var(--secondary)] mb-4">
-          Your project is staged and ready for your feedback. Take a look and schedule a review call
-          to walk through it together.
-        </p>
-        
-        {absoluteStagingUrl ? (
-          <Button asChild variant="default">
-            <a href={absoluteStagingUrl} target="_blank" rel="noopener noreferrer">
-              Open Staging Site <ExternalLink className="ml-2 h-4 w-4" />
-            </a>
-          </Button>
-        ) : (
-          <p className="text-sm text-[var(--secondary)] italic">
-            Staging link will appear here once available.
-          </p>
-        )}
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main content */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* Preview hero card */}
+        <div className="surface-elevated p-6 lg:p-8 rounded-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent" />
+
+          <div className="relative">
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10">
+                  <FileCheck className="h-7 w-7 text-emerald-500" />
+                </div>
+              </div>
+              <div className="flex-1">
+                <h2 className="text-xl font-semibold">Your Site is Ready for Review</h2>
+                <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+                  We&apos;ve finished building your website and it&apos;s ready for you to preview.
+                  Check out the staging site and let us know your thoughts!
+                </p>
+              </div>
+            </div>
+
+            {/* Staging URL card */}
+            <div className="mt-6 p-4 rounded-xl bg-[var(--background)]/50 border border-[var(--border)]">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[hsl(var(--primary)/0.1)] flex-shrink-0">
+                    <Globe className="h-5 w-5 text-[hsl(var(--primary))]" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Staging Preview</p>
+                    {absoluteStagingUrl ? (
+                      <p className="text-sm font-mono truncate">{stagingUrl}</p>
+                    ) : (
+                      <p className="text-sm text-[var(--muted-foreground)] italic">Link coming soon...</p>
+                    )}
+                  </div>
+                </div>
+                {absoluteStagingUrl && (
+                  <Button asChild className="schedule-call-btn flex-shrink-0">
+                    <a href={absoluteStagingUrl} target="_blank" rel="noopener noreferrer">
+                      Open Preview <ExternalLink className="ml-2 h-4 w-4" />
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Review tips */}
+        <div className="surface p-6 rounded-2xl">
+          <h3 className="font-semibold mb-4">Review Checklist</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {[
+              { label: "Check all pages load correctly", icon: FileText },
+              { label: "Test on mobile devices", icon: Settings },
+              { label: "Review contact forms work", icon: Send },
+              { label: "Verify all links are correct", icon: Link2 },
+              { label: "Check images and branding", icon: Palette },
+              { label: "Test site speed and performance", icon: BarChart3 },
+            ].map((item, index) => {
+              const Icon = item.icon;
+              return (
+                <div key={index} className="flex items-center gap-3 p-3 rounded-lg bg-[var(--muted)]/30">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--background)]">
+                    <Icon className="h-4 w-4 text-[var(--muted-foreground)]" />
+                  </div>
+                  <span className="text-sm">{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
-      <CallCtaOrSummary
-        kind="review"
-        booking={reviewBooking}
-        calUrl={CAL_REVIEW_URL}
-      />
+      {/* Sidebar */}
+      <div className="lg:col-span-1 space-y-4">
+        {/* Review call card */}
+        <CallCtaOrSummary
+          kind="review"
+          booking={reviewBooking}
+          calUrl={CAL_REVIEW_URL}
+        />
+
+        {/* What happens next */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-3">After Your Review</h4>
+          <ul className="space-y-3 text-xs text-[var(--muted-foreground)]">
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+                1
+              </div>
+              <span>Share your feedback with us</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+                2
+              </div>
+              <span>We&apos;ll make any requested changes</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <div className="flex-shrink-0 mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-bold">
+                3
+              </div>
+              <span>Final approval and go live!</span>
+            </li>
+          </ul>
+        </div>
+
+        {/* Need changes? */}
+        <div className="surface-soft p-5 rounded-xl">
+          <h4 className="font-semibold text-sm mb-2">Found Something?</h4>
+          <p className="text-xs text-[var(--muted-foreground)] mb-3">
+            Noticed something that needs adjustment? Let us know during your review call or send us a message.
+          </p>
+          <a
+            href="mailto:support@acadianawebdesign.com"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-[hsl(var(--primary))] hover:underline"
+          >
+            <Send className="h-3.5 w-3.5" />
+            Send Feedback
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1074,6 +1486,7 @@ function LiveSupportPanel({
   subscriptionCreatedAt?: number;
 }) {
   const [portalLoading, setPortalLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<"overview" | "support">("overview");
   const createPortalSession = useAction(api.stripeActions.createCustomerPortalSession);
 
   const absoluteLiveUrl = liveUrl
@@ -1084,8 +1497,8 @@ function LiveSupportPanel({
 
   // Calculate if 12 months have passed since subscription started
   const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
-  const isEligibleForPortal = subscriptionCreatedAt 
-    ? Date.now() - subscriptionCreatedAt >= twelveMonthsMs 
+  const isEligibleForPortal = subscriptionCreatedAt
+    ? Date.now() - subscriptionCreatedAt >= twelveMonthsMs
     : false;
 
   const handleOpenPortal = async () => {
@@ -1102,77 +1515,202 @@ function LiveSupportPanel({
 
   return (
     <div className="space-y-6">
-      {/* Live Banner */}
-      <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-emerald-600/20 p-6">
-        <h2 className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 mb-2">
-          Your Site is Live! 🎉
-        </h2>
-        <div className="space-y-3">
-          {absoluteLiveUrl ? (
-            <div>
-              <p className="text-sm text-[var(--secondary)] mb-2">Live at:</p>
-              <Button asChild variant="outline">
-                <a href={absoluteLiveUrl} target="_blank" rel="noopener noreferrer" className="font-mono text-sm">
-                  {liveUrl} <ExternalLink className="ml-2 h-4 w-4" />
-                </a>
-              </Button>
+      {/* Live Site Header Banner */}
+      <div className="surface-elevated p-6 lg:p-8 rounded-2xl relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-[hsl(var(--primary)/0.05)]" />
+
+        <div className="relative">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+            {/* Left side - Site info */}
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 ring-4 ring-emerald-500/20">
+                  <Globe className="h-7 w-7 text-emerald-500" />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-xl font-semibold">Your Site is Live</h2>
+                  <span className="flex h-2.5 w-2.5">
+                    <span className="animate-ping absolute inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                  </span>
+                </div>
+                {absoluteLiveUrl ? (
+                  <a
+                    href={absoluteLiveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-mono text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1"
+                  >
+                    {liveUrl}
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-[var(--muted-foreground)]">URL will appear here shortly</p>
+                )}
+                {domainPreference && (
+                  <p className="text-xs text-[var(--muted-foreground)] mt-1">
+                    Domain: <span className="font-mono">{domainPreference}</span>
+                  </p>
+                )}
+              </div>
             </div>
-          ) : (
-            <p className="text-sm">Your site is live! The URL will be displayed here shortly.</p>
-          )}
-          
-          {domainPreference && (
-            <p className="text-xs text-[var(--secondary)]">
-              Domain preference: <span className="font-mono">{domainPreference}</span>
-            </p>
-          )}
+
+            {/* Right side - Quick actions */}
+            <div className="flex flex-wrap items-center gap-3">
+              {absoluteLiveUrl && (
+                <Button asChild className="schedule-call-btn">
+                  <a href={absoluteLiveUrl} target="_blank" rel="noopener noreferrer">
+                    Visit Site <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+              {isEligibleForPortal && (
+                <Button
+                  onClick={handleOpenPortal}
+                  variant="outline"
+                  disabled={portalLoading}
+                  size="sm"
+                >
+                  {portalLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Settings className="h-4 w-4 mr-1.5" />
+                      Billing
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* KPI Stats Row */}
-      <DashboardStats projectId={projectSlug} />
-
-      {/* Analytics Section: Chart + Top Pages */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <PageViewsChart projectId={projectSlug} days={30} />
-        <TopPages projectId={projectSlug} limit={5} />
-      </div>
-
-      {/* Recent Leads */}
-      <RecentLeads projectId={projectSlug} limit={10} />
-
-      {/* Support Request Form */}
-      <div className="surface p-6 rounded-2xl">
-        <h3 className="text-lg font-semibold mb-4">Request Edits or Support</h3>
-        <SupportRequestForm projectId={projectId} />
-      </div>
-
-      {/* Edit Requests List */}
-      <EditRequestsList projectId={projectId} editRequests={editRequests} />
-
-      {/* Customer Portal Link - Only shown after 12+ months */}
-      {isEligibleForPortal && (
-        <div className="surface p-6 rounded-2xl">
-          <h3 className="font-semibold mb-2">Subscription Management</h3>
-          <p className="text-sm text-[var(--secondary)] mb-4">
-            Manage your billing details or cancel your subscription.
-          </p>
-          <Button 
-            onClick={handleOpenPortal} 
-            variant="outline"
-            disabled={portalLoading}
-          >
-            {portalLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Opening...
-              </>
-            ) : (
-              <>
-                Manage Subscription <ExternalLink className="ml-2 h-4 w-4" />
-              </>
+      {/* Tab navigation */}
+      <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--muted)]/50 w-fit">
+        <button
+          onClick={() => setActiveTab("overview")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === "overview"
+              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4" />
+            Analytics
+          </span>
+        </button>
+        <button
+          onClick={() => setActiveTab("support")}
+          className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
+            activeTab === "support"
+              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <Send className="h-4 w-4" />
+            Support
+            {editRequests.length > 0 && (
+              <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[hsl(var(--primary))] text-[10px] font-bold text-white px-1.5">
+                {editRequests.length}
+              </span>
             )}
-          </Button>
+          </span>
+        </button>
+      </div>
+
+      {/* Tab content */}
+      {activeTab === "overview" ? (
+        <div className="space-y-6">
+          {/* Recent Leads - full width at top */}
+          <RecentLeads projectId={projectSlug} limit={10} />
+
+          {/* KPI Stats Row */}
+          <DashboardStats projectId={projectSlug} />
+
+          {/* Analytics Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            {/* Chart - takes more space */}
+            <div className="xl:col-span-3">
+              <PageViewsChart projectId={projectSlug} days={30} />
+            </div>
+            {/* Top Pages - sidebar */}
+            <div className="xl:col-span-2">
+              <TopPages projectId={projectSlug} limit={5} />
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main column */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Edit Requests List */}
+            <EditRequestsList projectId={projectId} editRequests={editRequests} />
+
+            {/* Support form */}
+            <div className="surface p-6 rounded-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary)/0.1)]">
+                  <Send className="h-5 w-5 text-[hsl(var(--primary))]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold">Request Edits or Support</h3>
+                  <p className="text-xs text-[var(--muted-foreground)]">We typically respond within 24 hours</p>
+                </div>
+              </div>
+              <SupportRequestForm projectId={projectId} />
+            </div>
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-1 space-y-4">
+            {/* Quick help */}
+            <div className="surface-soft p-5 rounded-xl">
+              <h4 className="font-semibold text-sm mb-3 flex items-center gap-2">
+                <HelpCircle className="h-4 w-4 text-[hsl(var(--primary))]" />
+                Need Quick Help?
+              </h4>
+              <div className="space-y-3">
+                <a
+                  href="mailto:support@acadianawebdesign.com"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-[var(--background)]/50 hover:bg-[var(--background)] transition-colors"
+                >
+                  <Send className="h-4 w-4 text-[var(--muted-foreground)]" />
+                  <div>
+                    <p className="text-sm font-medium">Email Support</p>
+                    <p className="text-xs text-[var(--muted-foreground)]">support@acadianawebdesign.com</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+
+            {/* What's included */}
+            <div className="surface-soft p-5 rounded-xl">
+              <h4 className="font-semibold text-sm mb-3">Support Includes</h4>
+              <ul className="space-y-2 text-xs text-[var(--muted-foreground)]">
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  Content updates and text changes
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  Image and media replacements
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  Bug fixes and technical issues
+                </li>
+                <li className="flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                  Minor design adjustments
+                </li>
+              </ul>
+            </div>
+          </div>
         </div>
       )}
     </div>

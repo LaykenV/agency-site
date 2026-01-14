@@ -3,6 +3,7 @@
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useMemo, useState } from "react";
+import { BarChart3 } from "lucide-react";
 
 interface PageViewsChartProps {
   projectId: string;
@@ -54,12 +55,12 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
 
   if (!chartData) {
     return (
-      <div className="surface p-5 rounded-2xl">
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-5 w-32 rounded bg-[hsl(var(--secondary))] animate-pulse" />
-          <div className="h-4 w-20 rounded bg-[hsl(var(--secondary))] animate-pulse" />
+      <div className="surface p-6 rounded-2xl h-full">
+        <div className="flex items-center justify-between mb-5">
+          <div className="h-5 w-36 rounded bg-[hsl(var(--secondary))] animate-pulse" />
+          <div className="h-4 w-24 rounded bg-[hsl(var(--secondary))] animate-pulse" />
         </div>
-        <div className="h-32 flex items-end gap-1">
+        <div className="h-40 flex items-end gap-1">
           {Array.from({ length: 30 }).map((_, i) => (
             <div
               key={i}
@@ -75,64 +76,83 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
   const hoveredData = hoveredIndex !== null ? chartData[hoveredIndex] : null;
 
   return (
-    <div className="surface p-5 rounded-2xl">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-semibold">Daily Page Views</h3>
-        <div className="text-xs text-[var(--muted-foreground)]">
+    <div className="surface p-6 rounded-2xl h-full flex flex-col">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--primary)/0.1)]">
+            <BarChart3 className="h-4.5 w-4.5 text-[hsl(var(--primary))]" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">Daily Page Views</h3>
+            <p className="text-xs text-[var(--muted-foreground)]">Last {days} days</p>
+          </div>
+        </div>
+        <div className="text-right">
           {hoveredData ? (
-            <span className="font-medium text-[var(--foreground)]">
-              {hoveredData.label}: {hoveredData.pageViews.toLocaleString()} views
-            </span>
+            <div>
+              <p className="text-lg font-bold tabular-nums">{hoveredData.pageViews.toLocaleString()}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">{hoveredData.label}</p>
+            </div>
           ) : (
-            <span>Last {days} days: {totalViews.toLocaleString()} total</span>
+            <div>
+              <p className="text-lg font-bold tabular-nums">{totalViews.toLocaleString()}</p>
+              <p className="text-xs text-[var(--muted-foreground)]">Total views</p>
+            </div>
           )}
         </div>
       </div>
 
       {totalViews === 0 ? (
-        <div className="h-32 flex items-center justify-center text-sm text-[var(--muted-foreground)]">
-          No page views recorded yet
+        <div className="flex-1 min-h-[140px] flex items-center justify-center">
+          <div className="text-center">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--muted)]">
+              <BarChart3 className="h-6 w-6 text-[var(--muted-foreground)]" />
+            </div>
+            <p className="text-sm text-[var(--muted-foreground)]">No page views recorded yet</p>
+          </div>
         </div>
       ) : (
-        <div
-          className="h-32 flex items-end gap-[2px]"
-          onMouseLeave={() => setHoveredIndex(null)}
-        >
-          {chartData.map((day, index) => {
-            const height = (day.pageViews / maxViews) * 100;
-            const isHovered = hoveredIndex === index;
+        <div className="flex-1 flex flex-col">
+          <div
+            className="flex-1 min-h-[140px] flex items-end gap-[2px]"
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
+            {chartData.map((day, index) => {
+              const height = (day.pageViews / maxViews) * 100;
+              const isHovered = hoveredIndex === index;
 
-            return (
-              <div
-                key={day.date}
-                className="flex-1 min-w-[4px] relative group cursor-pointer"
-                onMouseEnter={() => setHoveredIndex(index)}
-                onTouchStart={() => setHoveredIndex(index)}
-              >
+              return (
                 <div
-                  className={`
-                    w-full rounded-t transition-all duration-150
-                    ${isHovered
-                      ? "bg-[hsl(var(--primary))]"
-                      : "bg-[hsl(var(--primary)/0.4)] hover:bg-[hsl(var(--primary)/0.6)]"
-                    }
-                  `}
-                  style={{
-                    height: `${Math.max(height, day.pageViews > 0 ? 4 : 0)}%`,
-                  }}
-                />
-              </div>
-            );
-          })}
+                  key={day.date}
+                  className="flex-1 min-w-[3px] relative cursor-pointer"
+                  onMouseEnter={() => setHoveredIndex(index)}
+                  onTouchStart={() => setHoveredIndex(index)}
+                >
+                  <div
+                    className={`
+                      w-full rounded-sm transition-all duration-150
+                      ${isHovered
+                        ? "bg-[hsl(var(--primary))] shadow-sm shadow-[hsl(var(--primary)/0.3)]"
+                        : "bg-[hsl(var(--primary)/0.35)] hover:bg-[hsl(var(--primary)/0.5)]"
+                      }
+                    `}
+                    style={{
+                      height: `${Math.max(height, day.pageViews > 0 ? 3 : 0)}%`,
+                    }}
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          {/* X-axis labels */}
+          <div className="flex justify-between mt-3 pt-3 border-t border-[var(--border)]">
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[0]?.label}</span>
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[Math.floor(chartData.length / 2)]?.label}</span>
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[chartData.length - 1]?.label}</span>
+          </div>
         </div>
       )}
-
-      {/* X-axis labels */}
-      <div className="flex justify-between mt-2 text-[10px] text-[var(--muted-foreground)]">
-        <span>{chartData[0]?.label}</span>
-        <span>{chartData[Math.floor(chartData.length / 2)]?.label}</span>
-        <span>{chartData[chartData.length - 1]?.label}</span>
-      </div>
     </div>
   );
 }

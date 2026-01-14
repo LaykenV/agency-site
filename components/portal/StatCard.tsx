@@ -21,41 +21,41 @@ export function StatCard({
   const hasTrend = typeof trend === "number";
   const trendIcon =
     trend && trend > 0 ? (
-      <TrendingUp className="h-3.5 w-3.5" />
+      <TrendingUp className="h-3 w-3" />
     ) : trend && trend < 0 ? (
-      <TrendingDown className="h-3.5 w-3.5" />
+      <TrendingDown className="h-3 w-3" />
     ) : (
-      <Minus className="h-3.5 w-3.5" />
+      <Minus className="h-3 w-3" />
     );
 
   const trendColor =
     trend && trend > 0
-      ? "text-emerald-600 dark:text-emerald-400"
+      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
       : trend && trend < 0
-        ? "text-red-600 dark:text-red-400"
-        : "text-[var(--muted-foreground)]";
+        ? "bg-red-500/10 text-red-600 dark:text-red-400"
+        : "bg-[var(--muted)] text-[var(--muted-foreground)]";
 
   return (
-    <div className="surface p-4 rounded-xl flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))]">
+    <div className="surface p-5 rounded-xl flex flex-col">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[hsl(var(--primary)/0.1)] text-[hsl(var(--primary))]">
           {icon}
         </div>
         {hasTrend && (
-          <div className={`flex items-center gap-1 text-xs font-medium ${trendColor}`}>
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${trendColor}`}>
             {trendIcon}
             <span>{Math.abs(trend)}%</span>
           </div>
         )}
       </div>
-      <div className="mt-1">
-        <p className="text-2xl font-bold tabular-nums">
+      <div className="mt-4">
+        <p className="text-3xl font-bold tabular-nums tracking-tight">
           {typeof value === "number" ? value.toLocaleString() : value}
         </p>
-        <p className="text-xs text-[var(--muted-foreground)] mt-0.5">
+        <p className="text-sm text-[var(--muted-foreground)] mt-1">
           {label}
           {trendLabel && hasTrend && (
-            <span className="ml-1 opacity-75">{trendLabel}</span>
+            <span className="ml-1 opacity-75 text-xs">{trendLabel}</span>
           )}
         </p>
       </div>

@@ -17,16 +17,16 @@ export function DashboardStats({ projectId }: DashboardStatsProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="surface p-4 rounded-xl animate-pulse">
+          <div key={i} className="surface p-5 rounded-xl animate-pulse">
             <div className="flex items-center justify-between">
-              <div className="w-9 h-9 rounded-lg bg-[hsl(var(--secondary))]" />
-              <div className="w-12 h-4 rounded bg-[hsl(var(--secondary))]" />
+              <div className="w-10 h-10 rounded-xl bg-[hsl(var(--secondary))]" />
+              <div className="w-14 h-5 rounded-full bg-[hsl(var(--secondary))]" />
             </div>
-            <div className="mt-3">
-              <div className="w-16 h-7 rounded bg-[hsl(var(--secondary))]" />
-              <div className="w-24 h-3 rounded bg-[hsl(var(--secondary))] mt-2" />
+            <div className="mt-4">
+              <div className="w-20 h-8 rounded bg-[hsl(var(--secondary))]" />
+              <div className="w-28 h-4 rounded bg-[hsl(var(--secondary))] mt-2" />
             </div>
           </div>
         ))}
@@ -35,7 +35,7 @@ export function DashboardStats({ projectId }: DashboardStatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-3 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <StatCard
         icon={<Eye className="h-5 w-5" />}
         label="Page Views"
