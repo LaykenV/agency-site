@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
@@ -104,10 +105,10 @@ function LinkSentContent() {
 
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button asChild className="w-full sm:flex-1">
-            <a href="/portal">Request new link</a>
+            <Link href="/portal">Request new link</Link>
           </Button>
           <Button asChild variant="outline" className="w-full sm:flex-1">
-            <a href="/">Go to homepage</a>
+            <Link href="/">Go to homepage</Link>
           </Button>
         </div>
 
