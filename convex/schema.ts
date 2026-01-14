@@ -43,6 +43,7 @@ export default defineSchema({
   })
     .index("by_authUserId", ["authUserId"])
     .index("by_projectId", ["projectId"])
+    .index("by_prospectId", ["prospectId"])
     .index("by_updatedAt", ["updatedAt"]),
 
   agreements: defineTable(agreementValidator)

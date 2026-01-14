@@ -285,7 +285,17 @@ export const getPortalDecision = query({
     if (primaryProject) {
       const projectStatus = primaryProject.projectStatus ?? "AWAITING_AGREEMENT";
       if (projectStatus === "AWAITING_AGREEMENT") {
-        const sessionId = prospect?.sessionId;
+        // Use the prospect linked to the existing project, not findLatestByEmail result
+        // This prevents creating duplicate projects when multiple prospects exist for the same email
+        let sessionId: string | null = null;
+        if (primaryProject.prospectId) {
+          const linkedProspect = await ctx.db.get(primaryProject.prospectId);
+          sessionId = linkedProspect?.sessionId ?? null;
+        }
+        // Fall back to latest prospect only if project has no linked prospect
+        if (!sessionId && prospect) {
+          sessionId = prospect.sessionId;
+        }
         if (sessionId) {
           redirect = `/portal/agreement?sid=${sessionId}`;
         }

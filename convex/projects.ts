@@ -41,23 +41,51 @@ export const findOrCreateProjectForProspect = mutation({
       throw new Error("Prospect does not belong to this account");
     }
 
-    let existing: Doc<"projects"> | null = null;
+    // First, check for ANY existing non-archived project for this user (prevents duplicate projects)
+    // This is a safety guard for when the user has multiple prospects with the same email
+    let anyExistingProject: Doc<"projects"> | null = null;
+    let exactMatch: Doc<"projects"> | null = null;
+    
     for await (const project of ctx.db
       .query("projects")
       .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))) {
+      // Skip archived projects
+      if (project.projectStatus === "ARCHIVED") {
+        continue;
+      }
+      
+      // Track first non-archived project as fallback
+      if (!anyExistingProject) {
+        anyExistingProject = project;
+      }
+      
+      // Check for exact prospect match
       if (project.prospectId && project.prospectId === args.prospectId) {
-        existing = project;
+        exactMatch = project;
         break;
       }
     }
 
-    if (existing) {
-      console.log("[projects] found existing project", {
-        projectId: existing._id,
+    // If we found an exact match (same prospect), return it
+    if (exactMatch) {
+      console.log("[projects] found existing project with matching prospect", {
+        projectId: exactMatch._id,
         authUserId,
         prospectId: args.prospectId,
       });
-      return existing._id;
+      return exactMatch._id;
+    }
+
+    // If user has any existing non-archived project (even with different prospect), return it
+    // This prevents creating duplicate projects when multiple prospects exist for the same email
+    if (anyExistingProject) {
+      console.log("[projects] user already has a project, returning existing (different prospect)", {
+        projectId: anyExistingProject._id,
+        authUserId,
+        requestedProspectId: args.prospectId,
+        existingProspectId: anyExistingProject.prospectId,
+      });
+      return anyExistingProject._id;
     }
 
     const now = Date.now();

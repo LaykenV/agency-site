@@ -27,6 +27,81 @@ export const listProspects = query({
   },
 });
 
+// Check if a prospect or project already exists for a given email
+// Used to warn admin before creating duplicate prospects
+export const checkExistingByEmail = query({
+  args: { email: v.string() },
+  returns: v.object({
+    hasExisting: v.boolean(),
+    existingProspect: v.union(
+      v.object({
+        _id: v.id("prospects"),
+        companyName: v.string(),
+        createdAt: v.number(),
+      }),
+      v.null()
+    ),
+    existingProject: v.union(
+      v.object({
+        _id: v.id("projects"),
+        projectId: v.string(),
+        projectStatus: v.optional(projectStatusValidator),
+      }),
+      v.null()
+    ),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    const normalizedEmail = args.email.trim().toLowerCase();
+    
+    // Check for existing prospect with this email
+    const existingProspect = await ctx.db
+      .query("prospects")
+      .withIndex("by_contactEmail", (q) => q.eq("details.contactEmail", normalizedEmail))
+      .first();
+    
+    // Check for existing project via billing customers or auth users
+    // We check prospects first, then look for any project linked to those prospects
+    let existingProject = null;
+    if (existingProspect) {
+      existingProject = await ctx.db
+        .query("projects")
+        .withIndex("by_prospectId", (q) => q.eq("prospectId", existingProspect._id))
+        .first();
+    }
+    
+    // Also check billingCustomers table for this email (in case project exists without prospect)
+    if (!existingProject) {
+      const billingCustomer = await ctx.db
+        .query("billingCustomers")
+        .withIndex("by_email", (q) => q.eq("email", normalizedEmail))
+        .first();
+      
+      if (billingCustomer?.userId) {
+        existingProject = await ctx.db
+          .query("projects")
+          .withIndex("by_authUserId", (q) => q.eq("authUserId", billingCustomer.userId))
+          .first();
+      }
+    }
+    
+    return {
+      hasExisting: Boolean(existingProspect || existingProject),
+      existingProspect: existingProspect ? {
+        _id: existingProspect._id,
+        companyName: existingProspect.details.companyName,
+        createdAt: existingProspect.createdAt,
+      } : null,
+      existingProject: existingProject ? {
+        _id: existingProject._id,
+        projectId: existingProject.projectId,
+        projectStatus: existingProject.projectStatus,
+      } : null,
+    };
+  },
+});
+
 export const listProjects = query({
   args: {},
   returns: v.array(v.object({

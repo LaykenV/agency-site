@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { useQuery, useMutation, useConvex, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
@@ -148,6 +148,13 @@ function ProspectsTab() {
   const [formData, setFormData] = useState<ProspectDetails>(emptyDetails);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
+  
+  // State for duplicate warning confirmation
+  const [duplicateWarning, setDuplicateWarning] = useState<{
+    show: boolean;
+    existingProspect: { companyName: string; createdAt: number } | null;
+    existingProject: { projectId: string; projectStatus?: string } | null;
+  }>({ show: false, existingProspect: null, existingProject: null });
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -184,24 +191,59 @@ function ProspectsTab() {
     setFormData(emptyDetails);
   };
 
+  const convex = useConvex();
+
+  // Proceed with creation after user confirms (or if no duplicate)
+  const proceedWithCreate = async () => {
+    setIsSubmitting(true);
+    setDuplicateWarning({ show: false, existingProspect: null, existingProject: null });
+    try {
+      await createProspect({ details: formData });
+      handleCancel();
+    } catch (error) {
+      console.error("Error creating prospect:", error);
+      alert("Failed to create prospect. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
       if (editingProspectId) {
+        // Editing existing prospect - no duplicate check needed
         await updateProspect({
           prospectId: editingProspectId as Id<"prospects">,
           details: formData,
         });
+        setIsSubmitting(false);
+        handleCancel();
       } else {
-        await createProspect({ details: formData });
+        // Creating new prospect - check for duplicates first
+        const existing = await convex.query(api.admin.checkExistingByEmail, {
+          email: formData.contactEmail,
+        });
+
+        if (existing.hasExisting) {
+          // Show warning dialog
+          setDuplicateWarning({
+            show: true,
+            existingProspect: existing.existingProspect,
+            existingProject: existing.existingProject,
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        // No duplicates, proceed with creation
+        await proceedWithCreate();
       }
-      handleCancel();
     } catch (error) {
       console.error("Error saving prospect:", error);
       alert("Failed to save prospect. Please try again.");
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -384,6 +426,53 @@ function ProspectsTab() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Duplicate Warning Dialog */}
+      {duplicateWarning.show && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[hsl(var(--background)/0.6)] dark:bg-black/50 backdrop-blur-sm">
+          <div className="surface-elevated rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">
+              ⚠️ Existing Record Found
+            </h3>
+            <div className="space-y-3 text-sm text-[var(--muted-foreground)] mb-6">
+              <p>A prospect or project already exists for this email:</p>
+              {duplicateWarning.existingProspect && (
+                <div className="surface rounded-lg p-3">
+                  <p className="font-medium text-[var(--foreground)]">Existing Prospect</p>
+                  <p>Company: {duplicateWarning.existingProspect.companyName}</p>
+                  <p>Created: {new Date(duplicateWarning.existingProspect.createdAt).toLocaleDateString()}</p>
+                </div>
+              )}
+              {duplicateWarning.existingProject && (
+                <div className="surface rounded-lg p-3">
+                  <p className="font-medium text-[var(--foreground)]">Existing Project</p>
+                  <p>Status: {duplicateWarning.existingProject.projectStatus ?? "Unknown"}</p>
+                </div>
+              )}
+              <p className="text-amber-600 dark:text-amber-400">
+                Creating another prospect may cause confusion. Are you sure you want to proceed?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDuplicateWarning({ show: false, existingProspect: null, existingProject: null })}
+                className="flex-1 btn-outline-strong"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={proceedWithCreate}
+                disabled={isSubmitting}
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+              >
+                {isSubmitting ? "Creating..." : "Create Anyway"}
+              </button>
+            </div>
           </div>
         </div>
       )}
