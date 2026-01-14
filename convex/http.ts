@@ -54,7 +54,7 @@ http.route({
       if (!signature) return new Response("Missing signature", { status: 400 });
       const rawBody = await request.text();
       try {
-          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2025-09-30.clover" });
+          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2025-10-29.clover" });
           const event = stripe.webhooks.constructEvent(
               rawBody,
               signature,

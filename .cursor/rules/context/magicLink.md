@@ -6,15 +6,33 @@
 
 ## 1) Current Implementation
 
-- **Next.js auth proxy**: All Better Auth routes are proxied via `nextJsHandler()` at `/api/auth/*`.
+- **Next.js auth proxy**: All Better Auth routes are proxied via `handler` from `lib/auth-server.ts` at `/api/auth/*`.
 
 ```1:6:app/api/auth/[...all]/route.ts
-import { nextJsHandler } from "@convex-dev/better-auth/nextjs";
+import { handler } from "@/lib/auth-server";
 
-// Phase 3: HTTP Handlers & Next Proxy
+// HTTP Handlers & Next Proxy
 // This route handler proxies all auth requests from /api/auth/* to Convex
 // Handles GET and POST requests for sign-in, sign-out, callbacks, etc.
-export const { GET, POST } = nextJsHandler();
+export const { GET, POST } = handler;
+```
+
+- **Server-side auth utilities (`lib/auth-server.ts`)**: Uses `convexBetterAuthNextJs()` factory to create all server utilities.
+
+```1:30:lib/auth-server.ts
+import { convexBetterAuthNextJs } from "@convex-dev/better-auth/nextjs";
+
+export const {
+  handler,           // HTTP route handlers (GET, POST) for /api/auth/[...all]
+  getToken,          // Extract JWT token from cookies
+  isAuthenticated,   // Check if user is authenticated
+  fetchAuthQuery,    // Fetch authenticated queries
+  fetchAuthMutation, // Execute authenticated mutations
+  fetchAuthAction,   // Execute authenticated actions
+} = convexBetterAuthNextJs({
+  convexUrl: process.env.NEXT_PUBLIC_CONVEX_URL!,
+  convexSiteUrl: process.env.NEXT_PUBLIC_CONVEX_SITE_URL!,
+});
 ```
 
 - **Better Auth server config (`convex/auth.ts`)**:
@@ -285,4 +303,61 @@ export const authClient = createAuthClient({
 - Rate limiting: global + custom rules for sensitive endpoints; client `onError` with `X-Retry-After`.
 - Keep auth logic centralized in `convex/auth.ts`; use Convex Resend component for sending and logging.
 
+## 3) Mobile Session Hydration Fix (Implemented Jan 2026)
+
+### Problem
+When users clicked magic links on mobile devices (especially from in-app browsers like Outlook), they would land on `/portal/agreement?sid=xxx` but see an infinite loading skeleton. The session was actually created successfully, but the Convex client was stuck waiting for session validation.
+
+### Root Cause
+- `ConvexBetterAuthProvider` needed to validate the session via a network call after mount
+- On mobile/in-app browsers, this async validation could stall or be slow
+- Result: `<AuthLoading>` component rendered indefinitely
+
+### Solution
+Pre-fetch the auth token server-side and pass it to `ConvexBetterAuthProvider` via `initialToken` prop. This eliminates the client-side race condition.
+
+### Implementation
+
+**`components/ConvexClientProvider.tsx`**:
+```tsx
+export default function ConvexClientProvider({
+  children,
+  initialToken,
+}: {
+  children: ReactNode;
+  initialToken?: string | null;
+}) {
+  return (
+    <ConvexBetterAuthProvider 
+      client={convex} 
+      authClient={authClient}
+      initialToken={initialToken}
+    >
+      {children}
+    </ConvexBetterAuthProvider>
+  );
+}
+```
+
+**`app/layout.tsx`**:
+```tsx
+import { getToken } from "@/lib/auth-server";
+
+export default async function RootLayout({ children }) {
+  const initialToken = await getToken();
+  
+  return (
+    <html>
+      <body>
+        <ConvexClientProvider initialToken={initialToken}>
+          {children}
+        </ConvexClientProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+### Key Insight
+Magic link tokens are stored **server-side in the database** (hashed), not in the browser. Cross-device magic links work by design. The issue was purely about client-side session hydration timing, not the magic link verification itself.
 

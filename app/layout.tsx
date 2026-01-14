@@ -4,6 +4,7 @@ import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { AppThemeProvider } from "@/components/theme-provider";
 import { GlobalHeader } from "@/components/global-header";
+import { getToken } from "@/lib/auth-server";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -131,11 +132,22 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Pre-fetch auth token server-side to avoid client-side hydration delays
+  // This fixes magic link redirect issues on mobile browsers where session sync could stall
+  // Wrapped in try-catch to prevent root layout crash on cookie/network errors
+  let initialToken: string | null | undefined = null;
+  try {
+    initialToken = await getToken();
+  } catch (error) {
+    console.error("[layout] Failed to get auth token:", error);
+    // Fallback to null - client will do auth validation instead
+  }
+
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -245,7 +257,7 @@ export default function RootLayout({
           }}
         />
         <AppThemeProvider>
-          <ConvexClientProvider>
+          <ConvexClientProvider initialToken={initialToken}>
             <GlobalHeader />
             {children}
           </ConvexClientProvider>

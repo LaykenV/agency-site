@@ -8,7 +8,13 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const token = await getToken();
+  let token: string | null | undefined = null;
+  try {
+    token = await getToken();
+  } catch (error) {
+    console.error("[admin layout] Failed to get auth token:", error);
+    redirect("/");
+  }
   
   if (!token) {
     redirect("/");

@@ -16,6 +16,7 @@ import {
   COMPANY_NAME
 } from "./emails";
 import { projectStatusValidator } from "./validators";
+import authConfig from "./auth.config";
 const siteUrl = process.env.SITE_URL!;
 
 export const authComponent = createClient<DataModel>(components.betterAuth);
@@ -121,7 +122,7 @@ export const createAuth = (
       updateAge: 60 * 60 * 24, // Refresh session every 24 hours of activity
     },
     plugins: [
-      convex(),
+      convex({ authConfig }),
       magicLink({
         expiresIn: 60 * 60 * 24, // 24 hours
         disableSignUp: false,

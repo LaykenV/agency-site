@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.5
-Last Updated: January 12, 2026
+Document Version: 2.6
+Last Updated: January 14, 2026
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -117,7 +117,9 @@ VI. Application Architecture
 - Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions + file storage), Cal.com (scheduling).
 - Authentication (better-auth):
   - Magic link tokens valid for 24 hours (users can click the link within a day of receiving it)
+  - Magic link tokens stored server-side (hashed in database), NOT in the browser—links work cross-device
   - Session expiry: 1 year with 24-hour sliding refresh (active users stay logged in indefinitely)
+  - Server-side token pre-fetch via `initialToken` prop on `ConvexBetterAuthProvider` for instant auth hydration (prevents mobile loading delays)
 - Hub ↔ Spokes (Client Template Sites):
   - Client sites (Spokes) send leads + analytics to this Convex backend (Hub).
   - Public client endpoints (Convex HTTP router):
@@ -596,6 +598,10 @@ XI. Roadmap
   - Activity logging for all admin actions ✅
   - Server-side access gating via layout.tsx ✅
   - Convex RBAC guard for all admin functions ✅
+- V1.5: Mobile auth hydration fix ✅
+  - Server-side token pre-fetch in root layout via `getToken()` from `lib/auth-server.ts`
+  - Pass `initialToken` to `ConvexBetterAuthProvider` for instant session recognition
+  - Fixes infinite loading skeleton on magic link redirects and `/portal` access on mobile
 
 Example high-level flow (pseudo)
 - GET /portal/agreement
