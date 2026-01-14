@@ -42,7 +42,6 @@ export default function PortalPage() {
 
 function UnauthenticatedView() {
   const convex = useConvex();
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "unknown" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -90,9 +89,11 @@ function UnauthenticatedView() {
         }
       }
 
-      // CRITICAL: Redirect to link-sent page in auth-free route group
-      // This page has NO ConvexBetterAuthProvider, preventing cross-tab session contention
-      router.replace(`/link-sent?email=${encodeURIComponent(trimmed)}`);
+      // CRITICAL: Use full page navigation (not Next.js router) to completely tear down
+      // the JavaScript context, close WebSocket connections, and clear BroadcastChannel
+      // listeners. This prevents cross-tab session contention on mobile browsers where
+      // Tab 2 (magic link) would hang until Tab 1 is closed.
+      window.location.replace(`/link-sent?email=${encodeURIComponent(trimmed)}`);
     } catch (error) {
       console.error("[portal] failed to send magic link", error);
       setErrorMessage("We couldn't send a magic link. Please try again.");
