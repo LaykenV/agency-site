@@ -89,11 +89,12 @@ function UnauthenticatedView() {
         }
       }
 
-      // CRITICAL: Use full page navigation (not Next.js router) to completely tear down
-      // the JavaScript context, close WebSocket connections, and clear BroadcastChannel
-      // listeners. This prevents cross-tab session contention on mobile browsers where
-      // Tab 2 (magic link) would hang until Tab 1 is closed.
-      window.location.replace(`/link-sent?email=${encodeURIComponent(trimmed)}`);
+      // CRITICAL: Redirect to static HTML page (not a Next.js route) to completely
+      // destroy the JavaScript context, close WebSocket connections, and clear
+      // BroadcastChannel listeners. This prevents cross-tab session contention on
+      // mobile browsers where Tab 2 (magic link) would hang until Tab 1 is closed.
+      // Static files bypass Next.js entirely, ensuring full teardown.
+      window.location.replace(`/link-sent.html?email=${encodeURIComponent(trimmed)}`);
     } catch (error) {
       console.error("[portal] failed to send magic link", error);
       setErrorMessage("We couldn't send a magic link. Please try again.");

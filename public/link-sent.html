@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Magic Link Sent | Acadiana Web Design</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS Reset */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Light theme (default) */
+    :root {
+      --background: hsl(225, 38%, 95%);
+      --foreground: hsl(225, 30%, 35%);
+      --card: hsl(225, 33%, 96%);
+      --primary: hsl(215, 85%, 55%);
+      --primary-foreground: hsl(0, 0%, 100%);
+      --secondary: hsl(225, 24%, 94%);
+      --muted-foreground: hsl(225, 20%, 50%);
+      --border: hsl(230, 16%, 84%);
+      --radius: 0.625rem;
+    }
+
+    /* Dark theme */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --background: hsl(220, 28%, 11%);
+        --foreground: hsl(0, 0%, 100%);
+        --card: hsl(220, 28%, 12%);
+        --primary: hsl(215, 80%, 60%);
+        --primary-foreground: hsl(0, 0%, 100%);
+        --secondary: hsl(220, 16%, 16%);
+        --muted-foreground: hsl(220, 12%, 72%);
+        --border: hsl(220, 12%, 18%);
+      }
+    }
+
+    body {
+      font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--background);
+      color: var(--foreground);
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 32rem;
+      background: var(--card);
+      background-image: linear-gradient(180deg, var(--card) 0%, var(--secondary) 100%);
+      border: 1px solid color-mix(in hsl, var(--border), var(--primary) 14%);
+      border-radius: 1.5rem;
+      padding: 1.5rem;
+      box-shadow:
+        0 14px 36px -18px hsla(0, 0%, 0%, 0.26),
+        0 8px 22px -16px color-mix(in hsl, var(--primary), var(--background) 40%),
+        inset 0 1px 0 hsla(0, 0%, 100%, 0.45);
+    }
+
+    @media (min-width: 640px) {
+      .container {
+        padding: 2rem;
+      }
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .icon {
+      width: 3rem;
+      height: 3rem;
+      color: var(--primary);
+      margin: 0 auto 0.5rem;
+    }
+
+    .overline {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.35em;
+      color: var(--muted-foreground);
+      margin-top: 0.5rem;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .title {
+        font-size: 1.5rem;
+      }
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: var(--muted-foreground);
+      margin-top: 0.5rem;
+    }
+
+    .email {
+      font-size: 1rem;
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+    .warning {
+      border-radius: 0.5rem;
+      border: 1px solid hsla(43, 74%, 52%, 0.3);
+      background: hsla(43, 74%, 52%, 0.1);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      text-align: center;
+    }
+
+    .warning p {
+      font-size: 0.875rem;
+      color: hsl(43, 74%, 35%);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      .warning p {
+        color: hsl(43, 74%, 60%);
+      }
+    }
+
+    .warning strong {
+      font-weight: 700;
+    }
+
+    .buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    @media (min-width: 640px) {
+      .buttons {
+        flex-direction: row;
+      }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      border-radius: var(--radius);
+      text-decoration: none;
+      transition: all 0.18s ease;
+      cursor: pointer;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--primary-foreground);
+      box-shadow:
+        inset 0 1px 0 hsla(0, 0%, 100%, 0.3),
+        0 4px 12px -4px color-mix(in hsl, var(--primary), var(--background) 50%);
+    }
+
+    .btn-primary:hover {
+      filter: brightness(1.05);
+      box-shadow:
+        inset 0 1px 0 hsla(0, 0%, 100%, 0.35),
+        0 8px 20px -6px color-mix(in hsl, var(--primary), var(--background) 40%);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--foreground);
+      border: 1px solid var(--border);
+    }
+
+    .btn-outline:hover {
+      background: var(--secondary);
+      border-color: color-mix(in hsl, var(--border), var(--primary) 20%);
+    }
+
+    .footer-text {
+      margin-top: 1.5rem;
+      font-size: 0.75rem;
+      text-align: center;
+      color: var(--muted-foreground);
+    }
+
+    /* Hide email display initially until JS populates it */
+    #email-display {
+      display: none;
+    }
+
+    #email-display.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container" role="status" aria-live="polite">
+    <div class="header">
+      <!-- Check Circle Icon (Lucide) -->
+      <svg class="icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      <p class="overline">Magic Link Sent</p>
+      <h1 class="title">Check your inbox</h1>
+      <p class="subtitle">We've sent a secure sign-in link to</p>
+      <p class="email" id="email-display"></p>
+    </div>
+
+    <div class="warning">
+      <p><strong>Important:</strong> You can close this tab. The sign-in link will open in a new tab.</p>
+    </div>
+
+    <div class="buttons">
+      <a href="/portal" class="btn btn-primary">Request new link</a>
+      <a href="/" class="btn btn-outline">Go to homepage</a>
+    </div>
+
+    <p class="footer-text">
+      Didn't receive the email? Check your spam folder or request a new link.
+    </p>
+  </div>
+
+  <script>
+    // Read email from URL query parameter
+    (function() {
+      var params = new URLSearchParams(window.location.search);
+      var email = params.get('email');
+      var emailDisplay = document.getElementById('email-display');
+      
+      if (email && emailDisplay) {
+        emailDisplay.textContent = decodeURIComponent(email);
+        emailDisplay.classList.add('visible');
+      }
+    })();
+  </script>
+</body>
+</html>
