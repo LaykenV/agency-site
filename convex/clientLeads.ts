@@ -83,21 +83,19 @@ export const listByProject = query({
   },
 });
 
-// Query: Get lead counts by status (for dashboard stats)
-export const getCountsByStatus = query({
+// Query: Get leads summary with this month vs last month comparison
+export const getLeadsSummary = query({
   args: { projectId: v.string() },
   returns: v.object({
-    new: v.number(),
-    contacted: v.number(),
-    qualified: v.number(),
-    won: v.number(),
-    lost: v.number(),
+    thisMonth: v.number(),
+    lastMonth: v.number(),
+    trend: v.number(),
     total: v.number(),
   }),
   handler: async (ctx, { projectId }) => {
     const user = await authComponent.getAuthUser(ctx);
     if (!user?._id) {
-      return { new: 0, contacted: 0, qualified: 0, won: 0, lost: 0, total: 0 };
+      return { thisMonth: 0, lastMonth: 0, trend: 0, total: 0 };
     }
 
     const project = await ctx.db
@@ -106,7 +104,7 @@ export const getCountsByStatus = query({
       .first();
 
     if (!project || project.authUserId !== user._id) {
-      return { new: 0, contacted: 0, qualified: 0, won: 0, lost: 0, total: 0 };
+      return { thisMonth: 0, lastMonth: 0, trend: 0, total: 0 };
     }
 
     const leads = await ctx.db
@@ -114,19 +112,32 @@ export const getCountsByStatus = query({
       .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
       .collect();
 
-    const counts = {
-      new: 0,
-      contacted: 0,
-      qualified: 0,
-      won: 0,
-      lost: 0,
-      total: leads.length,
-    };
+    // Calculate date boundaries
+    const now = new Date();
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+    const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+
+    let thisMonthCount = 0;
+    let lastMonthCount = 0;
 
     for (const lead of leads) {
-      counts[lead.status]++;
+      if (lead.createdAt >= thisMonthStart) {
+        thisMonthCount++;
+      } else if (lead.createdAt >= lastMonthStart && lead.createdAt < thisMonthStart) {
+        lastMonthCount++;
+      }
     }
 
-    return counts;
+    const trend =
+      lastMonthCount > 0
+        ? Math.round(((thisMonthCount - lastMonthCount) / lastMonthCount) * 100)
+        : 0;
+
+    return {
+      thisMonth: thisMonthCount,
+      lastMonth: lastMonthCount,
+      trend,
+      total: leads.length,
+    };
   },
 });

@@ -134,9 +134,9 @@
 update live dashboard ui (cc)
 
 
-remove 'join meeting' 'back to portal home'
+//remove 'join meeting' 'back to portal home'
 //'accept and continue payment' 'continue to checkout' cursor pointer
-'atypically takes 5-7 days'
+//'atypically takes 5-7 days'
 remove hover on card
 
 clean up all code

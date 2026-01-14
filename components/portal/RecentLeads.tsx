@@ -10,14 +10,6 @@ interface RecentLeadsProps {
   limit?: number;
 }
 
-const statusColors: Record<string, string> = {
-  new: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
-  contacted: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  qualified: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  won: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
-  lost: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300",
-};
-
 const sourceLabels: Record<string, string> = {
   "contact-form": "Contact Form",
   "footer-form": "Footer Form",
@@ -100,14 +92,7 @@ export function RecentLeads({ projectId, limit = 10 }: RecentLeadsProps) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-xs font-medium capitalize ${
-                      statusColors[lead.status] || statusColors.new
-                    }`}
-                  >
-                    {lead.status}
-                  </span>
-                  <span className="text-xs text-[var(--muted-foreground)] hidden sm:inline">
+                  <span className="text-xs text-[var(--muted-foreground)]">
                     {formattedDate}
                   </span>
                   {isExpanded ? (
