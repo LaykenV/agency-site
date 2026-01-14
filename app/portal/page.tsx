@@ -254,7 +254,7 @@ function AuthenticatedPortalRedirect() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-      <Loader2 className="h-12 w-12 animate-spin text-[var(--primary)]" />
+      <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
       <p className="mt-6 text-sm text-[var(--secondary)]">{statusMessage}</p>
     </div>
   );
