@@ -120,6 +120,10 @@ export const createAuth = (
     session: {
       expiresIn: 60 * 60 * 24 * 365, // 1 year in seconds
       updateAge: 60 * 60 * 24, // Refresh session every 24 hours of activity
+      cookieCache: {
+        enabled: true,
+        maxAge: 60 * 5, // Cache valid for 5 minutes - reduces DB calls for session validation
+      },
     },
     plugins: [
       convex({ authConfig }),

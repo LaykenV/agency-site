@@ -127,7 +127,7 @@
 update live dashboard ui (cc)
 //style emails (login)
 //mobile magic link
-update admin welcome email to system invite. change login to /login? and no signup
+//update admin welcome email to system invite. change login to /login? and no signup
 better loading spinner on portal
 customer portal link after 12 months
 
