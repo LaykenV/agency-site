@@ -6,6 +6,7 @@ import {
   AuthLoading,
   useQuery,
   useMutation,
+  useAction,
 } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -149,6 +150,7 @@ function AuthenticatedProjectView() {
   const editRequests = useQuery(api.projects.listEditRequests, 
     project?._id ? { projectId: project._id } : "skip"
   );
+  const subscription = useQuery(api.stripeHelpers.getMySubscription);
 
   useEffect(() => {
     if (!decision) return;
@@ -272,6 +274,7 @@ function AuthenticatedProjectView() {
                     liveUrl={project.deployment?.liveUrl}
                     domainPreference={project.buildDetails?.domainPreference ?? undefined}
                     editRequests={editRequests ?? []}
+                    subscriptionCreatedAt={subscription?._creationTime}
                   />
                 )}
               </div>
@@ -1075,18 +1078,41 @@ function LiveSupportPanel({
   liveUrl,
   domainPreference,
   editRequests = [],
+  subscriptionCreatedAt,
 }: {
   projectId: Id<"projects">;
   projectSlug: string;
   liveUrl?: string;
   domainPreference?: string;
   editRequests?: EditRequest[];
+  subscriptionCreatedAt?: number;
 }) {
+  const [portalLoading, setPortalLoading] = useState(false);
+  const createPortalSession = useAction(api.stripeActions.createCustomerPortalSession);
+
   const absoluteLiveUrl = liveUrl
     ? liveUrl.startsWith('http://') || liveUrl.startsWith('https://')
       ? liveUrl
       : `https://${liveUrl}`
     : undefined;
+
+  // Calculate if 12 months have passed since subscription started
+  const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
+  const isEligibleForPortal = subscriptionCreatedAt 
+    ? Date.now() - subscriptionCreatedAt >= twelveMonthsMs 
+    : false;
+
+  const handleOpenPortal = async () => {
+    setPortalLoading(true);
+    try {
+      const { url } = await createPortalSession();
+      window.location.href = url;
+    } catch (error) {
+      console.error("Failed to open customer portal:", error);
+      toast.error("Failed to open subscription portal. Please try again.");
+      setPortalLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -1137,6 +1163,32 @@ function LiveSupportPanel({
 
       {/* Edit Requests List */}
       <EditRequestsList projectId={projectId} editRequests={editRequests} />
+
+      {/* Customer Portal Link - Only shown after 12+ months */}
+      {isEligibleForPortal && (
+        <div className="surface p-6 rounded-2xl">
+          <h3 className="font-semibold mb-2">Subscription Management</h3>
+          <p className="text-sm text-[var(--secondary)] mb-4">
+            Manage your billing details or cancel your subscription.
+          </p>
+          <Button 
+            onClick={handleOpenPortal} 
+            variant="outline"
+            disabled={portalLoading}
+          >
+            {portalLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Opening...
+              </>
+            ) : (
+              <>
+                Manage Subscription <ExternalLink className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

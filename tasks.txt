@@ -130,10 +130,10 @@ update live dashboard ui (cc)
 //update admin welcome email to system invite. change login to /login? and no signup
 //token check on landing page?
 //better loading spinner on portal
-customer portal link after 12 months
+//customer portal link after 12 months
 
 remove 'join meeting' 'back to portal home'
-'accept and continue payment' 'continue to checkout' cursor pointer
+//'accept and continue payment' 'continue to checkout' cursor pointer
 'atypically takes 5-7 days'
 remove hover on card
 
