@@ -8,6 +8,22 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Sync theme from next-themes localStorage before paint to prevent flash -->
+  <script>
+    (function() {
+      var theme = localStorage.getItem('theme');
+      if (theme === 'dark') {
+        document.documentElement.classList.add('dark');
+      } else if (theme === 'light') {
+        document.documentElement.classList.remove('dark');
+      } else if (theme === 'system' || !theme) {
+        // Follow system preference
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      }
+    })();
+  </script>
   <style>
     /* CSS Reset */
     *, *::before, *::after {
@@ -27,20 +43,20 @@
       --muted-foreground: hsl(225, 20%, 50%);
       --border: hsl(230, 16%, 84%);
       --radius: 0.625rem;
+      --warning-text: hsl(43, 74%, 35%);
     }
 
-    /* Dark theme */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --background: hsl(220, 28%, 11%);
-        --foreground: hsl(0, 0%, 100%);
-        --card: hsl(220, 28%, 12%);
-        --primary: hsl(215, 80%, 60%);
-        --primary-foreground: hsl(0, 0%, 100%);
-        --secondary: hsl(220, 16%, 16%);
-        --muted-foreground: hsl(220, 12%, 72%);
-        --border: hsl(220, 12%, 18%);
-      }
+    /* Dark theme - activated via .dark class (synced with next-themes) */
+    html.dark {
+      --background: hsl(220, 28%, 11%);
+      --foreground: hsl(0, 0%, 100%);
+      --card: hsl(220, 28%, 12%);
+      --primary: hsl(215, 80%, 60%);
+      --primary-foreground: hsl(0, 0%, 100%);
+      --secondary: hsl(220, 16%, 16%);
+      --muted-foreground: hsl(220, 12%, 72%);
+      --border: hsl(220, 12%, 18%);
+      --warning-text: hsl(43, 74%, 60%);
     }
 
     body {
@@ -131,13 +147,7 @@
 
     .warning p {
       font-size: 0.875rem;
-      color: hsl(43, 74%, 35%);
-    }
-
-    @media (prefers-color-scheme: dark) {
-      .warning p {
-        color: hsl(43, 74%, 60%);
-      }
+      color: var(--warning-text);
     }
 
     .warning strong {
