@@ -282,11 +282,8 @@ function AuthenticatedProjectView() {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4 text-xs text-[var(--secondary)]">
-          <Link href="/portal" className="text-[var(--primary)] hover:underline">
-            ← Back to portal home
-          </Link>
-          <span>Need help? Contact support.</span>
+        <div className="flex flex-wrap items-center justify-end gap-4 text-xs text-[var(--secondary)]">
+          <span>Need help? <a href="mailto:support@acadianawebdesign.com" className="text-[var(--primary)] hover:underline">Contact support</a>.</span>
         </div>
       </div>
     </div>
@@ -966,17 +963,6 @@ function CallCtaOrSummary({
               {formattedDate} at {formattedTime}
             </p>
           </div>
-          {booking.meetingUrl && (
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-            >
-              <a href={booking.meetingUrl} target="_blank" rel="noopener noreferrer">
-                Join Meeting <ExternalLink className="ml-1 h-3 w-3" />
-              </a>
-            </Button>
-          )}
         </div>
       </div>
     );
@@ -1013,7 +999,7 @@ function InProgressSection({ calKickoffBooking }: { calKickoffBooking?: CalBooki
         <h2 className="text-lg font-semibold mb-2">Build in Progress 🚀</h2>
         <p className="text-sm text-[var(--secondary)]">
           We&apos;re actively building your site. You&apos;ll receive an update once it&apos;s ready for review. 
-          Typically this takes 5-7 business days depending on complexity.
+          Typically this takes 2-3 business days depending on complexity.
         </p>
       </div>
 
