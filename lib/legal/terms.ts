@@ -1,5 +1,5 @@
-export const TERMS_VERSION = "2025-10-01" as const;
-export const TERMS_LAST_UPDATED = "2025-10-01" as const;
+export const TERMS_VERSION = "2026-01-14" as const;
+export const TERMS_LAST_UPDATED = "2026-01-14" as const;
 
 export type TermsContentBlock =
   | { type: "paragraph"; text: string }

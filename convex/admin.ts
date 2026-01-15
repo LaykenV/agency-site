@@ -634,3 +634,56 @@ export const updateEditRequestStatus = mutation({
     return null;
   },
 });
+
+export const listActivityLog = query({
+  args: {
+    limit: v.optional(v.number()),
+  },
+  returns: v.array(v.object({
+    _id: v.id("activity_log"),
+    _creationTime: v.number(),
+    projectId: v.optional(v.id("projects")),
+    prospectId: v.optional(v.id("prospects")),
+    actor: v.union(v.literal("system"), v.literal("user"), v.literal("admin")),
+    kind: v.string(),
+    payload: v.optional(v.any()),
+    createdAt: v.number(),
+    projectIdString: v.optional(v.string()),
+  })),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const limit = args.limit ?? 100;
+    
+    const activities = await ctx.db
+      .query("activity_log")
+      .withIndex("by_createdAt")
+      .order("desc")
+      .take(limit);
+    
+    // Enrich with projectIdString for linking
+    const enrichedActivities = await Promise.all(
+      activities.map(async (activity) => {
+        let projectIdString: string | undefined;
+        
+        if (activity.projectId) {
+          const project = await ctx.db.get(activity.projectId);
+          projectIdString = project?.projectId;
+        }
+        
+        return {
+          _id: activity._id,
+          _creationTime: activity._creationTime,
+          projectId: activity.projectId,
+          prospectId: activity.prospectId,
+          actor: activity.actor,
+          kind: activity.kind,
+          payload: activity.payload,
+          createdAt: activity.createdAt,
+          projectIdString,
+        };
+      })
+    );
+    
+    return enrichedActivities;
+  },
+});

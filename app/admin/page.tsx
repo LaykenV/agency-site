@@ -25,7 +25,7 @@ const emptyDetails: ProspectDetails = {
   myNotes: "",
 };
 
-type Tab = "prospects" | "projects" | "calls" | "requests";
+type Tab = "prospects" | "projects" | "calls" | "requests" | "activity";
 
 const PROJECT_STATUSES = [
   "AWAITING_AGREEMENT",
@@ -122,6 +122,17 @@ export default function AdminPage() {
                 >
                   Edit Requests
                 </button>
+                <button
+                  onClick={() => setActiveTab("activity")}
+                  className={clsx(
+                    "px-1.5 py-3 text-sm font-semibold -mb-px border-b-2",
+                    activeTab === "activity"
+                      ? "border-[hsl(var(--primary))] text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
+                >
+                  Activity
+                </button>
               </nav>
             </div>
 
@@ -130,6 +141,7 @@ export default function AdminPage() {
             {activeTab === "projects" && <ProjectsTab />}
             {activeTab === "calls" && <ScheduledCallsTab />}
             {activeTab === "requests" && <EditRequestsTab />}
+            {activeTab === "activity" && <ActivityLogTab />}
           </div>
         </div>
       </Authenticated>
@@ -1670,6 +1682,179 @@ function EditRequestsTab() {
           </table>
         </div>
         </>
+      )}
+    </div>
+  );
+}
+
+// Helper to format activity kind into human-readable text
+function formatActivityKind(kind: string, payload?: Record<string, unknown>): string {
+  const kindMap: Record<string, string | ((p?: Record<string, unknown>) => string)> = {
+    "magic_link_sent": "Magic link sent",
+    "project.status_updated": (p) => {
+      if (p?.from && p?.to) return `Status changed: ${String(p.from).replace(/_/g, " ")} → ${String(p.to).replace(/_/g, " ")}`;
+      if (p?.to) return `Status set to ${String(p.to).replace(/_/g, " ")}`;
+      return "Status updated";
+    },
+    "project.deployment_updated": "Deployment updated",
+    "build.admin_notes_updated": "Admin notes updated",
+    "ticket.status_updated": (p) => {
+      if (p?.from && p?.to) return `Ticket: ${String(p.from).replace(/_/g, " ")} → ${String(p.to).replace(/_/g, " ")}`;
+      return "Ticket status updated";
+    },
+    "agreement.signed": "Agreement signed",
+    "payment.completed": "Payment completed",
+    "payment.failed": "Payment failed",
+    "subscription.created": "Subscription created",
+    "subscription.cancelled": "Subscription cancelled",
+    "booking.created": "Call scheduled",
+    "booking.cancelled": "Call cancelled",
+    "booking.rescheduled": "Call rescheduled",
+    "project.created": "Project created",
+    "prospect.created": "Prospect created",
+    "edit_request.created": "Edit request submitted",
+    "build.assets_uploaded": "Brand assets uploaded",
+  };
+
+  const formatter = kindMap[kind];
+  if (typeof formatter === "function") {
+    return formatter(payload);
+  }
+  if (typeof formatter === "string") {
+    return formatter;
+  }
+  // Fallback: convert kind to readable format
+  return kind.replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+// Helper to get actor badge styles
+function getActorBadge(actor: "system" | "user" | "admin"): { label: string; className: string } {
+  switch (actor) {
+    case "system":
+      return { label: "System", className: "pill text-[hsl(var(--muted-foreground))] bg-[hsl(var(--muted)/0.3)]" };
+    case "user":
+      return { label: "User", className: "pill text-[hsl(var(--primary))] bg-[hsl(var(--primary)/0.10)]" };
+    case "admin":
+      return { label: "Admin", className: "pill text-[hsl(var(--accent))] bg-[hsl(var(--accent)/0.10)]" };
+  }
+}
+
+// Helper to format relative time
+function formatRelativeTime(timestamp: number): string {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString();
+}
+
+function ActivityLogTab() {
+  const activities = useQuery(api.admin.listActivityLog, { limit: 100 });
+
+  if (activities === undefined) {
+    return (
+      <div className="text-center py-12">
+        <div className="inline-flex h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+        <p className="mt-4 text-gray-500">Loading activity...</p>
+      </div>
+    );
+  }
+
+  // Group activities by date
+  const groupedByDate = activities.reduce((acc, activity) => {
+    const date = new Date(activity.createdAt).toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+    if (!acc[date]) acc[date] = [];
+    acc[date].push(activity);
+    return acc;
+  }, {} as Record<string, typeof activities>);
+
+  const sortedDates = Object.keys(groupedByDate);
+
+  return (
+    <div>
+      <h2 className="text-2xl font-semibold text-[var(--foreground)] mb-6">Activity Log</h2>
+
+      {activities.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-[var(--muted-foreground)] text-lg">No activity recorded yet</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {sortedDates.map((date) => (
+            <div key={date} className="surface rounded-xl p-6">
+              <h3 className="text-sm font-semibold text-[var(--muted-foreground)] uppercase tracking-wide mb-4">
+                {date}
+              </h3>
+              <div className="space-y-3">
+                {groupedByDate[date].map((activity) => {
+                  const actorBadge = getActorBadge(activity.actor);
+                  const description = formatActivityKind(
+                    activity.kind,
+                    activity.payload as Record<string, unknown> | undefined
+                  );
+
+                  return (
+                    <div
+                      key={activity._id}
+                      className="flex items-start gap-3 py-3 border-b border-[hsl(var(--border)/0.5)] last:border-0"
+                    >
+                      {/* Timeline dot */}
+                      <div className="flex-shrink-0 mt-1.5">
+                        <div className="w-2 h-2 rounded-full bg-[hsl(var(--primary))]" />
+                      </div>
+
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-[var(--foreground)]">
+                            {description}
+                          </span>
+                          <span className={actorBadge.className}>{actorBadge.label}</span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted-foreground)]">
+                          <span>{formatRelativeTime(activity.createdAt)}</span>
+                          <span>
+                            {new Date(activity.createdAt).toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          {activity.projectIdString && (
+                            <Link
+                              href={`/portal/${activity.projectIdString}`}
+                              className="text-[hsl(var(--primary))] hover:underline"
+                            >
+                              View Project →
+                            </Link>
+                          )}
+                        </div>
+
+                        {/* Show payload details for certain event types */}
+                        {activity.payload && activity.kind === "magic_link_sent" && (
+                          <div className="mt-1 text-xs text-[var(--muted-foreground)]">
+                            Email: {(activity.payload as { email?: string }).email}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

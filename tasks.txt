@@ -131,17 +131,22 @@
 //better loading spinner on portal
 
 //why new project being created?
-update live dashboard ui (cc)
+//update live dashboard ui (cc)
 
 
 //remove 'join meeting' 'back to portal home'
 //'accept and continue payment' 'continue to checkout' cursor pointer
 //'atypically takes 5-7 days'
-remove hover on card
+//remove hover on card
+
+//update terms date
+//activity log to admin
 
 clean up all code
-
 test everything, total
+
+
+
 live stripe
 stripe img
 
