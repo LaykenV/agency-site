@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, m as motion, useReducedMotion } from "framer-motion";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { ShinyLink } from "@/components/ui/shiny-button";
 

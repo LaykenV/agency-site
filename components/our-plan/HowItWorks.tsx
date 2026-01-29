@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { m as motion, useReducedMotion } from "framer-motion";
 import { CalendarCheck2, FolderCog, Rocket } from "lucide-react";
 
 const steps = [

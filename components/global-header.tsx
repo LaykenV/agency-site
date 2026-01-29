@@ -15,8 +15,36 @@ export function GlobalHeader() {
   const pathname = usePathname();
   const router = useRouter();
   const isPortal = pathname.startsWith("/portal");
-  const onLanding = pathname === "/";
-  const decision = useQuery(api.auth.getPortalDecision);
+  // Pages with gradient backgrounds where header needs light text
+  // Includes landing page, SEO city pages, industry service pages
+  const isGradientPage = 
+    pathname === "/" || 
+    pathname.startsWith("/websites-for-") ||
+    // Match /services/[industry] pages like /services/plumbers
+    /^\/services\/[a-z-]+$/.test(pathname) ||
+    // Match city pages like /lafayette, /new-iberia (but not /portal, /admin, etc.)
+    (
+      /^\/[a-z-]+$/.test(pathname) && 
+      !pathname.startsWith("/portal") && 
+      !pathname.startsWith("/admin") && 
+      !pathname.startsWith("/blog") && 
+      !pathname.startsWith("/legal") && 
+      !pathname.startsWith("/onboarding") &&
+      !pathname.startsWith("/services")
+    ) ||
+    // Match city+industry pages like /lafayette/plumbers (but not protected routes)
+    (
+      /^\/[a-z-]+\/[a-z-]+$/.test(pathname) &&
+      !pathname.startsWith("/portal") && 
+      !pathname.startsWith("/admin") && 
+      !pathname.startsWith("/blog") && 
+      !pathname.startsWith("/legal") && 
+      !pathname.startsWith("/onboarding") &&
+      !pathname.startsWith("/services")
+    );
+  const onLanding = isGradientPage;
+  // Only check auth on portal pages to avoid unnecessary auth calls on public SEO pages
+  const decision = useQuery(api.auth.getPortalDecision, isPortal ? {} : "skip");
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {

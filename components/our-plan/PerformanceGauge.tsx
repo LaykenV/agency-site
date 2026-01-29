@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useInView, useMotionValue, animate, useTransform } from "framer-motion";
+import { m as motion, useInView, useMotionValue, animate, useTransform } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 
 export function PerformanceGauge({ value = 95 }: { value: number }) {

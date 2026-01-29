@@ -24,6 +24,9 @@ import {
   useHeroTimings,
   useIsMdUp,
   inViewDefaults,
+  sectionReveal,
+  staggerContainer,
+  staggerItem,
 } from "@/components/animations";
 
 const REVIEWS = [
@@ -78,21 +81,21 @@ export function PageContent() {
     }
   }, [reduce]);
   return (
+    <LazyMotion features={domAnimation} strict>
+    <MotionConfig transition={motionDefaults.transition}>
     <main className="w-full flex flex-col relative">
       <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[120vh] sm:h-[110vh] md:h-[100vh] pointer-events-none" />
       {/* Hero */}
       <motion.section id="hero" className="anchor-target relative overflow-hidden" viewport={{ once: true, amount: 0.20 }}>
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8 pb-12 md:pb-20">
-          <LazyMotion features={domAnimation} strict>
-            <MotionConfig transition={motionDefaults.transition}>
               {reduce ? (
-                <h1 className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]">
+                <h1 className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]">
                   {TITLE}
                 </h1>
               ) : (
                 <SplitWords
                   text={TITLE}
-                  className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]"
+                  className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]"
                 />
               )}
 
@@ -110,7 +113,7 @@ export function PageContent() {
               {/* Centered CTA */}
               <motion.div
                 data-floating-cta-anchor
-                className="flex justify-center mt-5 sm:mt-6 md:mt-8 opacity-0"
+                className="flex items-center justify-center mt-5 sm:mt-6 md:mt-8 opacity-0"
                 variants={fadeUp}
                 initial={reduce ? false : "hidden"}
                 animate={reduce ? undefined : "visible"}
@@ -120,7 +123,7 @@ export function PageContent() {
                   href={ONBOARDING_CAL_LINK}
                   target="_blank"
                   rel="noreferrer"
-                  className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+                  className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
                 >
                   Schedule 15-Min Call
                 </ShinyLink>
@@ -190,32 +193,50 @@ export function PageContent() {
                   </div>
                 </motion.div>
               </div>
-            </MotionConfig>
-          </LazyMotion>
           </div>
         <span className="sr-only">Hero background illustration</span>
         <span className="sr-only">Device mockups are decorative</span>
       </motion.section>
 
       {/* Trust & Reviews */}
-      <section id="trust" className="anchor-target">
+      <motion.section
+        id="trust"
+        className="anchor-target"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={sectionReveal}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
           <SectionHeader as="h2">Trusted by local businesses across Acadiana</SectionHeader>
-          <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
-            <span className="pill text-xs sm:text-sm">Plumbing</span>
-            <span className="pill text-xs sm:text-sm">Landscaping</span>
-            <span className="pill text-xs sm:text-sm">Painting</span>
-            <span className="pill text-xs sm:text-sm">Home Services</span>
-          </div>
+          <motion.div
+            className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Plumbing</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Landscaping</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Painting</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Home Services</motion.span>
+          </motion.div>
           <ReviewsScroller reviews={REVIEWS} className="mt-6 sm:mt-8" />
           <p className="mt-4 text-[11px] sm:text-xs text-[var(--muted-foreground)] text-center max-w-md mx-auto leading-relaxed">
             Built the right way. Loads fast on any phone. Same-day support.
           </p>
         </div>
-      </section>
+      </motion.section>
 
       {/* Offer / Features / Comparison */}
-      <section id="offer" className="anchor-target">
+      <motion.section
+        id="offer"
+        className="anchor-target"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.1 }}
+        variants={sectionReveal}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
           <SectionHeader as="h2" className="mb-6 sm:mb-8">Our Plan</SectionHeader>
           <div className="surface-elevated rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden md:overflow-visible ring-1 ring-black/5 dark:ring-white/5">
@@ -336,270 +357,138 @@ export function PageContent() {
 
             {/* Comparison */}
             <section id="plan-comparison" className="mt-8 sm:mt-10">
-              <h3 className="text-lg sm:text-xl font-semibold text-[var(--foreground)]">Our Plan vs Traditional</h3>
+              <h3 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] mb-5 sm:mb-6">Our Plan vs Traditional</h3>
 
-              {/* Mobile: horizontal scroller for comparison cards */}
-              <div className="mt-4 md:hidden">
-                <HorizontalScroller trackClassName="hscroll-track--contained" cardClassName="plan-hscroll-card surface rounded-xl p-4 plan-compare-card" ariaLabel="Plan comparison">
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Price</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> $199/mo • $0 down</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> $3–5k+ upfront + retainers</span></div></div>
+              {/* Side-by-side comparison cards */}
+              <div className="comparison-duel">
+                {/* Our Plan - Hero Card */}
+                <motion.div 
+                  className="comparison-card comparison-card--hero"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  <div className="comparison-card__header">
+                    <div className="comparison-card__badge comparison-card__badge--recommended">Recommended</div>
+                    <h4 className="comparison-card__title">Our Plan</h4>
+                    <div className="comparison-card__price">
+                      <span className="comparison-card__price-amount">$199</span>
+                      <span className="comparison-card__price-period">/mo</span>
                     </div>
+                    <p className="comparison-card__subtitle">$0 upfront • Cancel anytime after 12 months</p>
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><Clock className="h-5 w-5 text-[hsl(var(--primary))]" aria-hidden /> Timeline to live</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 72 hours from build</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> 4–8 weeks</span></div></div>
+                  <ul className="comparison-card__features">
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Timeline</span><span className="comparison-feature-value comparison-feature-value--good">72 hours</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Hosting & SSL</span><span className="comparison-feature-value comparison-feature-value--good">Included</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Domain</span><span className="comparison-feature-value comparison-feature-value--good">Included</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Edits</span><span className="comparison-feature-value comparison-feature-value--good">Unlimited</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">PageSpeed</span><span className="comparison-feature-value comparison-feature-value--good">95+</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Reviews Widget</span><span className="comparison-feature-value comparison-feature-value--good">Included</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Analytics</span><span className="comparison-feature-value comparison-feature-value--good">Monthly report</span></li>
+                    <li><CheckCircle2 className="comparison-icon comparison-icon--good" aria-hidden /><span className="comparison-feature-label">Support</span><span className="comparison-feature-value comparison-feature-value--good">Same-day</span></li>
+                  </ul>
+                </motion.div>
+
+                {/* VS Divider */}
+                <div className="comparison-vs" aria-hidden>
+                  <span>VS</span>
+                </div>
+
+                {/* Traditional Agency - Muted Card */}
+                <motion.div 
+                  className="comparison-card comparison-card--muted"
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.3 }}
+                  transition={{ duration: 0.5, ease: "easeOut", delay: 0.1 }}
+                >
+                  <div className="comparison-card__header">
+                    <div className="comparison-card__badge comparison-card__badge--legacy">The Old Way</div>
+                    <h4 className="comparison-card__title">Traditional Agency</h4>
+                    <div className="comparison-card__price">
+                      <span className="comparison-card__price-amount">$3–5k+</span>
+                      <span className="comparison-card__price-period">upfront</span>
                     </div>
+                    <p className="comparison-card__subtitle">Plus monthly retainers & hourly fees</p>
                   </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17a4 4 0 0 0 4-4V9a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2"/><path d="M5 11h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8Z" stroke="currentColor" strokeWidth="2"/></svg>Hosting & SSL</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Billed separately</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="2"/><path d="M2.1 9h19.8M2.1 15h19.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor" strokeWidth="2"/></svg>Domain</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included & managed</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Bring your own</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Yes, through your portal</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> $75-150/hour for every change</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>PageSpeed target</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 95+</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Varies (often 60–80)</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17.3 6.18 21l1.57-6.73L2 8.97l6.9-.6L12 2l3.1 6.37 6.9.6-5.75 5.3L17.82 21 12 17.3Z" stroke="currentColor" strokeWidth="2"/></svg>Reviews widget</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Included</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Often extra</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 3v18h18" stroke="currentColor" strokeWidth="2"/><path d="M7 15v3M11 10v8M15 6v12M19 12v6" stroke="currentColor" strokeWidth="2"/></svg>Analytics</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Monthly summary</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> DIY</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Same-day responses</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Submit a ticket, wait days</span></div></div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></div>
-                    <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 12-month minimum</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Project-based/retainer</span></div></div>
-                    </div>
-                  </div>
-                </HorizontalScroller>
+                  <ul className="comparison-card__features">
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Timeline</span><span className="comparison-feature-value comparison-feature-value--bad">4–8 weeks</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Hosting & SSL</span><span className="comparison-feature-value comparison-feature-value--bad">Extra cost</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Domain</span><span className="comparison-feature-value comparison-feature-value--bad">Bring your own</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Edits</span><span className="comparison-feature-value comparison-feature-value--bad">$75–150/hr</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">PageSpeed</span><span className="comparison-feature-value comparison-feature-value--bad">60–80</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Reviews Widget</span><span className="comparison-feature-value comparison-feature-value--bad">Extra add-on</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Analytics</span><span className="comparison-feature-value comparison-feature-value--bad">DIY setup</span></li>
+                    <li><XCircle className="comparison-icon comparison-icon--bad" aria-hidden /><span className="comparison-feature-label">Support</span><span className="comparison-feature-value comparison-feature-value--bad">Days to weeks</span></li>
+                  </ul>
+                </motion.div>
               </div>
-
-              {/* Desktop: table comparison */}
-              <div className="mt-4 hidden md:block overflow-x-auto">
-              <table className="compare-table w-full">
-                <caption className="sr-only">Our Plan vs Traditional Agency</caption>
-                <thead>
-                  <tr>
-                    <th className="text-left">Feature</th>
-                    <th className="text-left">Our Plan</th>
-                    <th className="text-left">Traditional Agency</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>Price</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> $199/mo • $0 down
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> $3–5k+ upfront + retainers
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><Clock className="h-5 w-5 text-[hsl(var(--primary))]" aria-hidden /> Timeline to live</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> 72 hours from build
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> 4–8 weeks
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17a4 4 0 0 0 4-4V9a4 4 0 1 0-8 0v4a4 4 0 0 0 4 4Z" stroke="currentColor" strokeWidth="2"/><path d="M5 11h14v8a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-8Z" stroke="currentColor" strokeWidth="2"/></svg>Hosting & SSL</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Included
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Billed separately
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 21a9 9 0 1 0 0-18a9 9 0 0 0 0 18Z" stroke="currentColor" strokeWidth="2"/><path d="M2.1 9h19.8M2.1 15h19.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" stroke="currentColor" strokeWidth="2"/></svg>Domain</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Included & managed
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Bring your own
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Yes, through your portal
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> $75-150/hour for every change
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 3a9 9 0 1 0 9 9" stroke="currentColor" strokeWidth="2"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>PageSpeed target</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> 95+
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Varies (often 60–80)
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 17.3 6.18 21l1.57-6.73L2 8.97l6.9-.6L12 2l3.1 6.37 6.9.6-5.75 5.3L17.82 21 12 17.3Z" stroke="currentColor" strokeWidth="2"/></svg>Reviews widget</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Included
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Often extra
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M3 3v18h18" stroke="currentColor" strokeWidth="2"/><path d="M7 15v3M11 10v8M15 6v12M19 12v6" stroke="currentColor" strokeWidth="2"/></svg>Analytics</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Monthly summary
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> DIY
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Same-day responses
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Submit a ticket, wait days
-                      </span>
-                    </td>
-                  </tr>
-                  <tr>
-                    <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></th>
-                    <td>
-                      <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> 12-month minimum
-                      </span>
-                    </td>
-                    <td>
-                      <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Project-based/retainer
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
             </section>
           </div>
         </div>
-      </section>
+      </motion.section>
 
-      {/* Service Area */}
-      <section id="service-area" className="anchor-target">
+      {/* Industries We Serve */}
+      <motion.section
+        id="industries"
+        className="anchor-target"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={sectionReveal}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
-          <SectionHeader as="h2">Serving Businesses Across Acadiana</SectionHeader>
-          <p className="text-center text-[var(--muted-foreground)] mt-4 max-w-2xl mx-auto">
-            We build professional websites for local service businesses throughout Lafayette Parish and the greater Acadiana region.
+          <SectionHeader as="h2">Industries We Serve</SectionHeader>
+          <p className="text-center text-[var(--muted-foreground)] mt-3 sm:mt-4 max-w-xl mx-auto text-sm sm:text-base">
+            Professional websites built for local service businesses.
           </p>
-          <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-2 sm:gap-3">
-            <Link href="/lafayette" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Lafayette</Link>
-            <Link href="/new-iberia" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">New Iberia</Link>
-            <Link href="/opelousas" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Opelousas</Link>
-            <Link href="/crowley" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Crowley</Link>
-            <Link href="/breaux-bridge" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Breaux Bridge</Link>
-            <Link href="/abbeville" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Abbeville</Link>
-            <Link href="/youngsville" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Youngsville</Link>
-            <Link href="/scott" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Scott</Link>
-          </div>
-          <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
-            <Link href="/websites-for-plumbers" className="text-[hsl(var(--primary))] hover:underline">Plumbers</Link>
-            <Link href="/websites-for-landscapers" className="text-[hsl(var(--primary))] hover:underline">Landscapers</Link>
-            <Link href="/websites-for-painters" className="text-[hsl(var(--primary))] hover:underline">Painters</Link>
-            <Link href="/websites-for-contractors" className="text-[hsl(var(--primary))] hover:underline">Contractors</Link>
-            <Link href="/websites-for-electricians" className="text-[hsl(var(--primary))] hover:underline">Electricians</Link>
-            <Link href="/websites-for-hvac" className="text-[hsl(var(--primary))] hover:underline">HVAC</Link>
-            <Link href="/websites-for-roofers" className="text-[hsl(var(--primary))] hover:underline">Roofers</Link>
-            <Link href="/websites-for-pressure-washing" className="text-[hsl(var(--primary))] hover:underline">Pressure Washing</Link>
-            <Link href="/websites-for-cleaning-services" className="text-[hsl(var(--primary))] hover:underline">Cleaning</Link>
-            <Link href="/websites-for-pest-control" className="text-[hsl(var(--primary))] hover:underline">Pest Control</Link>
-            <Link href="/websites-for-tree-services" className="text-[hsl(var(--primary))] hover:underline">Tree Services</Link>
-            <Link href="/websites-for-fencing" className="text-[hsl(var(--primary))] hover:underline">Fencing</Link>
-          </div>
+
+          <motion.div
+            className="mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 sm:gap-3 max-w-4xl mx-auto"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.3 }}
+          >
+            {[
+              { name: "Plumbers", href: "/services/plumbers" },
+              { name: "Landscapers", href: "/services/landscapers" },
+              { name: "Painters", href: "/services/painters" },
+              { name: "Contractors", href: "/services/contractors" },
+              { name: "Electricians", href: "/services/electricians" },
+              { name: "HVAC", href: "/services/hvac" },
+              { name: "Roofers", href: "/services/roofers" },
+              { name: "Pressure Washing", href: "/services/pressure-washing" },
+              { name: "Cleaning", href: "/services/cleaning-services" },
+              { name: "Pest Control", href: "/services/pest-control" },
+              { name: "Tree Services", href: "/services/tree-services" },
+              { name: "Fencing", href: "/services/fencing" },
+            ].map((industry) => (
+              <motion.div key={industry.href} variants={staggerItem}>
+                <Link
+                  href={industry.href}
+                  className="group flex items-center justify-center gap-2 px-4 py-3 sm:py-4 rounded-xl surface ring-1 ring-black/5 dark:ring-white/5 hover:ring-[hsl(var(--primary))]/30 hover:bg-[hsl(var(--primary))]/5 transition-all"
+                >
+                  <span className="text-sm sm:text-base text-[var(--foreground)] group-hover:text-[hsl(var(--primary))] transition-colors font-medium">
+                    {industry.name}
+                  </span>
+                </Link>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* FAQs */}
-      <section id="faqs" className="anchor-target">
+      <motion.section
+        id="faqs"
+        className="anchor-target"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={sectionReveal}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
           <SectionHeader as="h2">FAQs</SectionHeader>
           <div className="mt-6 sm:mt-8 faq-grid max-w-3xl mx-auto">
@@ -624,10 +513,16 @@ export function PageContent() {
             </FaqItem>
           </div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Final CTA / pricing */}
-      <section className="relative overflow-hidden">
+      <motion.section
+        className="relative overflow-hidden"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={sectionReveal}
+      >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
           <SectionHeader as="h2" align="center" className="mb-6 sm:mb-8">Ready to Get Started?</SectionHeader>
           <div className="cta-card surface-elevated rounded-2xl sm:rounded-3xl mx-auto max-w-4xl p-5 sm:p-8 md:p-10 lg:p-12 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
@@ -653,7 +548,7 @@ export function PageContent() {
         </div>
         {/* Bottom gradient fade-out */}
         <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none page-gradient-fade" aria-hidden="true" />
-      </section>
+      </motion.section>
 
       {/* Footer */}
       <footer className="footer-container pb-6 sm:pb-8">
@@ -671,6 +566,8 @@ export function PageContent() {
       </footer>
       <FloatingCtaTray />
     </main>
+    </MotionConfig>
+    </LazyMotion>
   );
 }
 

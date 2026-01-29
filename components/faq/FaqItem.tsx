@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState, useLayoutEffect } from 'react';
-import { motion, useReducedMotion } from 'framer-motion';
+import { m as motion, useReducedMotion } from 'framer-motion';
 
 type FaqItemProps = {
   question: React.ReactNode;

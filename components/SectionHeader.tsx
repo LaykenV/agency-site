@@ -20,14 +20,14 @@ export function SectionHeader({
       ? "text-3xl sm:text-4xl md:text-5xl lg:text-6xl"
       : size === "sm"
       ? "text-xl sm:text-2xl md:text-3xl"
-      : "text-2xl sm:text-3xl md:text-4xl lg:text-5xl";
+      : "text-2xl sm:text-3xl md:text-4xl";
   const alignClasses =
     align === "left" ? "text-left" : align === "right" ? "text-right" : "text-center";
   return createElement(
     as,
     {
       className: clsx(
-        "font-bold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--hero-foreground))]",
+        "font-extrabold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[24ch] heading-gradient-soft",
         sizeClasses,
         alignClasses,
         className
