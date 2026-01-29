@@ -9,6 +9,7 @@ import {
 } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
@@ -158,7 +159,7 @@ function UnauthenticatedView() {
         {status === "unknown" && (
           <div className="mt-6 grid gap-2 sm:grid-cols-2">
             <Button asChild variant="outline">
-              <a href="/onboarding">Get Your Tailored Plan</a>
+              <Link href="/onboarding">Get Your Tailored Plan</Link>
             </Button>
             <Button asChild variant="outline">
               <a href={ONBOARDING_CAL_LINK}>Schedule a call</a>
@@ -244,7 +245,7 @@ function AuthenticatedPortalRedirect() {
             agreement link or start the onboarding flow below.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant="outline"><a href="/onboarding">Start onboarding</a></Button>
+            <Button asChild variant="outline"><Link href="/onboarding">Start onboarding</Link></Button>
             <Button asChild variant="outline"><a href="https://cal.com/acadianawebdesign">Schedule a call</a></Button>
           </div>
         </div>

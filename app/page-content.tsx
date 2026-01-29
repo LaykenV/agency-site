@@ -323,7 +323,7 @@ export function PageContent() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Customers don't wait. Slow sites lose calls.</span>
+                    <span>Customers don&apos;t wait. Slow sites lose calls.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
@@ -564,13 +564,42 @@ export function PageContent() {
         </div>
       </section>
 
+      {/* Service Area */}
+      <section id="service-area" className="anchor-target">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
+          <SectionHeader as="h2">Serving Businesses Across Acadiana</SectionHeader>
+          <p className="text-center text-[var(--muted-foreground)] mt-4 max-w-2xl mx-auto">
+            We build professional websites for local service businesses throughout Lafayette Parish and the greater Acadiana region.
+          </p>
+          <div className="mt-6 sm:mt-8 flex flex-wrap justify-center gap-2 sm:gap-3">
+            <Link href="/lafayette" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Lafayette</Link>
+            <Link href="/new-iberia" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">New Iberia</Link>
+            <Link href="/opelousas" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Opelousas</Link>
+            <Link href="/crowley" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Crowley</Link>
+            <Link href="/breaux-bridge" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Breaux Bridge</Link>
+            <Link href="/abbeville" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Abbeville</Link>
+            <Link href="/youngsville" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Youngsville</Link>
+            <Link href="/scott" className="pill text-xs sm:text-sm hover:bg-[hsl(var(--primary))]/10 transition-colors">Scott</Link>
+          </div>
+          <div className="mt-6 flex flex-wrap justify-center gap-x-4 gap-y-2 text-sm">
+            <Link href="/websites-for-plumbers" className="text-[hsl(var(--primary))] hover:underline">Plumbers</Link>
+            <Link href="/websites-for-landscapers" className="text-[hsl(var(--primary))] hover:underline">Landscapers</Link>
+            <Link href="/websites-for-painters" className="text-[hsl(var(--primary))] hover:underline">Painters</Link>
+            <Link href="/websites-for-contractors" className="text-[hsl(var(--primary))] hover:underline">Contractors</Link>
+            <Link href="/websites-for-electricians" className="text-[hsl(var(--primary))] hover:underline">Electricians</Link>
+            <Link href="/websites-for-hvac" className="text-[hsl(var(--primary))] hover:underline">HVAC</Link>
+            <Link href="/websites-for-roofers" className="text-[hsl(var(--primary))] hover:underline">Roofers</Link>
+          </div>
+        </div>
+      </section>
+
       {/* FAQs */}
       <section id="faqs" className="anchor-target">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
           <SectionHeader as="h2">FAQs</SectionHeader>
           <div className="mt-6 sm:mt-8 faq-grid max-w-3xl mx-auto">
             <FaqItem question='What does "unlimited edits" include?'>
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Swap a photo, fix a typo, add a new service, change your hours. Submit requests through your portal anytime. If you want a full redesign, we'll give you a simple quote. No nickel-and-diming.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Swap a photo, fix a typo, add a new service, change your hours. Submit requests through your portal anytime. If you want a full redesign, we&apos;ll give you a simple quote. No nickel-and-diming.</p>
             </FaqItem>
 
             <FaqItem question="How fast can we launch?">
@@ -578,7 +607,7 @@ export function PageContent() {
             </FaqItem>
 
             <FaqItem question="Do I keep my domain?">
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage your domain while you're subscribed. After the 12-month minimum and if your account is in good standing, we can transfer it to you per the Terms.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage your domain while you&apos;re subscribed. After the 12-month minimum and if your account is in good standing, we can transfer it to you per the Terms.</p>
             </FaqItem>
 
             <FaqItem question="Who owns the website?">

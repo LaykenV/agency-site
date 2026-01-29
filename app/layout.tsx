@@ -4,6 +4,7 @@ import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { AppThemeProvider } from "@/components/theme-provider";
 import { GlobalHeader } from "@/components/global-header";
+import { Analytics } from "@/components/Analytics";
 import { getToken } from "@/lib/auth-server";
 
 const geistSans = Geist({
@@ -262,6 +263,7 @@ export default async function RootLayout({
             {children}
           </ConvexClientProvider>
         </AppThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
