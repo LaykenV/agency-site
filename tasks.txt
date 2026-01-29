@@ -144,14 +144,25 @@
 
 clean up all code
 test everything, total
+copywriting skill
+
+harley
+schedule call
+send onboarding email
+sign agreement
+checkout with test stripe
+build details
+clone and build template site and deploy
+schedule review call
+go live
+test analytics and lead gen
 
 
 
 live stripe
 stripe img
-
 google business profile
-bandit signs 
+
 //resend inbound
 
 //template nextjs
@@ -159,7 +170,6 @@ update reviews with examples
 
 
 get user
-
 marketing // use atlas outbound, get them to sign up
 bandit signs
 cold call
@@ -168,7 +178,6 @@ get first client
 
 LLC
 Sentry
-npm package for template + cli for onboarding
 
 
 

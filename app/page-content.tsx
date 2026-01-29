@@ -58,7 +58,7 @@ const REVIEWS = [
 
 export function PageContent() {
   const reduce = useReducedMotion();
-  const TITLE = "Get More Calls in Acadiana with a 5‑Star Website";
+  const TITLE = "More Calls. Less Hassle. One Simple Price.";
   const t = useHeroTimings(TITLE);
   const [cardContentVisible, setCardContentVisible] = useState(reduce);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -104,7 +104,7 @@ export function PageContent() {
                 animate={reduce ? undefined : "visible"}
                 transition={{ delay: reduce ? 0 : t.headerDuration + 0.1 }}
               >
-                Done‑for‑you website, hosting, and domain. $0 down. 72‑hour go‑live. Unlimited edit requests in the client portal.
+                We build, host, and manage your website for one flat monthly fee. $0 upfront. Live in 72 hours. Unlimited changes included.
               </motion.p>
 
               {/* Centered CTA */}
@@ -122,7 +122,7 @@ export function PageContent() {
                   rel="noreferrer"
                   className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
                 >
-                  Schedule 15‑Min Call
+                  Schedule 15-Min Call
                 </ShinyLink>
               </motion.div>
 
@@ -165,7 +165,7 @@ export function PageContent() {
                         {...contentMotionProps}
                         transition={{ delay: reduce ? 0 : 0.16 }}
                       >
-                        All‑inclusive plan
+                        One plan. Everything included.
                       </motion.h2>
                       <motion.ul
                         className="mt-2.5 sm:mt-3 space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-[var(--muted-foreground)]"
@@ -175,15 +175,15 @@ export function PageContent() {
                       >
                         <motion.li className="flex items-center gap-2" variants={fadeUp}>
                           <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>$199/mo • $0 down</span>
+                          <span>$199/mo, nothing upfront</span>
                         </motion.li>
                         <motion.li className="flex items-center gap-2" variants={fadeUp}>
                           <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>72‑hour go‑live from build</span>
+                          <span>Live in 72 hours</span>
                         </motion.li>
                         <motion.li className="flex items-center gap-2" variants={fadeUp}>
                           <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>Unlimited edit requests via the client portal</span>
+                          <span>Unlimited changes, no extra charge</span>
                         </motion.li>
                       </motion.ul>
                     </div>
@@ -200,7 +200,7 @@ export function PageContent() {
       {/* Trust & Reviews */}
       <section id="trust" className="anchor-target">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
-          <SectionHeader as="h2">Trusted by local pros across Acadiana</SectionHeader>
+          <SectionHeader as="h2">Trusted by local businesses across Acadiana</SectionHeader>
           <div className="mt-4 sm:mt-5 flex flex-wrap items-center justify-center gap-2 sm:gap-3">
             <span className="pill text-xs sm:text-sm">Plumbing</span>
             <span className="pill text-xs sm:text-sm">Landscaping</span>
@@ -209,7 +209,7 @@ export function PageContent() {
           </div>
           <ReviewsScroller reviews={REVIEWS} className="mt-6 sm:mt-8" />
           <p className="mt-4 text-[11px] sm:text-xs text-[var(--muted-foreground)] text-center max-w-md mx-auto leading-relaxed">
-            Built on modern best practices • Pages load fast on mobile • Same‑day support
+            Built the right way. Loads fast on any phone. Same-day support.
           </p>
         </div>
       </section>
@@ -238,29 +238,29 @@ export function PageContent() {
                     <div className="surface rounded-xl p-4 lg:p-5">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Build & Performance</div>
                       <ul className="mt-3 list-checks text-sm">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Custom 7‑page website</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Loads fast on mobile (95+ PageSpeed)</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>7-page site built around your services</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Loads in under a second on any phone</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-xl p-4 lg:p-5">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Hosting & Domain</div>
                       <ul className="mt-3 list-checks text-sm">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Managed hosting + SSL</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Domain included & managed</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Always online, always secure</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Your own .com, registered and managed</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-xl p-4 lg:p-5">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Conversion</div>
                       <ul className="mt-3 list-checks text-sm">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Google Reviews widget</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Contact form + email alerts</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Show off your 5-star reviews automatically</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Leads go straight to your inbox</span></li>
                       </ul>
                     </div>
                     <div className="surface rounded-xl p-4 lg:p-5">
                       <div className="text-sm font-semibold text-[var(--muted-foreground)]">Support & Insights</div>
                       <ul className="mt-3 list-checks text-sm">
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Unlimited edit requests via the client portal</span></li>
-                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Monthly analytics summary</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Unlimited changes through your portal</span></li>
+                        <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))] flex-shrink-0" /><span>Monthly traffic summary delivered to you</span></li>
                       </ul>
                     </div>
                   </div>
@@ -270,29 +270,29 @@ export function PageContent() {
                       <div>
                         <div className="plan-card-title">Build & Performance</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Custom 7‑page website</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Loads fast on mobile (95+ PageSpeed)</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>7-page site built around your services</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Loads in under a second on any phone</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Hosting & Domain</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Managed hosting + SSL</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Domain included & managed</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Always online, always secure</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Your own .com, registered and managed</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Conversion</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Google Reviews widget</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Contact form + email alerts</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Show off your 5-star reviews automatically</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Leads go straight to your inbox</span></li>
                         </ul>
                       </div>
                       <div>
                         <div className="plan-card-title">Support & Insights</div>
                         <ul className="mt-3 list-checks">
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited edit requests via the client portal</span></li>
-                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly analytics summary</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Unlimited changes through your portal</span></li>
+                          <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" /><span>Monthly traffic summary delivered to you</span></li>
                         </ul>
                       </div>
                     </HorizontalScroller>
@@ -319,15 +319,15 @@ export function PageContent() {
                 <ul className="mt-4 sm:mt-5 space-y-2 text-sm text-[var(--muted-foreground)]">
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Google favors quick, mobile‑first sites</span>
+                    <span>Fast sites rank higher on Google</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Fewer bounces, more calls and form fills</span>
+                    <span>Customers don't wait. Slow sites lose calls.</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Built with modern best practices</span>
+                    <span>Built the right way, works on every device</span>
                   </li>
                 </ul>
               </div>
@@ -372,8 +372,8 @@ export function PageContent() {
                   <div>
                     <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Yes — via client portal</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Typically billed hourly</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Yes, through your portal</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> $75-150/hour for every change</span></div></div>
                     </div>
                   </div>
                   <div>
@@ -400,15 +400,15 @@ export function PageContent() {
                   <div>
                     <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Email support, same‑day</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Ticket queues</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> Same-day responses</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Submit a ticket, wait days</span></div></div>
                     </div>
                   </div>
                   <div>
                     <div className="text-sm font-semibold text-[var(--muted-foreground)]"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></div>
                     <div className="mt-2 plan-compare-grid text-sm">
-                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 12‑month minimum</span></div></div>
-                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Project‑based/retainer</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Our Plan</div><div><span className="badge badge-good inline-flex items-center gap-1"><CheckCircle2 aria-hidden className="inline-block" /> 12-month minimum</span></div></div>
+                      <div><div className="text-[var(--muted-foreground)]">Traditional Agency</div><div><span className="badge badge-bad inline-flex items-center gap-1"><XCircle aria-hidden className="inline-block" /> Project-based/retainer</span></div></div>
                     </div>
                   </div>
                 </HorizontalScroller>
@@ -482,12 +482,12 @@ export function PageContent() {
                     <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 20h9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5Z" stroke="currentColor" strokeWidth="2"/></svg>Unlimited edits</span></th>
                     <td>
                       <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Yes — via client portal
+                        <CheckCircle2 aria-hidden className="inline-block" /> Yes, through your portal
                       </span>
                     </td>
                     <td>
                       <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Typically billed hourly
+                        <XCircle aria-hidden className="inline-block" /> $75-150/hour for every change
                       </span>
                     </td>
                   </tr>
@@ -534,12 +534,12 @@ export function PageContent() {
                     <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M12 22a5 5 0 0 0 5-5v-1a7 7 0 1 0-14 0v1a5 5 0 0 0 5 5" stroke="currentColor" strokeWidth="2"/><path d="M19 14v-1a7 7 0 0 0-14 0v1" stroke="currentColor" strokeWidth="2"/></svg>Support</span></th>
                     <td>
                       <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> Email support, same‑day
+                        <CheckCircle2 aria-hidden className="inline-block" /> Same-day responses
                       </span>
                     </td>
                     <td>
                       <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Ticket queues
+                        <XCircle aria-hidden className="inline-block" /> Submit a ticket, wait days
                       </span>
                     </td>
                   </tr>
@@ -547,12 +547,12 @@ export function PageContent() {
                     <th scope="row"><span className="inline-flex items-center gap-2"><svg className="h-5 w-5 text-[hsl(var(--primary))]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden><path d="M8 2v4M16 2v4M3 10h18M5 6h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z" stroke="currentColor" strokeWidth="2"/></svg>Contract term</span></th>
                     <td>
                       <span className="badge badge-good inline-flex items-center gap-1">
-                        <CheckCircle2 aria-hidden className="inline-block" /> 12‑month minimum
+                        <CheckCircle2 aria-hidden className="inline-block" /> 12-month minimum
                       </span>
                     </td>
                     <td>
                       <span className="badge badge-bad inline-flex items-center gap-1">
-                        <XCircle aria-hidden className="inline-block" /> Project‑based/retainer
+                        <XCircle aria-hidden className="inline-block" /> Project-based/retainer
                       </span>
                     </td>
                   </tr>
@@ -570,23 +570,23 @@ export function PageContent() {
           <SectionHeader as="h2">FAQs</SectionHeader>
           <div className="mt-6 sm:mt-8 faq-grid max-w-3xl mx-auto">
             <FaqItem question='What does "unlimited edits" include?'>
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Reasonable updates like text, photos, hours, banners, sections, and small layout tweaks. Submit requests in the client portal anytime. Bigger redesigns get a simple scope and quote.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Swap a photo, fix a typo, add a new service, change your hours. Submit requests through your portal anytime. If you want a full redesign, we'll give you a simple quote. No nickel-and-diming.</p>
             </FaqItem>
 
             <FaqItem question="How fast can we launch?">
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Once we start the build, we aim to go live within 72 hours. Kickoff happens after we collect assets.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">After our kickoff call, most sites go live in 72 hours. Send us your logo and photos, and we move fast.</p>
             </FaqItem>
 
             <FaqItem question="Do I keep my domain?">
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We include and manage your domain while subscribed. After the 12‑month minimum and if your account is in good standing, we can transfer per the Terms.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage your domain while you're subscribed. After the 12-month minimum and if your account is in good standing, we can transfer it to you per the Terms.</p>
             </FaqItem>
 
             <FaqItem question="Who owns the website?">
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">You own your original content (copy, images, logo). We license the implementation during the term. Details are in the Terms.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">You own your content: your copy, your images, your logo. We license the design and code during your subscription. Details are in the Terms.</p>
             </FaqItem>
 
             <FaqItem question="How do I cancel?">
-              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Email support. During months 1–12, the early termination policy applies. After 12 months, cancel any month before renewal.</p>
+              <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Reach out to support. During months 1-12, the early termination policy applies. After 12 months, cancel any month before renewal.</p>
             </FaqItem>
           </div>
         </div>
@@ -595,26 +595,23 @@ export function PageContent() {
       {/* Final CTA / pricing */}
       <section className="relative overflow-hidden">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
-          <SectionHeader as="h2" align="center" className="mb-6 sm:mb-8">Launch Your 5‑Star Website</SectionHeader>
+          <SectionHeader as="h2" align="center" className="mb-6 sm:mb-8">Ready to Get Started?</SectionHeader>
           <div className="cta-card surface-elevated rounded-2xl sm:rounded-3xl mx-auto max-w-4xl p-5 sm:p-8 md:p-10 lg:p-12 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/5">
             <div className="absolute inset-0 beams-overlay" aria-hidden />
             <div className="relative z-[1] flex flex-col gap-5 sm:gap-6 md:grid md:grid-cols-[1fr_auto] md:items-center">
               <div className="text-center md:text-left">
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-                  <span className="pill text-[11px] sm:text-xs"><Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> 72‑hour go‑live</span>
-                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> Unlimited edits</span>
-                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> $0 down</span>
-                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> Managed hosting</span>
+                  <span className="pill text-[11px] sm:text-xs"><Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> Live in 72 hours</span>
+                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> Unlimited changes</span>
+                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> $0 upfront</span>
+                  <span className="pill text-[11px] sm:text-xs"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))]" aria-hidden /> Hosting included</span>
                 </div>
-                <p className="text-[var(--muted-foreground)] text-sm md:text-base leading-relaxed max-w-lg mx-auto md:mx-0">Everything you need to launch and grow—managed hosting, SSL, and domain included. Built for local pros in Acadiana with same‑day email support.</p>
-                <p className="mt-2 sm:mt-3 text-[11px] sm:text-xs text-[var(--muted-foreground)]/80">$199/mo • 12‑month minimum. Renews monthly thereafter until canceled. Early termination policy applies. See <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
+                <p className="text-[var(--muted-foreground)] text-sm md:text-base leading-relaxed max-w-lg mx-auto md:mx-0">One flat price. No tech headaches. Just a website that makes your business look as good as it really is.</p>
+                <p className="mt-2 sm:mt-3 text-[11px] sm:text-xs text-[var(--muted-foreground)]/80">$199/mo. 12-month minimum. Renews monthly until canceled. See <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
               </div>
               <div className="flex flex-col gap-2.5 sm:gap-3 w-full md:w-auto md:min-w-[260px] lg:min-w-[300px]">
-                <Link href="/onboarding?utm_source=lp&cta=final" className="btn-secondary w-full inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base whitespace-nowrap rounded-xl">
-                  Get Your Tailored Plan
-                </Link>
                 <Link href={ONBOARDING_CAL_LINK} target="_blank" rel="noreferrer" className="btn-cta w-full inline-flex items-center justify-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base whitespace-nowrap rounded-xl font-semibold">
-                  Schedule 15‑Min Call
+                  Book a Free Call
                 </Link>
               </div>
             </div>

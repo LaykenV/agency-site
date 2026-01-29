@@ -4,9 +4,9 @@ import { motion, useReducedMotion } from "framer-motion";
 import { CalendarCheck2, FolderCog, Rocket } from "lucide-react";
 
 const steps = [
-  { k: 1, title: "Talk for 15 Minutes", desc: "Tell us your goals. We’ll map pages and style, fast.", Icon: CalendarCheck2 },
-  { k: 2, title: "We Build Your Website", desc: "Hand‑coded, mobile‑first, and tuned for speed. You review before launch.", Icon: FolderCog },
-  { k: 3, title: "Launch and Grow", desc: "We host it, manage the domain, and handle edit requests in the client portal anytime.", Icon: Rocket },
+  { k: 1, title: "Quick Call, Real Plan", desc: "Tell us about your business. We'll show you exactly what your site will look like.", Icon: CalendarCheck2 },
+  { k: 2, title: "We Build It, You Approve It", desc: "Custom site designed around your business. Loads fast on any phone. You see it before it goes live.", Icon: FolderCog },
+  { k: 3, title: "Launch and Forget the Tech", desc: "We handle hosting, security, and your domain. Need changes? Submit a request through your portal.", Icon: Rocket },
 ] as const;
 
 export function HowItWorks() {
@@ -39,5 +39,3 @@ export function HowItWorks() {
 }
 
 export default HowItWorks;
-
-
