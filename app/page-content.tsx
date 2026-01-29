@@ -589,6 +589,11 @@ export function PageContent() {
             <Link href="/websites-for-electricians" className="text-[hsl(var(--primary))] hover:underline">Electricians</Link>
             <Link href="/websites-for-hvac" className="text-[hsl(var(--primary))] hover:underline">HVAC</Link>
             <Link href="/websites-for-roofers" className="text-[hsl(var(--primary))] hover:underline">Roofers</Link>
+            <Link href="/websites-for-pressure-washing" className="text-[hsl(var(--primary))] hover:underline">Pressure Washing</Link>
+            <Link href="/websites-for-cleaning-services" className="text-[hsl(var(--primary))] hover:underline">Cleaning</Link>
+            <Link href="/websites-for-pest-control" className="text-[hsl(var(--primary))] hover:underline">Pest Control</Link>
+            <Link href="/websites-for-tree-services" className="text-[hsl(var(--primary))] hover:underline">Tree Services</Link>
+            <Link href="/websites-for-fencing" className="text-[hsl(var(--primary))] hover:underline">Fencing</Link>
           </div>
         </div>
       </section>

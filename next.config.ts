@@ -12,6 +12,14 @@ const INDUSTRY_SLUGS = [
   "electricians",
   "hvac",
   "roofers",
+  "pressure-washing",
+  "cleaning-services",
+  "pest-control",
+  "tree-services",
+  "fencing",
+  "garage-doors",
+  "concrete",
+  "pool-services",
 ] as const;
 
 const nextConfig: NextConfig = {

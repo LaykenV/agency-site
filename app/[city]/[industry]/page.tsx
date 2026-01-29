@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, Clock, Phone, ArrowRight } from "lucide-react";
+import { CheckCircle2, Clock, MapPin, Phone, ArrowRight } from "lucide-react";
+import { ACADIANA_CITIES, getCityBySlug, getAllCitySlugs } from "@/lib/seo/cities";
 import { TARGET_INDUSTRIES, getIndustryBySlug, getAllIndustrySlugs } from "@/lib/seo/industries";
-import { ACADIANA_CITIES } from "@/lib/seo/cities";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import { SectionHeader } from "@/components/SectionHeader";
@@ -13,64 +13,122 @@ const baseUrl = process.env.NEXT_PUBLIC_APP_URL
   ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
   : process.env.SITE_URL ?? "http://localhost:3000";
 
-interface IndustryPageProps {
-  params: Promise<{ industry: string }>;
+interface CityIndustryPageProps {
+  params: Promise<{ city: string; industry: string }>;
 }
 
-// Generate static params for all industries
+// Generate static params for all city + industry combinations
 export async function generateStaticParams() {
-  return getAllIndustrySlugs().map((industry) => ({ industry }));
+  const cities = getAllCitySlugs();
+  const industries = getAllIndustrySlugs();
+  
+  const params: { city: string; industry: string }[] = [];
+  
+  for (const city of cities) {
+    for (const industry of industries) {
+      params.push({ city, industry });
+    }
+  }
+  
+  return params;
 }
 
-// Generate metadata for each industry
-export async function generateMetadata({ params }: IndustryPageProps): Promise<Metadata> {
-  const { industry: industrySlug } = await params;
+// Generate metadata for each city + industry combination
+export async function generateMetadata({ params }: CityIndustryPageProps): Promise<Metadata> {
+  const { city: citySlug, industry: industrySlug } = await params;
+  const city = getCityBySlug(citySlug);
   const industry = getIndustryBySlug(industrySlug);
 
-  if (!industry) {
+  if (!city || !industry) {
     return {
       title: "Page Not Found",
     };
   }
 
-  const title = `Websites for ${industry.plural} | $0 Down, $199/mo | Acadiana`;
-  const description = `Professional website design for ${industry.plural.toLowerCase()} in Louisiana. Fast, mobile-optimized sites that help ${industry.name.toLowerCase()}s get more customers. 72-hour launch, unlimited edits included.`;
+  const title = `${industry.name} Website Design in ${city.name}, LA | $0 Down, $199/mo`;
+  const description = `Professional website design for ${industry.plural.toLowerCase()} in ${city.name}, Louisiana. Get more customers with a fast, mobile-optimized site. 72-hour launch, unlimited edits included.`;
 
   return {
     title,
     description,
     keywords: [
-      ...industry.keywords,
-      `${industry.name.toLowerCase()} website Lafayette`,
-      `${industry.name.toLowerCase()} website Louisiana`,
-      `website for ${industry.name.toLowerCase()}s`,
-      `${industry.plural.toLowerCase()} website design`,
+      `${industry.name.toLowerCase()} website ${city.name}`,
+      `${industry.name.toLowerCase()} web design ${city.name} LA`,
+      `website for ${industry.name.toLowerCase()}s ${city.name}`,
+      `${city.name} ${industry.name.toLowerCase()} website`,
+      `${industry.plural.toLowerCase()} website ${city.name} Louisiana`,
+      ...industry.keywords.map(k => `${k} ${city.name}`),
     ],
     alternates: {
-      canonical: `/websites-for-${industry.slug}`,
+      canonical: `/${city.slug}/${industry.slug}`,
     },
     openGraph: {
       title,
       description,
-      url: `${baseUrl}/websites-for-${industry.slug}`,
+      url: `${baseUrl}/${city.slug}/${industry.slug}`,
       type: "website",
+    },
+    other: {
+      "geo.region": "US-LA",
+      "geo.placename": city.name,
+      "geo.position": `${city.lat};${city.lng}`,
+      ICBM: `${city.lat}, ${city.lng}`,
     },
   };
 }
 
-export default async function IndustryPage({ params }: IndustryPageProps) {
-  const { industry: industrySlug } = await params;
+export default async function CityIndustryPage({ params }: CityIndustryPageProps) {
+  const { city: citySlug, industry: industrySlug } = await params;
+  const city = getCityBySlug(citySlug);
   const industry = getIndustryBySlug(industrySlug);
 
-  if (!industry) {
+  if (!city || !industry) {
     notFound();
   }
 
-  // Get other industries for internal linking
+  // Get other cities for this industry
+  const otherCities = ACADIANA_CITIES.filter((c) => c.slug !== city.slug).slice(0, 4);
+  
+  // Get other industries for this city
   const otherIndustries = TARGET_INDUSTRIES.filter((i) => i.slug !== industry.slug).slice(0, 4);
 
   return (
     <>
+      {/* LocalBusiness JSON-LD with city + industry specific data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "ProfessionalService",
+            name: "Acadiana Web Design",
+            description: `Professional ${industry.name.toLowerCase()} website design services in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and $199/mo.`,
+            image: `${baseUrl}/heroimg.png`,
+            "@id": `${baseUrl}/${city.slug}/${industry.slug}`,
+            url: `${baseUrl}/${city.slug}/${industry.slug}`,
+            telephone: "+1-337-306-3705",
+            email: "hello@acadianawebdesign.com",
+            address: {
+              "@type": "PostalAddress",
+              addressLocality: city.name,
+              addressRegion: "LA",
+              addressCountry: "US",
+            },
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: city.lat.toString(),
+              longitude: city.lng.toString(),
+            },
+            areaServed: {
+              "@type": "City",
+              name: city.name,
+            },
+            priceRange: "$199",
+            serviceType: [`${industry.name} Website Design`, "Web Design", "Website Development"],
+          }),
+        }}
+      />
+
       {/* Service JSON-LD */}
       <script
         type="application/ld+json"
@@ -78,18 +136,22 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
           __html: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Service",
-            name: `Website Design for ${industry.plural}`,
-            description: `Professional website design services for ${industry.plural.toLowerCase()} in Acadiana, Louisiana.`,
+            name: `${industry.name} Website Design in ${city.name}`,
+            description: `Professional website design for ${industry.plural.toLowerCase()} in ${city.name}, ${city.county}.`,
             provider: {
               "@type": "ProfessionalService",
               name: "Acadiana Web Design",
               url: baseUrl,
             },
             areaServed: {
-              "@type": "State",
-              name: "Louisiana",
+              "@type": "City",
+              name: city.name,
+              containedInPlace: {
+                "@type": "State",
+                name: "Louisiana",
+              },
             },
-            serviceType: "Web Design",
+            serviceType: `${industry.name} Website Design`,
           }),
         }}
       />
@@ -130,8 +192,14 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
               {
                 "@type": "ListItem",
                 position: 2,
-                name: `Websites for ${industry.plural}`,
-                item: `${baseUrl}/websites-for-${industry.slug}`,
+                name: city.name,
+                item: `${baseUrl}/${city.slug}`,
+              },
+              {
+                "@type": "ListItem",
+                position: 3,
+                name: `${industry.plural}`,
+                item: `${baseUrl}/${city.slug}/${industry.slug}`,
               },
             ],
           }),
@@ -147,18 +215,17 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
           />
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-8 sm:pt-12 md:pt-16 pb-12 md:pb-20">
             <div className="flex items-center justify-center gap-2 text-sm text-[hsl(var(--primary-foreground))]/80 mb-4">
-              <span className="pill bg-white/20 text-[hsl(var(--primary-foreground))]">
-                Built for {industry.plural}
-              </span>
+              <MapPin className="h-4 w-4" />
+              <span>Serving {industry.plural} in {city.name}, LA</span>
             </div>
 
-            <h1 className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mx-auto max-w-[22ch] text-[hsl(var(--primary-foreground))]">
-              Professional Websites for {industry.plural}
+            <h1 className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight mx-auto max-w-[24ch] text-[hsl(var(--primary-foreground))]">
+              {industry.name} Website Design in {city.name}
             </h1>
 
             <p className="text-center text-base sm:text-lg md:text-xl text-[hsl(var(--primary-foreground))]/90 mt-6 mx-auto max-w-2xl leading-relaxed">
-              Get a website that actually brings in customers. Built specifically for{" "}
-              {industry.name.toLowerCase()}s who want to grow their business online.
+              Get a professional website that helps your {industry.name.toLowerCase()} business stand out in {city.name}. 
+              $0 down, $199/mo, live in 72 hours.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
@@ -176,7 +243,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
             <div className="flex flex-wrap items-center justify-center gap-4 mt-8 text-sm text-[hsl(var(--primary-foreground))]/80">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-[hsl(var(--primary))]" />
-                $0 Down, $199/mo
+                $0 Down
               </span>
               <span className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4 text-[hsl(var(--primary))]" />
@@ -194,7 +261,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
         <section className="py-12 md:py-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeader as="h2">
-              Sound Familiar?
+              Challenges {city.name} {industry.plural} Face Online
             </SectionHeader>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -214,7 +281,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
         <section className="py-12 md:py-16 bg-[var(--muted)]/30">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeader as="h2">
-              What You Get With Your {industry.name} Website
+              What Your {city.name} {industry.name} Website Includes
             </SectionHeader>
 
             <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -228,39 +295,35 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
           </div>
         </section>
 
-        {/* How It Works */}
+        {/* Local Focus Section */}
         <section className="py-12 md:py-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <SectionHeader as="h2">How It Works</SectionHeader>
+            <SectionHeader as="h2">
+              Why Local {industry.plural} in {city.name} Choose Us
+            </SectionHeader>
 
             <div className="mt-8 grid gap-6 md:grid-cols-3">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--primary))] text-white font-bold text-lg mb-4">
-                  1
-                </div>
-                <h3 className="font-semibold text-lg text-[var(--foreground)]">Quick Call</h3>
+              <div className="surface rounded-xl p-6">
+                <h3 className="font-semibold text-lg text-[var(--foreground)]">{city.name} Focused</h3>
                 <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                  15 minutes to understand your {industry.name.toLowerCase()} business, services, and goals.
+                  We optimize your site to rank for &quot;{industry.name.toLowerCase()} in {city.name}&quot; and 
+                  &quot;{industry.name.toLowerCase()} near me&quot; searches in {city.county}.
                 </p>
               </div>
 
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--primary))] text-white font-bold text-lg mb-4">
-                  2
-                </div>
-                <h3 className="font-semibold text-lg text-[var(--foreground)]">We Build</h3>
+              <div className="surface rounded-xl p-6">
+                <h3 className="font-semibold text-lg text-[var(--foreground)]">Built for {industry.plural}</h3>
                 <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                  We create your custom website optimized for {industry.name.toLowerCase()} services.
+                  We understand what {industry.name.toLowerCase()} customers want. Your site showcases your 
+                  services and makes it easy to get quotes.
                 </p>
               </div>
 
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[hsl(var(--primary))] text-white font-bold text-lg mb-4">
-                  3
-                </div>
-                <h3 className="font-semibold text-lg text-[var(--foreground)]">Go Live</h3>
+              <div className="surface rounded-xl p-6">
+                <h3 className="font-semibold text-lg text-[var(--foreground)]">All-Inclusive</h3>
                 <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-                  Your site launches in 72 hours and starts bringing in leads.
+                  Hosting, domain, SSL, unlimited edits—all included. No surprise bills. 
+                  Just one flat monthly price.
                 </p>
               </div>
             </div>
@@ -271,7 +334,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
         <section className="py-12 md:py-16 bg-[var(--muted)]/30">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeader as="h2">
-              FAQs for {industry.plural}
+              FAQs for {city.name} {industry.plural}
             </SectionHeader>
 
             <div className="mt-8 max-w-3xl mx-auto space-y-4">
@@ -285,53 +348,68 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
           </div>
         </section>
 
-        {/* Service Areas */}
+        {/* Other Industries in This City */}
         <section className="py-12 md:py-16">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <SectionHeader as="h2">
-              {industry.name} Websites Across Acadiana
-            </SectionHeader>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {ACADIANA_CITIES.map((city) => (
-                <Link
-                  key={city.slug}
-                  href={`/${city.slug}/${industry.slug}`}
-                  className="surface rounded-xl p-4 hover:ring-2 hover:ring-[hsl(var(--primary))]/50 transition-all group"
-                >
-                  <h3 className="font-medium text-[var(--foreground)] flex items-center justify-between">
-                    {city.name}
-                    <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </h3>
-                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-                    {industry.plural} in {city.name}
-                  </p>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Other Industries */}
-        <section className="py-12 md:py-16 bg-[var(--muted)]/30">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <SectionHeader as="h2">
-              We Also Build Websites For
+              Other Services We Build Websites For in {city.name}
             </SectionHeader>
 
             <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {otherIndustries.map((otherIndustry) => (
                 <Link
                   key={otherIndustry.slug}
-                  href={`/websites-for-${otherIndustry.slug}`}
+                  href={`/${city.slug}/${otherIndustry.slug}`}
                   className="surface rounded-xl p-4 hover:ring-2 hover:ring-[hsl(var(--primary))]/50 transition-all group"
                 >
                   <h3 className="font-medium text-[var(--foreground)] flex items-center justify-between">
                     {otherIndustry.plural}
                     <ArrowRight className="h-4 w-4 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </h3>
+                  <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                    in {city.name}
+                  </p>
                 </Link>
               ))}
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                href={`/${city.slug}`}
+                className="text-sm text-[hsl(var(--primary))] hover:underline"
+              >
+                View all services in {city.name} →
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Same Industry in Other Cities */}
+        <section className="py-12 md:py-16 bg-[var(--muted)]/30">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionHeader as="h2">
+              {industry.name} Websites in Other Acadiana Cities
+            </SectionHeader>
+
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
+              {otherCities.map((otherCity) => (
+                <Link
+                  key={otherCity.slug}
+                  href={`/${otherCity.slug}/${industry.slug}`}
+                  className="pill hover:bg-[hsl(var(--primary))]/10 transition-colors"
+                >
+                  {otherCity.name}
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                href={`/websites-for-${industry.slug}`}
+                className="text-sm text-[hsl(var(--primary))] hover:underline"
+              >
+                View all {industry.name.toLowerCase()} website services →
+              </Link>
             </div>
           </div>
         </section>
@@ -341,10 +419,10 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <div className="surface-elevated rounded-2xl sm:rounded-3xl p-6 sm:p-10 text-center ring-1 ring-black/5 dark:ring-white/5">
               <h2 className="text-2xl sm:text-3xl font-bold text-[var(--foreground)]">
-                Ready to Grow Your {industry.name} Business?
+                Ready to Grow Your {industry.name} Business in {city.name}?
               </h2>
               <p className="mt-4 text-[var(--muted-foreground)] max-w-xl mx-auto">
-                Join other {industry.plural.toLowerCase()} who trust us with their online presence.
+                Join other {industry.plural.toLowerCase()} in {city.name} who trust us with their online presence.
                 $0 down, live in 72 hours.
               </p>
               <div className="mt-6">
@@ -376,9 +454,9 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
                 © {new Date().getFullYear()} Acadiana Web Design
               </p>
               <div className="footer-badges text-[10px] sm:text-xs">
-                <span>Websites for {industry.plural}</span>
+                <span>{industry.plural} in {city.name}</span>
                 <span>Vet Owned</span>
-                <span>Serving Acadiana</span>
+                <span>Local Developer</span>
               </div>
             </div>
             <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">

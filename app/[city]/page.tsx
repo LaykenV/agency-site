@@ -235,7 +235,7 @@ export default async function CityPage({ params }: CityPageProps) {
               {TARGET_INDUSTRIES.slice(0, 8).map((industry) => (
                 <Link
                   key={industry.slug}
-                  href={`/websites-for-${industry.slug}`}
+                  href={`/${city.slug}/${industry.slug}`}
                   className="surface rounded-xl p-4 hover:ring-2 hover:ring-[hsl(var(--primary))]/50 transition-all"
                 >
                   <h3 className="font-medium text-[var(--foreground)]">
@@ -247,6 +247,15 @@ export default async function CityPage({ params }: CityPageProps) {
                 </Link>
               ))}
             </div>
+
+            {TARGET_INDUSTRIES.length > 8 && (
+              <div className="mt-6 text-center">
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  Plus {TARGET_INDUSTRIES.length - 8} more industries including{" "}
+                  {TARGET_INDUSTRIES.slice(8, 11).map((i) => i.plural.toLowerCase()).join(", ")}, and more.
+                </p>
+              </div>
+            )}
           </div>
         </section>
 

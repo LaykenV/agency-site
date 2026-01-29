@@ -46,6 +46,19 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
+  // City + Industry combination pages (programmatic SEO - highest intent)
+  const cityIndustryPages: MetadataRoute.Sitemap = [];
+  for (const city of ACADIANA_CITIES) {
+    for (const industry of TARGET_INDUSTRIES) {
+      cityIndustryPages.push({
+        url: `${baseUrl}/${city.slug}/${industry.slug}`,
+        lastModified: new Date(),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      });
+    }
+  }
+
   // Blog pages
   const blogIndexPage: MetadataRoute.Sitemap = [
     {
@@ -63,5 +76,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...cityPages, ...industryPages, ...blogIndexPage, ...blogPostPages];
+  return [
+    ...staticPages, 
+    ...cityPages, 
+    ...industryPages, 
+    ...cityIndustryPages,
+    ...blogIndexPage, 
+    ...blogPostPages
+  ];
 }
