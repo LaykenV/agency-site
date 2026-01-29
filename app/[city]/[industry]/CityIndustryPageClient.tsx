@@ -66,12 +66,12 @@ export function CityIndustryPageClient({
                 className="flex items-center justify-center gap-3 mb-6"
                 variants={fadeUp}
               >
-                <span className="h-px w-8 sm:w-12 bg-gradient-to-r from-transparent to-white/40" aria-hidden />
+                <span className="hidden sm:block h-px w-8 sm:w-12 bg-gradient-to-r from-transparent to-white/40" aria-hidden />
                 <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
                   <MapPin className="h-3.5 w-3.5 text-white/90" />
                   <span className="text-sm font-medium text-white/90">{industry.plural} in {city.name}</span>
                 </div>
-                <span className="h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-white/40" aria-hidden />
+                <span className="hidden sm:block h-px w-8 sm:w-12 bg-gradient-to-l from-transparent to-white/40" aria-hidden />
               </motion.div>
 
               <motion.h1 

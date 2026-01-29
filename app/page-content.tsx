@@ -239,12 +239,13 @@ export function PageContent() {
       >
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
           <SectionHeader as="h2" className="mb-6 sm:mb-8">Our Plan</SectionHeader>
-          <div className="surface-elevated rounded-2xl sm:rounded-3xl p-4 sm:p-6 md:p-8 lg:p-10 overflow-hidden md:overflow-visible ring-1 ring-black/5 dark:ring-white/5">
+          {/* Card wrapper: removed on mobile for breathing room, elevated surface on md+ */}
+          <div className="md:surface-elevated md:rounded-3xl md:p-8 lg:p-10 md:overflow-visible md:ring-1 md:ring-black/5 dark:md:ring-white/5">
 
             {/* Main grid: narrative + sticky proof */}
-            <div className="grid gap-6 sm:gap-8 lg:gap-10 md:grid-cols-[1.4fr_1fr]">
+            <div className="grid gap-10 md:gap-8 lg:gap-10 md:grid-cols-[1.4fr_1fr]">
               {/* Narrative column */}
-              <div className="space-y-6 sm:space-y-8 min-w-0">
+              <div className="space-y-10 md:space-y-8 min-w-0">
                 {/* Steps */}
                 <section id="plan-steps">
                   <h3 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] pb-2 md:pb-3">How it works</h3>
@@ -321,42 +322,43 @@ export function PageContent() {
                 </section>
               </div>
 
-              {/* Proof column (sticky) */}
+              {/* Proof column (sticky) - card styling only on md+ */}
               <aside id="plan-performance" className="self-start md:sticky md:top-24">
-                <div className="surface rounded-xl sm:rounded-2xl p-5 sm:p-6">
-                <div className="flex items-center gap-4 sm:gap-6">
-                  <PerformanceGauge value={95} />
-                  <div className="space-y-2">
-                    <div className="stat-pill">
-                      <div className="stat-pill-label">Before</div>
-                      <div className="stat-pill-value">3.9s</div>
-                    </div>
-                    <div className="stat-pill">
-                      <div className="stat-pill-label">After</div>
-                      <div className="stat-pill-value">0.9s</div>
+                <div className="md:surface md:rounded-2xl md:p-6">
+                  {/* Mobile: centered stacked layout | Desktop: side-by-side */}
+                  <div className="flex flex-col items-center gap-5 md:flex-row md:items-center md:gap-6">
+                    <PerformanceGauge value={95} />
+                    <div className="flex gap-3 md:flex-col md:gap-2">
+                      <div className="stat-pill">
+                        <div className="stat-pill-label">Before</div>
+                        <div className="stat-pill-value">3.9s</div>
+                      </div>
+                      <div className="stat-pill">
+                        <div className="stat-pill-label">After</div>
+                        <div className="stat-pill-value">0.9s</div>
+                      </div>
                     </div>
                   </div>
+                  <ul className="mt-5 md:mt-5 space-y-2 text-sm text-[var(--muted-foreground)] text-center md:text-left">
+                    <li className="flex items-start justify-center md:justify-start gap-2">
+                      <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
+                      <span>Fast sites rank higher on Google</span>
+                    </li>
+                    <li className="flex items-start justify-center md:justify-start gap-2">
+                      <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
+                      <span>Customers don&apos;t wait. Slow sites lose calls.</span>
+                    </li>
+                    <li className="flex items-start justify-center md:justify-start gap-2">
+                      <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
+                      <span>Built the right way, works on every device</span>
+                    </li>
+                  </ul>
                 </div>
-                <ul className="mt-4 sm:mt-5 space-y-2 text-sm text-[var(--muted-foreground)]">
-                  <li className="flex items-start gap-2">
-                    <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Fast sites rank higher on Google</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Customers don&apos;t wait. Slow sites lose calls.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-[hsl(var(--primary))] mt-0.5">•</span>
-                    <span>Built the right way, works on every device</span>
-                  </li>
-                </ul>
-              </div>
               </aside>
             </div>
 
             {/* Comparison */}
-            <section id="plan-comparison" className="mt-8 sm:mt-10">
+            <section id="plan-comparison" className="mt-10 md:mt-10">
               <h3 className="text-lg sm:text-xl font-semibold text-[var(--foreground)] mb-5 sm:mb-6">Our Plan vs Traditional</h3>
 
               {/* Side-by-side comparison cards */}

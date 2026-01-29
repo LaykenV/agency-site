@@ -421,6 +421,27 @@ body {
       inset 0 1px 0 hsl(0 0% 100% / 0.45);
   }
 
+  /* Responsive variant: surface only on md+ */
+  .md\:surface {
+    background: transparent;
+    background-image: none;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  @media (min-width: 768px) {
+    .md\:surface {
+      background: var(--card);
+      background-image: var(--gradient-surface);
+      border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 14%);
+      border-radius: var(--radius);
+      box-shadow:
+        0 14px 36px -18px hsl(0 0% 0% / 0.26),
+        0 8px 22px -16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 40%),
+        inset 0 1px 0 hsl(0 0% 100% / 0.45);
+    }
+  }
+
   .surface-soft {
     background: var(--secondary);
     border: 1px solid var(--border);
@@ -435,6 +456,25 @@ body {
       0 26px 64px -28px hsl(0 0% 0% / 0.34),
       0 12px 28px -16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 45%),
       inset 0 1px 0 hsl(0 0% 100% / 0.48);
+  }
+
+  /* Responsive variant: surface-elevated only on md+ */
+  .md\:surface-elevated {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  @media (min-width: 768px) {
+    .md\:surface-elevated {
+      background: var(--card);
+      border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 18%);
+      border-radius: calc(var(--radius) + 2px);
+      box-shadow:
+        0 26px 64px -28px hsl(0 0% 0% / 0.34),
+        0 12px 28px -16px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 45%),
+        inset 0 1px 0 hsl(0 0% 100% / 0.48);
+    }
   }
 
   /* Subtle brand glow that works on light/dark */
@@ -1269,27 +1309,38 @@ body {
   }
 
   /* Offer section: add a tasteful color overlay to the elevated surface */
-  #offer .surface-elevated {
+  #offer .surface-elevated,
+  #offer .md\:surface-elevated {
     position: relative;
     /* overflow: hidden removed to allow sticky positioning to work */
   }
-  #offer .surface-elevated::after {
+  /* Gradient overlay only on md+ when card is visible */
+  #offer .surface-elevated::after,
+  #offer .md\:surface-elevated::after {
     content: "";
     position: absolute;
     inset: 0;
     border-radius: inherit;
-    background:
-      radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.20), transparent 62%),
-      radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.18), transparent 64%);
     pointer-events: none;
     z-index: 0;
+    background: none;
   }
-  .dark #offer .surface-elevated::after {
-    background:
-      radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.24), transparent 64%),
-      radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.22), transparent 66%);
+  @media (min-width: 768px) {
+    #offer .surface-elevated::after,
+    #offer .md\:surface-elevated::after {
+      background:
+        radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.20), transparent 62%),
+        radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.18), transparent 64%);
+    }
+    .dark #offer .surface-elevated::after,
+    .dark #offer .md\:surface-elevated::after {
+      background:
+        radial-gradient(900px 380px at 100% 0%, hsl(var(--primary) / 0.24), transparent 64%),
+        radial-gradient(720px 280px at 50% 100%, hsl(var(--accent) / 0.22), transparent 66%);
+    }
   }
-  #offer .surface-elevated > * { position: relative; z-index: 1; }
+  #offer .surface-elevated > *,
+  #offer .md\:surface-elevated > * { position: relative; z-index: 1; }
 
   /* Inclusions: color-washed cards */
   #offer #plan-inclusions .surface {
@@ -1393,25 +1444,36 @@ body {
   }
 
   /* Performance: light radial wash */
-  #offer #plan-performance .surface {
+  #offer #plan-performance .surface,
+  #offer #plan-performance .md\:surface {
     position: relative;
     overflow: hidden;
   }
-  #offer #plan-performance .surface::after {
+  /* Gradient overlay only on md+ when card is visible */
+  #offer #plan-performance .surface::after,
+  #offer #plan-performance .md\:surface::after {
     content: "";
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background:
-      radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.18), transparent 65%);
     pointer-events: none;
     z-index: 0;
+    background: none;
   }
-  .dark #offer #plan-performance .surface::after {
-    background:
-      radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.22), transparent 68%);
+  @media (min-width: 768px) {
+    #offer #plan-performance .surface::after,
+    #offer #plan-performance .md\:surface::after {
+      background:
+        radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.18), transparent 65%);
+    }
+    .dark #offer #plan-performance .surface::after,
+    .dark #offer #plan-performance .md\:surface::after {
+      background:
+        radial-gradient(640px 260px at 0% 0%, hsl(var(--primary) / 0.22), transparent 68%);
+    }
   }
-  #offer #plan-performance .surface > * { position: relative; z-index: 1; }
+  #offer #plan-performance .surface > *,
+  #offer #plan-performance .md\:surface > * { position: relative; z-index: 1; }
 
   /* Transparent footer to show page gradient */
   footer {
