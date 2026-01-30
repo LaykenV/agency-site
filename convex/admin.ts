@@ -128,6 +128,10 @@ export const listProjects = query({
     deployment: v.optional(deploymentValidator),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
+    prospect: v.optional(v.object({
+      contactName: v.string(),
+      contactEmail: v.string(),
+    })),
   })),
   handler: async (ctx) => {
     await requireAdmin(ctx);
@@ -137,28 +141,48 @@ export const listProjects = query({
       .order("desc")
       .collect();
     
-    return projects.map(p => ({
-      _id: p._id,
-      projectId: p.projectId,
-      authUserId: p.authUserId,
-      prospectId: p.prospectId,
-      projectStatus: p.projectStatus,
-      buildDetails: p.buildDetails ? {
-        headline: p.buildDetails.headline,
-        domainPreference: p.buildDetails.domainPreference,
-        inspirationLinks: p.buildDetails.inspirationLinks,
-        myNotes: p.buildDetails.myNotes,
-        brand: {
-          colorScheme: p.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
-          logoStorageId: p.buildDetails.brand.logoStorageId,
-          imageStorageIds: p.buildDetails.brand.imageStorageIds,
-        },
-        brandAssetsUploaded: p.buildDetails.brandAssetsUploaded,
-      } : undefined,
-      deployment: p.deployment,
-      createdAt: p.createdAt,
-      updatedAt: p.updatedAt,
-    }));
+    // Fetch prospect details for each project
+    const enrichedProjects = await Promise.all(
+      projects.map(async (p) => {
+        let prospect: { contactName: string; contactEmail: string } | undefined;
+        
+        if (p.prospectId) {
+          const prospectDoc = await ctx.db.get(p.prospectId);
+          if (prospectDoc) {
+            prospect = {
+              contactName: prospectDoc.details.contactName,
+              contactEmail: prospectDoc.details.contactEmail,
+            };
+          }
+        }
+        
+        return {
+          _id: p._id,
+          projectId: p.projectId,
+          authUserId: p.authUserId,
+          prospectId: p.prospectId,
+          projectStatus: p.projectStatus,
+          buildDetails: p.buildDetails ? {
+            headline: p.buildDetails.headline,
+            domainPreference: p.buildDetails.domainPreference,
+            inspirationLinks: p.buildDetails.inspirationLinks,
+            myNotes: p.buildDetails.myNotes,
+            brand: {
+              colorScheme: p.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
+              logoStorageId: p.buildDetails.brand.logoStorageId,
+              imageStorageIds: p.buildDetails.brand.imageStorageIds,
+            },
+            brandAssetsUploaded: p.buildDetails.brandAssetsUploaded,
+          } : undefined,
+          deployment: p.deployment,
+          createdAt: p.createdAt,
+          updatedAt: p.updatedAt,
+          prospect,
+        };
+      })
+    );
+    
+    return enrichedProjects;
   },
 });
 

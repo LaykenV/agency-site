@@ -1,8 +1,7 @@
 "use client";
 
-import { Authenticated, Unauthenticated, AuthLoading, useQuery } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { Loader2 } from "lucide-react";
-import { useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
@@ -15,26 +14,15 @@ import {
 } from "@/lib/legal/terms";
 import { PageHeader } from "@/components/PageHeader";
 import { ProgressTimeline } from "@/components/portal";
+import { StickyAuth } from "@/components/StickyAuth";
 
 export default function AgreementPage() {
   return (
-    <>
-      <AuthLoading>
-        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-          <div className="flex flex-col items-center gap-4">
-            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
-          </div>
-        </div>
-      </AuthLoading>
-
-      <Unauthenticated>
-        <UnauthenticatedAgreementView />
-      </Unauthenticated>
-
-      <Authenticated>
-        <AuthenticatedAgreementView />
-      </Authenticated>
-    </>
+    <StickyAuth
+      unauthenticatedFallback={<UnauthenticatedAgreementView />}
+    >
+      <AuthenticatedAgreementView />
+    </StickyAuth>
   );
 }
 
@@ -71,7 +59,7 @@ function AuthenticatedAgreementView() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [acceptanceError, setAcceptanceError] = useState<string | null>(null);
-  const [isAccepting, setIsAccepting] = useState(false);
+  const [acceptStage, setAcceptStage] = useState<'idle' | 'agreement' | 'checkout'>('idle');
   const [isChecked, setIsChecked] = useState(false);
   const router = useRouter();
   const errorRef = useRef<HTMLDivElement | null>(null);
@@ -146,6 +134,9 @@ function AuthenticatedAgreementView() {
   useEffect(() => {
     if (!decision || !prospect || !user?._id) return;
 
+    // Skip redirects while actively accepting the agreement (prevents race with checkout action)
+    if (acceptStage !== 'idle') return;
+
     // User must have a primary project when initialized. If already awaiting payment or assets, redirect.
     if (decision.primaryProject) {
       const status = decision.primaryProject.projectStatus ?? "AWAITING_AGREEMENT";
@@ -162,7 +153,7 @@ function AuthenticatedAgreementView() {
     if (decision.redirect && decision.redirect !== `/portal/agreement?sid=${prospect.sessionId}`) {
       router.replace(decision.redirect);
     }
-  }, [decision, prospect, router, user?._id]);
+  }, [acceptStage, decision, prospect, router, user?._id]);
 
   // Compute latestProject before early returns (hooks must come before conditionals)
   const latestProject = useMemo(() => {
@@ -212,9 +203,9 @@ function AuthenticatedAgreementView() {
   }, []);
 
   const handleAgreementAccept = async () => {
-    if (!latestProject || !isChecked || isAccepting) return;
+    if (!latestProject || !isChecked || acceptStage !== 'idle') return;
     setAcceptanceError(null);
-    setIsAccepting(true);
+    setAcceptStage('agreement');
     try {
       const termsHash = await computeTermsHash();
       const userAgent = typeof window !== "undefined" ? window.navigator.userAgent : undefined;
@@ -226,12 +217,15 @@ function AuthenticatedAgreementView() {
       });
 
       // Try to redirect directly to Stripe checkout for frictionless happy path
+      setAcceptStage('checkout');
       try {
         const { url } = await createCheckout({});
         window.location.href = url;
         return; // Exit early on success
       } catch (checkoutErr) {
         console.error("[portal] checkout creation failed, falling back to subscribe page", checkoutErr);
+        // Reset state before fallback navigation to maintain consistency
+        setAcceptStage('idle');
       }
 
       // Fallback: redirect to subscribe page if checkout creation fails
@@ -239,7 +233,7 @@ function AuthenticatedAgreementView() {
     } catch (err) {
       console.error("[portal] failed to accept agreement", err);
       setAcceptanceError("We couldn't capture your agreement. Please try again.");
-      setIsAccepting(false);
+      setAcceptStage('idle');
     }
   };
 
@@ -381,11 +375,15 @@ function AuthenticatedAgreementView() {
               <button
                 onClick={handleAgreementAccept}
                 className="btn-cta w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!isChecked || isAccepting}
-                aria-disabled={!isChecked || isAccepting}
-                aria-busy={isAccepting}
+                disabled={!isChecked || acceptStage !== 'idle'}
+                aria-disabled={!isChecked || acceptStage !== 'idle'}
+                aria-busy={acceptStage !== 'idle'}
               >
-                {isAccepting ? "Capturing agreement..." : "Accept & Continue to Payment"}
+                {acceptStage === 'agreement' 
+                  ? "Capturing agreement..." 
+                  : acceptStage === 'checkout' 
+                    ? "Redirecting to payment..." 
+                    : "Accept & Continue to Payment"}
               </button>
             </div>
           </div>

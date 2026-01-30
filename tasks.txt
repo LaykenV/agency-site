@@ -146,21 +146,22 @@ clean up all code
 test everything, total
 //copywriting skill
 
-harley
-schedule call
-send onboarding email
-sign agreement
-checkout with test stripe
-build details
-clone and build template site and deploy
-schedule review call
-go live
-test analytics and lead gen
+//harley
+//schedule call
+//send onboarding email
+//sign agreement
+//checkout with test stripe
+//build details
+//clone and build template site and deploy
+//schedule review call
+//go live
+//test analytics and lead gen
 
 logo blended on header in magic link email and welcome email
 prospect details on project entry in admin
 link directly to payment, currently goes to payment page then loads async
 remove inspiration links from build details form
+//client side err? - fixed with StickyAuth pattern + global error boundary
 
 
 

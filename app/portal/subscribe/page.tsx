@@ -1,32 +1,22 @@
 "use client";
 
 import {
-  Authenticated,
-  Unauthenticated,
-  AuthLoading,
   useQuery,
+  useAction,
 } from "convex/react";
 import { Loader2 } from "lucide-react";
-import { useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PageHeader } from "@/components/PageHeader";
 import { ProgressTimeline } from "@/components/portal";
+import { StickyAuth } from "@/components/StickyAuth";
 
 export default function SubscribePage() {
   return (
-    <>
-      <AuthLoading>
-        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-          <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
-          </div>
-        </div>
-      </AuthLoading>
-
-      <Unauthenticated>
+    <StickyAuth
+      unauthenticatedFallback={
         <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in to subscribe</h1>
@@ -38,12 +28,10 @@ export default function SubscribePage() {
             </Link>
           </div>
         </div>
-      </Unauthenticated>
-
-      <Authenticated>
-        <AuthenticatedSubscribeView />
-      </Authenticated>
-    </>
+      }
+    >
+      <AuthenticatedSubscribeView />
+    </StickyAuth>
   );
 }
 

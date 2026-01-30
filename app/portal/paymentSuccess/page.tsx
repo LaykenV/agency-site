@@ -4,27 +4,25 @@ import { useAction, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Authenticated, Unauthenticated } from "convex/react";
 import Link from "next/link";
 import { Loader2, CheckCircle2, ArrowRight } from "lucide-react";
 import { ProgressTimeline } from "@/components/portal";
+import { StickyAuth } from "@/components/StickyAuth";
 
 export default function PaymentSuccessPage() {
   return (
-    <>
-      <Unauthenticated>
+    <StickyAuth
+      unauthenticatedFallback={
         <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
             <p className="text-[var(--secondary)]">Redirecting...</p>
           </div>
         </div>
-      </Unauthenticated>
-
-      <Authenticated>
-        <PaymentSuccessContent />
-      </Authenticated>
-    </>
+      }
+    >
+      <PaymentSuccessContent />
+    </StickyAuth>
   );
 }
 

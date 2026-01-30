@@ -122,7 +122,7 @@ export const createAuth = (
       updateAge: 60 * 60 * 24, // Refresh session every 24 hours of activity
       cookieCache: {
         enabled: true,
-        maxAge: 60 * 5, // Cache valid for 5 minutes - reduces DB calls for session validation
+        maxAge: 60 * 15, // Cache valid for 15 minutes - reduces DB calls for session validation
       },
     },
     plugins: [

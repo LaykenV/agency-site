@@ -1,9 +1,6 @@
 "use client";
 
 import {
-  Authenticated,
-  Unauthenticated,
-  AuthLoading,
   useQuery,
   useMutation,
   useAction,
@@ -45,6 +42,7 @@ import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
 import { RecentLeads } from "@/components/portal/RecentLeads";
 import { ProgressTimeline } from "@/components/portal";
+import { StickyAuth } from "@/components/StickyAuth";
 
 // Types based on validators
 type CalBooking = {
@@ -108,31 +106,23 @@ export default function ProjectPage() {
   return (
     <>
       <Toaster position="top-center" richColors />
-      <AuthLoading>
-        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-          <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+      <StickyAuth
+        unauthenticatedFallback={
+          <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+            <div className="text-center">
+              <h1 className="text-2xl font-bold mb-4">Please sign in to view this project</h1>
+              <Link 
+                href="/portal"
+                className="text-[var(--primary)] hover:underline"
+              >
+                Go to Login
+              </Link>
+            </div>
           </div>
-        </div>
-      </AuthLoading>
-
-      <Unauthenticated>
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Please sign in to view this project</h1>
-            <Link 
-              href="/portal"
-              className="text-[var(--primary)] hover:underline"
-            >
-              Go to Login
-            </Link>
-          </div>
-        </div>
-      </Unauthenticated>
-
-      <Authenticated>
+        }
+      >
         <AuthenticatedProjectView />
-      </Authenticated>
+      </StickyAuth>
     </>
   );
 }

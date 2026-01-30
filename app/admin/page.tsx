@@ -1,6 +1,6 @@
 "use client";
 import { api } from "@/convex/_generated/api";
-import { useQuery, useMutation, useConvex, Authenticated, Unauthenticated, AuthLoading } from "convex/react";
+import { useQuery, useMutation, useConvex } from "convex/react";
 import { useState, useEffect, Fragment, useMemo, useRef } from "react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { authClient } from "@/lib/auth-client";
@@ -11,6 +11,7 @@ import { clsx } from "clsx";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { StickyAuth } from "@/components/StickyAuth";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -51,27 +52,25 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<Tab>("prospects");
 
   return (
-    <>
-      <AuthLoading>
+    <StickyAuth
+      loadingFallback={
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-sm text-gray-500">
             <div className="inline-flex h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
             <p>Loading...</p>
           </div>
         </div>
-      </AuthLoading>
-
-      <Unauthenticated>
+      }
+      unauthenticatedFallback={
         <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in to access admin</h1>
             <p className="text-gray-500">You must be authenticated to view this page.</p>
           </div>
         </div>
-      </Unauthenticated>
-
-      <Authenticated>
-        <div className="min-h-screen px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
+      }
+    >
+      <div className="min-h-screen px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
             <SectionHeader as="h1" align="left" size="md" className="mb-6 max-w-none mx-0">Admin</SectionHeader>
 
@@ -144,8 +143,7 @@ export default function AdminPage() {
             {activeTab === "activity" && <ActivityLogTab />}
           </div>
         </div>
-      </Authenticated>
-    </>
+    </StickyAuth>
   );
 }
 
@@ -743,9 +741,17 @@ function ProjectsTab() {
             {projects.map((project) => (
               <div key={project._id} className="surface rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <Link href={`/portal/${project.projectId}`} className="text-[hsl(var(--primary))] font-medium">
-                    {project.projectId.slice(0, 8)}...
-                  </Link>
+                  <div>
+                    <Link href={`/portal/${project.projectId}`} className="text-[hsl(var(--primary))] font-medium">
+                      {project.projectId.slice(0, 8)}...
+                    </Link>
+                    {project.prospect && (
+                      <div className="mt-1">
+                        <p className="text-sm font-medium text-[var(--foreground)]">{project.prospect.contactName}</p>
+                        <p className="text-xs text-[var(--muted-foreground)]">{project.prospect.contactEmail}</p>
+                      </div>
+                    )}
+                  </div>
                   <select
                     value={project.projectStatus || ""}
                     onChange={(e) => handleStatusChange(project._id, e.target.value as typeof PROJECT_STATUSES[number])}
@@ -960,6 +966,7 @@ function ProjectsTab() {
             <thead className="">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Project</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Client</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Headline</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wider">Assets</th>
@@ -976,6 +983,16 @@ function ProjectsTab() {
                       <Link href={`/portal/${project.projectId}`} className="text-[hsl(var(--primary))] hover:underline font-medium">
                         {project.projectId.slice(0, 8)}...
                       </Link>
+                    </td>
+                    <td className="px-6 py-4">
+                      {project.prospect ? (
+                        <div>
+                          <div className="text-sm font-medium text-[var(--foreground)]">{project.prospect.contactName}</div>
+                          <div className="text-xs text-[var(--muted-foreground)]">{project.prospect.contactEmail}</div>
+                        </div>
+                      ) : (
+                        <span className="text-[var(--muted-foreground)]">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <select
@@ -1062,7 +1079,7 @@ function ProjectsTab() {
                           <ProjectFileUrlsFetcher projectId={project._id} storageIds={storageIds} />
                         )}
                         <tr>
-                          <td colSpan={7} className="px-6 py-4">
+                          <td colSpan={8} className="px-6 py-4">
                             <div className="space-y-4">
                               {/* Build Details Section */}
                               {project.buildDetails && (
