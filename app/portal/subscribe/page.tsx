@@ -4,7 +4,6 @@ import {
   useQuery,
   useAction,
 } from "convex/react";
-import { Loader2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";

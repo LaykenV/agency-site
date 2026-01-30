@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { CheckCircle2, Clock, MapPin, ArrowRight, Zap, Shield, Sparkles } from "lucide-react";
+import { CheckCircle2, MapPin, ArrowRight, Zap, Shield, Sparkles } from "lucide-react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import { SectionHeader } from "@/components/SectionHeader";

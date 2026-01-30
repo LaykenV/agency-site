@@ -3,6 +3,7 @@
 import { Authenticated, Unauthenticated, AuthLoading } from "convex/react";
 import { useRef, useState, useEffect, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 /**
  * StickyAuth - Prevents flash of unauthenticated content during reconnection
@@ -174,12 +175,12 @@ export function RequireAuth({ children }: { children: ReactNode }) {
         <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
-            <a 
+            <Link 
               href="/portal"
               className="text-[var(--primary)] hover:underline"
             >
               Go to Login
-            </a>
+            </Link>
           </div>
         </div>
       }
