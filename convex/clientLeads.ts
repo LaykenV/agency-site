@@ -49,6 +49,7 @@ export const listByProject = query({
   returns: v.array(
     v.object({
       _id: v.id("client_leads"),
+      _creationTime: v.number(),
       projectId: v.string(),
       status: leadStatusValidator,
       source: v.string(),
