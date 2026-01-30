@@ -157,6 +157,11 @@ schedule review call
 go live
 test analytics and lead gen
 
+logo blended on header in magic link email and welcome email
+prospect details on project entry in admin
+link directly to payment, currently goes to payment page then loads async
+remove inspiration links from build details form
+
 
 
 live stripe

@@ -1726,75 +1726,48 @@ export type ArchetypeTokens = typeof archetypeTokens[keyof typeof archetypeToken
 
 ## X. The Agentic Workflow (Cursor Rules)
 
+### Strategy: Onboarding Doc as Context
+
+The detailed AI agent workflow is maintained in `onboarding.md` rather than in `.cursor/rules`. This allows:
+
+- **Single source of truth** — All onboarding instructions in one place
+- **Easy context passing** — Just attach `onboarding.md` when starting a new client
+- **Human-readable** — Same doc works for AI agents and human developers
+
 ### Cursor Rules (`.cursor/rules`)
+
+The rules file is kept minimal, pointing to the onboarding doc:
 
 ```markdown
 # Agency Template Rules
 
-You are the Lead Architect for [Agency Name] WaaS Template.
+You are the Lead Architect for this WaaS (Website as a Service) template.
 
-## 1. Core Mandate
-- NEVER modify component code (`/components`) unless explicitly asked to fix a bug.
-- ALL customization happens in `config/site.ts`.
-- NEVER put secrets or environment variables in `config/site.ts`.
+## Core Mandate
 
-## 2. Onboarding Workflow
-When I provide client details, you must:
+- NEVER modify component code (`/components`) unless explicitly asked to fix a bug
+- ALL customization happens in `config/site.ts`
+- NEVER put secrets or environment variables in `config/site.ts`
 
-### Step 1: Select Archetype
-Based on the client's industry:
-- Trades/Construction/Home Services → `trustworthy-trade`
-- Legal/Finance/Consulting → `modern-minimal`  
-- Beauty/Health/Wellness/Spa → `warm-organic`
-- Fitness/Auto/Sports/Entertainment → `bold-impact`
+## Onboarding Context
 
-### Step 2: Build Pages (Up to 7)
-Create entries in `pages` for each required page:
-- `home` (required)
-- `about`
-- `services` or `practice-areas`
-- `gallery` or `portfolio` or `results`
-- `team` or `attorneys`
-- `faq`
-- `contact` (required)
+When onboarding a new client, reference `onboarding.md` for the complete workflow including:
 
-Use `simple-page-header` for inner page heroes.
+- Archetype selection based on industry
+- Page structure and section variants
+- SEO copywriting guidelines
+- Identity configuration for local SEO
+- Validation and deployment steps
 
-### Step 2b: Select Appropriate Sections
-For trades clients (contractors, plumbers, landscapers), prioritize:
-- `before-after` sections to showcase work
-- `credentials` section for licenses, insurance, certifications
-- `service-areas` for local SEO
-- `process` section to explain "how it works"
-
-### Step 3: Write SEO Copy
-- Use the client's city and niche in page titles
-- Example: "Premier Plumbing in Austin, TX | Apex Plumbing"
-- Keep descriptions under 160 characters
-- Include primary service keywords
-
-### Step 4: Configure Identity
-Fill in the complete `identity` block including:
-- Structured address (street, city, state, zip, country)
-- Geo coordinates (lat/lng) for Local SEO
-- Opening hours for JSON-LD schema
-- Google Maps link for footer
-
-## 3. Deployment Checklist
-- [ ] Ensure `waas.projectId` matches the project's `projects.projectId` value in the agency portal/admin (currently a generated UUID string)
-- [ ] Run `bun run validate` to verify config is type-safe
-- [ ] Run `bun run build` to generate static pages
-- [ ] Set env vars on Vercel:
-  - `NEXT_PUBLIC_WAAS_API_URL`
-  - `TURNSTILE_SECRET_KEY`
-  - `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-
-## 4. Image Guidelines
-- Use next/image for automatic optimization
-- Store originals in `/public/images/`
-- Always include `alt` text for accessibility
-- Recommended formats: WebP, AVIF, or high-quality JPEG/PNG
+Pass `onboarding.md` as context when starting a new client setup.
 ```
+
+### Using This Workflow
+
+1. **Start a new chat** in Cursor
+2. **Attach `onboarding.md`** as context
+3. **Provide client details** (name, industry, location, services, etc.)
+4. **AI generates `config/site.ts`** following the documented workflow
 
 ---
 
@@ -1868,29 +1841,122 @@ Per your Terms of Service:
 
 ## XIII. Multi-Repo Maintenance Strategy
 
-### Phase 1: Manual Template Sync (Current)
+We use a **Git Template + Upstream Remote** strategy that provides:
+- ✅ Fast client setup (clone from template)
+- ✅ Full client isolation (each client has their own repo)
+- ✅ Update capability (`git merge upstream/main`)
+- ✅ Client variety (each client frozen at their launch version until you choose to update)
 
-For the first 5-10 clients, manually clone and customize:
+### Repository Structure
 
-```bash
-# Create new client site
-git clone git@github.com:your-agency/waas-template.git client-name-web
-cd client-name-web
-rm -rf .git
-git init
-git remote add origin git@github.com:your-agency/client-name-web.git
-
-# Update config/site.ts with client details
-# Deploy to Vercel
+```
+GitHub Organization
+├── agency-template        ← Master template (source of truth)
+├── agency-playground      ← Test instance (for experimenting)
+├── apex-legal-web         ← Client repo
+├── summit-roofing-web     ← Client repo
+└── ...
 ```
 
-### What Never Syncs
+### One-Time Setup (Before First Client)
 
-- `config/site.ts` (client-specific)
-- `/public/images/` (client assets)
-- `.env.local` (secrets)
+**1. Configure Git Merge Driver:**
+```bash
+git config --global merge.ours.driver true
+```
 
-### Phase 2: NPM Package (After 5-10 clients)
+**2. Create `.gitattributes` in Template Root:**
+```gitattributes
+# Client-specific files: always keep local version during upstream merges
+config/site.ts merge=ours
+public/images/** merge=ours
+```
+
+**3. Mark as Template Repository:**
+On GitHub: **Repository Settings → ☑️ Template repository**
+
+### Phase 1: Upstream Remote Strategy (Current)
+
+Create new clients using GitHub's template feature:
+
+```bash
+# 1. Create new repo from template
+gh repo create "CLIENT_SLUG-web" --template "your-org/agency-template" --private --clone
+
+# 2. Enter directory
+cd CLIENT_SLUG-web
+
+# 3. Add upstream remote (enables future updates)
+git remote add upstream git@github.com:your-org/agency-template.git
+git remote set-url --push upstream DISABLE
+
+# 4. Create client assets folder
+mkdir -p public/images/CLIENT_SLUG
+
+# 5. Open in editor and configure config/site.ts
+```
+
+### Pushing Template Updates to Client Sites
+
+When you fix a bug or add a component in `agency-template`:
+
+```bash
+cd apex-legal-web
+
+# 1. Fetch latest from template
+git fetch upstream
+
+# 2. Merge changes (config/site.ts is protected by merge=ours)
+git merge upstream/main --no-edit
+
+# 3. Resolve any conflicts if they arise
+# (Conflicts are rare if you only edit config/site.ts in client repos)
+
+# 4. Push to deploy
+git push origin main
+```
+
+### What Gets Updated vs. Protected
+
+| Updated (from upstream) | Protected (stays local) |
+|------------------------|------------------------|
+| `/components/*` | `config/site.ts` |
+| `/app/*` | `/public/images/*` |
+| `/actions/*` | `.env.local` |
+| `/lib/*` | |
+| `/types/*` | |
+
+### Selective Updates
+
+You don't have to update all clients. Each can stay at their "vintage":
+
+| Client | Template Version | Notes |
+|--------|------------------|-------|
+| Apex Legal | v1.0 (launch) | Happy, no updates needed |
+| Summit Roofing | v1.2 | Updated to get `BeforeAfterSlider` |
+| Coastal Plumbing | v1.3 | Latest everything |
+
+### Test/Playground Instance
+
+Create a dedicated sandbox for testing new components:
+
+```bash
+# Create playground from template
+gh repo create "agency-playground" --template "your-org/agency-template" --private --clone
+cd agency-playground
+git remote add upstream git@github.com:your-org/agency-template.git
+git remote set-url --push upstream DISABLE
+mkdir -p public/images/demo
+```
+
+Deploy to Vercel at `playground.your-agency.com` for testing before client rollout.
+
+### Phase 2: NPM Package (After 20+ Clients)
+
+Graduate to NPM package when:
+- **20+ clients** and `git pull upstream` becomes tedious
+- **You hire devs** and want to lock down core code
+- **Breaking changes** become frequent and you need semantic versioning
 
 Publish template core as `@your-agency/waas-template`:
 
@@ -1956,11 +2022,11 @@ Use this checklist for every new client deployment to ensure consistency and avo
 
 ```markdown
 ### 3. Repository Setup
-- [ ] Clone template: `git clone git@github.com:your-agency/waas-template.git [client-slug]-web`
-- [ ] Remove template git history: `cd [client-slug]-web && rm -rf .git`
-- [ ] Initialize new repo: `git init`
-- [ ] Create GitHub repo: `your-agency/[client-slug]-web`
-- [ ] Add remote: `git remote add origin git@github.com:your-agency/[client-slug]-web.git`
+- [ ] Create from template: `gh repo create "[client-slug]-web" --template "your-org/agency-template" --private --clone`
+- [ ] Enter directory: `cd [client-slug]-web`
+- [ ] Add upstream remote: `git remote add upstream git@github.com:your-org/agency-template.git`
+- [ ] Disable upstream push: `git remote set-url --push upstream DISABLE`
+- [ ] Create assets folder: `mkdir -p public/images/[client-slug]`
 
 ### 4. Configuration
 - [ ] Update `config/site.ts`:
@@ -2052,11 +2118,12 @@ Date: ______ | Deployed By: ______
 ### Quick Reference Commands
 
 ```bash
-# Clone and setup new client
-git clone git@github.com:your-agency/waas-template.git CLIENT-web
+# Create new client from template
+gh repo create "CLIENT-web" --template "your-org/agency-template" --private --clone
 cd CLIENT-web
-rm -rf .git && git init
-git remote add origin git@github.com:your-agency/CLIENT-web.git
+git remote add upstream git@github.com:your-org/agency-template.git
+git remote set-url --push upstream DISABLE
+mkdir -p public/images/CLIENT
 
 # Validate config
 bun run validate
@@ -2068,6 +2135,11 @@ bun run start
 # Deploy (after pushing to GitHub)
 # Vercel auto-deploys on push to main
 git add . && git commit -m "Initial client setup" && git push -u origin main
+
+# Push template updates to client site
+git fetch upstream
+git merge upstream/main --no-edit
+git push origin main
 ```
 
 ---
@@ -2152,6 +2224,6 @@ GOOGLE_PLACES_API_KEY=AIza... # For Google Reviews (server-side only)
 
 ---
 
-**Document Version:** 7.1  
-**Last Updated:** January 9, 2026  
+**Document Version:** 7.2  
+**Last Updated:** January 27, 2026  
 **Status:** Ready to Build (Template Only - Backend updates in `agencyUpdate.md`)

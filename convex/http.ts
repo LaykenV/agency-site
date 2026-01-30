@@ -191,8 +191,13 @@ http.route({
       origin
     );
 
-    // 2. Validate origin matches project's liveUrl or stagingUrl
-    if (!corsHeaders["Access-Control-Allow-Origin"]) {
+    // 2. Validate origin for browser requests only
+    // Server-to-server calls (no origin) are allowed through - they're protected by:
+    // - Rate limiting below (5/min/project/IP) prevents spam regardless of source
+    // - Turnstile validation at client template level (for legitimate Server Action path)
+    // Note: CORS was never a security boundary for server-side attackers anyway -
+    // anyone who knew the liveUrl could fake the origin header
+    if (origin && !corsHeaders["Access-Control-Allow-Origin"]) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { "Content-Type": "application/json" },
