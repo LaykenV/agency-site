@@ -124,7 +124,7 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
               return (
                 <div
                   key={day.date}
-                  className="flex-1 min-w-[3px] relative cursor-pointer"
+                  className="flex-1 min-w-[3px] relative cursor-pointer flex items-end"
                   onMouseEnter={() => setHoveredIndex(index)}
                   onTouchStart={() => setHoveredIndex(index)}
                 >
