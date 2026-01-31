@@ -248,8 +248,8 @@ http.route({
       },
     });
 
-    // 6. Trigger email notification (fire and forget)
-    ctx.runAction(internal.emails.sendLeadNotification, {
+    // 6. Schedule email notification (fire and forget via scheduler)
+    await ctx.scheduler.runAfter(0, internal.emails.sendLeadNotification, {
       projectId,
       leadId,
       leadData: {
@@ -258,8 +258,6 @@ http.route({
         phone: leadData.phone,
         message: leadData.message,
       },
-    }).catch((err) => {
-      console.error("[http] Failed to send lead notification email:", err);
     });
 
     return new Response(JSON.stringify({ success: true, leadId }), {
