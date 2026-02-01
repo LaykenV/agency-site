@@ -2781,3 +2781,63 @@ html.dark .mobile-menu-panel {
   border-color: color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 35%);
   background: hsl(var(--primary) / 0.12);
 }
+
+/* ===== Chart Component Styles ===== */
+
+/* Base chart bar with subtle highlight */
+.chart-bar {
+  transition: all 0.2s ease;
+}
+
+.chart-bar:hover {
+  filter: brightness(1.1);
+}
+
+/* Today's bar with enhanced glow */
+.chart-bar-today {
+  transition: all 0.2s ease;
+  animation: chart-bar-pulse 2s ease-in-out infinite;
+}
+
+@keyframes chart-bar-pulse {
+  0%, 100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.05);
+  }
+}
+
+/* Chart tooltip styling */
+.chart-tooltip {
+  box-shadow:
+    0 20px 44px -16px hsl(0 0% 0% / 0.25),
+    0 10px 20px -8px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 50%),
+    inset 0 1px 0 hsl(0 0% 100% / 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.dark .chart-tooltip {
+  box-shadow:
+    0 22px 48px -18px hsl(0 0% 0% / 0.45),
+    0 12px 24px -10px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 40%),
+    inset 0 1px 0 hsl(0 0% 100% / 0.12);
+}
+
+/* Tooltip arrow (optional, for future use) */
+.chart-tooltip::after {
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 12px;
+  height: 12px;
+  background: inherit;
+  border: inherit;
+  border-top: none;
+  border-left: none;
+  transform: translateX(-50%) rotate(45deg);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
