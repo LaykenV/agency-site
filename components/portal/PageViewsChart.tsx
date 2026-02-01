@@ -114,7 +114,7 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
       ) : (
         <div className="flex-1 flex flex-col">
           <div
-            className="flex-1 min-h-[140px] flex items-end gap-[2px]"
+            className="h-[140px] flex gap-[2px]"
             onMouseLeave={() => setHoveredIndex(null)}
           >
             {chartData.map((day, index) => {
