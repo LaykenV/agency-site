@@ -124,13 +124,13 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
               return (
                 <div
                   key={day.date}
-                  className="flex-1 min-w-[3px] relative cursor-pointer flex items-end"
+                  className="flex-1 min-w-[3px] relative cursor-pointer"
                   onMouseEnter={() => setHoveredIndex(index)}
                   onTouchStart={() => setHoveredIndex(index)}
                 >
                   <div
                     className={`
-                      w-full rounded-sm transition-all duration-150
+                      absolute bottom-0 left-0 right-0 rounded-sm transition-all duration-150
                       ${isHovered
                         ? "bg-[hsl(var(--primary))] shadow-sm shadow-[hsl(var(--primary)/0.3)]"
                         : "bg-[hsl(var(--primary)/0.35)] hover:bg-[hsl(var(--primary)/0.5)]"
