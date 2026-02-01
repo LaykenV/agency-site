@@ -35,9 +35,14 @@ import {
   BarChart3,
   FileText,
   Settings,
-  HelpCircle
+  HelpCircle,
+  Eye,
+  UserPlus,
+  Users,
+  TrendingUp,
+  TrendingDown,
+  Minus
 } from "lucide-react";
-import { DashboardStats } from "@/components/portal/DashboardStats";
 import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
 import { RecentLeads } from "@/components/portal/RecentLeads";
@@ -1362,6 +1367,11 @@ function LiveSupportPanel({
   const [activeTab, setActiveTab] = useState<"overview" | "support">("overview");
   const createPortalSession = useAction(api.stripeActions.createCustomerPortalSession);
 
+  // Fetch analytics and leads data for inline stats
+  const analyticsSummary = useQuery(api.clientAnalytics.getSummary, { projectId: projectSlug });
+  const leadsSummary = useQuery(api.clientLeads.getLeadsSummary, { projectId: projectSlug });
+  const statsLoading = analyticsSummary === undefined || leadsSummary === undefined;
+
   const absoluteLiveUrl = liveUrl
     ? liveUrl.startsWith('http://') || liveUrl.startsWith('https://')
       ? liveUrl
@@ -1386,16 +1396,40 @@ function LiveSupportPanel({
     }
   };
 
+  // Helper to render trend badge
+  const renderTrendBadge = (trend: number | undefined) => {
+    if (typeof trend !== "number") return null;
+    const trendIcon = trend > 0 ? (
+      <TrendingUp className="h-3 w-3" />
+    ) : trend < 0 ? (
+      <TrendingDown className="h-3 w-3" />
+    ) : (
+      <Minus className="h-3 w-3" />
+    );
+    const trendColor = trend > 0
+      ? "text-emerald-600 dark:text-emerald-400"
+      : trend < 0
+        ? "text-red-600 dark:text-red-400"
+        : "text-[var(--muted-foreground)]";
+    return (
+      <span className={`flex items-center gap-0.5 text-[10px] font-medium ${trendColor}`}>
+        {trendIcon}
+        {Math.abs(trend)}%
+      </span>
+    );
+  };
+
   return (
     <div className="space-y-6">
-      {/* Live Site Header Banner */}
+      {/* Live Site Header Banner with Inline Stats */}
       <div className="surface-elevated p-6 lg:p-8 rounded-2xl relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 via-transparent to-[hsl(var(--primary)/0.05)]" />
 
         <div className="relative">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+          {/* Desktop layout */}
+          <div className="hidden lg:flex lg:items-center lg:justify-between gap-6">
             {/* Left side - Site info */}
-            <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4 flex-shrink-0">
               <div className="flex-shrink-0">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 ring-4 ring-emerald-500/20">
                   <Globe className="h-7 w-7 text-emerald-500" />
@@ -1422,18 +1456,194 @@ function LiveSupportPanel({
                 ) : (
                   <p className="text-sm text-[var(--muted-foreground)]">URL will appear here shortly</p>
                 )}
-                {domainPreference && (
-                  <p className="text-xs text-[var(--muted-foreground)] mt-1">
-                    Domain: <span className="font-mono">{domainPreference}</span>
-                  </p>
+              </div>
+            </div>
+
+            {/* Center - Compact stats */}
+            <div className="flex items-center gap-6">
+              {statsLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="flex items-center gap-2 animate-pulse">
+                      <div className="h-8 w-8 rounded-lg bg-[var(--muted)]" />
+                      <div className="space-y-1">
+                        <div className="h-4 w-10 rounded bg-[var(--muted)]" />
+                        <div className="h-3 w-14 rounded bg-[var(--muted)]" />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Page Views */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--primary)/0.1)]">
+                      <Eye className="h-4 w-4 text-[hsl(var(--primary))]" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-lg font-bold tabular-nums leading-none">
+                          {analyticsSummary?.thisMonth.pageViews.toLocaleString()}
+                        </p>
+                        {renderTrendBadge(analyticsSummary?.trend)}
+                      </div>
+                      <p className="text-[11px] text-[var(--muted-foreground)]">Page Views</p>
+                    </div>
+                  </div>
+
+                  {/* Leads This Month */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
+                      <UserPlus className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-lg font-bold tabular-nums leading-none">
+                          {leadsSummary?.thisMonth.toLocaleString()}
+                        </p>
+                        {renderTrendBadge(leadsSummary?.trend)}
+                      </div>
+                      <p className="text-[11px] text-[var(--muted-foreground)]">Leads This Month</p>
+                    </div>
+                  </div>
+
+                  {/* Total Leads */}
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--muted)]">
+                      <Users className="h-4 w-4 text-[var(--muted-foreground)]" />
+                    </div>
+                    <div>
+                      <p className="text-lg font-bold tabular-nums leading-none">
+                        {leadsSummary?.total.toLocaleString()}
+                      </p>
+                      <p className="text-[11px] text-[var(--muted-foreground)]">Total Leads</p>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Right side - Quick actions */}
+            <div className="flex items-center gap-3 flex-shrink-0">
+              {absoluteLiveUrl && (
+                <Button asChild className="schedule-call-btn">
+                  <a href={absoluteLiveUrl} target="_blank" rel="noopener noreferrer">
+                    Visit Site <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              )}
+              {isEligibleForPortal && (
+                <Button
+                  onClick={handleOpenPortal}
+                  variant="outline"
+                  disabled={portalLoading}
+                  size="sm"
+                >
+                  {portalLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Settings className="h-4 w-4 mr-1.5" />
+                      Billing
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Mobile layout */}
+          <div className="lg:hidden space-y-5">
+            {/* Site info */}
+            <div className="flex items-start gap-4">
+              <div className="flex-shrink-0">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/10 ring-4 ring-emerald-500/20">
+                  <Globe className="h-6 w-6 text-emerald-500" />
+                </div>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-semibold">Your Site is Live</h2>
+                  <span className="flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                </div>
+                {absoluteLiveUrl ? (
+                  <a
+                    href={absoluteLiveUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-mono text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1 truncate"
+                  >
+                    {liveUrl}
+                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                  </a>
+                ) : (
+                  <p className="text-sm text-[var(--muted-foreground)]">URL will appear here shortly</p>
                 )}
               </div>
             </div>
 
-            {/* Right side - Quick actions */}
+            {/* Compact stats grid */}
+            <div className="grid grid-cols-3 gap-3">
+              {statsLoading ? (
+                <>
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="p-3 rounded-xl bg-[var(--background)]/60 animate-pulse">
+                      <div className="h-6 w-12 rounded bg-[var(--muted)] mb-1" />
+                      <div className="h-3 w-16 rounded bg-[var(--muted)]" />
+                    </div>
+                  ))}
+                </>
+              ) : (
+                <>
+                  {/* Page Views */}
+                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Eye className="h-3.5 w-3.5 text-[hsl(var(--primary))]" />
+                      <span className="text-base font-bold tabular-nums">
+                        {analyticsSummary?.thisMonth.pageViews.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <p className="text-[10px] text-[var(--muted-foreground)]">Views</p>
+                      {renderTrendBadge(analyticsSummary?.trend)}
+                    </div>
+                  </div>
+
+                  {/* Leads This Month */}
+                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <UserPlus className="h-3.5 w-3.5 text-emerald-500" />
+                      <span className="text-base font-bold tabular-nums">
+                        {leadsSummary?.thisMonth.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <p className="text-[10px] text-[var(--muted-foreground)]">Leads</p>
+                      {renderTrendBadge(leadsSummary?.trend)}
+                    </div>
+                  </div>
+
+                  {/* Total Leads */}
+                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <Users className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
+                      <span className="text-base font-bold tabular-nums">
+                        {leadsSummary?.total.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-[var(--muted-foreground)]">Total</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Actions */}
             <div className="flex flex-wrap items-center gap-3">
               {absoluteLiveUrl && (
-                <Button asChild className="schedule-call-btn">
+                <Button asChild className="schedule-call-btn flex-1 sm:flex-none">
                   <a href={absoluteLiveUrl} target="_blank" rel="noopener noreferrer">
                     Visit Site <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
@@ -1499,23 +1709,14 @@ function LiveSupportPanel({
       {/* Tab content */}
       {activeTab === "overview" ? (
         <div className="space-y-6">
-          {/* Recent Leads - full width at top */}
-          <RecentLeads projectId={projectSlug} limit={10} />
-
-          {/* KPI Stats Row */}
-          <DashboardStats projectId={projectSlug} />
-
-          {/* Analytics Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-            {/* Chart - takes more space */}
-            <div className="xl:col-span-3">
-              <PageViewsChart projectId={projectSlug} days={30} />
-            </div>
-            {/* Top Pages - sidebar */}
-            <div className="xl:col-span-2">
-              <TopPages projectId={projectSlug} limit={5} />
-            </div>
+          {/* Recent Leads + Top Pages side by side */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <RecentLeads projectId={projectSlug} limit={10} />
+            <TopPages projectId={projectSlug} limit={8} />
           </div>
+
+          {/* Page Views Chart - full width */}
+          <PageViewsChart projectId={projectSlug} days={30} />
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
