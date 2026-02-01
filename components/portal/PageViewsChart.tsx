@@ -75,6 +75,8 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
 
   const hoveredData = hoveredIndex !== null ? chartData[hoveredIndex] : null;
 
+  const CHART_HEIGHT_PX = 140;
+
   return (
     <div className="surface p-6 rounded-2xl h-full flex flex-col">
       <div className="flex items-start justify-between gap-4 mb-5">
@@ -85,7 +87,7 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
           <div>
             <h3 className="text-sm font-semibold">Daily Page Views</h3>
             <p className="text-xs text-[var(--muted-foreground)]">
-              Last {days} days{totalViews > 0 ? " • Hover or tap a day" : ""}
+              Last {days} days{totalViews > 0 ? " • Hover or tap a bar" : ""}
             </p>
           </div>
         </div>
@@ -115,65 +117,63 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
         </div>
       ) : (
         <div className="flex-1 flex flex-col">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-2">
-            {chartData.map((day, index) => {
-              const widthPercent = (day.pageViews / maxViews) * 100;
-              const isActive = hoveredIndex === index;
+          <div className="-mx-1 px-1 sm:mx-0 sm:px-0 overflow-x-auto overflow-y-hidden">
+            <div
+              className="h-[140px] flex items-end gap-[3px] min-w-max sm:min-w-0 sm:w-full"
+              onMouseLeave={() => setHoveredIndex(null)}
+              style={{ height: CHART_HEIGHT_PX }}
+            >
+              {chartData.map((day, index) => {
+                const heightPercent = (day.pageViews / maxViews) * 100;
+                const isActive = hoveredIndex === index;
 
-              return (
-                <button
-                  key={day.date}
-                  type="button"
-                  className={[
-                    "group w-full",
-                    "flex items-center gap-3",
-                    "rounded-xl px-3 py-2",
-                    "ring-1 ring-[hsl(var(--border))]",
-                    "bg-[hsl(var(--primary)/0.04)]",
-                    "transition-colors",
-                    "hover:bg-[hsl(var(--primary)/0.07)]",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]",
-                  ].join(" ")}
-                  onMouseEnter={() => setHoveredIndex(index)}
-                  onFocus={() => setHoveredIndex(index)}
-                  onBlur={() => setHoveredIndex(null)}
-                  onTouchStart={() => setHoveredIndex(index)}
-                  aria-label={`${day.label}: ${day.pageViews.toLocaleString()} page views`}
-                  title={`${day.label}: ${day.pageViews.toLocaleString()} views`}
-                >
-                  <span className="w-14 text-xs font-medium tabular-nums text-[var(--muted-foreground)]">
-                    {day.label}
-                  </span>
-
-                  <span className="flex-1">
-                    <span className="block h-2.5 w-full rounded-full bg-[hsl(var(--primary)/0.10)] ring-1 ring-[hsl(var(--border))] overflow-hidden">
-                      <span
-                        className={[
-                          "block h-full rounded-full",
-                          "transition-all duration-150",
-                          isActive
-                            ? "bg-[hsl(var(--primary))] shadow-[0_10px_18px_-14px_hsl(var(--primary)/0.7)]"
-                            : "bg-[hsl(var(--primary)/0.45)]",
-                        ].join(" ")}
-                        style={{
-                          width: `${widthPercent}%`,
-                          minWidth: day.pageViews > 0 ? 6 : 0,
-                        }}
-                      />
-                    </span>
-                  </span>
-
-                  <span
+                return (
+                  <button
+                    key={day.date}
+                    type="button"
                     className={[
-                      "w-16 text-right text-xs font-semibold tabular-nums",
-                      isActive ? "text-[hsl(var(--primary))]" : "text-[var(--foreground)]",
+                      // sizing: fixed width on mobile, flexible on sm+
+                      "h-full flex-none w-[10px] sm:flex-1 sm:w-auto sm:min-w-[4px]",
+                      // layout: keep fill pinned to bottom (bar-chart behavior)
+                      "flex flex-col justify-end",
+                      // track
+                      "rounded-md bg-[hsl(var(--primary)/0.06)] ring-1 ring-[hsl(var(--border))] overflow-hidden",
+                      // interaction
+                      "transition-colors",
+                      "hover:bg-[hsl(var(--primary)/0.09)]",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]",
                     ].join(" ")}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onFocus={() => setHoveredIndex(index)}
+                    onBlur={() => setHoveredIndex(null)}
+                    onTouchStart={() => setHoveredIndex(index)}
+                    aria-label={`${day.label}: ${day.pageViews.toLocaleString()} page views`}
+                    title={`${day.label}: ${day.pageViews.toLocaleString()} views`}
                   >
-                    {day.pageViews.toLocaleString()}
-                  </span>
-                </button>
-              );
-            })}
+                    <div
+                      className={[
+                        "w-full mt-auto",
+                        "transition-all duration-150",
+                        isActive
+                          ? "bg-[hsl(var(--primary))] shadow-[0_8px_18px_-10px_hsl(var(--primary)/0.55)]"
+                          : "bg-[hsl(var(--primary)/0.40)]",
+                      ].join(" ")}
+                      style={{
+                        height: `${heightPercent}%`,
+                        minHeight: day.pageViews > 0 ? 3 : 0,
+                      }}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* X-axis labels */}
+          <div className="flex justify-between mt-3 pt-3 border-t border-[var(--border)]">
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[0]?.label}</span>
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[Math.floor(chartData.length / 2)]?.label}</span>
+            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[chartData.length - 1]?.label}</span>
           </div>
         </div>
       )}
