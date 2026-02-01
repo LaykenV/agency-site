@@ -1460,15 +1460,15 @@ function LiveSupportPanel({
             </div>
 
             {/* Center - Compact stats */}
-            <div className="flex items-center gap-6">
+            <div className="flex items-center gap-10">
               {statsLoading ? (
                 <>
                   {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-2 animate-pulse">
-                      <div className="h-8 w-8 rounded-lg bg-[var(--muted)]" />
-                      <div className="space-y-1">
-                        <div className="h-4 w-10 rounded bg-[var(--muted)]" />
-                        <div className="h-3 w-14 rounded bg-[var(--muted)]" />
+                    <div key={i} className="flex items-center gap-3 animate-pulse">
+                      <div className="h-10 w-10 rounded-lg bg-[var(--muted)]" />
+                      <div className="space-y-1.5">
+                        <div className="h-5 w-12 rounded bg-[var(--muted)]" />
+                        <div className="h-3 w-16 rounded bg-[var(--muted)]" />
                       </div>
                     </div>
                   ))}
@@ -1476,47 +1476,47 @@ function LiveSupportPanel({
               ) : (
                 <>
                   {/* Page Views */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[hsl(var(--primary)/0.1)]">
-                      <Eye className="h-4 w-4 text-[hsl(var(--primary))]" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary)/0.1)]">
+                      <Eye className="h-5 w-5 text-[hsl(var(--primary))]" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-lg font-bold tabular-nums leading-none">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xl font-bold tabular-nums leading-none">
                           {analyticsSummary?.thisMonth.pageViews.toLocaleString()}
                         </p>
                         {renderTrendBadge(analyticsSummary?.trend)}
                       </div>
-                      <p className="text-[11px] text-[var(--muted-foreground)]">Page Views</p>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Page Views</p>
                     </div>
                   </div>
 
                   {/* Leads This Month */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/10">
-                      <UserPlus className="h-4 w-4 text-emerald-500" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary)/0.1)]">
+                      <UserPlus className="h-5 w-5 text-[hsl(var(--primary))]" />
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <p className="text-lg font-bold tabular-nums leading-none">
+                      <div className="flex items-center gap-2">
+                        <p className="text-xl font-bold tabular-nums leading-none">
                           {leadsSummary?.thisMonth.toLocaleString()}
                         </p>
                         {renderTrendBadge(leadsSummary?.trend)}
                       </div>
-                      <p className="text-[11px] text-[var(--muted-foreground)]">Leads This Month</p>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Leads This Month</p>
                     </div>
                   </div>
 
                   {/* Total Leads */}
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--muted)]">
-                      <Users className="h-4 w-4 text-[var(--muted-foreground)]" />
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[hsl(var(--primary)/0.1)]">
+                      <Users className="h-5 w-5 text-[hsl(var(--primary))]" />
                     </div>
                     <div>
-                      <p className="text-lg font-bold tabular-nums leading-none">
+                      <p className="text-xl font-bold tabular-nums leading-none">
                         {leadsSummary?.total.toLocaleString()}
                       </p>
-                      <p className="text-[11px] text-[var(--muted-foreground)]">Total Leads</p>
+                      <p className="text-xs text-[var(--muted-foreground)] mt-0.5">Total Leads</p>
                     </div>
                   </div>
                 </>

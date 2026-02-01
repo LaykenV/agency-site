@@ -22,7 +22,7 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
     if (!dailyStats) return null;
 
     const dataMap = new Map(dailyStats.map((d) => [d.date, d.pageViews]));
-    const result: Array<{ date: string; pageViews: number; label: string }> = [];
+    const result: Array<{ date: string; pageViews: number; label: string; dayNum: number }> = [];
 
     const today = new Date();
     for (let i = days - 1; i >= 0; i--) {
@@ -37,6 +37,7 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
         date: dateStr,
         pageViews: dataMap.get(dateStr) || 0,
         label,
+        dayNum: date.getDate(),
       });
     }
 
@@ -75,7 +76,8 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
 
   const hoveredData = hoveredIndex !== null ? chartData[hoveredIndex] : null;
 
-  const CHART_HEIGHT_PX = 140;
+  const BAR_HEIGHT_PX = 120;
+  const LABEL_HEIGHT_PX = 20;
 
   return (
     <div className="surface p-6 rounded-2xl h-full flex flex-col">
@@ -116,64 +118,136 @@ export function PageViewsChart({ projectId, days = 30 }: PageViewsChartProps) {
           </div>
         </div>
       ) : (
-        <div className="flex-1 flex flex-col">
-          <div className="-mx-1 px-1 sm:mx-0 sm:px-0 overflow-x-auto overflow-y-hidden">
+        <div className="flex-1">
+          {/* Mobile: custom styled scroll container */}
+          <div 
+            className="sm:hidden overflow-x-auto pb-2"
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'hsl(var(--muted-foreground) / 0.3) transparent',
+            }}
+          >
             <div
-              className="h-[140px] flex items-end gap-[3px] min-w-max sm:min-w-0 sm:w-full"
+              className="flex gap-[2px]"
+              style={{ 
+                minWidth: `${chartData.length * 14}px`,
+                height: BAR_HEIGHT_PX + LABEL_HEIGHT_PX,
+              }}
               onMouseLeave={() => setHoveredIndex(null)}
-              style={{ height: CHART_HEIGHT_PX }}
             >
               {chartData.map((day, index) => {
                 const heightPercent = (day.pageViews / maxViews) * 100;
                 const isActive = hoveredIndex === index;
+                const showLabel = index === 0 || index === chartData.length - 1 || (index + 1) % 5 === 0;
 
                 return (
-                  <button
-                    key={day.date}
-                    type="button"
-                    className={[
-                      // sizing: fixed width on mobile, flexible on sm+
-                      "h-full flex-none w-[10px] sm:flex-1 sm:w-auto sm:min-w-[4px]",
-                      // layout: keep fill pinned to bottom (bar-chart behavior)
-                      "flex flex-col justify-end",
-                      // track
-                      "rounded-md bg-[hsl(var(--primary)/0.06)] ring-1 ring-[hsl(var(--border))] overflow-hidden",
-                      // interaction
-                      "transition-colors",
-                      "hover:bg-[hsl(var(--primary)/0.09)]",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring))] focus-visible:ring-offset-2 focus-visible:ring-offset-[hsl(var(--background))]",
-                    ].join(" ")}
-                    onMouseEnter={() => setHoveredIndex(index)}
-                    onFocus={() => setHoveredIndex(index)}
-                    onBlur={() => setHoveredIndex(null)}
-                    onTouchStart={() => setHoveredIndex(index)}
-                    aria-label={`${day.label}: ${day.pageViews.toLocaleString()} page views`}
-                    title={`${day.label}: ${day.pageViews.toLocaleString()} views`}
-                  >
-                    <div
+                  <div key={day.date} className="flex flex-col w-[12px] flex-shrink-0">
+                    {/* Bar container */}
+                    <button
+                      type="button"
                       className={[
-                        "w-full mt-auto",
-                        "transition-all duration-150",
-                        isActive
-                          ? "bg-[hsl(var(--primary))] shadow-[0_8px_18px_-10px_hsl(var(--primary)/0.55)]"
-                          : "bg-[hsl(var(--primary)/0.40)]",
+                        "flex-1 flex flex-col justify-end",
+                        "rounded-t-sm bg-[hsl(var(--primary)/0.06)]",
+                        "transition-colors",
+                        "hover:bg-[hsl(var(--primary)/0.12)]",
+                        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]",
                       ].join(" ")}
-                      style={{
-                        height: `${heightPercent}%`,
-                        minHeight: day.pageViews > 0 ? 3 : 0,
-                      }}
-                    />
-                  </button>
+                      style={{ height: BAR_HEIGHT_PX }}
+                      onMouseEnter={() => setHoveredIndex(index)}
+                      onFocus={() => setHoveredIndex(index)}
+                      onBlur={() => setHoveredIndex(null)}
+                      onTouchStart={() => setHoveredIndex(index)}
+                      aria-label={`${day.label}: ${day.pageViews.toLocaleString()} page views`}
+                    >
+                      <div
+                        className={[
+                          "w-full rounded-t-sm",
+                          "transition-all duration-150",
+                          isActive
+                            ? "bg-[hsl(var(--primary))]"
+                            : "bg-[hsl(var(--primary)/0.5)]",
+                        ].join(" ")}
+                        style={{
+                          height: `${heightPercent}%`,
+                          minHeight: day.pageViews > 0 ? 2 : 0,
+                        }}
+                      />
+                    </button>
+                    {/* Date label */}
+                    <div 
+                      className="flex items-center justify-center"
+                      style={{ height: LABEL_HEIGHT_PX }}
+                    >
+                      {showLabel && (
+                        <span className="text-[9px] text-[var(--muted-foreground)] tabular-nums">
+                          {day.dayNum}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 );
               })}
             </div>
           </div>
 
-          {/* X-axis labels */}
-          <div className="flex justify-between mt-3 pt-3 border-t border-[var(--border)]">
-            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[0]?.label}</span>
-            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[Math.floor(chartData.length / 2)]?.label}</span>
-            <span className="text-[11px] text-[var(--muted-foreground)]">{chartData[chartData.length - 1]?.label}</span>
+          {/* Desktop: all bars visible, no overflow */}
+          <div 
+            className="hidden sm:flex gap-[3px]"
+            style={{ height: BAR_HEIGHT_PX + LABEL_HEIGHT_PX }}
+            onMouseLeave={() => setHoveredIndex(null)}
+          >
+            {chartData.map((day, index) => {
+              const heightPercent = (day.pageViews / maxViews) * 100;
+              const isActive = hoveredIndex === index;
+              const showLabel = index === 0 || index === chartData.length - 1 || (index + 1) % 5 === 0;
+
+              return (
+                <div key={day.date} className="flex-1 flex flex-col min-w-0">
+                  {/* Bar container */}
+                  <button
+                    type="button"
+                    className={[
+                      "flex-1 flex flex-col justify-end",
+                      "rounded-t bg-[hsl(var(--primary)/0.06)]",
+                      "transition-colors",
+                      "hover:bg-[hsl(var(--primary)/0.12)]",
+                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[hsl(var(--ring))]",
+                    ].join(" ")}
+                    style={{ height: BAR_HEIGHT_PX }}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onFocus={() => setHoveredIndex(index)}
+                    onBlur={() => setHoveredIndex(null)}
+                    aria-label={`${day.label}: ${day.pageViews.toLocaleString()} page views`}
+                    title={`${day.label}: ${day.pageViews.toLocaleString()} views`}
+                  >
+                    <div
+                      className={[
+                        "w-full rounded-t",
+                        "transition-all duration-150",
+                        isActive
+                          ? "bg-[hsl(var(--primary))] shadow-[0_4px_12px_-4px_hsl(var(--primary)/0.4)]"
+                          : "bg-[hsl(var(--primary)/0.5)]",
+                      ].join(" ")}
+                      style={{
+                        height: `${heightPercent}%`,
+                        minHeight: day.pageViews > 0 ? 2 : 0,
+                      }}
+                    />
+                  </button>
+                  {/* Date label */}
+                  <div 
+                    className="flex items-center justify-center"
+                    style={{ height: LABEL_HEIGHT_PX }}
+                  >
+                    {showLabel && (
+                      <span className="text-[10px] text-[var(--muted-foreground)] tabular-nums">
+                        {day.dayNum}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
