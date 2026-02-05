@@ -212,7 +212,7 @@ export const sendTestEmail = internalAction({
 
 // Bulk inbox placement test — call from Convex dashboard with a comma-separated list of emails
 export const sendBulkTestEmail = internalAction({
-  args: { emails: v.string() },
+  args: { emails: v.string(), seedCode: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     const emailList = args.emails
@@ -220,11 +220,18 @@ export const sendBulkTestEmail = internalAction({
       .map((e) => e.trim())
       .filter((e) => e.length > 0);
 
-    console.log(`[emails] sending bulk test email to ${emailList.length} recipients`);
+    const seedCode = args.seedCode ?? "";
+
+    console.log(`[emails] sending bulk test email to ${emailList.length} recipients${seedCode ? ` (seed: ${seedCode})` : ""}`);
+
+    const seedHtml = seedCode
+      ? `<p style="margin: 0 0 16px 0; font-size: 12px; color: ${EMAIL_STYLES.textLight};">${seedCode}</p>`
+      : "";
 
     const htmlContent = getEmailWrapper(`
       ${getEmailHeader('Test Email', 'System verification')}
       <div style="padding: 32px 24px;">
+        ${seedHtml}
         <p style="margin: 0 0 16px 0; font-size: 16px; color: ${EMAIL_STYLES.textDark};">
           Hello,
         </p>
@@ -241,7 +248,8 @@ export const sendBulkTestEmail = internalAction({
       ${getEmailFooter(new Date().getFullYear())}
     `);
 
-    const textContent = `Test Email - ${COMPANY_NAME}\n\nHello,\n\nThis is a test email from ${COMPANY_NAME}. If you received this, the email system is working correctly.\n\nVisit our website: ${getBaseUrl()}\n\nThis is an automated test message. No action is required.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`;
+    const seedText = seedCode ? `${seedCode}\n\n` : "";
+    const textContent = `Test Email - ${COMPANY_NAME}\n\n${seedText}Hello,\n\nThis is a test email from ${COMPANY_NAME}. If you received this, the email system is working correctly.\n\nVisit our website: ${getBaseUrl()}\n\nThis is an automated test message. No action is required.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`;
 
     let sent = 0;
     for (const email of emailList) {
