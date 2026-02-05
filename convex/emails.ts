@@ -210,6 +210,57 @@ export const sendTestEmail = internalAction({
   },
 });
 
+// Bulk inbox placement test — call from Convex dashboard with a comma-separated list of emails
+export const sendBulkTestEmail = internalAction({
+  args: { emails: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const emailList = args.emails
+      .split(",")
+      .map((e) => e.trim())
+      .filter((e) => e.length > 0);
+
+    console.log(`[emails] sending bulk test email to ${emailList.length} recipients`);
+
+    const htmlContent = getEmailWrapper(`
+      ${getEmailHeader('Test Email', 'System verification')}
+      <div style="padding: 32px 24px;">
+        <p style="margin: 0 0 16px 0; font-size: 16px; color: ${EMAIL_STYLES.textDark};">
+          Hello,
+        </p>
+        <p style="margin: 0 0 24px 0; font-size: 16px; color: ${EMAIL_STYLES.textMuted}; line-height: 1.6;">
+          This is a test email from ${COMPANY_NAME}. If you received this, the email system is working correctly.
+        </p>
+        <div style="text-align: center; margin: 32px 0;">
+          ${getCtaButton('Visit Our Website', getBaseUrl())}
+        </div>
+        <p style="margin: 24px 0 0 0; font-size: 14px; color: ${EMAIL_STYLES.textMuted}; line-height: 1.6;">
+          This is an automated test message. No action is required.
+        </p>
+      </div>
+      ${getEmailFooter(new Date().getFullYear())}
+    `);
+
+    const textContent = `Test Email - ${COMPANY_NAME}\n\nHello,\n\nThis is a test email from ${COMPANY_NAME}. If you received this, the email system is working correctly.\n\nVisit our website: ${getBaseUrl()}\n\nThis is an automated test message. No action is required.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`;
+
+    let sent = 0;
+    for (const email of emailList) {
+      await resend.sendEmail(ctx, {
+        from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
+        to: email,
+        subject: "Test Email - Acadiana Web Design",
+        html: htmlContent,
+        text: textContent,
+        replyTo: [SUPPORT_EMAIL],
+      });
+      sent++;
+    }
+
+    console.log(`[emails] bulk test complete: ${sent}/${emailList.length} emails sent`);
+    return null;
+  },
+});
+
 export const sendWelcomeEmail = internalAction({
   args: {
     projectId: v.id("projects"),
