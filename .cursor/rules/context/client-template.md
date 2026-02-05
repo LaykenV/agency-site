@@ -1,6 +1,6 @@
 # The Agency Blueprint: Client Template (Product Factory)
 
-**Document Version:** 7.1  
+**Document Version:** 7.5  
 **Target Stack:** Next.js 15 (App Router), React 19, Tailwind 4, TypeScript 5.7  
 **Philosophy:** "Config over Code." The code is standardized; the configuration is bespoke.  
 **Related:** `agencyUpdate.md` (backend updates for WaaS hub)
@@ -28,9 +28,29 @@ To scale to 100+ clients without them looking identical, we move beyond "swappin
 
 ### 4. Rendering Strategy
 - **SSG on Vercel:** All pages are pre-rendered at build time via `generateStaticParams()`. This ensures 95+ PageSpeed scores.
-- **Server Actions:** Contact forms use `'use server'` actions for Turnstile validation and POST to the hub.
+- **Server Actions:** Contact forms use `'use server'` actions with honeypot spam protection and POST to the hub.
 - **Client Islands:** Only interactive elements (mobile nav, form inputs) are hydrated client-side.
 - **NOT static export:** We do not use `output: "export"`. We need serverless runtime for Server Actions.
+
+### 5. Client Component Data Flow
+
+**Critical Rule:** Never import `siteConfig` in client components (`"use client"` files). This would bundle the entire config into client JS.
+
+Instead, server components extract the specific data needed and pass it as props:
+
+```
+Server Component (imports siteConfig) → passes minimal props → Client Component
+```
+
+**Current data flows:**
+| Server Component | Props Passed | Client Component |
+|-----------------|--------------|------------------|
+| `layout.tsx` | `projectId` | `AnalyticsPixel` |
+| `Header.tsx` | `links, cta, phone, archetype` | `MobileNav` → `MobileMenu` |
+| `SectionRenderer.tsx` | `identity` (phone, email, name, address, geo) | `ContactSplitMap` |
+
+**Key types:**
+- `IdentityContactProps` — Subset of identity data for contact components (defined in `types/config.ts`)
 
 ---
 
@@ -52,16 +72,16 @@ Optimized for AI Agents and Dynamic Routing. We do **not** use separate folders 
 ├── /ui                     # Primitive UI (Buttons, Inputs)
 └── /utils                  # AnalyticsPixel, LocalBusinessSchema, ErrorBoundary
 /config
-├── site.ts                 # PUBLIC CONFIG: Content + Layout + Routing (safe to import anywhere)
+├── site.ts                 # PUBLIC CONFIG: Content + Layout + Routing (server components only)
 ├── registry.ts             # Component mapping
 └── theme.ts                # Archetype definitions (Tailwind classes)
 /lib
-├── secrets.ts              # SERVER-ONLY: Turnstile secret (never import in client components)
+├── secrets.ts              # SERVER-ONLY: API keys (never import in client components)
 └── utils.ts
 /types
 └── config.ts               # TypeScript interfaces + Zod schemas for the Config Engine
 /actions
-├── contact.ts              # Server Action (Turnstile + POST to WaaS)
+├── contact.ts              # Server Action (honeypot spam protection + POST to WaaS)
 └── reviews.ts              # Server Action (Google Places API)
 /scripts
 └── validate-config.ts      # Build-time Zod validation
@@ -78,6 +98,45 @@ Optimized for AI Agents and Dynamic Routing. We do **not** use separate folders 
 This is the most critical part of the codebase. It allows you to build a unique 7-page site without touching a `.tsx` file.
 
 ### 1. Type Definitions (`types/config.ts`)
+
+#### Icons in config (string → registry lookup)
+
+Several section content types include icon fields (all are **strings**), for example:
+
+- `HeroSplitContent.trustBadges[].icon`
+- `FeaturesGridContent.items[].icon`
+- `CredentialsBadgesContent.items[].icon`
+- `ProcessStepsContent.steps[].icon`
+
+At render time, these strings are resolved by the `Icon` component (`components/ui/Icon.tsx`), which calls `getIcon(name)` from the central registry (`lib/icons/index.tsx`).
+
+**Server-First Architecture:**
+- `Icon` is a **server component** — icons render as static SVG on the server with zero client JS overhead.
+- `ClientIcon` is available for the rare cases where icons must be inside interactive client islands (e.g., icons that change based on `useState`).
+- This keeps Lucide imports **out of the client bundle** entirely.
+
+**Icon Registry:**
+- **Available icons**: Only names registered in `lib/icons/index.tsx` (plus aliases) are available by default. This keeps Lucide **tree-shakeable**.
+- **Unknown icon names**: Gracefully fall back to a neutral `Circle` icon (no runtime error).
+- **Adding a Lucide icon**: Import it from `lucide-react` and add it to the `lucideIcons` map in `lib/icons/index.tsx`.
+- **Custom SVG icons**: Add a component to the `customIcons` map (custom icons take precedence), or register at runtime with `registerCustomIcon(name, component)`.
+
+#### Custom Industry Icons
+
+The template includes custom industry-specific icons that aren't available in Lucide:
+
+| Icon | Use Case | Industries |
+|------|----------|------------|
+| `Chainsaw` | Tree removal, cutting | Tree service, forestry |
+| `StumpGrinder` | Stump grinding services | Tree service, landscaping |
+| `WoodChipper` | Debris processing, land clearing | Tree service, landscaping |
+| `BucketTruck` | Elevated work, power line clearing | Tree service, utilities |
+
+Custom icons follow Lucide's design principles:
+- Stroke-only design (no fills)
+- 24x24 viewBox with rounded caps/joins
+- Accept `LucideProps` for consistent styling (`className`, `strokeWidth`, etc.)
+- Clear silhouettes that work at small sizes (16x16 to 28x28)
 
 ```typescript
 import { z } from "zod";
@@ -102,23 +161,37 @@ export interface ImageConfig {
 }
 
 // ============================================
+// HERO BRANDING (Optional logo/name above hero content)
+// ============================================
+export type HeroBrandingLayout =
+  | "logo-left"    // Logo left, name right (horizontal)
+  | "logo-right"   // Name left, logo right (horizontal)
+  | "logo-above"   // Logo above name (vertical)
+  | "logo-below";  // Name above logo (vertical)
+
+export type HeroBrandingContent = {
+  logo?: ImageConfig;           // Optional logo image
+  name?: string;                // Optional business name
+  layout?: HeroBrandingLayout;  // Only used when both are present, defaults to "logo-left"
+};
+
+// ============================================
 // SECTION CONTENT TYPES (Discriminated Unions)
 // Each variant has strictly typed content - NO `any` types
 // ============================================
 
 // Hero Variants
 export type HeroSplitContent = {
+  branding?: HeroBrandingContent; // Optional logo/name above title
   title: string;
   subtitle: string;
   cta: { label: string; href: string };
   image: ImageConfig;
   trustBadges?: Array<{ text: string; icon?: string }>;
-  // Social proof bar (avatar stack + count) - used by split-trust variant
   socialProof?: {
     count: string;    // e.g., "500+"
     label: string;    // e.g., "happy clients"
   };
-  // Floating testimonial card - used by split-trust variant
   testimonial?: {
     quote: string;
     author: string;
@@ -129,24 +202,31 @@ export type HeroSplitContent = {
 export type HeroSimpleContent = {
   title: string;
   subtitle?: string;
+  image?: ImageConfig;    // Optional image rendered below the header
+  imageText?: string;     // Optional caption/description text below the image
 };
 
 export type HeroCenteredContent = {
+  branding?: HeroBrandingContent; // Optional logo/name above title
   title: string;
   subtitle: string;
   cta: { label: string; href: string };
   backgroundImage?: ImageConfig;
+  backgroundImageMobile?: ImageConfig; // Optional mobile-specific background for art direction
 };
 
 export type HeroVideoContent = {
+  branding?: HeroBrandingContent; // Optional logo/name above title
   title: string;
   subtitle: string;
   cta: { label: string; href: string };
   videoUrl: string;
   posterImage: ImageConfig;
+  posterImageMobile?: ImageConfig; // Optional mobile-specific poster for art direction
 };
 
 export type HeroWithStatsContent = {
+  branding?: HeroBrandingContent; // Optional logo/name above title
   title: string;
   subtitle: string;
   cta: { label: string; href: string };
@@ -156,9 +236,35 @@ export type HeroWithStatsContent = {
     description?: string;
   }>;
   backgroundImage?: ImageConfig;
+  backgroundImageMobile?: ImageConfig; // Optional mobile-specific background for art direction
 };
 
 // Note: HeroSplitAngled reuses HeroSplitContent type
+
+// ============================================
+// VIDEO SHOWCASE (Non-hero video section)
+// ============================================
+export type VideoShowcaseHeader = {
+  text?: string;               // e.g., "As featured on"
+  logo?: ImageConfig;          // Optional logo displayed alongside text
+  logoHref?: string;           // Optional link target for logo
+  ariaLabel?: string;          // Accessible label
+};
+
+export type VideoShowcaseSource =
+  | { kind: "file"; mp4Url: string; webmUrl?: string; posterImage: ImageConfig; preload?: "none" | "metadata" | "auto" }
+  | { kind: "youtube"; videoId: string; posterImage: ImageConfig }
+  | { kind: "vimeo"; videoId: string; posterImage: ImageConfig }
+  | { kind: "iframe"; src: string; title: string; posterImage: ImageConfig };
+
+export type VideoShowcaseFeaturedContent = {
+  featuredOn: VideoShowcaseHeader;
+  heading?: string;
+  subheading?: string;
+  video: VideoShowcaseSource;
+  aspectRatio?: "16:9" | "4:3" | "1:1" | "9:16";
+  caption?: string;
+};
 
 // Features Variants
 export type FeaturesGridContent = {
@@ -177,12 +283,34 @@ export type FeaturesListContent = {
   items: Array<{ title: string; description: string }>;
 };
 
+export type FeaturesSplitImageContent = {
+  heading: string;
+  subheading?: string;
+  items: Array<{ title: string; description: string; icon?: string }>;
+  image: ImageConfig;
+  imagePosition?: "left" | "right"; // defaults to "right"
+};
+
+export type FeaturesColorCardsContent = {
+  heading: string;
+  subheading?: string;
+  items: Array<{ title: string; description: string; icon: string }>;
+};
+
 // Reviews Variants
+export type ReviewSource = "google" | "facebook" | "yelp" | "bbb" | "thumbtack" | "angi" | "other";
+
 export type ReviewsCarouselContent = {
   heading: string;
-  source: "google" | "manual";
-  placeId?: string; // For Google reviews
-  manualReviews?: Array<{ name: string; rating: number; text: string; date?: string }>;
+  source: "google" | "manual" | "combined"; // "combined" is preferred
+  placeId?: string; // For Google reviews (required for "google" or "combined")
+  manualReviews?: Array<{
+    name: string;
+    rating: number;
+    text: string;
+    date?: string;
+    source?: ReviewSource; // Platform attribution (used with "combined")
+  }>;
 };
 
 export type ReviewsGridContent = {
@@ -284,6 +412,32 @@ export type CredentialsBadgesContent = {
   }>;
 };
 
+export type CredentialsSplitImageContent = {
+  heading: string;
+  subheading?: string;
+  items: Array<{
+    title: string;
+    description?: string;
+    icon?: string;
+  }>;
+  image: ImageConfig;
+  imagePosition?: "left" | "right"; // defaults to "right"
+};
+
+// Award Showcase Variants (Trust signals - single award display)
+export type AwardShowcaseContent = {
+  heading: string;
+  subheading?: string;
+  award: {
+    title: string;           // "Best Contractor of the Year"
+    description?: string;    // Award details/significance
+    year?: string;           // "2025"
+    organization?: string;   // "Austin Chamber of Commerce"
+  };
+  image: ImageConfig;        // Transparent PNG of award
+  imagePosition?: "left" | "right"; // defaults to "right"
+};
+
 // Service Areas Variants (Local SEO)
 export type ServiceAreasListContent = {
   heading: string;
@@ -314,6 +468,59 @@ export type ProcessTimelineContent = {
   }>;
 };
 
+export type ProcessSplitImageContent = {
+  heading: string;
+  subheading?: string;
+  steps: Array<{
+    step: number;
+    title: string;
+    description: string;
+    icon?: string;
+  }>;
+  image: ImageConfig;
+  imagePosition?: "left" | "right"; // defaults to "right"
+};
+
+// Find Us Variants (Location/Map display)
+export type FindUsContent = {
+  heading: string;
+  subheading?: string;
+  showDirectionsButton?: boolean;
+  showHours?: boolean;
+};
+
+// Leave Review Variants (CTA to leave Google review)
+export type LeaveReviewContent = {
+  heading: string;
+  subheading?: string;
+  placeId: string;          // Google Business Profile place ID
+  ctaLabel?: string;        // Default: "Leave a Review"
+  showRating?: boolean;
+  rating?: number;          // e.g., 4.9
+  reviewCount?: number;     // Total review count
+};
+
+// Promo Variants (Announcements, special offers, promotions)
+export type PromoContent = {
+  heading: string;
+  subheading?: string;
+  cta?: { label: string; href: string };
+  badge?: string;           // e.g., "Limited Time", "New", "Sale"
+  expirationText?: string;  // e.g., "Ends Dec 31st"
+  icon?: string;
+};
+
+// ============================================
+// IDENTITY CONTACT PROPS (Server → Client prop drilling)
+// ============================================
+export interface IdentityContactProps {
+  phone: string;
+  email: string;
+  name: string;
+  address: AddressConfig;
+  geo?: GeoConfig;
+}
+
 // ============================================
 // SECTION CONFIG (Discriminated Union by type + variant)
 // ============================================
@@ -323,6 +530,7 @@ export type SectionConfig =
   | { id: string; type: "hero"; variant: "split-image-right"; content: HeroSplitContent }
   | { id: string; type: "hero"; variant: "split-angled"; content: HeroSplitContent }
   | { id: string; type: "hero"; variant: "simple-page-header"; content: HeroSimpleContent }
+  | { id: string; type: "hero"; variant: "simple-page-header-floating"; content: HeroSimpleContent }
   | { id: string; type: "hero"; variant: "centered"; content: HeroCenteredContent }
   | { id: string; type: "hero"; variant: "video"; content: HeroVideoContent }
   | { id: string; type: "hero"; variant: "with-stats"; content: HeroWithStatsContent }
@@ -330,6 +538,8 @@ export type SectionConfig =
   | { id: string; type: "features"; variant: "grid-icons"; content: FeaturesGridContent }
   | { id: string; type: "features"; variant: "bento"; content: FeaturesBentoContent }
   | { id: string; type: "features"; variant: "list"; content: FeaturesListContent }
+  | { id: string; type: "features"; variant: "split-image"; content: FeaturesSplitImageContent }
+  | { id: string; type: "features"; variant: "color-cards"; content: FeaturesColorCardsContent }
   // Reviews variants
   | { id: string; type: "reviews"; variant: "carousel"; content: ReviewsCarouselContent }
   | { id: string; type: "reviews"; variant: "grid"; content: ReviewsGridContent }
@@ -340,6 +550,8 @@ export type SectionConfig =
   // Gallery variants
   | { id: string; type: "gallery"; variant: "grid"; content: GalleryGridContent }
   | { id: string; type: "gallery"; variant: "masonry"; content: GalleryMasonryContent }
+  // Video Showcase variants
+  | { id: string; type: "video-showcase"; variant: "featured"; content: VideoShowcaseFeaturedContent }
   // Contact variants
   | { id: string; type: "contact"; variant: "split-map"; content: ContactSplitContent }
   | { id: string; type: "contact"; variant: "simple"; content: ContactSimpleContent }
@@ -352,11 +564,33 @@ export type SectionConfig =
   | { id: string; type: "before-after"; variant: "slider"; content: BeforeAfterSliderContent }
   // Credentials variants (trust signals)
   | { id: string; type: "credentials"; variant: "badges"; content: CredentialsBadgesContent }
+  | { id: string; type: "credentials"; variant: "split-image"; content: CredentialsSplitImageContent }
+  // Award Showcase variants (trust signals - single award)
+  | { id: string; type: "award-showcase"; variant: "split"; content: AwardShowcaseContent }
   // Service Areas variants (local SEO)
   | { id: string; type: "service-areas"; variant: "list"; content: ServiceAreasListContent }
   // Process variants (how it works)
   | { id: string; type: "process"; variant: "steps"; content: ProcessStepsContent }
-  | { id: string; type: "process"; variant: "timeline"; content: ProcessTimelineContent };
+  | { id: string; type: "process"; variant: "timeline"; content: ProcessTimelineContent }
+  | { id: string; type: "process"; variant: "split-image"; content: ProcessSplitImageContent }
+  // Find Us variants (location/map display)
+  | { id: string; type: "find-us"; variant: "minimal"; content: FindUsContent }
+  | { id: string; type: "find-us"; variant: "split"; content: FindUsContent }
+  | { id: string; type: "find-us"; variant: "banner"; content: FindUsContent }
+  | { id: string; type: "find-us"; variant: "card"; content: FindUsContent }
+  | { id: string; type: "find-us"; variant: "floating"; content: FindUsContent }
+  // Leave Review variants (CTA to leave Google review)
+  | { id: string; type: "leave-review"; variant: "simple"; content: LeaveReviewContent }
+  | { id: string; type: "leave-review"; variant: "banner"; content: LeaveReviewContent }
+  | { id: string; type: "leave-review"; variant: "card"; content: LeaveReviewContent }
+  | { id: string; type: "leave-review"; variant: "split"; content: LeaveReviewContent }
+  | { id: string; type: "leave-review"; variant: "floating"; content: LeaveReviewContent }
+  // Promo variants (announcements, special offers, promotions)
+  | { id: string; type: "promo"; variant: "banner"; content: PromoContent }
+  | { id: string; type: "promo"; variant: "ribbon"; content: PromoContent }
+  | { id: string; type: "promo"; variant: "card"; content: PromoContent }
+  | { id: string; type: "promo"; variant: "split"; content: PromoContent }
+  | { id: string; type: "promo"; variant: "marquee"; content: PromoContent };
 
 // ============================================
 // PAGE CONFIG
@@ -391,7 +625,7 @@ export interface OpeningHoursConfig {
 }
 
 // ============================================
-// SITE CONFIG (PUBLIC - safe to import anywhere)
+// SITE CONFIG (PUBLIC - server components only, not client components)
 // ============================================
 export interface SiteConfig {
   identity: {
@@ -413,7 +647,7 @@ export interface SiteConfig {
     };
   };
   header: {
-    variant: "simple" | "split" | "centered";
+    variant: "simple" | "split" | "centered" | "floating";
     links: Array<{ label: string; href: string }>;
     cta?: { label: string; href: string };
   };
@@ -425,7 +659,7 @@ export interface SiteConfig {
   waas: {
     projectId: string; // Public project identifier for WaaS backend
   };
-  seo: {
+  seo?: {
     titleTemplate?: string; // e.g., "%s | Apex Legal"
     defaultOgImage?: string;
   };
@@ -457,7 +691,7 @@ export const PageConfigSchema = z.object({
     id: z.string().min(1),
     type: z.string().min(1),
     variant: z.string().min(1),
-    content: z.record(z.any()), // Content validated per-variant in registry
+    content: z.record(z.string(), z.any()), // Content validated per-variant in registry
   })).min(1, "Page must have at least one section"),
 });
 
@@ -467,7 +701,7 @@ export const SiteConfigSchema = z.object({
     logo: ImageConfigSchema.optional(),
     domain: z.string().min(1),
     phone: z.string().min(1),
-    email: z.string().email(),
+    email: z.union([z.literal(""), z.string().email()]),
     address: AddressSchema,
     geo: z.object({ lat: z.number(), lng: z.number() }).optional(),
     openingHours: z.array(z.object({
@@ -485,13 +719,13 @@ export const SiteConfigSchema = z.object({
     }),
   }),
   header: z.object({
-    variant: z.enum(["simple", "split", "centered"]),
+    variant: z.enum(["simple", "split", "centered", "floating"]),
     links: z.array(z.object({ label: z.string(), href: z.string() })),
     cta: z.object({ label: z.string(), href: z.string() }).optional(),
   }),
   footer: z.object({
     variant: z.enum(["simple", "mega"]),
-    social: z.record(z.string()),
+    social: z.record(z.string(), z.string()),
   }),
   pages: z.record(z.string(), PageConfigSchema).refine(
     (pages) => "home" in pages,
@@ -517,7 +751,6 @@ export const SiteConfigSchema = z.object({
 // - Server Components that don't pass data to client
 
 export const secrets = {
-  turnstileSecret: process.env.TURNSTILE_SECRET_KEY!,
   googlePlacesApiKey: process.env.GOOGLE_PLACES_API_KEY,
 } as const;
 
@@ -766,7 +999,9 @@ if (!result.success) {
   process.exit(1);
 }
 
-// 2. Validate all header/footer links exist in pages (or are external)
+console.log("✓ Schema validation passed");
+
+// 2. Validate all header links exist in pages (or are external)
 const pageKeys = Object.keys(siteConfig.pages);
 const internalLinks = siteConfig.header.links.filter(l => l.href.startsWith("/"));
 
@@ -774,9 +1009,22 @@ for (const link of internalLinks) {
   const path = link.href === "/" ? "home" : link.href.slice(1);
   if (!pageKeys.includes(path)) {
     console.error(`❌ Header link "${link.label}" points to "${link.href}" but no page exists for "${path}"`);
+    console.error(`   Available pages: ${pageKeys.join(", ")}`);
     process.exit(1);
   }
 }
+
+// Also validate header CTA if it exists and is internal
+if (siteConfig.header.cta?.href?.startsWith("/")) {
+  const ctaPath = siteConfig.header.cta.href === "/" ? "home" : siteConfig.header.cta.href.slice(1);
+  if (!pageKeys.includes(ctaPath)) {
+    console.error(`❌ Header CTA "${siteConfig.header.cta.label}" points to "${siteConfig.header.cta.href}" but no page exists for "${ctaPath}"`);
+    console.error(`   Available pages: ${pageKeys.join(", ")}`);
+    process.exit(1);
+  }
+}
+
+console.log("✓ Header links validated");
 
 // 3. Validate all section variants exist in registry
 for (const [pageKey, page] of Object.entries(siteConfig.pages)) {
@@ -784,18 +1032,21 @@ for (const [pageKey, page] of Object.entries(siteConfig.pages)) {
     const registry = ComponentRegistry[section.type as keyof typeof ComponentRegistry];
     if (!registry) {
       console.error(`❌ Page "${pageKey}" uses unknown section type: "${section.type}"`);
+      console.error(`   Available types: ${Object.keys(ComponentRegistry).join(", ")}`);
       process.exit(1);
     }
     const component = registry[section.variant as keyof typeof registry];
     if (!component) {
-      console.error(`❌ Page "${pageKey}" uses unknown variant: "${section.type}/${section.variant}"`);
-      console.error(`   Available variants: ${Object.keys(registry).join(", ")}`);
+      console.error(`❌ Page "${pageKey}" section "${section.id}" uses unknown variant: "${section.type}/${section.variant}"`);
+      console.error(`   Available variants for "${section.type}": ${Object.keys(registry).join(", ")}`);
       process.exit(1);
     }
   }
 }
 
-console.log("✅ Config is valid!");
+console.log("✓ Section variants validated");
+
+console.log("\n✅ Config is valid!");
 console.log(`   ${pageKeys.length} pages defined`);
 console.log(`   ${siteConfig.header.links.length} nav links`);
 console.log(`   Archetype: ${siteConfig.design.archetype}`);
@@ -836,11 +1087,15 @@ function getPageConfig(slug?: string[]) {
   return siteConfig.pages[path];
 }
 
-// 2. SEO Metadata Generation
+// 2. SEO Metadata Generation (includes canonical URL, OG, Twitter)
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const page = getPageConfig(slug);
   if (!page) return {};
+
+  const baseUrl = `https://${siteConfig.identity.domain}`;
+  const path = slug && slug.length > 0 ? `/${slug.join("/")}` : "";
+  const canonicalUrl = `${baseUrl}${path}`;
   
   const title = siteConfig.seo?.titleTemplate 
     ? siteConfig.seo.titleTemplate.replace("%s", page.title)
@@ -849,7 +1104,17 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title,
     description: page.description,
+    alternates: {
+      canonical: canonicalUrl,
+    },
     openGraph: {
+      title,
+      description: page.description,
+      url: canonicalUrl,
+      type: "website",
+      images: siteConfig.seo?.defaultOgImage ? [siteConfig.seo.defaultOgImage] : [],
+    },
+    twitter: {
       title,
       description: page.description,
       images: siteConfig.seo?.defaultOgImage ? [siteConfig.seo.defaultOgImage] : [],
@@ -888,16 +1153,37 @@ export default async function DynamicPage({ params }: PageProps) {
 ### Section Renderer with Error Boundaries (`components/renderer/SectionRenderer.tsx`)
 
 ```typescript
+import { ComponentType, memo } from "react";
 import { ComponentRegistry } from "@/config/registry";
-import { SectionConfig } from "@/types/config";
+import { siteConfig } from "@/config/site";
+import { SectionConfig, IdentityContactProps } from "@/types/config";
 
 interface SectionRendererProps {
   section: SectionConfig;
 }
 
-export function SectionRenderer({ section }: SectionRendererProps) {
+// Build identity contact props from siteConfig (for contact + find-us sections)
+function getIdentityContactProps(): IdentityContactProps {
+  return {
+    phone: siteConfig.identity.phone,
+    email: siteConfig.identity.email,
+    name: siteConfig.identity.name,
+    address: siteConfig.identity.address,
+    geo: siteConfig.identity.geo,
+  };
+}
+
+// Build identity props with opening hours for find-us sections
+function getIdentityWithHours() {
+  return {
+    ...getIdentityContactProps(),
+    openingHours: siteConfig.identity.openingHours,
+  };
+}
+
+export const SectionRenderer = memo(function SectionRenderer({ section }: SectionRendererProps) {
   const registry = ComponentRegistry[section.type as keyof typeof ComponentRegistry];
-  const Component = registry?.[section.variant as keyof typeof registry];
+  const Component = registry?.[section.variant as keyof typeof registry] as ComponentType<any> | undefined;
 
   if (!Component) {
     // Development: Show visible error
@@ -908,18 +1194,29 @@ export function SectionRenderer({ section }: SectionRendererProps) {
           <code className="text-sm">
             Type: {section.type} | Variant: {section.variant}
           </code>
-          <details className="mt-2">
-            <summary className="cursor-pointer text-sm">View Content</summary>
-            <pre className="mt-2 text-xs overflow-auto">
-              {JSON.stringify(section.content, null, 2)}
-            </pre>
-          </details>
         </div>
       );
     }
-    // Production: Fail silently, log error
     console.error(`Missing section component: ${section.type}/${section.variant}`);
     return null;
+  }
+
+  // Inject identity props for contact sections that need it
+  if (section.type === "contact" && section.variant === "split-map") {
+    return (
+      <section id={section.id} className="w-full">
+        <Component {...section.content} identity={getIdentityContactProps()} />
+      </section>
+    );
+  }
+
+  // Inject identity props (with hours) for find-us sections
+  if (section.type === "find-us") {
+    return (
+      <section id={section.id} className="w-full">
+        <Component {...section.content} identity={getIdentityWithHours()} />
+      </section>
+    );
   }
 
   return (
@@ -927,7 +1224,7 @@ export function SectionRenderer({ section }: SectionRendererProps) {
       <Component {...section.content} />
     </section>
   );
-}
+});
 ```
 
 ---
@@ -986,24 +1283,56 @@ export function LocalBusinessSchema() {
 
 ### Layout Integration (`app/layout.tsx`)
 
+The root layout handles font loading for all 4 archetypes, theme CSS variable injection, metadata, and the global shell.
+
 ```typescript
-import { LocalBusinessSchema } from "@/components/utils/LocalBusinessSchema";
-import { AnalyticsPixel } from "@/components/utils/AnalyticsPixel";
+import type { Metadata, Viewport } from "next";
+import { Inter, Playfair_Display, Cormorant_Garamond, Lato, Oswald, Roboto } from "next/font/google";
+import { siteConfig } from "@/config/site";
 import { Header } from "@/components/agency/Header";
 import { Footer } from "@/components/agency/Footer";
+import { LocalBusinessSchema, AnalyticsPixel } from "@/components/utils";
 import "./globals.css";
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// Load all fonts used by the 4 design archetypes (each gets a CSS variable)
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-family-inter" });
+const playfair = Playfair_Display({ subsets: ["latin"], display: "swap", variable: "--font-family-playfair" });
+const cormorant = Cormorant_Garamond({ subsets: ["latin"], display: "swap", weight: ["400", "500", "600", "700"], variable: "--font-family-cormorant" });
+const lato = Lato({ subsets: ["latin"], display: "swap", weight: ["400", "700"], variable: "--font-family-lato" });
+const oswald = Oswald({ subsets: ["latin"], display: "swap", variable: "--font-family-oswald" });
+const roboto = Roboto({ subsets: ["latin"], display: "swap", weight: ["400", "500", "700"], variable: "--font-family-roboto" });
+
+const fontVariables = [inter.variable, playfair.variable, cormorant.variable, lato.variable, oswald.variable, roboto.variable].join(" ");
+
+export const metadata: Metadata = {
+  metadataBase: new URL(`https://${siteConfig.identity.domain}`),
+  title: siteConfig.seo?.titleTemplate?.replace("%s", siteConfig.identity.name) || siteConfig.identity.name,
+  description: siteConfig.pages.home.description,
+  icons: { icon: siteConfig.identity.logo?.src || "/favicon.ico" },
+};
+
+export const viewport: Viewport = {
+  themeColor: siteConfig.design.tokens.primary,
+};
+
+// Inject brand colors as CSS variables for Tailwind usage (bg-primary, text-primary, etc.)
+function getThemeStyles() {
+  const { primary, secondary } = siteConfig.design.tokens;
+  return `:root { --theme-primary: ${primary}; --theme-secondary: ${secondary}; }`;
+}
+
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={fontVariables}>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: getThemeStyles() }} />
         <LocalBusinessSchema />
       </head>
       <body>
         <Header />
         {children}
         <Footer />
-        <AnalyticsPixel />
+        <AnalyticsPixel projectId={siteConfig.waas.projectId} />
       </body>
     </html>
   );
@@ -1012,114 +1341,117 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ---
 
-## VII. WaaS Backend Integration & Turnstile Protection
+## VII. WaaS Backend Integration & Spam Protection
 
 ### Key Design Decision: No Per-Client Secrets
 
 To simplify operations and reduce env var management across client sites, we use:
 - **Public `projectId`** for identification (not authentication)
 - **Rate limiting by IP** on the backend to prevent spam (see `agencyUpdate.md`)
-- **Turnstile validation** on the client site before POSTing
+- **Honeypot + time-based validation** on the client site before POSTing
 
-This means client sites only need Turnstile env vars, not WaaS secrets.
+This means client sites need NO additional environment variables for spam protection.
 
-### Cloudflare Turnstile Overview
+### Spam Protection: Honeypot + Time-Based Validation
 
-Turnstile is Cloudflare's smart CAPTCHA alternative that protects forms without showing visitors a CAPTCHA. It uses non-interactive JavaScript challenges and machine learning to detect bots.
+We use two invisible spam filters that require no external dependencies or API keys:
 
-**Why Turnstile:**
-- No user friction (invisible or minimal challenge)
-- Privacy-focused (no tracking)
-- Free tier available
-- Works without sending traffic through Cloudflare CDN
+1. **Honeypot field**: A hidden `website` field that humans never see but bots auto-fill
+2. **Time-based validation**: Reject submissions within 3 seconds of page load (bots are instant)
 
-### Required Package
-
-```bash
-bun add @marsidev/react-turnstile
+```
+flowchart LR
+    subgraph client [Client Side]
+        A[Form renders] --> B[Hidden timestamp set]
+        B --> C[Hidden honeypot field]
+        C --> D[User fills form]
+        D --> E[Submit]
+    end
+    
+    subgraph server [Server Action]
+        E --> F{Honeypot empty?}
+        F -->|No| G[Reject - Bot detected]
+        F -->|Yes| H{Time > 3 seconds?}
+        H -->|No| I[Reject - Too fast]
+        H -->|Yes| J[Validate form data]
+        J --> K[Send to WaaS backend]
+    end
 ```
 
-**Package features:**
-- TypeScript support with `TurnstileServerValidationResponse` type
-- SSR-ready for Next.js
-- Automatic script injection
-- Ref support for programmatic control
+**Why this approach:**
+- Zero user friction (completely invisible)
+- No external dependencies or API keys
+- No environment variables needed
+- Works offline during development
+- Privacy-focused (no third-party requests)
+- Highly effective against simple bots
 
-### Testing Keys (Development)
+### Honeypot Field Implementation
 
-Use these dummy keys during development:
+The honeypot field is styled to be invisible to humans but appears as a normal field to bots:
 
-| Type | Key | Description |
-|------|-----|-------------|
-| **Site Key (visible, passes)** | `1x00000000000000000000AA` | Always passes |
-| **Site Key (visible, blocks)** | `2x00000000000000000000AB` | Always blocks |
-| **Site Key (invisible, passes)** | `1x00000000000000000000BB` | Invisible, always passes |
-| **Site Key (forces challenge)** | `3x00000000000000000000FF` | Forces interactive challenge |
-| **Secret Key (passes)** | `1x0000000000000000000000000000000AA` | Validation always passes |
-| **Secret Key (fails)** | `2x0000000000000000000000000000000AA` | Validation always fails |
-| **Secret Key (token spent)** | `3x0000000000000000000000000000000AA` | Returns "token spent" error |
-
-**Critical notes:**
-- Dummy sitekeys produce `XXXX.DUMMY.TOKEN.XXXX` response token
-- Production secret keys REJECT dummy tokens
-- Dummy secret keys only ACCEPT the dummy token
-- Always use matching pairs (dummy site + dummy secret, or prod + prod)
-
-### Turnstile Siteverify API Reference
-
-**Endpoint:** `https://challenges.cloudflare.com/turnstile/v0/siteverify`  
-**Method:** POST  
-**Content-Type:** `application/x-www-form-urlencoded` or `application/json`
-
-**Request Parameters:**
-| Parameter | Required | Description |
-|-----------|----------|-------------|
-| `secret` | Yes | Widget's secret key from Cloudflare dashboard |
-| `response` | Yes | Token from client-side widget (`cf-turnstile-response`) |
-| `remoteip` | No | Visitor's IP address |
-| `idempotency_key` | No | UUID for retry protection |
-
-**Response Shape:**
 ```typescript
-interface TurnstileServerValidationResponse {
-  success: boolean;           // True if token is valid
-  challenge_ts?: string;      // Timestamp of challenge
-  hostname?: string;          // Domain where challenge was solved
-  'error-codes'?: string[];   // Error codes if success is false
-  action?: string;            // Action label if configured
-  cdata?: string;             // Custom data if provided
+<input
+  type="text"
+  name="website"
+  className="hidden"      // Tailwind's display:none
+  tabIndex={-1}           // Prevents keyboard focus
+  autoComplete="off"      // Prevents browser autofill
+  aria-hidden="true"      // Hidden from screen readers
+/>
+```
+
+Bots see a `website` field and automatically fill it in. Any submission with this field populated is rejected.
+
+### Time-Based Validation
+
+A timestamp is captured when the form mounts and submitted with the form data:
+
+```typescript
+const [formLoadedAt, setFormLoadedAt] = useState("");
+
+useEffect(() => {
+  setFormLoadedAt(String(Date.now()));
+}, []);
+
+// In form JSX:
+<input type="hidden" name="_formLoadedAt" value={formLoadedAt} />
+```
+
+The server action checks if at least 3 seconds have elapsed:
+
+```typescript
+const MIN_SUBMISSION_TIME_MS = 3000; // 3 seconds
+
+const formLoadedAt = Number(formData.get("_formLoadedAt") || 0);
+const elapsed = Date.now() - formLoadedAt;
+
+if (elapsed < MIN_SUBMISSION_TIME_MS) {
+  return { success: false, message: "Please take your time filling out the form." };
 }
 ```
 
-**Error Codes:**
-| Code | Description |
-|------|-------------|
-| `missing-input-secret` | Secret key not provided |
-| `invalid-input-secret` | Secret key is invalid |
-| `missing-input-response` | Token not provided |
-| `invalid-input-response` | Token is invalid or expired |
-| `invalid-widget-id` | Widget ID doesn't match sitekey |
-| `invalid-parsed-secret` | Secret key couldn't be parsed |
-| `bad-request` | Malformed request |
-| `timeout-or-duplicate` | Token expired or already validated |
-| `internal-error` | Internal Cloudflare error |
-
-**Important:** The Siteverify API will only validate a token ONCE. Subsequent attempts return `timeout-or-duplicate`.
+Bots typically submit forms instantly, so this catches automated submissions.
 
 ### Analytics Pixel (`components/utils/AnalyticsPixel.tsx`)
+
+Receives `projectId` as a prop from `layout.tsx` (never imports `siteConfig` directly).
 
 ```typescript
 'use client';
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { siteConfig } from "@/config/site";
 
-export function AnalyticsPixel() {
+interface AnalyticsPixelProps {
+  projectId: string;
+}
+
+export function AnalyticsPixel({ projectId }: AnalyticsPixelProps) {
   const pathname = usePathname();
 
   useEffect(() => {
     const payload = {
-      projectId: siteConfig.waas.projectId,
+      projectId,
       path: pathname,
       referrer: document.referrer || "direct",
     };
@@ -1131,7 +1463,7 @@ export function AnalyticsPixel() {
       body: JSON.stringify(payload),
       keepalive: true,
     }).catch(() => {});
-  }, [pathname]);
+  }, [pathname, projectId]);
 
   return null;
 }
@@ -1143,9 +1475,10 @@ export function AnalyticsPixel() {
 'use server';
 
 import { z } from "zod";
-import type { TurnstileServerValidationResponse } from '@marsidev/react-turnstile';
 import { siteConfig } from "@/config/site";
-import { secrets } from "@/lib/secrets";
+
+// Spam protection constants
+const MIN_SUBMISSION_TIME_MS = 3000; // 3 seconds
 
 const ContactSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -1154,63 +1487,26 @@ const ContactSchema = z.object({
   message: z.string().min(1, "Message is required"),
 });
 
-// Cloudflare Turnstile Validation
-async function validateTurnstile(token: string): Promise<{
-  success: boolean;
-  error?: string;
-}> {
-  // Input validation
-  if (!token || typeof token !== "string") {
-    return { success: false, error: "Missing verification token" };
-  }
-
-  if (token.length > 2048) {
-    return { success: false, error: "Invalid token format" };
-  }
-
-  try {
-    const response = await fetch(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-        },
-        body: `secret=${encodeURIComponent(secrets.turnstileSecret)}&response=${encodeURIComponent(token)}`,
-      }
-    );
-
-    const data: TurnstileServerValidationResponse = await response.json();
-
-    if (!data.success) {
-      console.error('Turnstile validation failed:', data['error-codes']);
-      return { 
-        success: false, 
-        error: "Security check failed. Please try again." 
-      };
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Turnstile validation error:', error);
-    return { success: false, error: "Verification service unavailable" };
-  }
-}
-
 // Form Handler
 export async function submitContactForm(
   _prevState: { success: boolean; message: string } | null,
   formData: FormData
 ) {
-  // 1. Validate Turnstile token
-  const token = formData.get("cf-turnstile-response") as string;
-  const turnstileResult = await validateTurnstile(token);
-  
-  if (!turnstileResult.success) {
-    return { success: false, message: turnstileResult.error || "Verification failed" };
+  // 1. Honeypot check (bots fill this hidden field, humans don't see it)
+  const honeypot = formData.get("website");
+  if (honeypot) {
+    return { success: false, message: "Spam detected." };
   }
 
-  // 2. Validate form data
+  // 2. Time-based validation (reject instant bot submissions)
+  const formLoadedAt = Number(formData.get("_formLoadedAt") || 0);
+  const elapsed = Date.now() - formLoadedAt;
+
+  if (elapsed < MIN_SUBMISSION_TIME_MS) {
+    return { success: false, message: "Please take your time filling out the form." };
+  }
+
+  // 3. Validate form data
   const parsed = ContactSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -1222,7 +1518,7 @@ export async function submitContactForm(
     return { success: false, message: parsed.error.errors[0].message };
   }
 
-  // 3. Send to WaaS Backend (no secret needed - backend validates projectId + rate limits)
+  // 4. Send to WaaS Backend (no secret needed - backend validates projectId + rate limits)
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_WAAS_API_URL}/api/ingest-lead`, {
       method: "POST",
@@ -1244,77 +1540,57 @@ export async function submitContactForm(
 
 ### Contact Form Integration (Existing Components)
 
-Contact form components already exist and follow the template's dynamic rendering pattern:
-- `components/agency/contact/ContactSplitMap.tsx` — Full contact page with form + map
+Contact form components follow the template's dynamic rendering pattern:
+- `components/agency/contact/ContactSplitMap.tsx` — Full contact page with form + map (receives `identity` prop from `SectionRenderer`)
 - `components/agency/contact/ContactSimple.tsx` — Minimal centered form
 
-Both contain an internal `ContactForm` function that needs to be updated with Turnstile integration.
+**Note:** `ContactSplitMap` is a client component that needs identity data (phone, email, address, geo) for displaying contact info. The `SectionRenderer` (server component) injects this as an `identity` prop—it never imports `siteConfig` directly.
 
-**Add to imports at top of file:**
+Both contain an internal `ContactForm` function with honeypot + time-based spam protection.
+
+**Imports:**
 ```typescript
-import { useActionState, useRef, useEffect } from 'react';
-import { Turnstile, TurnstileInstance } from '@marsidev/react-turnstile';
+import { useActionState, useRef, useEffect, useState } from 'react';
 import { submitContactForm } from '@/actions/contact';
 ```
 
-**Replace the internal ContactForm function:**
+**ContactForm function:**
 ```typescript
 function ContactForm() {
   const tokens = useArchetype();
   const [state, formAction, isPending] = useActionState(submitContactForm, null);
-  const turnstileRef = useRef<TurnstileInstance>(null);
   const formRef = useRef<HTMLFormElement>(null);
+  const [formLoadedAt, setFormLoadedAt] = useState("");
 
-  // Reset Turnstile after submission (token is single-use)
+  // Set timestamp when form mounts (used for time-based spam protection)
   useEffect(() => {
-    if (state?.success || state?.message) {
-      turnstileRef.current?.reset();
-    }
-  }, [state]);
+    setFormLoadedAt(String(Date.now()));
+  }, []);
 
   // Reset form on success
   useEffect(() => {
     if (state?.success) {
       formRef.current?.reset();
+      setFormLoadedAt(String(Date.now()));
     }
   }, [state?.success]);
 
   return (
     <form ref={formRef} action={formAction} className="space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Input label="Name" name="name" type="text" placeholder="Your name" required disabled={isPending} />
-        <Input label="Email" name="email" type="email" placeholder="your@email.com" required disabled={isPending} />
-      </div>
+      {/* Form fields... */}
 
-      <Input label="Phone" name="phone" type="tel" placeholder="(555) 123-4567" disabled={isPending} />
-
-      <div className="w-full">
-        <label htmlFor="message" className={cn("block text-sm font-medium mb-1.5 text-gray-700", tokens.bodyFont)}>
-          Message <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="message"
-          name="message"
-          rows={5}
-          placeholder="How can we help you?"
-          required
-          disabled={isPending}
-          className={cn(
-            "block w-full px-4 py-2.5 text-gray-900 placeholder:text-gray-400",
-            "transition-colors duration-200 border-gray-300",
-            "focus:border-primary focus:ring-primary focus:outline-none focus:ring-2",
-            "disabled:bg-gray-50 disabled:cursor-not-allowed",
-            tokens.radius, tokens.borderWidth
-          )}
-        />
-      </div>
-
-      {/* Turnstile Widget */}
-      <Turnstile
-        ref={turnstileRef}
-        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-        options={{ theme: 'light', size: 'normal' }}
+      {/* Honeypot field - hidden from humans, bots fill it */}
+      <input
+        type="text"
+        name="website"
+        className="hidden"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
       />
+
+      {/* Timestamp for time-based spam protection */}
+      <input type="hidden" name="_formLoadedAt" value={formLoadedAt} />
 
       <Button type="submit" variant="primary" size="lg" fullWidth disabled={isPending}>
         {isPending ? 'Sending...' : 'Send Message'}
@@ -1335,54 +1611,40 @@ function ContactForm() {
 }
 ```
 
-### Turnstile Widget Options
+### Why Not CAPTCHA?
 
-| Option | Values | Description |
-|--------|--------|-------------|
-| `theme` | `'light'` \| `'dark'` \| `'auto'` | Widget color scheme |
-| `size` | `'normal'` \| `'compact'` \| `'invisible'` | Widget size |
-| `appearance` | `'always'` \| `'execute'` \| `'interaction-only'` | When to show widget |
-| `execution` | `'render'` \| `'execute'` | When to start challenge |
-| `action` | `string` | Custom action label for analytics |
-| `cData` | `string` | Custom data returned in validation |
-| `retry` | `'auto'` \| `'never'` | Auto-retry on failure |
-| `retryInterval` | `number` | Milliseconds between retries |
-| `language` | `string` | Widget language (e.g., 'es', 'fr') |
+We chose honeypot + time-based validation over traditional CAPTCHA solutions because:
 
-### Production Setup (Cloudflare Dashboard)
+| Factor | Honeypot + Time | CAPTCHA (Turnstile, reCAPTCHA) |
+|--------|-----------------|--------------------------------|
+| User friction | None (invisible) | Low to medium |
+| Dependencies | None | External package + API |
+| Environment vars | None | 2 (site key + secret) |
+| API calls | None | 1 per submission |
+| Privacy | No third-party | Third-party verification |
+| Effectiveness | Good for simple bots | Better for sophisticated bots |
 
-1. Navigate to Cloudflare Dashboard → Turnstile
-2. Click "Add Widget"
-3. Enter widget name (e.g., "Apex Legal Contact Form")
-4. Add allowed domains: `apexlegal.com` (add `localhost` only for dev)
-5. Choose widget mode:
-   - **Managed** (recommended): Cloudflare decides when to challenge
-   - **Non-interactive**: Never shows visible challenge
-   - **Invisible**: Hidden until needed
-6. Copy **Site Key** → `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
-7. Copy **Secret Key** → `TURNSTILE_SECRET_KEY`
-
-### Environment Variables
-
-```env
-# Public (exposed to browser - needed for widget)
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x...
-
-# Server-only (never exposed - for siteverify API)
-TURNSTILE_SECRET_KEY=0x...
-```
-
-**Development `.env.local`:**
-```env
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
-```
+For most small business sites, honeypot + time-based validation is sufficient. If you experience sophisticated bot attacks, consider adding rate limiting on the backend or upgrading to a CAPTCHA solution.
 
 ---
 
 ## VIII. Google Reviews Widget
 
-Google Reviews are fetched via a Server Action to comply with Google Places API Terms of Service (client-side fetch is prohibited). This keeps the API key secure on the server.
+Google Reviews are fetched at **build time** via a server component to comply with Google Places API Terms of Service (client-side fetch is prohibited). This keeps the API key secure on the server and eliminates post-hydration loading states.
+
+### Architecture: Server Component + Client Carousel
+
+```
+Build Time: ReviewsCarousel (server) → fetchGoogleReviews() → Reviews baked into static HTML
+Runtime: User gets instant HTML → ReviewsCarouselClient (client) handles scrolling/controls only
+```
+
+**Key Benefits:**
+- **No loading state** — Reviews are pre-rendered in HTML, visible immediately
+- **Zero runtime fetches** — No post-hydration network requests
+- **Reduced client JS** — Client component only handles carousel UI (~5KB vs ~15KB)
+- **SEO-friendly** — Reviews in initial HTML are crawlable
+- **Stale-while-revalidate** — Reviews cached for 1 hour, then refreshed in background
 
 ### Places API (New)
 
@@ -1391,6 +1653,7 @@ Google Reviews are fetched via a Server Action to comply with Google Places API 
 **Constraints:**
 - Returns a **maximum of 5 reviews** per request
 - Reviews are sorted by relevance by default
+- **Filtered to 5-star reviews only** (ensures only positive reviews are displayed)
 - API key must remain server-side (Google ToS requirement)
 
 ### Request Headers
@@ -1515,7 +1778,8 @@ const getCachedReviews = (placeId: string) =>
           return [];
         }
 
-        return data.reviews ?? [];
+        // Filter to only return 5-star reviews
+        return (data.reviews ?? []).filter((review) => review.rating === 5);
       } catch (error) {
         console.error('[Reviews] Failed to fetch:', error);
         return [];
@@ -1525,58 +1789,64 @@ const getCachedReviews = (placeId: string) =>
     { revalidate: 3600, tags: ['reviews'] }
   );
 
+// Fetches 5-star reviews only
 export async function fetchGoogleReviews(placeId: string): Promise<GoogleReview[]> {
   return getCachedReviews(placeId)();
 }
 ```
 
-### Reviews Component Integration
+### Reviews Component Architecture
 
-The `ReviewsCarousel` component fetches reviews from Google Places API and displays them with:
-- **Reviewer Photos:** Uses `authorAttribution.photoUri` from the API response
-- **Google Branding:** Shows the official Google "G" logo badge on each Google review
-- **Graceful Fallback:** Falls back to initials if no photo, and to manual reviews if API fails
+The reviews system uses a **server/client split** pattern:
+
+| Component | Type | Responsibility |
+|-----------|------|----------------|
+| `ReviewsCarousel.tsx` | Server (async) | Fetches Google reviews, processes source logic, passes data to client |
+| `ReviewsCarouselClient.tsx` | Client | Carousel UI, scrolling, navigation controls |
+
+**Data Flow:**
+```typescript
+// ReviewsCarousel.tsx (Server Component)
+export async function ReviewsCarousel({ heading, source, placeId, manualReviews }) {
+  // Fetch reviews on the server (at build time for SSG)
+  const googleReviews = shouldFetchGoogle ? await fetchGoogleReviews(placeId) : [];
+  
+  // Process and merge reviews based on source mode
+  const reviews = processReviews(googleReviews, manualReviews, source);
+  
+  // Pass pre-fetched reviews to client carousel
+  return <ReviewsCarouselClient heading={heading} reviews={reviews} />;
+}
+```
+
+**Source Modes:**
+- `"combined"` (Preferred) — Fetches 5-star Google reviews AND displays static reviews with source badges
+- `"google"` — 5-star Google reviews only, falls back to manual if API fails or no 5-star reviews
+- `"manual"` — Static reviews only (no API calls)
+
+**Features:**
+- **Reviewer Photos:** Uses `authorAttribution.photoUri` from Google API response
+- **Source Badges:** Shows platform-specific icons (Google, Facebook, Yelp, BBB, Thumbtack, Angi)
+- **Graceful Fallback:** Falls back to initials if no photo
+- **No Loading State:** Reviews are pre-rendered in HTML
 
 ```typescript
-// DisplayReview interface maps Google API response to unified format
-interface DisplayReview {
+// DisplayReview interface (shared between server and client)
+export interface DisplayReview {
   author_name: string;
   author_url?: string;
-  photo_url?: string;  // From authorAttribution.photoUri
+  photo_url?: string;
   rating: number;
   text: string;
   date?: string;
+  source: "google" | "facebook" | "yelp" | "bbb" | "thumbtack" | "angi" | "other" | "manual";
 }
-
-// Google reviews are converted to DisplayReview format:
-const googleDisplayReviews: DisplayReview[] = googleReviews.map((r) => ({
-  author_name: r.authorAttribution.displayName,
-  author_url: r.authorAttribution.uri,
-  photo_url: r.authorAttribution.photoUri,  // Reviewer's Google profile photo
-  rating: r.rating,
-  text: r.text.text,
-  date: r.relativePublishTimeDescription,
-}));
 ```
 
-**Avatar Rendering:** Shows Google profile photo with fallback to initials:
-```typescript
-{review.photo_url ? (
-  <Image src={review.photo_url} alt={review.author_name} fill unoptimized />
-) : (
-  <div className="bg-primary/10 text-primary">{review.author_name.charAt(0)}</div>
-)}
-```
-
-**Google Badge:** Displays on each Google-sourced review:
-```typescript
-{review.photo_url && (
-  <div className="flex items-center gap-1.5 text-gray-400">
-    <GoogleIcon />  {/* Official 4-color Google "G" logo */}
-    <span className="text-xs">Google</span>
-  </div>
-)}
-```
+**Caching Behavior:**
+- Reviews are cached for 1 hour via `unstable_cache`
+- After cache expires, Next.js uses stale-while-revalidate: serves cached data immediately, fetches fresh data in background
+- New reviews appear on next request after revalidation completes
 
 ### ReviewsStatsBar Design
 
@@ -1602,6 +1872,8 @@ This design is more modern and respects the archetype token system.
 
 ### Config Example
 
+**Preferred: Combined Source (Google + Static Reviews)**
+
 ```typescript
 {
   id: "reviews",
@@ -1609,14 +1881,26 @@ This design is more modern and respects the archetype token system.
   variant: "carousel",
   content: {
     heading: "What Our Clients Say",
-    source: "google",
+    source: "combined", // Fetches Google + shows static reviews together
     placeId: "ChIJN1t_tDeuEmsRUsoyG83frY4",
     manualReviews: [
-      { name: "John D.", rating: 5, text: "Excellent service!", date: "2 weeks ago" },
+      { name: "Sarah M.", rating: 5, text: "Amazing service!", date: "2 weeks ago", source: "facebook" },
+      { name: "John D.", rating: 5, text: "Best contractor in town.", source: "yelp" },
+      { name: "Mike R.", rating: 5, text: "Highly recommend!", source: "bbb" },
     ],
   },
 }
 ```
+
+**Available Source Modes:**
+| Mode | Behavior |
+|------|----------|
+| `"combined"` | **Preferred.** Fetches up to 5 Google reviews AND displays static reviews with source badges |
+| `"google"` | Fetches Google reviews only, falls back to manual if API fails |
+| `"manual"` | Static reviews only (no API calls) |
+
+**Supported Review Sources for Attribution:**
+`google`, `facebook`, `yelp`, `bbb`, `thumbtack`, `angi`, `other`
 
 ### Google Cloud Console Setup
 
@@ -1794,11 +2078,14 @@ Next.js automatically optimizes images at request time. No manual processing req
 | Section | Recommended Size | Aspect Ratio |
 |---------|-----------------|--------------|
 | Hero (split) | 800x600 | 4:3 |
-| Hero (full) | 1920x1080 | 16:9 |
+| Hero (full/desktop) | 1920x1080 | 16:9 |
+| Hero (full/mobile) | 800x1200 | 2:3 (portrait) |
 | Team photos | 400x400 | 1:1 |
 | Gallery | 800x600 | 4:3 |
 | Before/After | 800x600 | 4:3 |
 | OG Image | 1200x630 | ~1.9:1 |
+
+**Mobile Art Direction:** Hero variants `centered`, `video`, and `with-stats` support optional mobile-specific images (`backgroundImageMobile` or `posterImageMobile`). Uses the HTML `<picture>` element for optimal performance — browser only downloads the relevant image.
 
 ### Image Workflow (Portal → Template)
 
@@ -2064,8 +2351,6 @@ Use this checklist for every new client deployment to ensure consistency and avo
 - [ ] Create new Vercel project linked to GitHub repo
 - [ ] Configure environment variables:
   - [ ] `NEXT_PUBLIC_WAAS_API_URL` = https://[your-app].convex.site
-  - [ ] `NEXT_PUBLIC_TURNSTILE_SITE_KEY` = 0x...
-  - [ ] `TURNSTILE_SECRET_KEY` = 0x...
   - [ ] `GOOGLE_PLACES_API_KEY` = AIza... (if using Google Reviews)
 - [ ] Trigger initial deploy
 - [ ] Verify staging URL works: https://[client-slug]-web.vercel.app
@@ -2154,24 +2439,29 @@ git push origin main
 
 ### Type System
 - [ ] Create `types/config.ts` with all interfaces and Zod schemas
-- [ ] Create `lib/secrets.ts` (Turnstile + Google Places API key)
+- [ ] Create `lib/secrets.ts` (Google Places API key)
 
-### Registry Build
-- [ ] Create 7 Hero variants (split-trust, split-image-right, simple-page-header, centered, video, with-stats, split-angled)
-- [ ] Create 3 Features variants
-- [ ] Create 3 Reviews variants (including Google Reviews via Server Action)
-- [ ] Create `actions/reviews.ts` Server Action for Google Places API
-- [ ] Create 2 CTA variants
-- [ ] Create 2 Gallery variants
-- [ ] Create 2 Contact variants
-- [ ] Create 1 Team variant
-- [ ] Create 1 FAQ variant
-- [ ] Create 2 Before/After variants (grid, slider)
-- [ ] Create 1 Credentials variant (badges)
-- [ ] Create 1 Service Areas variant (list)
-- [ ] Create 2 Process variants (steps, timeline)
-- [ ] Create 2 Header variants
-- [ ] Create 2 Footer variants
+### Registry Build (52+ variants across 17 section types)
+- [x] Create 8 Hero variants (split-trust, split-image-right, simple-page-header, simple-page-header-floating, centered, video, with-stats, split-angled)
+- [x] Create 5 Features variants (grid-icons, bento, list, split-image, color-cards)
+- [x] Create 3 Reviews variants (carousel, grid, stats-bar) + Google Reviews Server Action
+- [x] Create `actions/reviews.ts` Server Action for Google Places API
+- [x] Create 2 CTA variants (simple, urgent)
+- [x] Create 2 Gallery variants (grid, masonry)
+- [x] Create 1 Video Showcase variant (featured)
+- [x] Create 2 Contact variants (split-map, simple)
+- [x] Create 1 Team variant (grid-cards)
+- [x] Create 1 FAQ variant (accordion)
+- [x] Create 2 Before/After variants (grid, slider)
+- [x] Create 2 Credentials variants (badges, split-image)
+- [x] Create 1 Award Showcase variant (split)
+- [x] Create 1 Service Areas variant (list)
+- [x] Create 3 Process variants (steps, timeline, split-image)
+- [x] Create 5 Find Us variants (minimal, split, banner, card, floating)
+- [x] Create 5 Leave Review variants (simple, banner, card, split, floating)
+- [x] Create 5 Promo variants (banner, ribbon, card, split, marquee)
+- [x] Create 2 Header variants
+- [x] Create 2 Footer variants
 
 ### Routing
 - [ ] Implement `app/[[...slug]]/page.tsx`
@@ -2201,29 +2491,28 @@ git push origin main
 ```env
 # Public (exposed to browser)
 NEXT_PUBLIC_WAAS_API_URL=https://your-app.convex.site
-NEXT_PUBLIC_TURNSTILE_SITE_KEY=0x...
 
 # Server-only (never exposed)
-TURNSTILE_SECRET_KEY=0x...
 GOOGLE_PLACES_API_KEY=AIza... # For Google Reviews (server-side only)
 ```
 
-> **Note:** No `WAAS_SECRET_KEY` needed! The backend uses rate limiting + CORS validation via `liveUrl` instead of per-client secrets. See `agencyUpdate.md` for backend implementation.
+> **Note:** No `WAAS_SECRET_KEY` needed! The backend uses rate limiting + CORS validation via `liveUrl` instead of per-client secrets. Spam protection uses honeypot + time-based validation (no API keys required). See `agencyUpdate.md` for backend implementation.
 
 ---
 
 ## XVIII. Phase 2 Roadmap (Template Enhancements)
 
 1. **Enhanced Archetypes:** Add Motion Profiles and Density Profiles
-2. **More Section Variants:** Expand to 25+ total variants
-3. **NPM Package:** Publish template as versioned package
+2. **Per-Variant Content Validation:** Add Zod schemas for each section variant's content at build time
+3. **NPM Package:** Publish template as versioned package (after 20+ clients)
 4. **CLI Tooling:** One-command client setup
 5. **AI Content Generation:** Auto-generate service descriptions and FAQs
 6. **Background Patterns:** Add configurable section backgrounds
 7. **Error Monitoring:** Add Sentry with shared DSN, filter by projectId tag
+8. **Conditional Font Loading:** Only load fonts required by the active archetype
 
 ---
 
-**Document Version:** 7.2  
-**Last Updated:** January 27, 2026  
-**Status:** Ready to Build (Template Only - Backend updates in `agencyUpdate.md`)
+**Document Version:** 7.5  
+**Last Updated:** February 5, 2026  
+**Status:** Active (52+ component variants built — Backend updates in `agencyUpdate.md`)

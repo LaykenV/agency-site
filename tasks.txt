@@ -157,33 +157,40 @@ test everything, total
 //go live
 //test analytics and lead gen
 
-logo blended on header in magic link email and welcome email
-prospect details on project entry in admin
-link directly to payment, currently goes to payment page then loads async
-remove inspiration links from build details form
+//logo blended on header in magic link email and welcome email
+//prospect details on project entry in admin
+//link directly to payment, currently goes to payment page then loads async
+//remove inspiration links from build details form
 //client side err? - fixed with StickyAuth pattern + global error boundary
 
+emails going to spam on outlook
 
+tiers? price? fb page?
+google business profile
+update reviews with examples
+
+A short description of what you want to build
+domain preference to api?
+page view /cmd_sco?
+double link in header live
+review status, will contact form owrk?
 
 live stripe
 stripe img
-google business profile
-
-//resend inbound
-
-//template nextjs
-update reviews with examples
-
-
+---------------
 get user
-marketing // use atlas outbound, get them to sign up
-bandit signs
 cold call
 
 get first client
 
+ai to filter leads?
+
+different features add ons? can i bolt onto client template different features? can i add different features to 'cart' before sending magic link and the stripe link auto updates based on cart? Sell extra features? or like different plans?
+
 LLC
 Sentry
+smoother way for people to sign up with ai 
+when project hits build status, some way to automate template cloning, get client data to  repo and build site config then deploy
 
 
 

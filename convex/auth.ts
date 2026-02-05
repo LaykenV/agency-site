@@ -13,7 +13,8 @@ import {
   getCtaButton, 
   getEmailWrapper,
   EMAIL_STYLES,
-  COMPANY_NAME
+  COMPANY_NAME,
+  SUPPORT_EMAIL
 } from "./emails";
 import { projectStatusValidator } from "./validators";
 import authConfig from "./auth.config";
@@ -76,6 +77,8 @@ const sendMagicLinkEmail = async (
     to,
     subject: "Your Secure Sign-In Link - Acadiana Web Design",
     html: htmlContent,
+    text: `Sign In to Your ${COMPANY_NAME} Portal\n\nHello,\n\nClick the link below to securely sign in to your portal. This link is valid for 24 hours.\n\n${url}\n\nIf you didn't request this link, you can safely ignore this email.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+    replyTo: [SUPPORT_EMAIL],
   });
 };
 

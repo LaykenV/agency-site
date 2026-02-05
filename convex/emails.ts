@@ -154,8 +154,22 @@ export function escapeHtml(str: string): string {
     .replace(/'/g, "&#039;");
 }
 
+// =============================================================================
+// EMAIL DELIVERABILITY HELPERS
+// =============================================================================
+
+const SUPPORT_EMAIL = 'support@acadianawebdesign.com';
+
+// List-Unsubscribe headers for non-transactional emails (improves Outlook/iCloud deliverability)
+export function getListUnsubscribeHeaders(): { name: string; value: string }[] {
+  return [
+    { name: 'List-Unsubscribe', value: `<mailto:${SUPPORT_EMAIL}?subject=Unsubscribe>` },
+    { name: 'List-Unsubscribe-Post', value: 'List-Unsubscribe=One-Click' },
+  ];
+}
+
 // Re-export EMAIL_STYLES for use in auth.ts
-export { EMAIL_STYLES, COMPANY_NAME, getBaseUrl };
+export { EMAIL_STYLES, COMPANY_NAME, getBaseUrl, SUPPORT_EMAIL };
 
 // Placeholder test email function for debugging
 export const sendTestEmail = internalAction({
@@ -188,6 +202,8 @@ export const sendTestEmail = internalAction({
       to: args.to,
       subject: "Test Email - Acadiana Web Design",
       html: htmlContent,
+      text: `Test Email - ${COMPANY_NAME}\n\nHello,\n\nThis is a test email from ${COMPANY_NAME}. If you received this, the email system is working correctly.\n\nVisit our website: ${getBaseUrl()}\n\nThis is an automated test message. No action is required.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+      replyTo: [SUPPORT_EMAIL],
     });
 
     return null;
@@ -278,11 +294,17 @@ export const sendWelcomeEmail = internalAction({
       ${getEmailFooter(new Date().getFullYear(), `Agreement Version: ${agreement?.termsVersion || TERMS_VERSION}`)}
     `);
 
+    const summaryText = TERMS_SUMMARY_POINTS.map(p => `${p.label}: ${p.value}`).join('\n');
+    const portalUrl = `${getBaseUrl()}/portal`;
+
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <welcome@acadianawebdesign.com>",
       to: args.userEmail,
       subject: `Welcome Aboard, ${args.userName}! Your Website Project Starts Now`,
       html: htmlContent,
+      text: `Welcome Aboard, ${args.userName}!\n\nThank you for choosing ${COMPANY_NAME}! Your subscription is now active, and we're excited to build something amazing for ${args.companyName}.\n\nOrder Summary:\n${summaryText}\n${agreement?.snapshotUrl ? `\nView your signed agreement: ${agreement.snapshotUrl}\n` : ''}\nWhat's Next:\n1. Log in to your portal to schedule your kickoff call\n2. Upload your brand assets (logo, photos, copy)\n3. We'll begin building your high-performance website\n\nGo to your portal: ${portalUrl}\n\nQuestions? Reply to this email or contact us at ${SUPPORT_EMAIL}.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+      replyTo: [SUPPORT_EMAIL],
+      headers: getListUnsubscribeHeaders(),
     });
 
     return null;
@@ -425,11 +447,17 @@ export const sendLeadNotification = internalAction({
       ${getEmailFooter(new Date().getFullYear(), 'This lead was submitted via your website\'s contact form.')}
     `);
 
+    const phoneLine = args.leadData.phone ? `Phone: ${args.leadData.phone}\n` : '';
+    const messageLine = args.leadData.message ? `Message: ${args.leadData.message}\n` : '';
+
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <leads@acadianawebdesign.com>",
       to: clientEmail,
       subject: `New Lead: ${args.leadData.name} - ${companyName}`,
       html: htmlContent,
+      text: `New Lead from Your Website!\n\nHi ${prospect.details.contactName || 'there'},\n\nGreat news! Someone just submitted a contact form on your ${companyName} website.\n\nLead Details:\nName: ${args.leadData.name}\nEmail: ${args.leadData.email}\n${phoneLine}${messageLine}\nReply to ${args.leadData.name.split(' ')[0]}: mailto:${args.leadData.email}\n\nView all leads in your portal: ${getBaseUrl()}/portal\n\nPro tip: Responding within 5 minutes increases your chances of converting this lead by 9x.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+      replyTo: [SUPPORT_EMAIL],
+      headers: getListUnsubscribeHeaders(),
     });
 
     console.log("[emails] lead notification sent successfully", {
