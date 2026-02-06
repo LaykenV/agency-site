@@ -673,7 +673,7 @@ function BuildDetailsForm({
             required
           />
           <p className="mt-1 text-xs text-[var(--secondary)]">
-            A short description of what you want to build
+            The main headline for your website
           </p>
         </div>
 
@@ -1272,11 +1272,14 @@ function ReviewSection({
         {/* Review tips */}
         <div className="surface p-6 rounded-2xl">
           <h3 className="font-semibold mb-4">Review Checklist</h3>
+          <p className="text-xs text-[var(--muted-foreground)] mb-4">
+            Tip: Submit a test message on the contact form — you should receive an email notification. Leads will show in the portal after launch.
+          </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
               { label: "Check all pages load correctly", icon: FileText },
               { label: "Test on mobile devices", icon: Settings },
-              { label: "Review contact forms work", icon: Send },
+              { label: "Submit a test contact form (check your email)", icon: Send },
               { label: "Verify all links are correct", icon: Link2 },
               { label: "Check images and branding", icon: Palette },
               { label: "Test site speed and performance", icon: BarChart3 },
@@ -1444,15 +1447,9 @@ function LiveSupportPanel({
                   </span>
                 </div>
                 {absoluteLiveUrl ? (
-                  <a
-                    href={absoluteLiveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-mono text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1"
-                  >
-                    {liveUrl}
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    Use “Visit Site” to open it.
+                  </p>
                 ) : (
                   <p className="text-sm text-[var(--muted-foreground)]">URL will appear here shortly</p>
                 )}
@@ -1570,15 +1567,9 @@ function LiveSupportPanel({
                   </span>
                 </div>
                 {absoluteLiveUrl ? (
-                  <a
-                    href={absoluteLiveUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm font-mono text-[hsl(var(--primary))] hover:underline inline-flex items-center gap-1 truncate"
-                  >
-                    {liveUrl}
-                    <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                  </a>
+                  <p className="text-sm text-[var(--muted-foreground)]">
+                    Use “Visit Site” to open it.
+                  </p>
                 ) : (
                   <p className="text-sm text-[var(--muted-foreground)]">URL will appear here shortly</p>
                 )}

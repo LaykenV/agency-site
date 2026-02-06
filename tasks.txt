@@ -170,13 +170,15 @@ emails going to spam on outlook
 //google phone
 2 fb posts
 google business profile
-update reviews with examples
+//update reviews with examples
 
-A short description of what you want to build
+//A short description of what you want to build
+//page view /cmd_sco?
+//double link in header live
+//review status, will contact form owrk?
+
 domain preference to api?
-page view /cmd_sco?
-double link in header live
-review status, will contact form owrk?
+ai to filter leads?
 
 live stripe
 stripe img
@@ -186,7 +188,6 @@ cold call 337-306-3705
 
 get first client
 
-ai to filter leads?
 
 different features add ons? can i bolt onto client template different features? can i add different features to 'cart' before sending magic link and the stripe link auto updates based on cart? Sell extra features? or like different plans?
 
