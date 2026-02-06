@@ -31,31 +31,22 @@ import {
 
 const REVIEWS = [
   {
-    quote: "They launched in 3 days and updates are a portal request away.",
-    name: "Alex R.",
-    role: "Service Owner in Acadiana",
+    quote: "Review coming soon.",
+    name: "TB Tree Service",
+    role: "Tree Services in Central Louisiana",
     rating: 5,
-    siteUrl: "https://example.com/greenscape",
-    imageSrc: "/placeholders/sites/landscaping.svg",
-    imageAlt: "GreenScape Landscaping website homepage",
+    siteUrl: "https://tbtreeservice.org/",
+    imageSrc: "/client-tb-tree.png",
+    imageAlt: "TB Tree Service website homepage",
   },
   {
-    quote: "Fast, professional build. Our phone calls picked up immediately.",
-    name: "Maya P.",
-    role: "Plumbing Services in Acadiana",
+    quote: "Review coming soon.",
+    name: "All About Towing",
+    role: "Towing Services in Alexandria",
     rating: 5,
-    siteUrl: "https://example.com/pro-plumb",
-    imageSrc: "/placeholders/sites/plumbing.svg",
-    imageAlt: "ProPlumb Services website homepage",
-  },
-  {
-    quote: "We submit changes in the portal and they ship the same day. Couldn’t be easier.",
-    name: "Jordan K.",
-    role: "Home Renovation in Acadiana",
-    rating: 5,
-    siteUrl: "https://example.com/reno-co",
-    imageSrc: "/placeholders/sites/renovation.svg",
-    imageAlt: "RenoCo website homepage",
+    siteUrl: "https://allabouttowingservice.com/",
+    imageSrc: "/client-all-about-towin.png",
+    imageAlt: "All About Towing Service website homepage",
   },
 ] as const;
 
@@ -216,9 +207,9 @@ export function PageContent() {
             whileInView="visible"
             viewport={{ once: true, amount: 0.3 }}
           >
-            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Plumbing</motion.span>
-            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Landscaping</motion.span>
-            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Painting</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Tree Services</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Towing</motion.span>
+            <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Contractors</motion.span>
             <motion.span className="pill text-xs sm:text-sm" variants={staggerItem}>Home Services</motion.span>
           </motion.div>
           <ReviewsScroller reviews={REVIEWS} className="mt-6 sm:mt-8" />

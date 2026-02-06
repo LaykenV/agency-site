@@ -91,7 +91,12 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
 
   return (
     <div className={cn("reviews-section", className)}>
-      <div className="hidden md:grid md:grid-cols-3 md:gap-4">
+      <div className={cn(
+          "hidden md:grid md:gap-6 md:justify-center",
+          items.length === 1 && "md:grid-cols-1 md:max-w-md md:mx-auto",
+          items.length === 2 && "md:grid-cols-2 md:max-w-4xl md:mx-auto",
+          items.length >= 3 && "md:grid-cols-3"
+        )}>
         {items.map((review, index) => (
           <figure
             key={`${review.name}-${index}`}
@@ -122,7 +127,7 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
                 href={review.siteUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-secondary inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
+                className="btn-cta inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
                 aria-label={`Visit ${review.name}'s website`}
               >
                 Visit site <span aria-hidden>↗</span>
@@ -177,7 +182,7 @@ export function ReviewsScroller({ reviews, className }: ReviewsScrollerProps) {
                     href={review.siteUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="btn-secondary inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
+                    className="btn-cta inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs whitespace-nowrap"
                     aria-label={`Visit ${review.name}'s website`}
                   >
                     Visit site <span aria-hidden>↗</span>
