@@ -10,6 +10,8 @@ import {
   agreementValidator,
   activityLogValidator,
   scheduledCallValidator,
+  triageVerdictValidator,
+  triageObjectValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -129,9 +131,13 @@ export default defineSchema({
       message: v.optional(v.string()),
     }),
     createdAt: v.number(),
+    // AI triage fields (optional for backward compat with existing leads)
+    triageVerdict: v.optional(triageVerdictValidator),
+    triage: v.optional(triageObjectValidator),
   })
     .index("by_projectId", ["projectId"])
     .index("by_projectId_and_status", ["projectId", "status"])
+    .index("by_projectId_and_triageVerdict", ["projectId", "triageVerdict"])
     .index("by_createdAt", ["createdAt"]),
 
   client_analytics: defineTable({

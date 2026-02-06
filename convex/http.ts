@@ -248,16 +248,9 @@ http.route({
       },
     });
 
-    // 6. Schedule email notification (fire and forget via scheduler)
-    await ctx.scheduler.runAfter(0, internal.emails.sendLeadNotification, {
-      projectId,
+    // 6. Schedule AI triage (triage will send email if verdict is not spam)
+    await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
       leadId,
-      leadData: {
-        name: leadData.name,
-        email: leadData.email,
-        phone: leadData.phone,
-        message: leadData.message,
-      },
     });
 
     return new Response(JSON.stringify({ success: true, leadId }), {

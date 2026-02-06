@@ -21,6 +21,7 @@ import type * as clientLeads from "../clientLeads.js";
 import type * as emails from "../emails.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as leadTriage from "../leadTriage.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
 import type * as onboarding_sessions from "../onboarding/sessions.js";
 import type * as projects from "../projects.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   files: typeof files;
   http: typeof http;
+  leadTriage: typeof leadTriage;
   "onboarding/agent": typeof onboarding_agent;
   "onboarding/sessions": typeof onboarding_sessions;
   projects: typeof projects;

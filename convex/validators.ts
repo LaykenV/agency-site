@@ -183,6 +183,33 @@ export const editRequestValidator = v.object({
   _creationTime: v.number(),
 });
 
+// ---------------------------------------------------------------------------
+// Lead triage validators
+// ---------------------------------------------------------------------------
+
+export const triageVerdictValidator = v.union(
+  v.literal("untriaged"),
+  v.literal("allow"),
+  v.literal("spam"),
+  v.literal("review"),
+);
+
+export const triageObjectValidator = v.object({
+  verdict: v.union(v.literal("allow"), v.literal("spam"), v.literal("review")),
+  confidence: v.number(), // 0..1
+  reasons: v.array(v.string()), // stable reason codes
+  summary: v.optional(v.string()), // 1 sentence
+  model: v.string(), // e.g. groq model id
+  promptVersion: v.string(),
+  triagedAt: v.number(),
+  overriddenBy: v.optional(
+    v.union(v.literal("client"), v.literal("admin"), v.literal("system"))
+  ),
+  overriddenAt: v.optional(v.number()),
+  overrideReason: v.optional(v.string()),
+  rawResponse: v.optional(v.string()),
+});
+
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;
 export const PLAN_TEXT_MAX_LENGTH = 280;
 export const SESSION_EXPIRY_DAYS = 30;

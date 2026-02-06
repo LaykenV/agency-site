@@ -177,8 +177,8 @@ google business profile
 //double link in header live
 //review status, will contact form owrk?
 
-domain preference to api?
 ai to filter leads?
+email stuff
 
 live stripe
 stripe img
@@ -188,6 +188,7 @@ cold call 337-306-3705
 
 get first client
 
+domain preference to api?
 
 different features add ons? can i bolt onto client template different features? can i add different features to 'cart' before sending magic link and the stripe link auto updates based on cart? Sell extra features? or like different plans?
 
