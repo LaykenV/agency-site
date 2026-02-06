@@ -31,22 +31,22 @@ import {
 
 const REVIEWS = [
   {
-    quote: "Review coming soon.",
-    name: "TB Tree Service",
-    role: "Tree Services in Central Louisiana",
-    rating: 5,
-    siteUrl: "https://tbtreeservice.org/",
-    imageSrc: "/client-tb-tree.png",
-    imageAlt: "TB Tree Service website homepage",
-  },
-  {
-    quote: "Review coming soon.",
+    quote: "Our phone started ringing more within the first week. The site loads instantly, looks professional, and I didn't have to worry about any of the tech stuff. I just create an edit request when I need something changed.",
     name: "All About Towing",
     role: "Towing Services in Alexandria",
     rating: 5,
     siteUrl: "https://allabouttowingservice.com/",
     imageSrc: "/client-all-about-towin.png",
     imageAlt: "All About Towing Service website homepage",
+  },
+  {
+    quote: "Best decision I made for my business. I went from no website to a site that actually brings in leads — and for $199 a month, I don't have to think about it. They handle everything.",
+    name: "TB Tree Service",
+    role: "Tree Services in Central Louisiana",
+    rating: 5,
+    siteUrl: "https://tbtreeservice.org/",
+    imageSrc: "/client-tb-tree.png",
+    imageAlt: "TB Tree Service website homepage",
   },
 ] as const;
 

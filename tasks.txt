@@ -168,8 +168,8 @@ emails going to spam on outlook
 //tiers? //price? 
 //fb page pictures
 //google phone
-2 fb posts
-google business profile
+//2 fb posts
+//google business profile
 //update reviews with examples
 
 //A short description of what you want to build
@@ -177,11 +177,13 @@ google business profile
 //double link in header live
 //review status, will contact form owrk?
 
-ai to filter leads?
-email stuff
+//ai to filter leads?
+//email stuff
 
 live stripe
 stripe img
+test
+polish GBP
 ---------------
 get user
 cold call 337-306-3705
@@ -189,6 +191,7 @@ cold call 337-306-3705
 get first client
 
 domain preference to api?
+stripe webhook for missing payment or cancel to update project status
 
 different features add ons? can i bolt onto client template different features? can i add different features to 'cart' before sending magic link and the stripe link auto updates based on cart? Sell extra features? or like different plans?
 
