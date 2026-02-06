@@ -31,13 +31,13 @@ export default function FBCoverPage() {
           position: "absolute",
           top: 0,
           left: 0,
-          width: "55%",
+          width: "50%",
           height: "100%",
           display: "flex",
           flexDirection: "column",
           justifyContent: "center",
-          paddingLeft: 150,
-          paddingRight: 40,
+          paddingLeft: 290,
+          paddingRight: 20,
           paddingTop: 48,
           paddingBottom: 48,
           zIndex: 2,
@@ -49,20 +49,20 @@ export default function FBCoverPage() {
             display: "flex",
             alignItems: "center",
             gap: 10,
-            marginBottom: 32,
+            marginBottom: 20,
           }}
         >
           <Image
             src="/logo.png"
             alt="Acadiana Web Design"
-            width={56}
-            height={56}
+            width={48}
+            height={48}
             style={{ borderRadius: 8 }}
           />
           <span
             style={{
               color: "white",
-              fontSize: 28,
+              fontSize: 24,
               fontWeight: 800,
               letterSpacing: "-0.02em",
               lineHeight: 1,
@@ -76,13 +76,13 @@ export default function FBCoverPage() {
         <h1
           style={{
             color: "white",
-            fontSize: 52,
+            fontSize: 44,
             fontWeight: 800,
             lineHeight: 1.1,
             letterSpacing: "-0.03em",
             margin: 0,
-            marginBottom: 16,
-            maxWidth: 520,
+            marginBottom: 10,
+            maxWidth: 440,
           }}
         >
           Professional Websites for Local Businesses
@@ -92,10 +92,10 @@ export default function FBCoverPage() {
         <p
           style={{
             color: "rgba(255,255,255,0.8)",
-            fontSize: 21,
+            fontSize: 18,
             fontWeight: 500,
             margin: 0,
-            marginBottom: 36,
+            marginBottom: 24,
             letterSpacing: "-0.01em",
           }}
         >
@@ -111,12 +111,12 @@ export default function FBCoverPage() {
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
-                  padding: "8px 18px",
+                  padding: "7px 14px",
                   borderRadius: 999,
                   background: "rgba(255,255,255,0.15)",
                   border: "1px solid rgba(255,255,255,0.25)",
                   color: "white",
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: 600,
                   letterSpacing: "-0.01em",
                   backdropFilter: "blur(8px)",
@@ -144,10 +144,10 @@ export default function FBCoverPage() {
         <div
           style={{
             position: "absolute",
-            top: 10,
-            left: -40,
-            width: 564,
-            height: 300,
+            top: 20,
+            left: -50,
+            width: 480,
+            height: 255,
             transform: "rotate(-2deg)",
             borderRadius: 10,
             overflow: "hidden",
@@ -168,10 +168,10 @@ export default function FBCoverPage() {
         <div
           style={{
             position: "absolute",
-            top: 314,
-            left: 140,
-            width: 564,
-            height: 300,
+            top: 290,
+            left: 60,
+            width: 480,
+            height: 255,
             transform: "rotate(2deg)",
             borderRadius: 10,
             overflow: "hidden",
