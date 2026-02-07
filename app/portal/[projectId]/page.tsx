@@ -59,7 +59,6 @@ type CalBooking = {
 };
 
 type BuildDetailsFormData = {
-  headline: string;
   domainPreference: string;
   inspirationLinks: string[];
   brand: {
@@ -326,12 +325,6 @@ function AwaitingAssetsSection({
 
             {/* Summary of submitted details */}
             <div className="mt-4 pt-4 border-t border-[var(--border)] grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {buildDetails.headline && (
-                <div>
-                  <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Headline</p>
-                  <p className="text-sm mt-1">{buildDetails.headline}</p>
-                </div>
-              )}
               {buildDetails.domainPreference && (
                 <div>
                   <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Domain</p>
@@ -363,7 +356,6 @@ function AwaitingAssetsSection({
           <BuildDetailsForm
             projectId={projectId}
             initialValues={buildDetails ? {
-              headline: buildDetails.headline ?? "",
               domainPreference: buildDetails.domainPreference ?? "",
               inspirationLinks: buildDetails.inspirationLinks,
               brand: {
@@ -451,7 +443,6 @@ function BuildDetailsForm({
 }) {
   const [pending, setPending] = useState(false);
   const [formData, setFormData] = useState<BuildDetailsFormData>({
-    headline: initialValues?.headline ?? "",
     domainPreference: initialValues?.domainPreference ?? "",
     inspirationLinks: initialValues?.inspirationLinks ?? [],
     brand: {
@@ -512,7 +503,6 @@ function BuildDetailsForm({
 
   // Track initial snapshot to detect dirty state and to reset on cancel
   const initialSnapshot = useMemo(() => {
-    const headline = (initialValues?.headline ?? "").trim();
     const domainPreference = (initialValues?.domainPreference ?? "").trim();
     const inspirationLinks = (initialValues?.inspirationLinks ?? []).map((u) => u.trim());
     const primary = (initialValues?.brand?.colorScheme?.primary ?? "#111827").trim();
@@ -520,7 +510,6 @@ function BuildDetailsForm({
     const logoStorageId = initialValues?.brand?.logoStorageId;
     const imageStorageIds = initialValues?.brand?.imageStorageIds ?? [];
     return {
-      headline,
       domainPreference,
       inspirationLinks,
       brand: {
@@ -535,7 +524,6 @@ function BuildDetailsForm({
 
   const normalizedNow = useMemo(() => {
     return {
-      headline: formData.headline.trim(),
       domainPreference: formData.domainPreference.trim(),
       inspirationLinks: formData.inspirationLinks.map((u) => u.trim()),
       brand: {
@@ -579,12 +567,6 @@ function BuildDetailsForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Basic validation
-    if (!formData.headline.trim()) {
-      toast.error("Please provide a headline for your project");
-      return;
-    }
-
     setPending(true);
 
     try {
@@ -633,7 +615,6 @@ function BuildDetailsForm({
 
       await upsertBuildDetails({
         projectId,
-        headline: formData.headline.trim() || undefined,
         domainPreference: formData.domainPreference.trim() || undefined,
         inspirationLinks: formData.inspirationLinks.length > 0 ? formData.inspirationLinks : undefined,
         brand: {
@@ -663,20 +644,6 @@ function BuildDetailsForm({
       </div>
 
       <div className="space-y-4">
-        <div>
-          <Label htmlFor="headline" className="mb-1.5 inline-block">Project Headline *</Label>
-          <Input
-            id="headline"
-            value={formData.headline}
-            onChange={(e) => setFormData({ ...formData, headline: e.target.value })}
-            placeholder="e.g., Modern portfolio site for creative agency"
-            required
-          />
-          <p className="mt-1 text-xs text-[var(--secondary)]">
-            The main headline for your website
-          </p>
-        </div>
-
         <div>
           <Label htmlFor="domain" className="mb-1.5 inline-block">Domain Preference</Label>
           <Input
@@ -960,7 +927,6 @@ function BuildDetailsForm({
             onClick={() => {
               // Reset form to initial snapshot
               const next: BuildDetailsFormData = {
-                headline: initialSnapshot.headline,
                 domainPreference: initialSnapshot.domainPreference,
                 inspirationLinks: initialSnapshot.inspirationLinks,
                 brand: {
