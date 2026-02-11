@@ -28,7 +28,7 @@ import {
 const REVIEWS = [
   {
     quote:
-      "Our phone started ringing more within the first week. The site loads instantly, looks professional, and I did not have to worry about any of the tech stuff.",
+      "We got 3 new calls in the first week. The site loads instantly, looks professional, and I did not have to worry about any of the tech stuff.",
     name: "All About Towing",
     role: "Towing Services in Alexandria",
     location: "Alexandria, LA",
@@ -39,7 +39,7 @@ const REVIEWS = [
   },
   {
     quote:
-      "Best decision I made for my business. I went from no website to a site that actually brings in leads. For $199 a month, I do not have to think about any of it.",
+      "Best decision I made for my business. I went from zero web presence to 4 leads a month. For $199 a month, I do not have to think about any of it.",
     name: "TB Tree Service",
     role: "Tree Services in Central Louisiana",
     location: "Central Louisiana",
@@ -98,7 +98,7 @@ const INDUSTRIES = [
 
 export function PageContent() {
   const reduce = useReducedMotion();
-  const TITLE = "More Calls. Less Hassle. One Simple Price.";
+  const TITLE = "Your website should be your best employee.";
   const t = useHeroTimings(TITLE);
   const [cardContentVisible, setCardContentVisible] = useState(reduce);
   const contentRef = useRef<HTMLDivElement | null>(null);
@@ -259,7 +259,7 @@ export function PageContent() {
                   <div className="mt-6 flex items-center justify-center gap-2 md:justify-start">
                     <Gauge className="h-4 w-4 text-[hsl(var(--primary))]" />
                     <span className="text-sm font-semibold text-[var(--foreground)]">
-                      Dedicated performance engineering
+                      Hand-tuned for speed
                     </span>
                   </div>
                 </motion.div>
@@ -282,7 +282,7 @@ export function PageContent() {
                   <ul className="mt-5 space-y-2.5 text-sm sm:text-base">
                     <li className="flex items-start gap-2.5 text-[var(--foreground)]">
                       <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
-                      <span>Better local SEO visibility for high-intent searches.</span>
+                      <span>Show up when someone Googles &ldquo;plumber near me&rdquo; in your area.</span>
                     </li>
                     <li className="flex items-start gap-2.5 text-[var(--foreground)]">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
@@ -290,7 +290,7 @@ export function PageContent() {
                     </li>
                     <li className="flex items-start gap-2.5 text-[var(--foreground)]">
                       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
-                      <span>Stronger first impression the moment visitors land.</span>
+                      <span>Visitors trust you before they even scroll.</span>
                     </li>
                   </ul>
                 </motion.div>
@@ -512,8 +512,9 @@ export function PageContent() {
                 className="mx-auto mt-6 max-w-[52ch] text-sm leading-relaxed text-[var(--muted-foreground)] sm:text-base md:text-lg"
                 variants={fadeUp}
               >
-                The person you talk to is the person writing your code and shipping
-                your updates. When your business changes, your site changes fast.
+                No support tickets. No being bounced between departments. The person
+                you talk to is the person building your site. When your business
+                changes, your site changes fast.
               </motion.p>
 
               {/* Stat chips row */}
@@ -558,7 +559,7 @@ export function PageContent() {
                   <div className="h-px w-8 bg-[hsl(var(--primary))]/40" />
                 </div>
                 <h2 className="mx-auto mt-5 max-w-[22ch] text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)]">
-                  1 to 2 to 3. That is it.
+                  Three steps. That&apos;s it.
                 </h2>
               </div>
 
@@ -612,10 +613,10 @@ export function PageContent() {
               <div className="text-center mb-10 sm:mb-14">
                 <div className="mx-auto mb-5 h-px w-16 bg-[hsl(var(--primary))]/30" />
                 <h2 className="text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)]">
-                  Industries We Serve
+                  Built for trades that live on the phone.
                 </h2>
                 <p className="mt-4 text-sm text-[var(--muted-foreground)] sm:text-base max-w-lg mx-auto">
-                  Twelve trades. One approach. Sites that get the phone ringing.
+                  Twelve industries. One goal: turn Google searches into calls.
                 </p>
                 <div className="mx-auto mt-5 h-px w-16 bg-[hsl(var(--primary))]/30" />
               </div>
@@ -664,15 +665,15 @@ export function PageContent() {
                 </FaqItem>
 
                 <FaqItem question="Do I keep my domain?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage your domain while you&apos;re subscribed. After the 12-month minimum and if your account is in good standing, we can transfer it to you per the Terms.</p>
+                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage it for you while you&apos;re subscribed. After 12 months, it&apos;s yours to transfer if you want. Details in the <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
                 </FaqItem>
 
                 <FaqItem question="Who owns the website?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">You own your content: your copy, your images, your logo. We license the design and code during your subscription. Details are in the Terms.</p>
+                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Your content is yours — copy, photos, logo. We handle the design and code while you&apos;re subscribed. It&apos;s all spelled out in the <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
                 </FaqItem>
 
                 <FaqItem question="How do I cancel?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Reach out to support. During months 1-12, the early termination policy applies. After 12 months, cancel any month before renewal.</p>
+                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Just email us. We ask that you stay for the first 12 months. After that, cancel anytime with a month&apos;s notice. No hoops.</p>
                 </FaqItem>
               </div>
             </div>
@@ -698,7 +699,7 @@ export function PageContent() {
                     <span className="text-2xl font-bold text-[var(--muted-foreground)] sm:text-3xl">/mo</span>
                   </p>
                   <p className="mt-3 text-sm text-[var(--muted-foreground)] sm:text-base">
-                    $0 upfront. Cancel after 12 months.
+                    $0 upfront. Stay 12 months, then cancel anytime.
                   </p>
                 </motion.div>
 
@@ -734,7 +735,7 @@ export function PageContent() {
               <div className="footer-info">
                 <p className="footer-copyright text-xs sm:text-sm">© {new Date().getFullYear()} Acadiana Web Design</p>
                 <div className="footer-badges text-[10px] sm:text-xs">
-                  <span>Vet Owned</span>
+                  <span>Veteran Owned</span>
                   <span>Serving Acadiana</span>
                   <span>Local Developer</span>
                 </div>

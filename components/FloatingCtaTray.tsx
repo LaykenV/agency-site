@@ -100,7 +100,7 @@ export function FloatingCtaTray() {
             rel="noreferrer"
             className="schedule-call-btn inline-flex items-center justify-center gap-2 px-5 py-2.5 text-base md:text-lg font-bold whitespace-nowrap"
           >
-            Schedule Call
+            Schedule 15-Min Call
           </ShinyLink>
         </motion.div>
       )}

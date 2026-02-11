@@ -180,8 +180,6 @@ emails going to spam on outlook
 //ai to filter leads?
 //email stuff
 
-update all copy 
-services nums not aligning
 
 client app
 get pics

@@ -50,7 +50,7 @@ export default function Home() {
                 "name": "Do I keep my domain?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "We include and manage your domain while subscribed. After the 12‑month minimum and if your account is in good standing, we can transfer per the Terms."
+                  "text": "We register and manage it for you while you're subscribed. After 12 months, it's yours to transfer if you want. Details in the Terms."
                 }
               },
               {
@@ -58,7 +58,7 @@ export default function Home() {
                 "name": "Who owns the website?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "You own your original content (copy, images, logo). We license the implementation during the term. Details are in the Terms."
+                  "text": "Your content is yours — copy, photos, logo. We handle the design and code while you're subscribed. It's all spelled out in the Terms."
                 }
               },
               {
@@ -66,7 +66,7 @@ export default function Home() {
                 "name": "How do I cancel?",
                 "acceptedAnswer": {
                   "@type": "Answer",
-                  "text": "Email support. During months 1–12, the early termination policy applies. After 12 months, cancel any month before renewal."
+                  "text": "Just email us. We ask that you stay for the first 12 months. After that, cancel anytime with a month's notice. No hoops."
                 }
               }
             ]
