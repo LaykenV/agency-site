@@ -309,11 +309,11 @@ export function PageContent() {
             <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 sm:py-18 lg:px-8 lg:py-24">
               <div className="text-center">
                 <div className="inline-flex items-center gap-3">
-                  <div className="h-px w-8 bg-[hsl(var(--brand-amber))]" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--brand-amber))] sm:text-xs">
+                  <div className="h-px w-8 bg-[hsl(var(--primary))]" />
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--primary))] sm:text-xs">
                     Real Client Results
                   </span>
-                  <div className="h-px w-8 bg-[hsl(var(--brand-amber))]" />
+                  <div className="h-px w-8 bg-[hsl(var(--primary))]" />
                 </div>
                 <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)]">
                   Reviews from businesses we serve.

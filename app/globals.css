@@ -2855,6 +2855,8 @@ html.dark .mobile-menu-panel {
   font-weight: 800;
   line-height: 1;
   letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
   color: hsl(var(--primary) / 0.12);
   transition: color 0.22s ease;
   flex-shrink: 0;

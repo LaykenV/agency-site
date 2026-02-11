@@ -180,15 +180,14 @@ emails going to spam on outlook
 //ai to filter leads?
 //email stuff
 
-update all copy and order of sections
-section titles
+update all copy 
+services nums not aligning
 
-
-portfolio stuff
+client app
+get pics
 
 build marketing
 
-client app
 
 
 live stripe
