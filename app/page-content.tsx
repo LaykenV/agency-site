@@ -6,10 +6,10 @@ import { useEffect, useRef, useState } from "react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import StarRating from "@/components/star-rating";
 import { ShinyLink } from "@/components/ui/shiny-button";
-import { CheckCircle2, Clock, XCircle, ArrowRight, Gauge, MapPin, Quote, Shield, Star, TrendingUp, Zap } from "lucide-react";
+import { CheckCircle2, Clock, XCircle, ArrowRight, MapPin, Quote, Shield, Star, Zap } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
-import { PerformanceGauge } from "@/components/our-plan/PerformanceGauge";
 import { FaqItem } from "@/components/faq/FaqItem";
+import { SpeedVariant5 } from "@/components/speed-variants";
 import { LazyMotion, domAnimation, MotionConfig, m as motion, useInView, useReducedMotion } from "framer-motion";
 import {
   motionDefaults,
@@ -232,71 +232,7 @@ export function PageContent() {
             <span className="sr-only">Device mockups are decorative</span>
           </motion.section>
 
-          <motion.section
-            id="speed"
-            className="anchor-target"
-            initial={initial}
-            whileInView={reduce ? undefined : "visible"}
-            viewport={{ once: true, amount: 0.18 }}
-            variants={sectionReveal}
-          >
-            <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-              <div className="grid items-center gap-8 lg:grid-cols-[0.94fr_1.06fr] lg:gap-12">
-                <motion.div className="surface-elevated rounded-3xl p-6 sm:p-8" variants={fadeUp}>
-                  <div className="flex flex-col items-center gap-6 md:flex-row md:items-center md:gap-8">
-                    <PerformanceGauge value={95} />
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-1 md:gap-2">
-                      <div className="stat-pill">
-                        <div className="stat-pill-label">Typical Site</div>
-                        <div className="stat-pill-value">3.9s</div>
-                      </div>
-                      <div className="stat-pill">
-                        <div className="stat-pill-label">Our Builds</div>
-                        <div className="stat-pill-value">0.9s</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-6 flex items-center justify-center gap-2 md:justify-start">
-                    <Gauge className="h-4 w-4 text-[hsl(var(--primary))]" />
-                    <span className="text-sm font-semibold text-[var(--foreground)]">
-                      Hand-tuned for speed
-                    </span>
-                  </div>
-                </motion.div>
-
-                <motion.div variants={fadeUp}>
-                  <div className="flex items-center gap-3">
-                    <div className="h-px w-10 bg-[hsl(var(--primary))]/45" />
-                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--primary))] sm:text-xs">
-                      Why Speed Matters
-                    </span>
-                  </div>
-                  <h2 className="mt-5 max-w-[22ch] text-3xl font-extrabold leading-tight tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)]">
-                    Fast pages rank higher and convert better.
-                  </h2>
-                  <p className="mt-5 max-w-[60ch] text-sm leading-relaxed text-[var(--muted-foreground)] sm:text-base">
-                    Google directly rewards faster sites. Customers do too. If
-                    your page stalls for even a few seconds, they bounce and call
-                    your competitor instead.
-                  </p>
-                  <ul className="mt-5 space-y-2.5 text-sm sm:text-base">
-                    <li className="flex items-start gap-2.5 text-[var(--foreground)]">
-                      <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
-                      <span>Show up when someone Googles &ldquo;plumber near me&rdquo; in your area.</span>
-                    </li>
-                    <li className="flex items-start gap-2.5 text-[var(--foreground)]">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
-                      <span>More call clicks and form submissions on mobile.</span>
-                    </li>
-                    <li className="flex items-start gap-2.5 text-[var(--foreground)]">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[hsl(var(--primary))]" />
-                      <span>Visitors trust you before they even scroll.</span>
-                    </li>
-                  </ul>
-                </motion.div>
-              </div>
-            </div>
-          </motion.section>
+          <SpeedVariant5 />
 
           <motion.section
             id="reviews"
