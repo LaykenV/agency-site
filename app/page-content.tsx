@@ -10,7 +10,6 @@ import { CheckCircle2, Clock, XCircle, ArrowRight, Gauge, MapPin, Quote, Shield,
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
 import { PerformanceGauge } from "@/components/our-plan/PerformanceGauge";
 import { FaqItem } from "@/components/faq/FaqItem";
-import { SectionHeader } from "@/components/SectionHeader";
 import { LazyMotion, domAnimation, MotionConfig, m as motion, useInView, useReducedMotion } from "framer-motion";
 import {
   motionDefaults,
@@ -652,7 +651,9 @@ export function PageContent() {
             variants={sectionReveal}
           >
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16 lg:py-20">
-              <SectionHeader as="h2">FAQs</SectionHeader>
+              <h2 className="text-center text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)]">
+                Frequently Asked Questions
+              </h2>
               <div className="mt-6 sm:mt-8 faq-grid max-w-3xl mx-auto">
                 <FaqItem question='What does "unlimited edits" include?'>
                   <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Swap a photo, fix a typo, add a new service, change your hours. Submit requests through your portal anytime. If you want a full redesign, we&apos;ll give you a simple quote. No nickel-and-diming.</p>
