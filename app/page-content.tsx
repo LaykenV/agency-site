@@ -182,7 +182,7 @@ export function PageContent() {
                 >
                   <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] hero-media">
                     <Image
-                      src="/heroimg.png"
+                      src="/heroimg4.png"
                       alt="Acadiana Web Design mobile-responsive website example for local contractors in Lafayette, Louisiana - 95+ PageSpeed score"
                       fill
                       priority
