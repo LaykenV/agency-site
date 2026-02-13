@@ -16,7 +16,7 @@ export default function SubscribePage() {
   return (
     <StickyAuth
       unauthenticatedFallback={
-        <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in to subscribe</h1>
             <Link 

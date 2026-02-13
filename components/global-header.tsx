@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { AnimatedThemeToggler } from "@/components/animated-theme-toggler";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { ArrowRight, LogOut } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Logo } from "@/components/logo";
 
 export function GlobalHeader() {
+  const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
-  const router = useRouter();
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
@@ -60,17 +60,44 @@ export function GlobalHeader() {
   }, [decision?.user?.name, decision?.user?.email]);
 
   const handleSignOut = async () => {
-    await authClient.signOut({
-      fetchOptions: {
-        onSuccess: () => {
-          router.push("/portal");
-        },
-      },
-    });
+    try {
+      await authClient.signOut();
+    } catch (error) {
+      console.error("[auth] sign out failed", error);
+    } finally {
+      // Use a hard redirect so protected portal routes are torn down immediately.
+      window.location.replace("/portal");
+    }
   };
+
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+
+    const updateHeaderHeight = () => {
+      const height = Math.ceil(header.getBoundingClientRect().height);
+      document.documentElement.style.setProperty("--global-header-height", `${height}px`);
+    };
+
+    updateHeaderHeight();
+
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(updateHeaderHeight)
+        : null;
+    observer?.observe(header);
+    window.addEventListener("resize", updateHeaderHeight);
+
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", updateHeaderHeight);
+    };
+  }, []);
 
   return (
     <header
+      ref={headerRef}
+      data-global-header
       className={
         `z-50 backdrop-blur-sm transition-colors bg-transparent`
       }
@@ -209,4 +236,3 @@ export function GlobalHeader() {
     </header>
   );
 }
-

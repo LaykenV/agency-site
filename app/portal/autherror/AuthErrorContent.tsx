@@ -93,7 +93,7 @@ export default function AuthErrorContent() {
 
   if (!sid) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-[calc(100dvh_-_var(--global-header-height))] flex items-center justify-center bg-gray-50">
         <div className="text-center max-w-md mx-auto p-8">
           <h1 className="text-2xl font-bold text-red-600 mb-2">Invalid Request</h1>
           <p className="text-gray-600">No session ID provided.</p>
@@ -104,7 +104,7 @@ export default function AuthErrorContent() {
 
   if (!prospect) {
     return (
-      <div className="min-h-dvh flex items-center justify-center bg-[var(--background)]">
+      <div className="min-h-[calc(100dvh_-_var(--global-header-height))] flex items-center justify-center bg-[var(--background)]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           <p className="text-sm text-[var(--muted-foreground)]">Loading...</p>
@@ -114,7 +114,7 @@ export default function AuthErrorContent() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-8">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] flex items-center justify-center bg-gray-50 p-8">
       <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
         <div className="text-center mb-6">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 rounded-full mb-4">
@@ -179,4 +179,3 @@ export default function AuthErrorContent() {
     </div>
   );
 }
-

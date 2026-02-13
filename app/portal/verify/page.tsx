@@ -49,7 +49,7 @@ function VerifyPageContent() {
 
 function VerifyLoadingView({ message }: { message: string }) {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+    <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
       <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
       <p className="mt-6 text-sm text-[var(--muted-foreground)]">{message}</p>
     </div>
@@ -80,7 +80,7 @@ function VerifyUnauthenticatedView({ sid }: { sid: string | null }) {
   }, [countdown, router, sid]);
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
+    <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
       <div className="w-full max-w-md surface rounded-xl p-6 text-center">
         <h1 className="text-xl font-semibold text-[var(--foreground)]">
           Sign-in link expired or invalid

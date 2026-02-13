@@ -180,10 +180,10 @@ emails going to spam on outlook
 //ai to filter leads?
 //email stuff
 
-
 client app
 
-portal login scroll
+//portal login scroll
+//logout not redirecting
 
 build marketing
 

@@ -39,7 +39,7 @@ function UnauthenticatedAgreementView() {
   }, [error, sid]);
 
   return (
-    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="surface rounded-xl p-6">
           <h1 className="text-xl md:text-2xl font-semibold text-[var(--foreground)]">Please sign in to view the agreement</h1>
@@ -240,7 +240,7 @@ function AuthenticatedAgreementView() {
   // Early returns after all hooks
   if (!sid) {
     return (
-      <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
+      <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-[var(--background)] text-[var(--foreground)]">
         <div className="mx-auto max-w-6xl px-6 py-16">
           <div className="surface rounded-xl p-6">
             <h1 className="text-xl md:text-2xl font-semibold text-red-600">Invalid Session</h1>
@@ -253,7 +253,7 @@ function AuthenticatedAgreementView() {
 
   if (!prospect) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           <p className="text-sm text-[var(--muted-foreground)]">Loading agreement...</p>
@@ -264,7 +264,7 @@ function AuthenticatedAgreementView() {
 
   if (!isInitialized) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           <p className="text-sm text-[var(--muted-foreground)]">Preparing your agreement...</p>
@@ -275,7 +275,7 @@ function AuthenticatedAgreementView() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-[var(--background)] text-[var(--foreground)]">
       <div className="mx-auto max-w-6xl px-6 py-10 lg:py-16">
         {/* Progress Timeline */}
         <ProgressTimeline currentStatus="AWAITING_AGREEMENT" className="mb-8" />

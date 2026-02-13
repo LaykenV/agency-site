@@ -13,7 +13,7 @@ export default function PaymentSuccessPage() {
   return (
     <StickyAuth
       unauthenticatedFallback={
-        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in</h1>
             <p className="text-[var(--secondary)]">Redirecting...</p>
@@ -76,7 +76,7 @@ function PaymentSuccessContent() {
 
   if (error) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+      <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
         <div className="text-center max-w-md">
           <div className="mb-6">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/10 text-yellow-500">

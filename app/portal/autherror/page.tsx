@@ -6,7 +6,7 @@ export default function AuthErrorPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-dvh flex items-center justify-center bg-[var(--background)]">
+        <div className="min-h-[calc(100dvh_-_var(--global-header-height))] flex items-center justify-center bg-[var(--background)]">
           <div className="flex flex-col items-center gap-4">
             <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
             <p className="text-sm text-[var(--muted-foreground)]">Loading...</p>

@@ -24,7 +24,7 @@ export default function PortalPage() {
   return (
     <>
       <AuthLoading>
-        <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
           <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
             <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           </div>
@@ -119,7 +119,7 @@ function UnauthenticatedView() {
 
   // Login form view
   return (
-    <div className="min-h-dvh flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] flex items-center justify-center bg-[var(--background)] text-[var(--foreground)] px-6">
       <div className="w-full max-w-lg surface rounded-xl p-6 sm:p-8">
         <div className="mb-6 text-center">
           <p className="text-xs uppercase tracking-[0.35em] text-[var(--muted-foreground)]">
@@ -254,7 +254,7 @@ function AuthenticatedPortalRedirect() {
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+    <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
       <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
       <p className="mt-6 text-sm text-[var(--secondary)]">{statusMessage}</p>
     </div>

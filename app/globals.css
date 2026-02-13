@@ -5,6 +5,7 @@
 
 /* Light theme (default) */
 :root {
+  --global-header-height: 0px;
   /* Light theme: off-white tinted background with deeper neutrals */
   --background: 225 38% 95%;
   --foreground: 225 30% 35%;
@@ -2887,5 +2888,4 @@ html.dark .mobile-menu-panel {
   color: hsl(var(--primary));
   transform: translateX(4px);
 }
-
 

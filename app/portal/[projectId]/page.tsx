@@ -112,7 +112,7 @@ export default function ProjectPage() {
       <Toaster position="top-center" richColors />
       <StickyAuth
         unauthenticatedFallback={
-          <div className="flex min-h-dvh flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+          <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] flex-col items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
             <div className="text-center">
               <h1 className="text-2xl font-bold mb-4">Please sign in to view this project</h1>
               <Link 
@@ -137,11 +137,18 @@ function AuthenticatedProjectView() {
   const router = useRouter();
 
   const decision = useQuery(api.auth.getPortalDecision);
-  const project = useQuery(api.projects.getPortalProject, projectId ? { projectId } : "skip");
-  const editRequests = useQuery(api.projects.listEditRequests,
-    project?._id ? { projectId: project._id } : "skip"
+  const isAuthed = decision?.authed === true;
+  const project = useQuery(
+    api.projects.getPortalProject,
+    isAuthed && projectId ? { projectId } : "skip"
   );
-  const subscription = useQuery(api.stripeHelpers.getMySubscription);
+  const editRequests = useQuery(api.projects.listEditRequests,
+    isAuthed && project?._id ? { projectId: project._id } : "skip"
+  );
+  const subscription = useQuery(
+    api.stripeHelpers.getMySubscription,
+    isAuthed ? {} : "skip"
+  );
 
   useEffect(() => {
     if (!decision) return;
@@ -182,7 +189,7 @@ function AuthenticatedProjectView() {
 
   if (!project) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
         <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
           <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
           <p>Loading your project...</p>
@@ -192,7 +199,7 @@ function AuthenticatedProjectView() {
   }
 
   return (
-    <div className="min-h-dvh bg-[var(--background)] text-[var(--foreground)]">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-[var(--background)] text-[var(--foreground)]">
       {/* Main content */}
       <main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-6 lg:py-10">
         {isArchived ? (
