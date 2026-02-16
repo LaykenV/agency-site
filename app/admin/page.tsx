@@ -72,7 +72,15 @@ export default function AdminPage() {
     >
       <div className="min-h-screen px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
-            <SectionHeader as="h1" align="left" size="md" className="mb-6 max-w-none mx-0">Admin</SectionHeader>
+            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+              <SectionHeader as="h1" align="left" size="md" className="max-w-none mx-0">Admin</SectionHeader>
+              <Link
+                href="/admin/marketing"
+                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Marketing Pipeline
+              </Link>
+            </div>
 
             {/* Underline Tabs */}
             <div className="mb-6 border-b border-[hsl(var(--border))]">

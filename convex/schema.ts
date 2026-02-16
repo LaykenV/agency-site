@@ -12,6 +12,12 @@ import {
   scheduledCallValidator,
   triageVerdictValidator,
   triageObjectValidator,
+  marketingSearchStatusValidator,
+  scrapedLeadStatusValidator,
+  googleDataValidator,
+  websiteDataValidator,
+  pageSpeedDataValidator,
+  aiLeadAnalysisValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -146,6 +152,54 @@ export default defineSchema({
     pageViews: v.number(),
     topPages: v.array(v.object({ path: v.string(), views: v.number() })),
   }).index("by_projectId_and_date", ["projectId", "date"]),
+
+  marketing_searches: defineTable({
+    city: v.string(),
+    state: v.string(),
+    industry: v.string(),
+    searchQuery: v.string(),
+    status: marketingSearchStatusValidator,
+    totalFound: v.number(),
+    totalScraped: v.number(),
+    totalQualified: v.number(),
+    workflowId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_city_and_industry", ["city", "industry"]),
+
+  scraped_leads: defineTable({
+    searchId: v.id("marketing_searches"),
+    placeId: v.string(),
+    googleData: googleDataValidator,
+    websiteData: v.optional(websiteDataValidator),
+    pageSpeedData: v.optional(pageSpeedDataValidator),
+    aiAnalysis: v.optional(aiLeadAnalysisValidator),
+    status: scrapedLeadStatusValidator,
+    demoToken: v.optional(v.string()),
+    demoScreenshotUrl: v.optional(v.string()),
+    demoViewedAt: v.optional(v.number()),
+    contactEmail: v.optional(v.string()),
+    emailSentAt: v.optional(v.number()),
+    calledAt: v.optional(v.number()),
+    followUpAt: v.optional(v.number()),
+    convertedToProspectId: v.optional(v.id("prospects")),
+    adminNotes: v.optional(v.string()),
+    contactAttempts: v.number(),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_searchId", ["searchId"])
+    .index("by_status", ["status"])
+    .index("by_searchId_and_status", ["searchId", "status"])
+    .index("by_searchId_and_placeId", ["searchId", "placeId"])
+    .index("by_placeId", ["placeId"])
+    .index("by_demoToken", ["demoToken"])
+    .index("by_followUpAt", ["followUpAt"])
+    .index("by_createdAt", ["createdAt"]),
 
   //errorReports - future
 });
