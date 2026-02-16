@@ -210,7 +210,81 @@ export const triageObjectValidator = v.object({
   rawResponse: v.optional(v.string()),
 });
 
+// ---------------------------------------------------------------------------
+// Marketing pipeline validators
+// ---------------------------------------------------------------------------
+
+export const marketingSearchStatusValidator = v.union(
+  v.literal("searching"),
+  v.literal("scraping"),
+  v.literal("analyzing"),
+  v.literal("completed"),
+  v.literal("failed"),
+  v.literal("canceled"),
+);
+
+export const scrapedLeadStatusValidator = v.union(
+  v.literal("new"),
+  v.literal("scraping"),
+  v.literal("scraped"),
+  v.literal("analyzing"),
+  v.literal("qualified"),
+  v.literal("disqualified"),
+  v.literal("contacted"),
+  v.literal("follow_up"),
+  v.literal("responded"),
+  v.literal("converted"),
+  v.literal("not_interested"),
+  v.literal("error"),
+);
+
+export const googleReviewValidator = v.object({
+  author: v.string(),
+  text: v.string(),
+  rating: v.number(),
+});
+
+export const googleDataValidator = v.object({
+  businessName: v.string(),
+  formattedAddress: v.string(),
+  phone: v.optional(v.string()),
+  websiteUrl: v.optional(v.string()),
+  rating: v.optional(v.number()),
+  reviewCount: v.optional(v.number()),
+  googleMapsUrl: v.optional(v.string()),
+  primaryType: v.optional(v.string()),
+  photoUrl: v.optional(v.string()),
+  topReview: v.optional(googleReviewValidator),
+});
+
+export const websiteDataValidator = v.object({
+  primaryColor: v.optional(v.string()),
+  heroImageUrl: v.optional(v.string()),
+  technology: v.optional(v.string()),
+  metaTitle: v.optional(v.string()),
+  metaDescription: v.optional(v.string()),
+  screenshotUrl: v.optional(v.string()),
+  hasHttps: v.optional(v.boolean()),
+  scrapedAt: v.number(),
+});
+
+export const pageSpeedDataValidator = v.object({
+  performanceScore: v.number(),
+  fcp: v.optional(v.number()),
+  lcp: v.optional(v.number()),
+  cls: v.optional(v.number()),
+  fetchedAt: v.number(),
+});
+
+export const aiLeadAnalysisValidator = v.object({
+  fitScore: v.number(),
+  businessDescription: v.string(),
+  painPoints: v.array(v.string()),
+  sellingPoints: v.array(v.string()),
+  outreachAngle: v.string(),
+  analyzedAt: v.number(),
+});
+
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;
 export const PLAN_TEXT_MAX_LENGTH = 280;
 export const SESSION_EXPIRY_DAYS = 30;
-

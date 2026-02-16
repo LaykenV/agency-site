@@ -185,7 +185,8 @@ client app
 //portal login scroll
 //logout not redirecting
 
-build marketing
+//build marketing
+review marketing
 
 
 live stripe
@@ -200,18 +201,14 @@ get first client
 
 GROWTH3MONTHS
 
-Before you commit to grinding a niche in a city, run a scan: "How many landscapers in Lafayette have a professional website vs. a bad one vs. none at all?" This tells you:
-Is this niche worth cold calling in this city?
-What's the total addressable market?
-What's the pitch density? ("Only 3 out of 20 landscapers in your area have a real website. The rest look like yours or worse.")
-This is basically a batch version of Tool 1, but oriented toward market research before you start dialing.
-
 
 scrape google city industry combo
 filter by reviews and no website / slow website / wix or whatever
 scrape business name, top 3 reviews, phone, website, primary color, description, hero img, and pain point
 create call list and plug data into ui hero and screenshot to say we made a mockup
 have an email with cta to schedule a call and mockup / speed score / mobile screenshot / concrete things that are wrong, and my offer 
+
+demo route
 
 automated follow up email and tag to call in a month
 
