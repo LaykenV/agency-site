@@ -42,12 +42,20 @@ type ScrapedLeadRow = {
   calledAt?: number;
   demoToken?: string;
   demoViewedAt?: number;
+  demoScreenshotUrl?: string;
+  convertedToProspectId?: string;
   contactAttempts: number;
+  error?: string;
   googleData: {
     businessName: string;
     formattedAddress: string;
     phone?: string;
     websiteUrl?: string;
+    rating?: number;
+    reviewCount?: number;
+    googleMapsUrl?: string;
+    primaryType?: string;
+    photoUrl?: string;
     topReview?: {
       author: string;
       text: string;
@@ -55,14 +63,29 @@ type ScrapedLeadRow = {
     };
   };
   websiteData?: {
+    primaryColor?: string;
+    heroImageUrl?: string;
+    technology?: string;
+    metaTitle?: string;
+    metaDescription?: string;
     screenshotUrl?: string;
+    hasHttps?: boolean;
+    scrapedAt: number;
   };
   pageSpeedData?: {
     performanceScore: number;
+    fcp?: number;
+    lcp?: number;
+    cls?: number;
+    fetchedAt: number;
   };
   aiAnalysis?: {
     fitScore: number;
+    businessDescription: string;
     painPoints: Array<string>;
+    sellingPoints: Array<string>;
+    outreachAngle: string;
+    analyzedAt: number;
   };
 };
 
@@ -591,6 +614,9 @@ export default function MarketingAdminPage() {
                         : "bg-red-100 text-red-700"
                     : "bg-slate-100 text-slate-700";
                 const speedScore = lead.pageSpeedData?.performanceScore;
+                const tech = lead.websiteData?.technology;
+                const gRating = lead.googleData.rating;
+                const reviewCount = lead.googleData.reviewCount;
 
                 return (
                   <div key={lead._id} className="rounded-xl border border-slate-200 bg-white p-4">
@@ -614,9 +640,19 @@ export default function MarketingAdminPage() {
                           Fit {fitScore}/10
                         </span>
                       ) : null}
+                      {typeof gRating === "number" ? (
+                        <span className="rounded-full bg-yellow-50 px-2 py-1 text-xs font-semibold text-yellow-700">
+                          ★ {gRating}{reviewCount ? ` (${reviewCount})` : ""}
+                        </span>
+                      ) : null}
                       {typeof speedScore === "number" ? (
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-700">
-                          Speed {speedScore}/100
+                        <span className={clsx("rounded-full px-2 py-1 text-xs font-semibold", speedScore < 50 ? "bg-red-100 text-red-700" : speedScore < 80 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700")}>
+                          Speed {speedScore}
+                        </span>
+                      ) : null}
+                      {tech ? (
+                        <span className="rounded-full bg-purple-100 px-2 py-1 text-xs font-semibold text-purple-700">
+                          {tech}
                         </span>
                       ) : null}
                       <span className="ml-auto text-xs text-slate-500">{lead.googleData.formattedAddress}</span>
@@ -624,30 +660,81 @@ export default function MarketingAdminPage() {
 
                     {expandedLeadId === lead._id ? (
                       <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 md:grid-cols-2">
+                        {/* Left column: visuals + google data */}
                         <div className="space-y-3">
-                          {lead.websiteData?.screenshotUrl ? (
-                            <img
-                              src={lead.websiteData.screenshotUrl}
-                              alt={`${lead.googleData.businessName} current site`}
-                              className="h-44 w-full rounded-md border border-slate-200 object-cover"
-                            />
+                          {/* Photos: hero image + Google photo */}
+                          {(lead.websiteData?.heroImageUrl || lead.googleData.photoUrl) ? (
+                            <div className="flex gap-3">
+                              {lead.websiteData?.heroImageUrl ? (
+                                <div className="flex-1 space-y-1">
+                                  <p className="text-xs font-semibold text-slate-500">Website Hero</p>
+                                  <a href={lead.websiteData.heroImageUrl} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={lead.websiteData.heroImageUrl}
+                                      alt={`${lead.googleData.businessName} hero`}
+                                      className="h-36 w-full rounded-md border border-slate-200 object-cover hover:ring-2 hover:ring-blue-400"
+                                    />
+                                  </a>
+                                </div>
+                              ) : null}
+                              {lead.googleData.photoUrl ? (
+                                <div className="flex-1 space-y-1">
+                                  <p className="text-xs font-semibold text-slate-500">Google Photo</p>
+                                  <a href={lead.googleData.photoUrl} target="_blank" rel="noopener noreferrer">
+                                    <img
+                                      src={lead.googleData.photoUrl}
+                                      alt={`${lead.googleData.businessName} google`}
+                                      className="h-36 w-full rounded-md border border-slate-200 object-cover hover:ring-2 hover:ring-blue-400"
+                                    />
+                                  </a>
+                                </div>
+                              ) : null}
+                            </div>
                           ) : null}
 
-                          {lead.demoToken ? (
-                            <Link
-                              href={`/demo/${lead.demoToken}`}
-                              target="_blank"
-                              className="inline-flex text-sm font-semibold text-blue-600 hover:text-blue-500"
-                            >
-                              View Demo Page
-                            </Link>
-                          ) : (
-                            <p className="text-xs text-slate-500">No demo token yet.</p>
-                          )}
+                          {lead.websiteData?.screenshotUrl ? (
+                            <div className="space-y-1">
+                              <p className="text-xs font-semibold text-slate-500">Current Site Screenshot</p>
+                              <img
+                                src={lead.websiteData.screenshotUrl}
+                                alt={`${lead.googleData.businessName} current site`}
+                                className="h-44 w-full rounded-md border border-slate-200 object-cover"
+                              />
+                            </div>
+                          ) : null}
 
-                          <div className="text-sm text-slate-700">
+                          <div className="flex flex-wrap items-center gap-2">
+                            {lead.demoToken ? (
+                              <Link
+                                href={`/demo/${lead.demoToken}`}
+                                target="_blank"
+                                className="inline-flex text-sm font-semibold text-blue-600 hover:text-blue-500"
+                              >
+                                View Demo Page
+                              </Link>
+                            ) : (
+                              <p className="text-xs text-slate-500">No demo token yet.</p>
+                            )}
+                            {lead.googleData.googleMapsUrl ? (
+                              <a
+                                href={lead.googleData.googleMapsUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm font-semibold text-blue-600 hover:text-blue-500"
+                              >
+                                Google Maps
+                              </a>
+                            ) : null}
+                          </div>
+
+                          <div className="text-sm text-slate-700 space-y-1">
                             <p>
-                              <strong>Phone:</strong> {lead.googleData.phone ?? "-"}
+                              <strong>Phone:</strong>{" "}
+                              {lead.googleData.phone ? (
+                                <a href={`tel:${lead.googleData.phone.replace(/[^\d+]/g, "")}`} className="text-blue-600">
+                                  {lead.googleData.phone}
+                                </a>
+                              ) : "-"}
                             </p>
                             <p>
                               <strong>Website:</strong>{" "}
@@ -661,24 +748,103 @@ export default function MarketingAdminPage() {
                                   {lead.googleData.websiteUrl}
                                 </a>
                               ) : (
-                                "None"
+                                <span className="text-red-600 font-medium">No website</span>
                               )}
                             </p>
-                            <p>
-                              <strong>Demo Viewed:</strong> {formatDate(lead.demoViewedAt)}
-                            </p>
+                            {lead.googleData.primaryType ? (
+                              <p><strong>Type:</strong> {lead.googleData.primaryType}</p>
+                            ) : null}
+                            <p><strong>HTTPS:</strong> {lead.websiteData?.hasHttps === true ? "Yes" : lead.websiteData?.hasHttps === false ? "No" : "-"}</p>
+                            <p><strong>Demo Viewed:</strong> {formatDate(lead.demoViewedAt)}</p>
+                            {lead.emailSentAt ? <p><strong>Email Sent:</strong> {formatDate(lead.emailSentAt)}</p> : null}
+                            {lead.calledAt ? <p><strong>Last Called:</strong> {formatDate(lead.calledAt)}</p> : null}
+                            <p><strong>Contact Attempts:</strong> {lead.contactAttempts}</p>
+                            {lead.error ? <p className="text-red-600"><strong>Error:</strong> {lead.error}</p> : null}
                           </div>
 
+                          {/* Website metadata */}
+                          {lead.websiteData?.metaTitle || lead.websiteData?.metaDescription ? (
+                            <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold">Site Metadata</p>
+                              {lead.websiteData.metaTitle ? <p className="mt-1"><strong>Title:</strong> {lead.websiteData.metaTitle}</p> : null}
+                              {lead.websiteData.metaDescription ? <p className="mt-1"><strong>Description:</strong> {lead.websiteData.metaDescription}</p> : null}
+                            </div>
+                          ) : null}
+
+                          {/* PageSpeed details */}
+                          {lead.pageSpeedData ? (
+                            <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold">PageSpeed (Mobile)</p>
+                              <div className="mt-2 grid grid-cols-2 gap-2">
+                                <p><strong>Score:</strong> <span className={speedScore && speedScore < 50 ? "text-red-600 font-semibold" : ""}>{lead.pageSpeedData.performanceScore}/100</span></p>
+                                {typeof lead.pageSpeedData.fcp === "number" ? <p><strong>FCP:</strong> {(lead.pageSpeedData.fcp / 1000).toFixed(1)}s</p> : null}
+                                {typeof lead.pageSpeedData.lcp === "number" ? <p><strong>LCP:</strong> {(lead.pageSpeedData.lcp / 1000).toFixed(1)}s</p> : null}
+                                {typeof lead.pageSpeedData.cls === "number" ? <p><strong>CLS:</strong> {lead.pageSpeedData.cls.toFixed(3)}</p> : null}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {/* Primary color swatch */}
+                          {lead.websiteData?.primaryColor ? (
+                            <div className="flex items-center gap-2 text-sm text-slate-700">
+                              <strong>Brand Color:</strong>
+                              <div className="h-6 w-6 rounded border border-slate-200" style={{ backgroundColor: lead.websiteData.primaryColor }} />
+                              <code className="text-xs text-slate-500">{lead.websiteData.primaryColor}</code>
+                            </div>
+                          ) : null}
+
+                          {/* Top Review */}
                           {lead.googleData.topReview ? (
                             <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
-                              <p className="font-semibold">Top Review ({lead.googleData.topReview.rating}/5)</p>
-                              <p className="mt-1">{lead.googleData.topReview.text}</p>
+                              <p className="font-semibold">Top Review ({lead.googleData.topReview.rating}/5) {"★".repeat(Math.round(lead.googleData.topReview.rating))}</p>
+                              <p className="mt-1">&ldquo;{lead.googleData.topReview.text}&rdquo;</p>
                               <p className="mt-1 text-xs text-slate-500">- {lead.googleData.topReview.author}</p>
                             </div>
                           ) : null}
                         </div>
 
+                        {/* Right column: AI analysis + actions */}
                         <div className="space-y-3">
+                          {/* AI Description */}
+                          {lead.aiAnalysis?.businessDescription ? (
+                            <div className="rounded-md bg-blue-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold text-blue-800">AI Description</p>
+                              <p className="mt-1">{lead.aiAnalysis.businessDescription}</p>
+                            </div>
+                          ) : null}
+
+                          {/* Outreach Angle */}
+                          {lead.aiAnalysis?.outreachAngle ? (
+                            <div className="rounded-md bg-emerald-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold text-emerald-800">Outreach Angle</p>
+                              <p className="mt-1">{lead.aiAnalysis.outreachAngle}</p>
+                            </div>
+                          ) : null}
+
+                          {/* Pain Points */}
+                          {lead.aiAnalysis?.painPoints?.length ? (
+                            <div className="rounded-md bg-red-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold text-red-800">Pain Points</p>
+                              <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {lead.aiAnalysis.painPoints.map((point: string) => (
+                                  <li key={point}>{point}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
+                          {/* Selling Points */}
+                          {lead.aiAnalysis?.sellingPoints?.length ? (
+                            <div className="rounded-md bg-emerald-50 p-3 text-sm text-slate-700">
+                              <p className="font-semibold text-emerald-800">Selling Points</p>
+                              <ul className="mt-2 list-disc space-y-1 pl-5">
+                                {lead.aiAnalysis.sellingPoints.map((point: string) => (
+                                  <li key={point}>{point}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
                           <div className="space-y-1">
                             <Label>Contact Email</Label>
                             <Input
@@ -704,7 +870,7 @@ export default function MarketingAdminPage() {
                                 }))
                               }
                               onBlur={() => void handleSaveNotes(lead._id)}
-                              rows={5}
+                              rows={4}
                             />
                           </div>
 
@@ -754,17 +920,6 @@ export default function MarketingAdminPage() {
                               Disqualify
                             </button>
                           </div>
-
-                          {Array.isArray(lead.aiAnalysis?.painPoints) && lead.aiAnalysis.painPoints.length ? (
-                            <div className="rounded-md bg-slate-50 p-3 text-sm text-slate-700">
-                              <p className="font-semibold">Pain Points</p>
-                              <ul className="mt-2 list-disc space-y-1 pl-5">
-                                {lead.aiAnalysis.painPoints.map((point: string) => (
-                                  <li key={point}>{point}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null}
                         </div>
                       </div>
                     ) : null}

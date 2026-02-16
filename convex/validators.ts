@@ -285,6 +285,48 @@ export const aiLeadAnalysisValidator = v.object({
   analyzedAt: v.number(),
 });
 
+export const marketingSearchDocValidator = v.object({
+  _id: v.id("marketing_searches"),
+  _creationTime: v.number(),
+  city: v.string(),
+  state: v.string(),
+  industry: v.string(),
+  searchQuery: v.string(),
+  status: marketingSearchStatusValidator,
+  totalFound: v.number(),
+  totalScraped: v.number(),
+  totalQualified: v.number(),
+  workflowId: v.optional(v.string()),
+  error: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
+export const scrapedLeadDocValidator = v.object({
+  _id: v.id("scraped_leads"),
+  _creationTime: v.number(),
+  searchId: v.id("marketing_searches"),
+  placeId: v.string(),
+  googleData: googleDataValidator,
+  websiteData: v.optional(websiteDataValidator),
+  pageSpeedData: v.optional(pageSpeedDataValidator),
+  aiAnalysis: v.optional(aiLeadAnalysisValidator),
+  status: scrapedLeadStatusValidator,
+  demoToken: v.optional(v.string()),
+  demoScreenshotUrl: v.optional(v.string()),
+  demoViewedAt: v.optional(v.number()),
+  contactEmail: v.optional(v.string()),
+  emailSentAt: v.optional(v.number()),
+  calledAt: v.optional(v.number()),
+  followUpAt: v.optional(v.number()),
+  convertedToProspectId: v.optional(v.id("prospects")),
+  adminNotes: v.optional(v.string()),
+  contactAttempts: v.number(),
+  error: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;
 export const PLAN_TEXT_MAX_LENGTH = 280;
 export const SESSION_EXPIRY_DAYS = 30;

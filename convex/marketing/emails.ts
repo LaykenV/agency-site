@@ -106,7 +106,7 @@ export const sendMockupEmail = internalAction({
       .join("\n");
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <outreach@marketing.acadianawebdesign.com>",
+      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
       subject: `${businessName}: your website preview is ready`,
       html,
@@ -174,7 +174,7 @@ export const sendFollowUpEmail = internalAction({
     ].join("\n");
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <outreach@marketing.acadianawebdesign.com>",
+      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
       subject: `${businessName}: quick follow-up on your website preview`,
       html,

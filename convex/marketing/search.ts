@@ -5,13 +5,16 @@ import {
   mutation,
   query,
 } from "../_generated/server";
+import type { MutationCtx } from "../_generated/server";
 import { internal } from "../_generated/api";
 import type { Doc, Id } from "../_generated/dataModel";
 import { requireAdmin } from "../adminGuard";
 import {
   aiLeadAnalysisValidator,
+  marketingSearchDocValidator,
   marketingSearchStatusValidator,
   pageSpeedDataValidator,
+  scrapedLeadDocValidator,
   scrapedLeadStatusValidator,
   websiteDataValidator,
 } from "../validators";
@@ -46,16 +49,15 @@ const QUALIFIED_STATUSES = new Set([
   "converted",
 ]);
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function recalculateCounters(ctx: any, searchId: Id<"marketing_searches">) {
+async function recalculateCounters(ctx: MutationCtx, searchId: Id<"marketing_searches">) {
   const leads = await ctx.db
     .query("scraped_leads")
-    .withIndex("by_searchId", (q: any) => q.eq("searchId", searchId))
+    .withIndex("by_searchId", (q) => q.eq("searchId", searchId))
     .collect();
 
   const totalFound = leads.length;
-  const totalScraped = leads.filter((l: any) => SCRAPED_STATUSES.has(l.status)).length;
-  const totalQualified = leads.filter((l: any) => QUALIFIED_STATUSES.has(l.status)).length;
+  const totalScraped = leads.filter((l) => SCRAPED_STATUSES.has(l.status)).length;
+  const totalQualified = leads.filter((l) => QUALIFIED_STATUSES.has(l.status)).length;
 
   await ctx.db.patch(searchId, {
     totalFound,
@@ -408,7 +410,7 @@ export const listSearches = query({
   args: {
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.array(marketingSearchDocValidator),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const limit = Math.min(args.limit ?? 25, 100);
@@ -425,7 +427,7 @@ export const getSearchById = query({
   args: {
     searchId: v.id("marketing_searches"),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(marketingSearchDocValidator, v.null()),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     return await ctx.db.get(args.searchId);
@@ -438,7 +440,7 @@ export const getLeadsBySearch = query({
     status: v.optional(scrapedLeadStatusValidator),
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.array(scrapedLeadDocValidator),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const limit = Math.min(args.limit ?? 100, 500);
@@ -466,7 +468,7 @@ export const listLeads = query({
     status: v.optional(scrapedLeadStatusValidator),
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.array(scrapedLeadDocValidator),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const limit = Math.min(args.limit ?? 100, 500);
@@ -491,7 +493,7 @@ export const listQualifiedLeads = query({
   args: {
     limit: v.optional(v.number()),
   },
-  returns: v.array(v.any()),
+  returns: v.array(scrapedLeadDocValidator),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
@@ -505,7 +507,7 @@ export const listQualifiedLeads = query({
 
 export const listFollowUps = query({
   args: {},
-  returns: v.array(v.any()),
+  returns: v.array(scrapedLeadDocValidator),
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const windowEnd = Date.now() + FOLLOW_UP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
@@ -523,7 +525,7 @@ export const getLeadById = query({
   args: {
     leadId: v.id("scraped_leads"),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(scrapedLeadDocValidator, v.null()),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     return await ctx.db.get(args.leadId);
@@ -552,7 +554,7 @@ export const internalGetSearch = internalQuery({
   args: {
     searchId: v.id("marketing_searches"),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(marketingSearchDocValidator, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.searchId);
   },
@@ -562,7 +564,7 @@ export const internalGetLeadById = internalQuery({
   args: {
     leadId: v.id("scraped_leads"),
   },
-  returns: v.union(v.any(), v.null()),
+  returns: v.union(scrapedLeadDocValidator, v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.leadId);
   },
@@ -654,9 +656,22 @@ export const internalUpdateLeadWebsiteData = internalMutation({
     leadId: v.id("scraped_leads"),
     websiteData: websiteDataValidator,
     pageSpeedData: v.optional(pageSpeedDataValidator),
+    contactEmail: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    if (args.contactEmail) {
+      const lead = await ctx.db.get(args.leadId);
+      if (lead && !lead.contactEmail) {
+        await ctx.db.patch(args.leadId, {
+          websiteData: args.websiteData,
+          pageSpeedData: args.pageSpeedData,
+          contactEmail: args.contactEmail,
+          updatedAt: Date.now(),
+        });
+        return null;
+      }
+    }
     await ctx.db.patch(args.leadId, {
       websiteData: args.websiteData,
       pageSpeedData: args.pageSpeedData,
@@ -790,7 +805,7 @@ export const completeSearch = internalMutation({
 export const onWorkflowComplete = internalMutation({
   args: {
     workflowId: v.string(),
-    context: v.any(),
+    context: v.union(v.id("marketing_searches"), v.null()),
     result: v.union(
       v.object({ kind: v.literal("success"), returnValue: v.any() }),
       v.object({ kind: v.literal("failed"), error: v.string() }),
@@ -799,7 +814,7 @@ export const onWorkflowComplete = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const searchId = args.context as Id<"marketing_searches"> | null;
+    const searchId = args.context;
     if (!searchId) return null;
 
     if (args.result.kind === "success") {

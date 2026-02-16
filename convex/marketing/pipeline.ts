@@ -100,30 +100,35 @@ function normalizeTechnology(value: unknown): string | undefined {
   return "custom";
 }
 
-function pickTopReview(review?: PlaceApiReview):
+function pickBestReview(reviews?: Array<PlaceApiReview>):
   | {
       author: string;
       text: string;
       rating: number;
     }
   | undefined {
-  if (!review) return undefined;
-  const author = review.authorAttribution?.displayName?.trim();
-  const text = review.text?.text?.trim();
-  const rating = typeof review.rating === "number" ? review.rating : undefined;
+  if (!reviews || reviews.length === 0) return undefined;
 
-  if (!author || !text || typeof rating !== "number") {
-    return undefined;
-  }
+  // Sort by rating desc, prefer reviews with longer text for more compelling quotes
+  const candidates = reviews
+    .map((r) => ({
+      author: r.authorAttribution?.displayName?.trim(),
+      text: r.text?.text?.trim(),
+      rating: typeof r.rating === "number" ? r.rating : undefined,
+    }))
+    .filter(
+      (r): r is { author: string; text: string; rating: number } =>
+        !!r.author && !!r.text && typeof r.rating === "number",
+    )
+    .sort((a, b) => {
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      return b.text.length - a.text.length;
+    });
 
-  return {
-    author,
-    text,
-    rating,
-  };
+  return candidates[0];
 }
 
-async function fetchTopReview(placeId: string): Promise<
+async function fetchBestReview(placeId: string): Promise<
   | {
       author: string;
       text: string;
@@ -145,7 +150,7 @@ async function fetchTopReview(placeId: string): Promise<
   }
 
   const json = (await response.json()) as { reviews?: Array<PlaceApiReview> };
-  return pickTopReview(json.reviews?.[0]);
+  return pickBestReview(json.reviews);
 }
 
 async function fetchPhotoUrl(photoName?: string): Promise<string | undefined> {
@@ -168,6 +173,7 @@ async function fetchPhotoUrl(photoName?: string): Promise<string | undefined> {
   const json = (await response.json()) as { photoUri?: string };
   return json.photoUri;
 }
+
 
 async function runPlacesSearch(textQuery: string): Promise<Array<PlaceResult>> {
   const apiKey = getPlacesApiKey();
@@ -235,13 +241,14 @@ async function runFirecrawlScrape(url: string) {
         {
           type: "json",
           prompt:
-            "Extract primaryColor (hex), heroImageUrl (url), and technology (wix/squarespace/wordpress/godaddy/weebly/custom)",
+            "Extract primaryColor (hex), heroImageUrl (url), technology (wix/squarespace/wordpress/godaddy/weebly/custom), and contactEmail (any email address found on the page, prefer info@ or contact@ addresses)",
           schema: {
             type: "object",
             properties: {
               primaryColor: { type: "string" },
               heroImageUrl: { type: "string" },
               technology: { type: "string" },
+              contactEmail: { type: "string" },
             },
           },
         },
@@ -266,6 +273,7 @@ async function runFirecrawlScrape(url: string) {
         primaryColor?: string;
         heroImageUrl?: string;
         technology?: string;
+        contactEmail?: string;
       };
     };
   };
@@ -277,6 +285,20 @@ async function runFirecrawlScrape(url: string) {
       : typeof data.screenshot?.url === "string"
         ? data.screenshot.url
         : undefined;
+
+  // Try to extract email: prefer AI-extracted, fall back to regex on markdown
+  let contactEmail: string | undefined;
+  const aiEmail = data.json?.contactEmail?.trim().toLowerCase();
+  if (aiEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(aiEmail)) {
+    contactEmail = aiEmail;
+  } else if (data.markdown) {
+    const emailMatch = data.markdown.match(
+      /\b([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/
+    );
+    if (emailMatch) {
+      contactEmail = emailMatch[1].toLowerCase();
+    }
+  }
 
   return {
     primaryColor: sanitizeColor(data.json?.primaryColor),
@@ -295,6 +317,7 @@ async function runFirecrawlScrape(url: string) {
         : undefined,
     screenshotUrl: screenshotValue,
     hasHttps: url.startsWith("https://"),
+    contactEmail,
   };
 }
 
@@ -510,8 +533,8 @@ export const executeSearch = internalAction({
         continue;
       }
 
-      const inlineReview = pickTopReview(place.reviews?.[0]);
-      const topReview = inlineReview ?? (await fetchTopReview(placeId));
+      const inlineReview = pickBestReview(place.reviews);
+      const topReview = inlineReview ?? (await fetchBestReview(placeId));
       const photoUrl = await fetchPhotoUrl(place.photos?.[0]?.name);
 
       const leadId = await ctx.runMutation(internal.marketing.search.internalInsertLead, {
@@ -605,6 +628,7 @@ export const scrapeOneLead = internalAction({
           scrapedAt: Date.now(),
         },
         pageSpeedData,
+        contactEmail: scrapeResult.contactEmail,
       });
 
       await ctx.runMutation(internal.marketing.search.internalUpdateLeadStatus, {

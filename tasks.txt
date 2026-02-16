@@ -188,6 +188,8 @@ client app
 //build marketing
 review marketing
 
+bad img
+demo page ui and header showing
 
 live stripe
 stripe img

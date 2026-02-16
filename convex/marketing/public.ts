@@ -41,7 +41,7 @@ export const getDemoData = query({
         `${lead.googleData.businessName} can benefit from a modern, high-converting website refresh.`,
       phone: lead.googleData.phone,
       primaryColor: lead.websiteData?.primaryColor,
-      imageUrl: lead.googleData.photoUrl ?? lead.websiteData?.heroImageUrl,
+      imageUrl: lead.websiteData?.heroImageUrl ?? lead.googleData.photoUrl,
       review: lead.googleData.topReview,
       demoViewedAt: lead.demoViewedAt,
     };
