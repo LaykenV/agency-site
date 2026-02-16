@@ -44,8 +44,10 @@ export const sendMockupEmail = internalAction({
 
     const demoUrl = getDemoUrl(lead.demoToken);
     const score = clampScore(lead.pageSpeedData?.performanceScore);
-    const businessName = escapeHtml(lead.googleData.businessName);
-    const name = escapeHtml(args.recipientName?.trim() || "there");
+    const rawBusinessName = lead.googleData.businessName;
+    const rawName = args.recipientName?.trim() || "there";
+    const businessName = escapeHtml(rawBusinessName);
+    const name = escapeHtml(rawName);
     const primaryColor = lead.websiteData?.primaryColor ?? EMAIL_STYLES.primaryColor;
 
     const scoreBox =
@@ -88,9 +90,9 @@ export const sendMockupEmail = internalAction({
     `);
 
     const text = [
-      `Hi ${name},`,
+      `Hi ${rawName},`,
       "",
-      `We built a website preview for ${businessName}.`,
+      `We built a website preview for ${rawBusinessName}.`,
       `View it here: ${demoUrl}`,
       "",
       typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "",
@@ -108,7 +110,7 @@ export const sendMockupEmail = internalAction({
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
-      subject: `${businessName}: your website preview is ready`,
+      subject: `${rawBusinessName}: your website preview is ready`,
       html,
       text,
       replyTo: [SUPPORT_EMAIL],
@@ -150,7 +152,8 @@ export const sendFollowUpEmail = internalAction({
     }
 
     const demoUrl = getDemoUrl(lead.demoToken);
-    const businessName = escapeHtml(lead.googleData.businessName);
+    const rawBusinessName = lead.googleData.businessName;
+    const businessName = escapeHtml(rawBusinessName);
 
     const html = getEmailWrapper(`
       ${getEmailHeader("Quick follow-up on your website preview")}
@@ -168,7 +171,7 @@ export const sendFollowUpEmail = internalAction({
     const text = [
       "Quick follow-up:",
       "",
-      `Your preview for ${businessName} is here: ${demoUrl}`,
+      `Your preview for ${rawBusinessName} is here: ${demoUrl}`,
       "",
       "Reply to this email if you want a quick walkthrough.",
     ].join("\n");
@@ -176,7 +179,7 @@ export const sendFollowUpEmail = internalAction({
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
-      subject: `${businessName}: quick follow-up on your website preview`,
+      subject: `${rawBusinessName}: quick follow-up on your website preview`,
       html,
       text,
       replyTo: [SUPPORT_EMAIL],

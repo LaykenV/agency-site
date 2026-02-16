@@ -235,6 +235,7 @@ async function runFirecrawlScrape(url: string) {
     },
     body: JSON.stringify({
       url,
+      // Confirmed against Firecrawl v2 scrape docs and local response tests (2026-02-16).
       formats: [
         { type: "markdown" },
         { type: "screenshot" },
@@ -279,6 +280,7 @@ async function runFirecrawlScrape(url: string) {
   };
 
   const data = json.data ?? {};
+  // Firecrawl can return screenshot as either a direct URL string or { url }.
   const screenshotValue =
     typeof data.screenshot === "string"
       ? data.screenshot

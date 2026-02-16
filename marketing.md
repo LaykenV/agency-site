@@ -1,6 +1,6 @@
 # Marketing Pipeline — System Documentation
 
-**Last Updated:** February 15, 2026
+**Last Updated:** February 16, 2026
 
 ---
 
@@ -220,6 +220,8 @@ Within a single search, leads are deduplicated by the `by_searchId_and_placeId` 
 **Endpoint:** `POST https://api.firecrawl.dev/v2/scrape`
 
 Used directly via `fetch()` (not the Convex Firecrawl component, which is designed for interactive client-side scraping).
+
+**Validation note (confirmed February 16, 2026):** We verified against Firecrawl v2 docs and local response testing that our request/response handling is correct: `formats` accepts typed entries (`markdown`, `screenshot`, `json` with prompt/schema), and `data.screenshot` may be either a URL string or an object containing `url`. No pipeline shape change is required.
 
 **Two use cases:**
 
@@ -500,7 +502,7 @@ Each pipeline action catches its own errors, writes `status: "error"` to the ind
 Email sending is an `internalAction`. The admin UI calls `triggerMockupEmail` / `triggerFollowUpEmail` mutations, which schedule the internal actions via `ctx.scheduler.runAfter(0, ...)`.
 
 ### Email Security
-All user-controlled values in email HTML are escaped via `escapeHtml()` to prevent XSS. The `contactEmail` field from automated scraping only writes if no admin-set email exists (admin manual entry takes priority).
+All user-controlled values in email HTML are escaped via `escapeHtml()` to prevent XSS. Plain text bodies and subject lines use raw business/person names so recipients do not see HTML entities (for example, `&amp;`). The `contactEmail` field from automated scraping only writes if no admin-set email exists (admin manual entry takes priority).
 
 ### Bounded Queries
 `listFollowUps` is bounded with an upper time window (7 days ahead) and `.take(500)` to prevent unbounded table scans. All list queries use indexed queries with explicit limits.
