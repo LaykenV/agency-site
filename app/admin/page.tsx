@@ -54,7 +54,7 @@ export default function AdminPage() {
   return (
     <StickyAuth
       loadingFallback={
-        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-gray-50 p-8 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-sm text-gray-500">
             <div className="inline-flex h-8 w-8 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
             <p>Loading...</p>
@@ -62,7 +62,7 @@ export default function AdminPage() {
         </div>
       }
       unauthenticatedFallback={
-        <div className="min-h-screen bg-gray-50 p-8 flex items-center justify-center">
+        <div className="min-h-[calc(100dvh_-_var(--global-header-height))] bg-gray-50 p-8 flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Please sign in to access admin</h1>
             <p className="text-gray-500">You must be authenticated to view this page.</p>
@@ -70,7 +70,7 @@ export default function AdminPage() {
         </div>
       }
     >
-      <div className="min-h-screen px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
+      <div className="min-h-[calc(100dvh_-_var(--global-header-height))] px-4 sm:px-6 md:px-8 py-6 md:py-8 relative">
           <div className="max-w-7xl mx-auto">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <SectionHeader as="h1" align="left" size="md" className="max-w-none mx-0">Admin</SectionHeader>

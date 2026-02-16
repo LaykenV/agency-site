@@ -10,6 +10,7 @@ import { clsx } from "clsx";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { StickyAuth } from "@/components/StickyAuth";
 
 type Tab = "searches" | "leads" | "followups";
 
@@ -206,6 +207,33 @@ function statusBadgeClass(status: string): string {
 }
 
 export default function MarketingAdminPage() {
+  return (
+    <StickyAuth
+      loadingFallback={
+        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+          <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
+            <div className="inline-flex h-8 w-8 animate-spin rounded-full border-2 border-[var(--border)] border-t-[var(--primary)]" />
+            <p>Loading marketing admin...</p>
+          </div>
+        </div>
+      }
+      unauthenticatedFallback={
+        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] px-6 text-[var(--foreground)]">
+          <div className="text-center">
+            <h1 className="text-2xl font-semibold">Please sign in to access admin</h1>
+            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+              You must be authenticated to view this page.
+            </p>
+          </div>
+        </div>
+      }
+    >
+      <MarketingAdminContent />
+    </StickyAuth>
+  );
+}
+
+function MarketingAdminContent() {
   const [activeTab, setActiveTab] = useState<Tab>("searches");
   const [selectedSearchId, setSelectedSearchId] =
     useState<Id<"marketing_searches"> | null>(null);
@@ -402,7 +430,7 @@ export default function MarketingAdminPage() {
   };
 
   return (
-    <div className="min-h-screen px-4 py-6 md:px-8 md:py-8">
+    <div className="min-h-[calc(100dvh_-_var(--global-header-height))] px-4 py-6 md:px-8 md:py-8">
       <div className="mx-auto max-w-7xl">
         {/* Header */}
         <div className="mb-8 flex flex-wrap items-center justify-between gap-3">

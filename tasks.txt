@@ -182,14 +182,7 @@ emails going to spam on outlook
 
 client app
 
-//portal login scroll
-//logout not redirecting
-
-//build marketing
-review marketing
-
 bad img
-demo page ui and header showing
 
 live stripe
 stripe img
