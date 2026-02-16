@@ -26,6 +26,45 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+const SCRAPED_STATUSES = new Set([
+  "scraped",
+  "analyzing",
+  "qualified",
+  "disqualified",
+  "contacted",
+  "follow_up",
+  "responded",
+  "converted",
+  "not_interested",
+]);
+
+const QUALIFIED_STATUSES = new Set([
+  "qualified",
+  "contacted",
+  "follow_up",
+  "responded",
+  "converted",
+]);
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function recalculateCounters(ctx: any, searchId: Id<"marketing_searches">) {
+  const leads = await ctx.db
+    .query("scraped_leads")
+    .withIndex("by_searchId", (q: any) => q.eq("searchId", searchId))
+    .collect();
+
+  const totalFound = leads.length;
+  const totalScraped = leads.filter((l: any) => SCRAPED_STATUSES.has(l.status)).length;
+  const totalQualified = leads.filter((l: any) => QUALIFIED_STATUSES.has(l.status)).length;
+
+  await ctx.db.patch(searchId, {
+    totalFound,
+    totalScraped,
+    totalQualified,
+    updatedAt: Date.now(),
+  });
+}
+
 function summarizeLeadForProspect(lead: ScrapedLeadDoc): string {
   const fitScore = lead.aiAnalysis?.fitScore ?? "N/A";
   const painPoints = lead.aiAnalysis?.painPoints?.length
@@ -695,38 +734,7 @@ export const internalRecalculateSearchCounters = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const leads = await ctx.db
-      .query("scraped_leads")
-      .withIndex("by_searchId", (q) => q.eq("searchId", args.searchId))
-      .collect();
-
-    const totalFound = leads.length;
-    const totalScraped = leads.filter((lead) =>
-      [
-        "scraped",
-        "analyzing",
-        "qualified",
-        "disqualified",
-        "contacted",
-        "follow_up",
-        "responded",
-        "converted",
-        "not_interested",
-      ].includes(lead.status)
-    ).length;
-    const totalQualified = leads.filter((lead) =>
-      ["qualified", "contacted", "follow_up", "responded", "converted"].includes(
-        lead.status
-      )
-    ).length;
-
-    await ctx.db.patch(args.searchId, {
-      totalFound,
-      totalScraped,
-      totalQualified,
-      updatedAt: Date.now(),
-    });
-
+    await recalculateCounters(ctx, args.searchId);
     return null;
   },
 });
@@ -770,10 +778,7 @@ export const completeSearch = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.runMutation(internal.marketing.search.internalRecalculateSearchCounters, {
-      searchId: args.searchId,
-    });
-
+    await recalculateCounters(ctx, args.searchId);
     await ctx.db.patch(args.searchId, {
       status: "completed",
       updatedAt: Date.now(),
@@ -797,7 +802,16 @@ export const onWorkflowComplete = internalMutation({
     const searchId = args.context as Id<"marketing_searches"> | null;
     if (!searchId) return null;
 
-    if (args.result.kind === "failed") {
+    if (args.result.kind === "success") {
+      const search = await ctx.db.get(searchId);
+      if (search && search.status !== "completed") {
+        await recalculateCounters(ctx, searchId);
+        await ctx.db.patch(searchId, {
+          status: "completed",
+          updatedAt: Date.now(),
+        });
+      }
+    } else if (args.result.kind === "failed") {
       await ctx.db.patch(searchId, {
         status: "failed",
         error: args.result.error.slice(0, 1000),
@@ -835,9 +849,7 @@ export const internalMarkEmailSent = internalMutation({
       updatedAt: Date.now(),
     });
 
-    await ctx.runMutation(internal.marketing.search.internalRecalculateSearchCounters, {
-      searchId: lead.searchId,
-    });
+    await recalculateCounters(ctx, lead.searchId);
 
     return null;
   },
