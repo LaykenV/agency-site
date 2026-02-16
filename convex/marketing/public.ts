@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
-import { internal } from "../_generated/api";
 import { rateLimiter } from "../rateLimiter";
 
 export const getDemoData = query({
@@ -63,16 +62,18 @@ export const recordDemoView = mutation({
       return null;
     }
 
-    const lead = await ctx.runQuery(internal.marketing.search.internalGetLeadByDemoToken, {
-      token: args.token,
-    });
+    const lead = await ctx.db
+      .query("scraped_leads")
+      .withIndex("by_demoToken", (q) => q.eq("demoToken", args.token))
+      .first();
 
     if (!lead || lead.demoViewedAt) {
       return null;
     }
 
-    await ctx.runMutation(internal.marketing.search.internalMarkDemoViewed, {
-      leadId: lead._id,
+    await ctx.db.patch(lead._id, {
+      demoViewedAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     return null;

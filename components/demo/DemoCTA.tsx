@@ -13,7 +13,7 @@ export function DemoCTA({ phone }: DemoCTAProps) {
       </p>
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <a
-          href="https://cal.com"
+          href="https://cal.com/layken-varholdt/agency-prospect?utm_source=demo&utm_medium=cta&utm_campaign=marketing"
           className="inline-flex items-center rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-400"
         >
           Schedule a Call

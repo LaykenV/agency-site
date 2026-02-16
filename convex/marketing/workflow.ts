@@ -1,75 +1,79 @@
-"use node";
-
-import { internalAction } from "../_generated/server";
+import { WorkflowManager } from "@convex-dev/workflow";
 import { v } from "convex/values";
-import { internal } from "../_generated/api";
+import { components, internal } from "../_generated/api";
 
-const MAX_PARALLELISM = 2;
+export const workflow = new WorkflowManager(components.workflow, {
+  workpoolOptions: {
+    maxParallelism: 2,
+  },
+});
 
-async function runInBatches<T>(
-  items: Array<T>,
-  worker: (item: T) => Promise<unknown>,
-  batchSize = MAX_PARALLELISM
-) {
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    await Promise.all(batch.map((item) => worker(item)));
-  }
-}
-
-export const runMarketingSearchWorkflow = internalAction({
+export const marketingSearchWorkflow = workflow.define({
   args: {
     searchId: v.id("marketing_searches"),
   },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    try {
-      const leadIds = await ctx.runAction(internal.marketing.pipeline.executeSearch, {
-        searchId: args.searchId,
-      });
+  handler: async (step, { searchId }) => {
+    // Step 1: Google Places search → writes leads to DB, returns IDs
+    const leadIds = await step.runAction(
+      internal.marketing.pipeline.executeSearch,
+      { searchId },
+      { retry: true },
+    );
 
-      await ctx.runMutation(internal.marketing.search.updateSearchStatus, {
-        searchId: args.searchId,
-        status: "scraping",
-      });
+    // Step 2: Transition to scraping phase
+    await step.runMutation(
+      internal.marketing.search.updateSearchStatus,
+      { searchId, status: "scraping" as const },
+    );
 
-      await runInBatches(leadIds, (leadId) =>
-        ctx.runAction(internal.marketing.pipeline.scrapeOneLead, { leadId })
-      );
+    // Step 2b: Scrape each lead's website (Firecrawl + PageSpeed)
+    await Promise.all(
+      leadIds.map((leadId) =>
+        step.runAction(
+          internal.marketing.pipeline.scrapeOneLead,
+          { leadId },
+          { retry: { maxAttempts: 2, initialBackoffMs: 3000, base: 2 } },
+        ),
+      ),
+    );
 
-      await ctx.runMutation(internal.marketing.search.updateSearchStatus, {
-        searchId: args.searchId,
-        status: "analyzing",
-      });
+    // Step 3: Transition to analyzing phase
+    await step.runMutation(
+      internal.marketing.search.updateSearchStatus,
+      { searchId, status: "analyzing" as const },
+    );
 
-      await runInBatches(leadIds, (leadId) =>
-        ctx.runAction(internal.marketing.pipeline.analyzeOneLead, { leadId })
-      );
+    // Step 3b: AI analyze each lead (Groq)
+    await Promise.all(
+      leadIds.map((leadId) =>
+        step.runAction(
+          internal.marketing.pipeline.analyzeOneLead,
+          { leadId },
+          { retry: true },
+        ),
+      ),
+    );
 
-      const qualifiedLeadIds = await ctx.runQuery(
-        internal.marketing.search.internalGetQualifiedLeadIds,
-        {
-          searchId: args.searchId,
-        }
-      );
+    // Step 4: Screenshot demo pages for qualified leads
+    const qualifiedIds = await step.runQuery(
+      internal.marketing.search.internalGetQualifiedLeadIds,
+      { searchId },
+    );
 
-      await runInBatches(qualifiedLeadIds, (leadId) =>
-        ctx.runAction(internal.marketing.pipeline.screenshotDemoPage, { leadId })
-      );
+    await Promise.all(
+      qualifiedIds.map((leadId) =>
+        step.runAction(
+          internal.marketing.pipeline.screenshotDemoPage,
+          { leadId },
+          { retry: { maxAttempts: 2, initialBackoffMs: 3000, base: 2 } },
+        ),
+      ),
+    );
 
-      await ctx.runMutation(internal.marketing.search.completeSearch, {
-        searchId: args.searchId,
-      });
-
-      return null;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Workflow failed";
-      await ctx.runMutation(internal.marketing.search.updateSearchStatus, {
-        searchId: args.searchId,
-        status: "failed",
-        error: message,
-      });
-      throw error;
-    }
+    // Step 5: Mark search complete
+    await step.runMutation(
+      internal.marketing.search.completeSearch,
+      { searchId },
+    );
   },
 });

@@ -15,6 +15,8 @@ import {
   scrapedLeadStatusValidator,
   websiteDataValidator,
 } from "../validators";
+import type { WorkflowId } from "@convex-dev/workflow";
+import { workflow } from "./workflow";
 
 const FOLLOW_UP_WINDOW_DAYS = 7;
 
@@ -31,7 +33,7 @@ function summarizeLeadForProspect(lead: ScrapedLeadDoc): string {
     : "None captured";
   const outreachAngle = lead.aiAnalysis?.outreachAngle ?? "None captured";
   const demoLink = lead.demoToken
-    ? `${process.env.SITE_URL ?? "http://localhost:3000"}/demo/${lead.demoToken}`
+    ? `/demo/${lead.demoToken}`
     : "No demo generated";
 
   return [
@@ -72,14 +74,18 @@ export const createSearch = mutation({
     });
 
     try {
-      const workflowId = await ctx.scheduler.runAfter(
-        0,
-        internal.marketing.workflow.runMarketingSearchWorkflow,
-        { searchId }
+      const workflowId = await workflow.start(
+        ctx,
+        internal.marketing.workflow.marketingSearchWorkflow,
+        { searchId },
+        {
+          onComplete: internal.marketing.search.onWorkflowComplete,
+          context: searchId,
+        },
       );
 
       await ctx.db.patch(searchId, {
-        workflowId: String(workflowId),
+        workflowId: workflowId as string,
         updatedAt: Date.now(),
       });
 
@@ -88,7 +94,7 @@ export const createSearch = mutation({
         kind: "marketing.search_created",
         payload: {
           searchId,
-          workflowId: String(workflowId),
+          workflowId: workflowId as string,
           query: searchQuery,
         },
       });
@@ -120,9 +126,9 @@ export const cancelSearch = mutation({
 
     if (search.workflowId) {
       try {
-        await ctx.scheduler.cancel(search.workflowId as Id<"_scheduled_functions">);
+        await workflow.cancel(ctx, search.workflowId as WorkflowId);
       } catch (error) {
-        console.warn("[marketing] failed to cancel scheduled workflow", {
+        console.warn("[marketing] failed to cancel workflow", {
           workflowId: search.workflowId,
           error,
         });
@@ -465,14 +471,12 @@ export const listFollowUps = query({
     await requireAdmin(ctx);
     const windowEnd = Date.now() + FOLLOW_UP_WINDOW_DAYS * 24 * 60 * 60 * 1000;
 
-    const candidates = await ctx.db
+    return await ctx.db
       .query("scraped_leads")
-      .withIndex("by_followUpAt", (q) => q.gte("followUpAt", 0))
-      .collect();
-
-    return candidates
-      .filter((lead) => typeof lead.followUpAt === "number" && lead.followUpAt <= windowEnd)
-      .sort((a, b) => (a.followUpAt ?? 0) - (b.followUpAt ?? 0));
+      .withIndex("by_followUpAt", (q) =>
+        q.gte("followUpAt", 0).lte("followUpAt", windowEnd)
+      )
+      .take(500);
   },
 });
 
@@ -522,19 +526,6 @@ export const internalGetLeadById = internalQuery({
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, args) => {
     return await ctx.db.get(args.leadId);
-  },
-});
-
-export const internalGetLeadByDemoToken = internalQuery({
-  args: {
-    token: v.string(),
-  },
-  returns: v.union(v.any(), v.null()),
-  handler: async (ctx, args) => {
-    return await ctx.db
-      .query("scraped_leads")
-      .withIndex("by_demoToken", (q) => q.eq("demoToken", args.token))
-      .first();
   },
 });
 
@@ -791,6 +782,38 @@ export const completeSearch = internalMutation({
   },
 });
 
+export const onWorkflowComplete = internalMutation({
+  args: {
+    workflowId: v.string(),
+    context: v.any(),
+    result: v.union(
+      v.object({ kind: v.literal("success"), returnValue: v.any() }),
+      v.object({ kind: v.literal("failed"), error: v.string() }),
+      v.object({ kind: v.literal("canceled") }),
+    ),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const searchId = args.context as Id<"marketing_searches"> | null;
+    if (!searchId) return null;
+
+    if (args.result.kind === "failed") {
+      await ctx.db.patch(searchId, {
+        status: "failed",
+        error: args.result.error.slice(0, 1000),
+        updatedAt: Date.now(),
+      });
+    } else if (args.result.kind === "canceled") {
+      await ctx.db.patch(searchId, {
+        status: "canceled",
+        updatedAt: Date.now(),
+      });
+    }
+
+    return null;
+  },
+});
+
 export const internalMarkEmailSent = internalMutation({
   args: {
     leadId: v.id("scraped_leads"),
@@ -820,21 +843,3 @@ export const internalMarkEmailSent = internalMutation({
   },
 });
 
-export const internalMarkDemoViewed = internalMutation({
-  args: {
-    leadId: v.id("scraped_leads"),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const lead = await ctx.db.get(args.leadId);
-    if (!lead || lead.demoViewedAt) {
-      return null;
-    }
-
-    await ctx.db.patch(args.leadId, {
-      demoViewedAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-    return null;
-  },
-});

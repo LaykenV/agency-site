@@ -6,6 +6,7 @@ import { internal } from "../_generated/api";
 import {
   EMAIL_STYLES,
   SUPPORT_EMAIL,
+  escapeHtml,
   getBaseUrl,
   getCtaButton,
   getEmailFooter,
@@ -43,8 +44,8 @@ export const sendMockupEmail = internalAction({
 
     const demoUrl = getDemoUrl(lead.demoToken);
     const score = clampScore(lead.pageSpeedData?.performanceScore);
-    const businessName = lead.googleData.businessName;
-    const name = args.recipientName?.trim() || "there";
+    const businessName = escapeHtml(lead.googleData.businessName);
+    const name = escapeHtml(args.recipientName?.trim() || "there");
     const primaryColor = lead.websiteData?.primaryColor ?? EMAIL_STYLES.primaryColor;
 
     const scoreBox =
@@ -54,15 +55,15 @@ export const sendMockupEmail = internalAction({
 
     const tech = lead.websiteData?.technology;
     const techBox = tech
-      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${primaryColor};background:#eff6ff;color:#1e3a8a;">We can outperform your current ${tech} setup with a faster custom build.</div>`
+      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${escapeHtml(primaryColor)};background:#eff6ff;color:#1e3a8a;">We can outperform your current ${escapeHtml(tech)} setup with a faster custom build.</div>`
       : "";
 
     const screenshot = lead.demoScreenshotUrl
-      ? `<a href="${demoUrl}" target="_blank" rel="noopener noreferrer"><img src="${lead.demoScreenshotUrl}" alt="Website preview" style="display:block;width:100%;max-width:560px;border-radius:10px;border:1px solid #e5e7eb;" /></a>`
+      ? `<a href="${escapeHtml(demoUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(lead.demoScreenshotUrl)}" alt="Website preview" style="display:block;width:100%;max-width:560px;border-radius:10px;border:1px solid #e5e7eb;" /></a>`
       : "";
 
     const html = getEmailWrapper(`
-      <div style="background: linear-gradient(135deg, ${primaryColor} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
+      <div style="background: linear-gradient(135deg, ${escapeHtml(primaryColor)} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
         <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">We built a preview of your new website</h1>
         <p style="margin:10px 0 0;color:#fff;opacity:0.92;">for ${businessName}</p>
       </div>
@@ -149,7 +150,7 @@ export const sendFollowUpEmail = internalAction({
     }
 
     const demoUrl = getDemoUrl(lead.demoToken);
-    const businessName = lead.googleData.businessName;
+    const businessName = escapeHtml(lead.googleData.businessName);
 
     const html = getEmailWrapper(`
       ${getEmailHeader("Quick follow-up on your website preview")}
