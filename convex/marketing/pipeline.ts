@@ -397,7 +397,13 @@ async function runPageSpeed(url: string) {
 
   const perfScore = json.lighthouseResult?.categories?.performance?.score;
   const normalizedScore =
-    typeof perfScore === "number" ? Math.round(Math.max(0, Math.min(1, perfScore)) * 100) : 0;
+    typeof perfScore === "number"
+      ? Math.round(
+          perfScore <= 1
+            ? Math.max(0, Math.min(1, perfScore)) * 100
+            : Math.max(0, Math.min(100, perfScore))
+        )
+      : 0;
 
   return {
     performanceScore: normalizedScore,
