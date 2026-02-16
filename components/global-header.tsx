@@ -14,6 +14,7 @@ import { Logo } from "@/components/logo";
 export function GlobalHeader() {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
+  const isDemo = pathname.startsWith("/demo");
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
@@ -93,6 +94,9 @@ export function GlobalHeader() {
       window.removeEventListener("resize", updateHeaderHeight);
     };
   }, []);
+
+  // Hide header entirely on demo pages — they have their own chrome
+  if (isDemo) return null;
 
   return (
     <header
