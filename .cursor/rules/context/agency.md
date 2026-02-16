@@ -1,7 +1,7 @@
 The Agency Blueprint: Website-as-a-Service (WaaS) Edition
 
-Document Version: 2.7
-Last Updated: January 13, 2026
+Document Version: 2.8
+Last Updated: February 16, 2026
 
 I. Business Positioning & Vision
 Our Vision: Be the default web partner for small, service-based businesses via a seamless “Website-as-a-Service” (WaaS) that eliminates friction and upfront cost.
@@ -39,6 +39,16 @@ Sales Call: Authentic consultant
   - “I hand-code in Next.js for instant load speeds; Google prioritizes fast, mobile-first sites.”
   - “It’s a service. You get me as your on-call web team. Email changes anytime.”
 - Close: “I’ll email a link to accept the terms and start your subscription. It takes 2 minutes.”
+
+Lead Generation: Automated outbound pipeline (`/admin/marketing`)
+- Search by city + industry to discover local businesses at scale (Google Places).
+- Scrape websites + capture mobile performance signals (Firecrawl + PageSpeed).
+- AI score each lead for fit and outreach angle (Groq).
+- Qualified leads (`fitScore >= 6`) receive a UUID demo token and public preview link: `/demo/{token}` (example: `/demo/token`).
+- Demo pages render from tokenized lead data and include a style picker (6 visual variations).
+- Firecrawl captures a screenshot of the default demo layout for outreach emails.
+- Outreach emails drive prospects to the demo link; first visit sets `demoViewedAt` for follow-up prioritization.
+- One-click “Convert to Prospect” moves qualified leads into the core sales workflow.
 
 IV. The Golden Path (End-to-End Client Journey)
 1) First Contact
@@ -115,6 +125,12 @@ V. Legal & Policy (MVP)
 
 VI. Application Architecture
 - Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions + file storage), Cal.com (scheduling).
+- Marketing pipeline stack (outbound acquisition):
+  - Admin route: `/admin/marketing` (searches, leads, follow-ups)
+  - Public demo route: `/demo/[token]` (tokenized, non-indexed)
+  - Convex modules: `convex/marketing/workflow.ts`, `convex/marketing/pipeline.ts`, `convex/marketing/search.ts`, `convex/marketing/emails.ts`, `convex/marketing/public.ts`
+  - Orchestration: `@convex-dev/workflow` with bounded parallelism for external APIs
+  - External APIs: Google Places, Firecrawl, PageSpeed Insights, Groq
 - Authentication (better-auth):
   - Magic link tokens valid for 24 hours (users can click the link within a day of receiving it)
   - Magic link tokens stored server-side (hashed in database), NOT in the browser—links work cross-device
@@ -147,6 +163,8 @@ VI. Application Architecture
   - /legal/terms (versioned, hashable)
   - /portal/success (post-checkout sync + redirect)
   - /admin (admin portal, server-gated by ADMIN_EMAIL env var)
+  - /admin/marketing (outbound pipeline control center)
+  - /demo/[token] (public live preview pages for outreach)
 - Webhooks:
   - /api/stripe (Stripe billing events)
   - /api/cal-webhook (scheduling events)
@@ -159,9 +177,10 @@ VI. Application Architecture
   - Payment Success + Terms copy
   - Kickoff reminder
   - Dunning and failed payment notices
+  - Marketing mockup + follow-up emails with demo links and preview screenshots
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; agreements, activity_log, scheduled_calls, and edit_requests tables; plus client template Hub tables for leads and analytics (`client_leads`, `client_analytics`). `projects.projectId` is the public project identifier used by the portal route and by template sites (currently a generated UUID string; can be made human-readable later if desired).
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; agreements, activity_log, scheduled_calls, and edit_requests tables; plus client template Hub tables for leads and analytics (`client_leads`, `client_analytics`). The outbound marketing system adds `marketing_searches` and `scraped_leads` (tokenized demo previews and outreach tracking). `projects.projectId` is the public project identifier used by the portal route and by template sites (currently a generated UUID string; can be made human-readable later if desired).
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -295,6 +314,121 @@ export default defineSchema({
     pageViews: v.number(),
     topPages: v.array(v.object({ path: v.string(), views: v.number() })), // top 10
   }).index("by_projectId_and_date", ["projectId", "date"]),
+
+  // Outbound marketing searches (batch-level)
+  marketing_searches: defineTable({
+    city: v.string(),
+    state: v.string(),
+    industry: v.string(),
+    searchQuery: v.string(), // "{industry} in {city}, {state}"
+    status: v.union(
+      v.literal("searching"),
+      v.literal("scraping"),
+      v.literal("analyzing"),
+      v.literal("completed"),
+      v.literal("failed"),
+      v.literal("canceled")
+    ),
+    totalFound: v.number(),
+    totalScraped: v.number(),
+    totalQualified: v.number(),
+    workflowId: v.optional(v.string()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_createdAt", ["createdAt"])
+    .index("by_city_and_industry", ["city", "industry"]),
+
+  // Outbound marketing leads (business-level)
+  scraped_leads: defineTable({
+    searchId: v.id("marketing_searches"),
+    placeId: v.string(),
+    googleData: v.object({
+      businessName: v.string(),
+      address: v.optional(v.string()),
+      phone: v.optional(v.string()),
+      websiteUrl: v.optional(v.string()),
+      rating: v.optional(v.number()),
+      reviewCount: v.optional(v.number()),
+      mapsUrl: v.optional(v.string()),
+      primaryType: v.optional(v.string()),
+      photoUrl: v.optional(v.string()),
+      topReview: v.optional(
+        v.object({
+          author: v.string(),
+          text: v.string(),
+          rating: v.number(),
+        })
+      ),
+    }),
+    websiteData: v.optional(
+      v.object({
+        primaryColor: v.optional(v.string()),
+        heroImageUrl: v.optional(v.string()),
+        technology: v.optional(v.string()),
+        metaTitle: v.optional(v.string()),
+        metaDescription: v.optional(v.string()),
+        screenshotUrl: v.optional(v.string()),
+        usesHttps: v.optional(v.boolean()),
+        scrapedAt: v.number(),
+      })
+    ),
+    pageSpeedData: v.optional(
+      v.object({
+        performanceScore: v.optional(v.number()),
+        fcp: v.optional(v.number()),
+        lcp: v.optional(v.number()),
+        cls: v.optional(v.number()),
+        fetchedAt: v.number(),
+      })
+    ),
+    aiAnalysis: v.optional(
+      v.object({
+        fitScore: v.number(),
+        businessDescription: v.string(),
+        painPoints: v.array(v.string()),
+        sellingPoints: v.array(v.string()),
+        outreachAngle: v.string(),
+        analyzedAt: v.number(),
+      })
+    ),
+    status: v.union(
+      v.literal("new"),
+      v.literal("scraping"),
+      v.literal("scraped"),
+      v.literal("analyzing"),
+      v.literal("qualified"),
+      v.literal("disqualified"),
+      v.literal("contacted"),
+      v.literal("follow_up"),
+      v.literal("responded"),
+      v.literal("converted"),
+      v.literal("not_interested"),
+      v.literal("error")
+    ),
+    demoToken: v.optional(v.string()),
+    demoScreenshotUrl: v.optional(v.string()),
+    demoViewedAt: v.optional(v.number()),
+    contactEmail: v.optional(v.string()),
+    emailSentAt: v.optional(v.number()),
+    calledAt: v.optional(v.number()),
+    followUpAt: v.optional(v.number()),
+    convertedToProspectId: v.optional(v.id("prospects")),
+    adminNotes: v.optional(v.string()),
+    contactAttempts: v.number(),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_searchId", ["searchId"])
+    .index("by_status", ["status"])
+    .index("by_searchId_and_status", ["searchId", "status"])
+    .index("by_searchId_and_placeId", ["searchId", "placeId"])
+    .index("by_placeId", ["placeId"])
+    .index("by_demoToken", ["demoToken"])
+    .index("by_followUpAt", ["followUpAt"])
+    .index("by_createdAt", ["createdAt"]),
 });
 
 KV Tables (Stripe)
@@ -551,6 +685,7 @@ Terms of Service essentials (MVP outline)
 IX. Admin and Ops
 - Admin actions:
   - Create prospect, send welcome email, resend agreement link, create Stripe Checkout Session (server-triggered after agreement), manual status overrides.
+  - Run outbound marketing searches, review/qualify scraped leads, trigger mockup/follow-up outreach emails, and convert qualified leads into prospects.
   - Admin portal at `/admin` (server-gated by ADMIN_EMAIL env var):
     - Prospects tab: View all prospects, create/edit prospects, send magic links
     - Projects tab: View all projects sorted by recent activity, update project status, manage admin notes (myNotes), update deployment URLs (live/staging/vercelProjectId). When expanded, displays full build details:
@@ -560,6 +695,7 @@ IX. Admin and Ops
       - Deployment: live URL, staging URL, and Vercel project ID fields
     - Scheduled Calls tab: View all scheduled calls grouped by date with project/prospect links
     - Edit Requests tab: View all edit/support requests with attachment thumbnails, update status and priority, filter by status
+    - Marketing route (`/admin/marketing`): Searches tab (batch status + cancellation), Leads tab (pipeline actions, notes, outreach, conversion), Follow-ups tab (time-based follow-up queue)
   - Admin API endpoints (all guarded by `requireAdmin`):
     - Queries: 
       - `admin.listProspects`: Returns all prospects with full details
@@ -608,6 +744,10 @@ XI. Roadmap
   - Server-side token pre-fetch via `getToken()` → `initialToken` prop for instant session hydration
   - Rate limiting configured: 3 sends/min, 10 verifications/min
   - Session cookie caching (5 min) to reduce DB calls
+- V1.6: Outbound marketing pipeline + tokenized demo previews ✅
+  - `/admin/marketing` control center for search, scrape, analyze, outreach, and follow-up workflows
+  - Tokenized public preview links at `/demo/{token}` (example: `/demo/token`) with first-view tracking (`demoViewedAt`)
+  - AI qualification + personalized outreach with demo screenshots and one-click conversion to prospects
 
 Example high-level flow (pseudo)
 - GET /portal/agreement
@@ -624,4 +764,3 @@ Example high-level flow (pseudo)
   - On subscription activated or first invoice paid:
     - Update project -> AWAITING_ASSETS
     - Email welcome; redirect signed-in user to /portal with success UI
-
