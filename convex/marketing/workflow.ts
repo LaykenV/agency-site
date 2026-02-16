@@ -27,7 +27,7 @@ export const marketingSearchWorkflow = workflow.define({
     );
 
     // Step 2b: Scrape each lead's website (Firecrawl + PageSpeed)
-    await Promise.all(
+    const scrapeResults = await Promise.all(
       leadIds.map((leadId) =>
         step.runAction(
           internal.marketing.pipeline.scrapeOneLead,
@@ -37,6 +37,12 @@ export const marketingSearchWorkflow = workflow.define({
       ),
     );
 
+    // Only analyze leads that successfully completed the scrape step.
+    // This preserves explicit scrape errors and avoids scoring incomplete data.
+    const scrapedLeadIds = scrapeResults
+      .filter((result) => result.status === "scraped")
+      .map((result) => result.leadId);
+
     // Step 3: Transition to analyzing phase
     await step.runMutation(
       internal.marketing.search.updateSearchStatus,
@@ -45,7 +51,7 @@ export const marketingSearchWorkflow = workflow.define({
 
     // Step 3b: AI analyze each lead (Groq)
     await Promise.all(
-      leadIds.map((leadId) =>
+      scrapedLeadIds.map((leadId) =>
         step.runAction(
           internal.marketing.pipeline.analyzeOneLead,
           { leadId },

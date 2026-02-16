@@ -92,7 +92,7 @@ The pipeline uses `@convex-dev/workflow` for durable execution. The `WorkflowMan
 | - | `updateSearchStatus("scraping")` | Mutation | - | Status transition |
 | 2 | `scrapeOneLead` (parallel per lead) | Action | 2 attempts, 3s backoff | Firecrawl + PageSpeed per lead |
 | - | `updateSearchStatus("analyzing")` | Mutation | - | Status transition |
-| 3 | `analyzeOneLead` (parallel per lead) | Action | Unlimited | Groq AI scoring per lead |
+| 3 | `analyzeOneLead` (parallel per successfully scraped lead) | Action | Unlimited | Groq AI scoring per lead |
 | 4 | `screenshotDemoPage` (parallel per qualified lead) | Action | 2 attempts, 3s backoff | Firecrawl screenshot of demo page |
 | 5 | `completeSearch` | Mutation | - | Final status + counter recalculation |
 
