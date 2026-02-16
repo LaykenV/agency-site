@@ -13,8 +13,8 @@ The Marketing Pipeline automates lead generation for Acadiana Web Design. It rep
 1. **Search** — Admin enters city + industry on `/admin/marketing`. Google Places API finds businesses.
 2. **Scrape** — Firecrawl analyzes each business's website. PageSpeed Insights scores their mobile speed.
 3. **Analyze** — Groq AI scores each lead's fit (1-10) and generates personalized pain points, selling points, and outreach angles.
-4. **Demo Page** — `/demo/{token}` renders a live website preview using the lead's data (hero + review + CTA).
-5. **Screenshot** — Firecrawl screenshots the demo page for embedding in outreach emails.
+4. **Demo Page** — `/demo/{token}` (for example, `/demo/token`) renders a tokenized public preview page with lead data and a built-in style picker (6 visual variations).
+5. **Screenshot** — Firecrawl screenshots the default demo variation for embedding in outreach emails.
 6. **Email** — Personalized mockup email with the demo screenshot and "See Your Website Preview" CTA.
 7. **Track** — When the prospect visits the demo page, `demoViewedAt` is recorded as a follow-up signal.
 8. **Convert** — One-click "Convert to Prospect" creates a prospect pre-filled with all scraped data, entering the normal sales workflow.
@@ -58,6 +58,7 @@ app/demo/[token]/
 
 components/demo/
   DemoHero.tsx        — Hero section with dynamic color, image, name, description
+  DemoVariations.tsx  — Client style picker + 6 visual demo layouts
   DemoReview.tsx      — Single review card with star rating
   DemoCTA.tsx         — Call-to-action with phone and scheduling link
   DemoBanner.tsx      — Fixed bottom attribution bar
@@ -368,17 +369,34 @@ No admin guard — these are public endpoints for the demo page.
 
 **SEO:** `robots: { index: false, follow: false }` — demo pages are not indexed by search engines.
 
-### Sections
+### How `/demo/{token}` Works
 
-1. **DemoHero** — Gradient hero using the lead's `primaryColor` (falls back to `#2B7FE0`). Shows business name, AI-generated description, and optional image (hero image or Google photo). Animated blob decoration.
+1. **Token creation** — During `analyzeOneLead`, qualified leads (`fitScore >= 6`) get a UUID `demoToken` via `crypto.randomUUID()`. This token is stored on the lead and used in URLs like `/demo/{token}`.
 
-2. **DemoReview** — Top Google review with star rating (filled/empty stars), quoted text, and author attribution. Hidden if no review available.
+2. **Server fetch by token** — `app/demo/[token]/page.tsx` reads the route param and calls `api.marketing.public.getDemoData`. The query resolves the lead through the `by_demoToken` index and returns a slim render payload (`businessName`, `description`, `phone`, `primaryColor`, `imageUrl`, optional review).
 
-3. **DemoCTA** — "Ready to get started?" section with two buttons: "Schedule a Call" (links to Cal.com with UTM params) and "Call {phone}" (click-to-call `tel:` link, conditional on phone availability).
+3. **404 on invalid token** — If no lead matches the token, the page calls `notFound()`.
 
-4. **DemoBanner** — Fixed bottom bar: "This is a preview built by Acadiana Web Design" with "Get Your Website" CTA button linking to the main site.
+4. **Default render (SSR)** — The server builds `originalContent` with:
+   - `DemoHero` (color + business copy + image)
+   - optional `DemoReview` (top Google review)
+   - `DemoCTA` (Cal.com CTA + optional click-to-call)
 
-5. **DemoViewTracker** — Client component that fires `recordDemoView` mutation on mount to track when the prospect visits the demo page.
+5. **Client-side style system** — `DemoVariations` wraps the default SSR content and adds a floating picker so prospects can switch between six styles:
+   - `Classic` (the original SSR layout)
+   - `Modern` (`CleanCard`)
+   - `Bold` (`SplitHero`)
+   - `Elegant` (`Editorial`)
+   - `Warm` (`Organic`)
+   - `Premium` (`Luxury`)
+
+   The selected style is local UI state only (not persisted to Convex).
+
+6. **View tracking** — `DemoViewTracker` runs on mount and calls `recordDemoView({ token })`. Backend protection includes:
+   - token-bucket rate limit: 10 requests/minute per token
+   - first-view-only write: `demoViewedAt` is set once and ignored on repeat visits
+
+7. **Persistent attribution bar** — `DemoBanner` is always fixed at the bottom with branding plus outbound CTA to `https://acadianawebdesign.com`.
 
 ---
 

@@ -21,6 +21,7 @@ We provide a fully managed website experience:
 - **Monthly analytics summary** — page views, top-performing pages, and leads at a glance
 - **Unlimited edits and support** — text changes, photo swaps, new services, updated hours — all included, no extra charge
 - **Client portal** — a simple dashboard where clients can submit edit requests, view their analytics, and track their leads
+- **Outbound demo previews** — for qualified prospects, we generate a personalized live preview link to show what their upgraded site could look like
 
 ---
 
@@ -119,6 +120,27 @@ Getting started is simple and low-friction:
 6. **Review & Revise** — Client reviews the site, we make any requested changes
 7. **Go Live** — Domain connected, site launched, client notified
 8. **Ongoing Service** — Client submits edit requests, views analytics, and sees leads — all through their portal
+
+---
+
+## Outbound Demo Preview System
+
+Alongside referrals and direct outreach, we run an outbound system that finds strong-fit businesses and sends each one a personalized demo link.
+
+### How It Works (Plain English)
+
+1. We search one city + service category (for example, "Plumbers in Lafayette").
+2. We review each business's current web presence (speed, platform, and overall quality).
+3. We score which businesses are the best fit for our offer.
+4. For qualified businesses, we generate a private preview link in the format `/demo/{token}` (for example, `/demo/token`).
+5. That link opens a live page with their branding context, review content, and multiple visual style options.
+6. We email the preview and track whether it was viewed so follow-up goes to the warmest leads first.
+
+### Why This Matters
+
+- It makes outreach concrete instead of generic.
+- Prospects can instantly see value before booking a call.
+- We spend more time on leads already showing buying intent.
 
 ---
 
