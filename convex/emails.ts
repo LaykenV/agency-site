@@ -61,11 +61,15 @@ function getEmailLogo(): string {
 export function getEmailHeader(title: string, subtitle?: string): string {
   return `
     <div style="background: linear-gradient(135deg, ${EMAIL_STYLES.primaryColor} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 32px 24px; text-align: center;">
-      ${getEmailLogo()}
-      <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-        ${title}
-      </h1>
-      ${subtitle ? `<p style="margin: 8px 0 0; color: #ffffff; font-size: 14px; opacity: 0.9;">${subtitle}</p>` : ''}
+      <div class="gmail-blend-screen">
+        <div class="gmail-blend-difference">
+          ${getEmailLogo()}
+          <h1 style="margin: 0; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; font-size: 24px; font-weight: 600;">
+            ${title}
+          </h1>
+          ${subtitle ? `<p style="margin: 8px 0 0; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; font-size: 14px; opacity: 0.9;">${subtitle}</p>` : ''}
+        </div>
+      </div>
     </div>
   `;
 }
@@ -106,8 +110,21 @@ export function getEmailWrapper(content: string): string {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta name="color-scheme" content="light">
+        <meta name="supported-color-schemes" content="light">
+        <style>
+          /* Gmail mobile dark mode fix for light text on dark backgrounds. */
+          u + .body .gmail-blend-screen {
+            background: #000;
+            mix-blend-mode: screen;
+          }
+          u + .body .gmail-blend-difference {
+            background: #000;
+            mix-blend-mode: difference;
+          }
+        </style>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: ${EMAIL_STYLES.background};">
+      <body class="body" style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: ${EMAIL_STYLES.background};">
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
           <div style="background: ${EMAIL_STYLES.cardBackground}; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden;">
             ${content}

@@ -66,8 +66,12 @@ export const sendMockupEmail = internalAction({
 
     const html = getEmailWrapper(`
       <div style="background: linear-gradient(135deg, ${escapeHtml(primaryColor)} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
-        <h1 style="margin:0;color:#fff;font-size:24px;font-weight:700;">We built a preview of your new website</h1>
-        <p style="margin:10px 0 0;color:#fff;opacity:0.92;">for ${businessName}</p>
+        <div class="gmail-blend-screen">
+          <div class="gmail-blend-difference">
+            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:24px;font-weight:700;">We built a preview of your new website</h1>
+            <p style="margin:10px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;">for ${businessName}</p>
+          </div>
+        </div>
       </div>
       <div style="padding:28px 24px;">
         <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
