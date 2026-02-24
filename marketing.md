@@ -57,11 +57,8 @@ app/demo/[token]/
   page.tsx        — Public demo preview page (server component)
 
 components/demo/
-  DemoHero.tsx        — Hero section with dynamic color, image, name, description
-  DemoVariations.tsx  — Client style picker + 6 visual demo layouts
-  DemoReview.tsx      — Single review card with star rating
-  DemoCTA.tsx         — Call-to-action with phone and scheduling link
-  DemoBanner.tsx      — Fixed bottom attribution bar
+  DemoVariations.tsx  — Client style picker + 6 standalone business website variants with image orientation detection
+  DemoBanner.tsx      — Fixed bottom attribution bar with Cal.com booking link
   DemoViewTracker.tsx — Client component that fires recordDemoView on mount
 ```
 
@@ -377,26 +374,23 @@ No admin guard — these are public endpoints for the demo page.
 
 3. **404 on invalid token** — If no lead matches the token, the page calls `notFound()`.
 
-4. **Default render (SSR)** — The server builds `originalContent` with:
-   - `DemoHero` (color + business copy + image)
-   - optional `DemoReview` (top Google review)
-   - `DemoCTA` (Cal.com CTA + optional click-to-call)
+4. **Client-side style system** — `DemoVariations` renders all content internally (no server-built `originalContent`). It detects image orientation via a hidden `<img>` `onLoad` handler and adapts each variant's layout for portrait vs landscape. A floating picker lets prospects switch between six styles:
+   - `Classic` — clean full-page site with hero, services hint, testimonial, phone CTA
+   - `Modern` — minimal geometric grid with thin borders and structured sections
+   - `Bold` — full-viewport dramatic hero with dark overlay and massive typography
+   - `Elegant` — serif editorial with masthead, fine dividers, grayscale image hover
+   - `Warm` — soft rounded shapes, warm earth tones, blob shadows
+   - `Premium` — dark cinematic with gold accents, split content grid
 
-5. **Client-side style system** — `DemoVariations` wraps the default SSR content and adds a floating picker so prospects can switch between six styles:
-   - `Classic` (the original SSR layout)
-   - `Modern` (`CleanCard`)
-   - `Bold` (`SplitHero`)
-   - `Elegant` (`Editorial`)
-   - `Warm` (`Organic`)
-   - `Premium` (`Luxury`)
+   All variants use the business phone as the primary CTA (click-to-call). No agency branding, pricing copy, or Cal.com links appear in the main content — those live only in the banner.
 
    The selected style is local UI state only (not persisted to Convex).
 
-6. **View tracking** — `DemoViewTracker` runs on mount and calls `recordDemoView({ token })`. Backend protection includes:
+5. **View tracking** — `DemoViewTracker` runs on mount and calls `recordDemoView({ token })`. Backend protection includes:
    - token-bucket rate limit: 10 requests/minute per token
    - first-view-only write: `demoViewedAt` is set once and ignored on repeat visits
 
-7. **Persistent attribution bar** — `DemoBanner` is always fixed at the bottom with branding plus outbound CTA to `https://acadianawebdesign.com`.
+6. **Persistent attribution bar** — `DemoBanner` is always fixed at the bottom with "Preview by Acadiana Web Design" text and a Cal.com "Schedule a Call" booking link.
 
 ---
 

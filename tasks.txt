@@ -180,8 +180,6 @@ emails going to spam on outlook
 //ai to filter leads?
 //email stuff
 
-client app
-
 bad img
 
 live stripe
@@ -223,6 +221,14 @@ Sentry
 smoother way for people to sign up with ai 
 when project hits build status, some way to automate template cloning, get client data to  repo and build site config then deploy
 
+
+These are the things that will actually come up on calls:
+They Say	You Say
+"I already have a website"	"I saw it -- your PageSpeed score is [X]. Google penalizes slow sites in search. I can get you to 95+ without you spending a dime upfront."
+"$199/month feels like a lot"	"One new job from your website pays for 3+ months of my service. Right now, how many jobs are you missing because your site doesn't show up or loads slow?"
+"I don't want a 12-month contract"	"I get it. After 12 months it's month-to-month. I have to earn your business every month. If you're not getting value, you can cancel."
+"I need to think about it"	"Totally understand. I'll send you that preview link so you can see exactly what your site would look like. Can I follow up next week?"
+"Can you just build it for a flat fee?"	"I could, but then you're on your own for hosting, updates, and changes. My clients love that they never have to think about their website again."
 
 
 

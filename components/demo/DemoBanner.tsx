@@ -1,3 +1,6 @@
+const CAL_LINK =
+  "https://cal.com/layken-varholdt/agency-prospect?utm_source=demo&utm_medium=banner&utm_campaign=marketing";
+
 export function DemoBanner() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 backdrop-blur">
@@ -6,10 +9,10 @@ export function DemoBanner() {
           Preview by <span className="font-semibold text-slate-700">Acadiana Web Design</span>
         </p>
         <a
-          href="https://acadianawebdesign.com"
+          href={CAL_LINK}
           className="inline-flex items-center rounded-full bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-500 md:text-xs"
         >
-          Get Yours
+          Schedule a Call
         </a>
       </div>
     </div>
