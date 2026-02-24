@@ -49,6 +49,14 @@ const QUALIFIED_STATUSES = new Set([
   "converted",
 ]);
 
+function isAdminAccessError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message === "Authentication required" ||
+      error.message === "Admin access required")
+  );
+}
+
 async function recalculateCounters(ctx: MutationCtx, searchId: Id<"marketing_searches">) {
   const leads = await ctx.db
     .query("scraped_leads")
@@ -532,6 +540,35 @@ export const getLeadById = query({
   },
 });
 
+export const getLeadByIdForCallHelp = query({
+  args: {
+    leadId: v.id("scraped_leads"),
+  },
+  returns: v.object({
+    unauthorized: v.boolean(),
+    lead: v.union(scrapedLeadDocValidator, v.null()),
+  }),
+  handler: async (ctx, args) => {
+    try {
+      await requireAdmin(ctx);
+    } catch (error) {
+      if (!isAdminAccessError(error)) {
+        throw error;
+      }
+
+      return {
+        unauthorized: true,
+        lead: null,
+      };
+    }
+
+    return {
+      unauthorized: false,
+      lead: await ctx.db.get(args.leadId),
+    };
+  },
+});
+
 export const getQualifiedLeadIds = query({
   args: {
     searchId: v.id("marketing_searches"),
@@ -869,4 +906,3 @@ export const internalMarkEmailSent = internalMutation({
     return null;
   },
 });
-

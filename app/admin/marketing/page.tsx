@@ -700,43 +700,51 @@ function MarketingAdminContent() {
 
                 return (
                   <div key={lead._id} className="rounded-xl border border-border bg-card transition-colors hover:border-primary/30">
-                    <button
-                      onClick={() =>
-                        setExpandedLeadId((prev) => (prev === lead._id ? null : lead._id))
-                      }
-                      className="flex w-full flex-wrap items-center gap-2 p-4 text-left"
-                    >
-                      <h3 className="text-base font-semibold text-card-foreground">{lead.googleData.businessName}</h3>
-                      <span
-                        className={clsx(
-                          "rounded-full px-2.5 py-1 text-xs font-semibold",
-                          statusBadgeClass(lead.status)
-                        )}
+                    <div className="flex flex-wrap items-center gap-2 p-4">
+                      <button
+                        onClick={() =>
+                          setExpandedLeadId((prev) => (prev === lead._id ? null : lead._id))
+                        }
+                        className="flex min-w-0 flex-1 flex-wrap items-center gap-2 text-left"
                       >
-                        {LEAD_STATUS_LABELS[lead.status] ?? lead.status}
-                      </span>
-                      {typeof fitScore === "number" ? (
-                        <span className={clsx("rounded-full px-2.5 py-1 text-xs font-semibold", fitClass)}>
-                          Fit {fitScore}/10
+                        <h3 className="text-base font-semibold text-card-foreground">{lead.googleData.businessName}</h3>
+                        <span
+                          className={clsx(
+                            "rounded-full px-2.5 py-1 text-xs font-semibold",
+                            statusBadgeClass(lead.status)
+                          )}
+                        >
+                          {LEAD_STATUS_LABELS[lead.status] ?? lead.status}
                         </span>
-                      ) : null}
-                      {typeof gRating === "number" ? (
-                        <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
-                          ★ {gRating}{reviewCount ? ` (${reviewCount})` : ""}
-                        </span>
-                      ) : null}
-                      {typeof speedScore === "number" ? (
-                        <span className={clsx("rounded-full px-2.5 py-1 text-xs font-semibold", speedScore < 50 ? "bg-red-500/15 text-red-700 dark:text-red-300" : speedScore < 80 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300")}>
-                          Speed {speedScore}
-                        </span>
-                      ) : null}
-                      {tech ? (
-                        <span className="rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
-                          {tech}
-                        </span>
-                      ) : null}
-                      <span className="ml-auto text-xs text-muted-foreground">{lead.googleData.formattedAddress}</span>
-                    </button>
+                        {typeof fitScore === "number" ? (
+                          <span className={clsx("rounded-full px-2.5 py-1 text-xs font-semibold", fitClass)}>
+                            Fit {fitScore}/10
+                          </span>
+                        ) : null}
+                        {typeof gRating === "number" ? (
+                          <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:text-amber-300">
+                            ★ {gRating}{reviewCount ? ` (${reviewCount})` : ""}
+                          </span>
+                        ) : null}
+                        {typeof speedScore === "number" ? (
+                          <span className={clsx("rounded-full px-2.5 py-1 text-xs font-semibold", speedScore < 50 ? "bg-red-500/15 text-red-700 dark:text-red-300" : speedScore < 80 ? "bg-amber-500/15 text-amber-700 dark:text-amber-300" : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300")}>
+                            Speed {speedScore}
+                          </span>
+                        ) : null}
+                        {tech ? (
+                          <span className="rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
+                            {tech}
+                          </span>
+                        ) : null}
+                        <span className="ml-auto text-xs text-muted-foreground">{lead.googleData.formattedAddress}</span>
+                      </button>
+                      <Link
+                        href={`/admin/marketing/call?id=${lead._id}`}
+                        className="rounded-lg bg-blue-500/15 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-500/25 dark:text-blue-300"
+                      >
+                        Call Help
+                      </Link>
+                    </div>
 
                     {expandedLeadId === lead._id ? (
                       <div className="grid gap-4 border-t border-border p-4 md:grid-cols-2">
@@ -977,6 +985,12 @@ function MarketingAdminContent() {
                           </div>
 
                           <div className="flex flex-wrap gap-2 pt-1">
+                            <Link
+                              href={`/admin/marketing/call?id=${lead._id}`}
+                              className="rounded-lg bg-blue-500/15 px-3 py-1.5 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-500/25 dark:text-blue-300"
+                            >
+                              Call Help
+                            </Link>
                             <button
                               onClick={() => void handleSendMockupEmail(lead)}
                               className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
@@ -1068,6 +1082,12 @@ function MarketingAdminContent() {
                             >
                               Call Now
                             </button>
+                            <Link
+                              href={`/admin/marketing/call?id=${lead._id}`}
+                              className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-500/25 dark:text-blue-300"
+                            >
+                              Call Help
+                            </Link>
                             <button
                               onClick={() => void handleSendFollowupEmail(lead)}
                               className="rounded-md bg-blue-500/15 px-2.5 py-1 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-500/25 dark:text-blue-300"
