@@ -767,7 +767,7 @@ export const screenshotDemoPage = internalAction({
         return { leadId: args.leadId, status: "skipped" };
       }
 
-      const demoUrl = `${getAppBaseUrl()}/demo/${lead.demoToken}`;
+      const demoUrl = `${getAppBaseUrl()}/demo/${lead.demoToken}?source=firecrawl-screenshot`;
       const screenshotUrl = await runFirecrawlScreenshot(demoUrl);
 
       if (screenshotUrl) {

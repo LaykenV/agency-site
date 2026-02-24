@@ -15,10 +15,13 @@ export const metadata: Metadata = {
 
 type DemoPageProps = {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ source?: string | Array<string> }>;
 };
 
-export default async function DemoPage({ params }: DemoPageProps) {
+export default async function DemoPage({ params, searchParams }: DemoPageProps) {
   const { token } = await params;
+  const { source } = await searchParams;
+  const sourceValue = Array.isArray(source) ? source[0] : source;
   const demo = await fetchQuery(api.marketing.public.getDemoData, { token });
 
   if (!demo) {
@@ -27,7 +30,7 @@ export default async function DemoPage({ params }: DemoPageProps) {
 
   return (
     <>
-      <DemoViewTracker token={token} />
+      <DemoViewTracker token={token} skipTracking={sourceValue === "firecrawl-screenshot"} />
       <DemoVariations
         data={{
           businessName: demo.businessName,

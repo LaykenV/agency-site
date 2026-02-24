@@ -169,6 +169,7 @@ const STATUS_FILTERS: Array<LeadStatusFilter> = [
   "disqualified",
   "error",
 ];
+const ALL_SEARCHES_FILTER = "__all_searches__";
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   new: "New",
@@ -287,6 +288,12 @@ function MarketingAdminContent() {
   const convertToProspect = useMutation(api.marketing.search.convertToProspect);
 
   const activeLeads = selectedSearchId ? leadsForSearch : latestLeads;
+  const selectedSearch = useMemo(() => {
+    if (!selectedSearchId || !searches) {
+      return null;
+    }
+    return searches.find((search) => search._id === selectedSearchId) ?? null;
+  }, [searches, selectedSearchId]);
 
   const pipelineCounts = useMemo(() => {
     const items = activeLeads ?? [];
@@ -427,6 +434,12 @@ function MarketingAdminContent() {
       console.error(error);
       alert("Failed to disqualify lead");
     }
+  };
+
+  const handleResetLeadFilters = () => {
+    setStatusFilter("all");
+    setSelectedSearchId(null);
+    setExpandedLeadId(null);
   };
 
   return (
@@ -620,7 +633,10 @@ function MarketingAdminContent() {
                 <div className="flex items-center gap-2">
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as LeadStatusFilter)}
+                    onChange={(e) => {
+                      setStatusFilter(e.target.value as LeadStatusFilter);
+                      setExpandedLeadId(null);
+                    }}
                     className="h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                   >
                     {STATUS_FILTERS.map((status) => (
@@ -629,14 +645,40 @@ function MarketingAdminContent() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    onClick={() => setSelectedSearchId(null)}
-                    className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  <select
+                    value={selectedSearchId ?? ALL_SEARCHES_FILTER}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setSelectedSearchId(
+                        value === ALL_SEARCHES_FILTER
+                          ? null
+                          : (value as Id<"marketing_searches">)
+                      );
+                      setExpandedLeadId(null);
+                    }}
+                    className="h-9 max-w-[360px] rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                   >
-                    {selectedSearchId ? "Show All Searches" : "Latest"}
+                    <option value={ALL_SEARCHES_FILTER}>All searches</option>
+                    {searches?.map((search) => (
+                      <option key={search._id} value={search._id}>
+                        {search.searchQuery} ({new Date(search.createdAt).toLocaleDateString()})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleResetLeadFilters}
+                    disabled={statusFilter === "all" && !selectedSearchId}
+                    className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Reset
                   </button>
                 </div>
               </div>
+              <p className="mt-3 text-xs text-muted-foreground">
+                {selectedSearch
+                  ? `Showing leads for: ${selectedSearch.searchQuery}`
+                  : "Showing leads from all searches"}
+              </p>
             </div>
 
             {/* Lead cards */}
