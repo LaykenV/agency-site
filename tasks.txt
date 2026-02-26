@@ -180,11 +180,10 @@ emails going to spam on outlook
 //ai to filter leads?
 //email stuff
 
-bad img
+//live stripe
+//stripe img
+//test
 
-live stripe
-stripe img
-test
 polish GBP
 ---------------
 get user

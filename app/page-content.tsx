@@ -36,6 +36,8 @@ const REVIEWS = [
     siteUrl: "https://allabouttowingservice.com/",
     imageSrc: "/client-all-about-towin.png",
     imageAlt: "All About Towing Service website homepage screenshot",
+    imageWidth: 2940,
+    imageHeight: 1656,
   },
   {
     quote:
@@ -47,6 +49,21 @@ const REVIEWS = [
     siteUrl: "https://tbtreeservice.org/",
     imageSrc: "/client-tb-tree.png",
     imageAlt: "TB Tree Service website homepage screenshot",
+    imageWidth: 1916,
+    imageHeight: 992,
+  },
+  {
+    quote:
+      "They made the whole process easy and our new site looks clean and professional. We have already had customers mention they found us online and loved how simple it is to use.",
+    name: "Bordelon's Tree Service",
+    role: "Tree Service Website",
+    location: "Louisiana",
+    rating: 5,
+    siteUrl: "https://bordelons-tree-service.vercel.app/",
+    imageSrc: "/client-bordelons.png",
+    imageAlt: "Bordelon's Tree Service website homepage screenshot",
+    imageWidth: 2940,
+    imageHeight: 1660,
   },
 ] as const;
 
@@ -270,18 +287,19 @@ export function PageContent() {
                     className="surface-elevated grid gap-6 rounded-3xl p-5 sm:gap-8 sm:p-7 lg:grid-cols-2 lg:items-center lg:p-8"
                   >
                     <div className={index % 2 === 1 ? "lg:order-2" : undefined}>
-                      <div className="review-screenshot !aspect-[16/10] rounded-2xl">
+                      <div className="review-screenshot rounded-2xl">
                         <a
                           href={review.siteUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="block h-full w-full"
+                          className="block w-full"
                           aria-label={`Visit ${review.name} website`}
                         >
                           <Image
                             src={review.imageSrc}
                             alt={review.imageAlt}
-                            fill
+                            width={review.imageWidth}
+                            height={review.imageHeight}
                             sizes="(min-width: 1024px) 44vw, 100vw"
                             className="review-screenshot-img"
                           />

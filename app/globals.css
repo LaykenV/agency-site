@@ -1785,15 +1785,15 @@ body {
   /* Review screenshot header with overlay action */
   .review-screenshot {
     position: relative;
-    aspect-ratio: 16 / 8;
     overflow: hidden;
     border-radius: 0.75rem;
     border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 16%);
     background: color-mix(in hsl, hsl(var(--secondary)), hsl(var(--primary)) 6%);
   }
   .review-screenshot-img {
-    object-fit: cover;
-    object-position: top;
+    display: block;
+    width: 100%;
+    height: auto;
   }
   /* Footer row: author left, CTA button right (pinned to bottom via margin-top:auto) */
   .review-footer { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: auto; }
@@ -2897,4 +2897,3 @@ html.dark .mobile-menu-panel {
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
-
