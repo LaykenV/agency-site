@@ -127,13 +127,13 @@ export function PageContent() {
                   animate={reduce ? undefined : "visible"}
                   transition={{ delay: 0.15 }}
                 >
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title">
+                  <span className="block text-5xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title">
                     One website.
                   </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))]/70 hero-title mt-1">
+                  <span className="block text-5xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))]/70 hero-title mt-1">
                     One monthly fee.
                   </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] mt-1">
+                  <span className="block text-5xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] mt-1">
                     Zero headaches.
                   </span>
                 </motion.h1>
