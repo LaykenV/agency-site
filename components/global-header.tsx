@@ -18,28 +18,29 @@ export function GlobalHeader() {
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
-  const isGradientPage = 
-    pathname === "/" || 
+  const isGradientPage =
+    pathname === "/" ||
+    pathname === "/3" ||
     pathname.startsWith("/websites-for-") ||
     // Match /services/[industry] pages like /services/plumbers
     /^\/services\/[a-z-]+$/.test(pathname) ||
     // Match city pages like /lafayette, /new-iberia (but not /portal, /admin, etc.)
     (
-      /^\/[a-z-]+$/.test(pathname) && 
-      !pathname.startsWith("/portal") && 
-      !pathname.startsWith("/admin") && 
-      !pathname.startsWith("/blog") && 
-      !pathname.startsWith("/legal") && 
+      /^\/[a-z-]+$/.test(pathname) &&
+      !pathname.startsWith("/portal") &&
+      !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/blog") &&
+      !pathname.startsWith("/legal") &&
       !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/services")
     ) ||
     // Match city+industry pages like /lafayette/plumbers (but not protected routes)
     (
       /^\/[a-z-]+\/[a-z-]+$/.test(pathname) &&
-      !pathname.startsWith("/portal") && 
-      !pathname.startsWith("/admin") && 
-      !pathname.startsWith("/blog") && 
-      !pathname.startsWith("/legal") && 
+      !pathname.startsWith("/portal") &&
+      !pathname.startsWith("/admin") &&
+      !pathname.startsWith("/blog") &&
+      !pathname.startsWith("/legal") &&
       !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/services")
     );

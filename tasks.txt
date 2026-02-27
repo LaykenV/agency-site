@@ -184,7 +184,7 @@ emails going to spam on outlook
 //stripe img
 //test
 
-polish GBP
+//polish GBP
 ---------------
 get user
 cold call 337-306-3705

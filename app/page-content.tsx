@@ -2,24 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
-import StarRating from "@/components/star-rating";
 import { ShinyLink } from "@/components/ui/shiny-button";
-import { CheckCircle2, Clock, XCircle, ArrowRight, MapPin, Quote, Shield, Star, Zap } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowRight, MapPin, Quote, Shield, Star, Zap } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
 import { FaqItem } from "@/components/faq/FaqItem";
 import { SpeedVariant5 } from "@/components/speed-variants";
-import { LazyMotion, domAnimation, MotionConfig, m as motion, useInView, useReducedMotion } from "framer-motion";
+import { LazyMotion, domAnimation, MotionConfig, m as motion, useReducedMotion } from "framer-motion";
 import {
   motionDefaults,
-  containerStagger,
   fadeUp,
-  floatCard,
-  SplitWords,
-  useHeroTimings,
-  useIsMdUp,
-  inViewDefaults,
   sectionReveal,
   staggerContainer,
   staggerItem,
@@ -115,26 +107,7 @@ const INDUSTRIES = [
 
 export function PageContent() {
   const reduce = useReducedMotion();
-  const TITLE = "Your website should be your best employee.";
-  const t = useHeroTimings(TITLE);
-  const [cardContentVisible, setCardContentVisible] = useState(reduce);
-  const contentRef = useRef<HTMLDivElement | null>(null);
-  const mdUp = useIsMdUp();
-  const isInView = useInView(contentRef, inViewDefaults);
   const initial = reduce ? false : "hidden";
-
-  const contentMotionProps =
-    reduce
-      ? { initial: false }
-      : mdUp
-      ? ({ initial: "hidden", whileInView: "visible", viewport: inViewDefaults })
-      : ({ initial: "hidden", animate: (cardContentVisible ? "visible" : "hidden") as "visible" | "hidden" });
-
-  useEffect(() => {
-    if (reduce) {
-      setCardContentVisible(true);
-    }
-  }, [reduce]);
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -142,115 +115,147 @@ export function PageContent() {
         <main className="w-full flex flex-col relative">
           <div aria-hidden className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[120vh] sm:h-[110vh] md:h-[100vh] pointer-events-none" />
 
-          <motion.section id="hero" className="anchor-target relative overflow-hidden" viewport={{ once: true, amount: 0.2 }}>
-            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-4 sm:pt-6 md:pt-8 pb-12 md:pb-20">
-              {reduce ? (
-                <h1 className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]">
-                  {TITLE}
-                </h1>
-              ) : (
-                <SplitWords
-                  text={TITLE}
-                  className="text-center text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.15] sm:leading-tight mx-auto max-w-[20ch] sm:max-w-[22ch] hero-title text-[hsl(var(--primary-foreground))]"
-                />
-              )}
-
-              <motion.p
-                className="text-center text-sm sm:text-base md:text-lg text-[hsl(var(--primary-foreground))]/90 mt-4 sm:mt-6 md:mt-8 mx-auto max-w-[38ch] sm:max-w-[42ch] leading-relaxed opacity-0"
-                variants={fadeUp}
-                initial={reduce ? false : "hidden"}
-                animate={reduce ? undefined : "visible"}
-                transition={{ delay: reduce ? 0 : t.headerDuration + 0.1 }}
-              >
-                We build, host, and manage your website for one flat monthly fee. $0 upfront. Live in 72 hours. Unlimited changes included.
-              </motion.p>
-
-              <motion.div
-                data-floating-cta-anchor
-                className="flex items-center justify-center mt-5 sm:mt-6 md:mt-8 opacity-0"
-                variants={fadeUp}
-                initial={reduce ? false : "hidden"}
-                animate={reduce ? undefined : "visible"}
-                transition={{ delay: reduce ? 0 : t.headerDuration + 0.2 }}
-              >
-                <ShinyLink
-                  href={ONBOARDING_CAL_LINK}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+          {/* ── Hero — Split Asymmetric (from variant 1) ── */}
+          <section className="mx-auto max-w-7xl px-5 sm:px-8 lg:px-12">
+            <div className="grid min-h-[calc(100vh-80px)] items-center gap-8 lg:grid-cols-[1fr_1.1fr] lg:gap-16 pt-8 pb-20 lg:pt-0 lg:pb-0">
+              {/* Left — Copy */}
+              <div className="max-w-xl">
+                <motion.h1
+                  className="font-[family-name:var(--font-sora)]"
+                  variants={fadeUp}
+                  initial={initial}
+                  animate={reduce ? undefined : "visible"}
+                  transition={{ delay: 0.15 }}
                 >
-                  Schedule 15-Min Call
-                </ShinyLink>
-              </motion.div>
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title">
+                    One website.
+                  </span>
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))]/70 hero-title mt-1">
+                    One monthly fee.
+                  </span>
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] mt-1">
+                    Zero headaches.
+                  </span>
+                </motion.h1>
 
-              <div className="mt-8 sm:mt-10 md:mt-14">
+                <motion.p
+                  className="mt-6 text-base sm:text-lg text-[hsl(var(--primary-foreground))]/80 leading-relaxed max-w-[42ch] font-[family-name:var(--font-sora)]"
+                  variants={fadeUp}
+                  initial={initial}
+                  animate={reduce ? undefined : "visible"}
+                  transition={{ delay: 0.3 }}
+                >
+                  We hand-code fast, professional websites for local service businesses.
+                  Hosting, SSL, edits, and support — all included for{" "}
+                  <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] leading-none align-baseline">$199/mo</span>.
+                </motion.p>
+
+                {/* Trust pills */}
                 <motion.div
-                  className="surface rounded-2xl sm:rounded-3xl overflow-hidden motion-will-change relative mx-auto max-w-4xl lg:max-w-5xl ring-1 ring-black/5 dark:ring-white/5"
-                  variants={floatCard}
-                  initial={reduce ? false : "hidden"}
-                  whileInView={reduce ? undefined : "visible"}
-                  custom={reduce ? 0 : t.cardStart}
-                  viewport={{ once: true, amount: 0.2 }}
-                  onAnimationComplete={() => {
-                    if (!reduce) {
-                      setCardContentVisible(true);
-                    }
-                  }}
+                  className="mt-6 flex flex-wrap gap-2.5 text-sm font-medium"
+                  variants={staggerContainer}
+                  initial={initial}
+                  animate={reduce ? undefined : "visible"}
                 >
-                  <div className="relative w-full aspect-[16/10] sm:aspect-[16/9] hero-media">
-                    <Image
-                      src="/heroimg4.png"
-                      alt="Acadiana Web Design mobile-responsive website example for local contractors in Lafayette, Louisiana - 95+ PageSpeed score"
-                      fill
-                      priority
-                      sizes="(min-width: 1024px) 960px, (min-width: 768px) 720px, 100vw"
-                      className="absolute inset-0 object-cover"
-                    />
-                  </div>
-                  <div className="relative px-4 sm:px-6 py-4 sm:py-5 md:py-6 bg-gradient-to-b from-white/60 via-white/55 to-white/50 dark:from-black/60 dark:via-black/55 dark:to-black/50 backdrop-blur-xl backdrop-saturate-150 border-t border-black/8 dark:border-white/8 shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.12)] dark:shadow-[0_-4px_24px_-8px_rgba(0,0,0,0.20),inset_0_1px_0_rgba(255,255,255,0.08)] overflow-hidden">
-                    <div aria-hidden className="absolute inset-0 pointer-events-none z-0 hero-glass-overlay" />
-                    <div ref={contentRef} className="relative z-[1]">
-                      <div className="mt-1 sm:mt-2">
-                        <StarRating align="left" start={reduce ? true : !!(mdUp ? isInView : cardContentVisible)} />
-                      </div>
-                      <motion.h2
-                        className="mt-3 sm:mt-4 font-semibold text-base sm:text-lg text-[var(--foreground)] opacity-0"
-                        variants={fadeUp}
-                        {...contentMotionProps}
-                        transition={{ delay: reduce ? 0 : 0.16 }}
-                      >
-                        One plan. Everything included.
-                      </motion.h2>
-                      <motion.ul
-                        className="mt-2.5 sm:mt-3 space-y-1.5 sm:space-y-2 text-xs sm:text-sm text-[var(--muted-foreground)]"
-                        variants={containerStagger}
-                        {...contentMotionProps}
-                        transition={{ delay: reduce ? 0 : 0.2 }}
-                      >
-                        <motion.li className="flex items-center gap-2" variants={fadeUp}>
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>$199/mo, nothing upfront</span>
-                        </motion.li>
-                        <motion.li className="flex items-center gap-2" variants={fadeUp}>
-                          <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>Live in 72 hours</span>
-                        </motion.li>
-                        <motion.li className="flex items-center gap-2" variants={fadeUp}>
-                          <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--primary))] flex-shrink-0" />
-                          <span>Unlimited changes, no extra charge</span>
-                        </motion.li>
-                      </motion.ul>
+                  <motion.span variants={staggerItem} className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 backdrop-blur-md px-3.5 py-2 text-[var(--foreground)] shadow-sm whitespace-nowrap cursor-default">
+                    <Shield className="h-4 w-4 text-[hsl(var(--brand-amber))]" />
+                    Veteran Owned
+                  </motion.span>
+                  <motion.span variants={staggerItem} className="flex items-center gap-2 rounded-lg border border-[hsl(var(--border))] bg-[hsl(var(--card))]/90 backdrop-blur-md px-3.5 py-2 text-[var(--foreground)] shadow-sm whitespace-nowrap cursor-default">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star key={i} className="h-3.5 w-3.5 fill-[hsl(var(--brand-amber))] text-[hsl(var(--brand-amber))]" />
+                      ))}
                     </div>
-                  </div>
+                    5.0 from every client
+                  </motion.span>
+                </motion.div>
+
+                {/* CTA */}
+                <motion.div
+                  data-floating-cta-anchor
+                  className="mt-8"
+                  variants={fadeUp}
+                  initial={initial}
+                  animate={reduce ? undefined : "visible"}
+                  transition={{ delay: 0.5 }}
+                >
+                  <ShinyLink
+                    href={ONBOARDING_CAL_LINK}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow font-[family-name:var(--font-sora)]"
+                  >
+                    Schedule 15-Min Call
+                  </ShinyLink>
                 </motion.div>
               </div>
-            </div>
-            <span className="sr-only">Hero background illustration</span>
-            <span className="sr-only">Device mockups are decorative</span>
-          </motion.section>
 
+              {/* Right — Dashboard Mockup */}
+              <motion.div
+                className="relative"
+                initial={reduce ? false : { opacity: 0, x: 40, scale: 0.96 }}
+                animate={reduce ? undefined : { opacity: 1, x: 0, scale: 1 }}
+                transition={{
+                  delay: 0.4,
+                  duration: 0.7,
+                  ease: [0.22, 1, 0.36, 1],
+                }}
+              >
+                <div
+                  aria-hidden
+                  className="absolute -inset-8 -z-10 rounded-3xl opacity-60 blur-3xl"
+                  style={{
+                    background:
+                      "radial-gradient(ellipse at 50% 40%, hsl(var(--primary) / 0.15), transparent 70%)",
+                  }}
+                />
+
+                <div className="relative rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-4 py-3">
+                    <div className="flex gap-1.5">
+                      <div className="h-3 w-3 rounded-full bg-red-400/70" />
+                      <div className="h-3 w-3 rounded-full bg-yellow-400/70" />
+                      <div className="h-3 w-3 rounded-full bg-green-400/70" />
+                    </div>
+                    <div className="ml-3 flex-1 rounded-md bg-[hsl(var(--muted))] px-3 py-1 text-xs text-[var(--muted-foreground)] font-[family-name:var(--font-sora)]">
+                      yourbusiness.com
+                    </div>
+                  </div>
+
+                  <Image
+                    src="/client-tb-tree.png"
+                    alt="Client website screenshot"
+                    width={1916}
+                    height={992}
+                    sizes="(min-width: 1024px) 52vw, 100vw"
+                    priority
+                    className="w-full object-cover object-top"
+                  />
+
+                  <div className="border-t border-[hsl(var(--border))] px-3 py-2.5 sm:px-5 sm:py-3 font-[family-name:var(--font-sora)]">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      <div className="flex gap-0.5">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className="h-2.5 w-2.5 sm:h-3 sm:w-3 fill-[hsl(var(--brand-amber))] text-[hsl(var(--brand-amber))]" />
+                        ))}
+                      </div>
+                      <span className="text-[10px] sm:text-xs font-semibold text-[var(--foreground)]">TB Tree Service</span>
+                    </div>
+                    <p className="text-[10px] sm:text-xs leading-snug text-[var(--muted-foreground)] line-clamp-2">
+                      &ldquo;Best decision I made for my business. I went from zero web presence to 4 leads a month.&rdquo;
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+          </section>
+
+          {/* ── PageSpeed comparison — after hero ── */}
           <SpeedVariant5 />
 
+          {/* ── Reviews — after pagespeed ── */}
           <motion.section
             id="reviews"
             className="anchor-target bg-[hsl(var(--primary))]/[0.04]"
@@ -339,6 +344,7 @@ export function PageContent() {
             </div>
           </motion.section>
 
+          {/* ── Our Plan vs Traditional ── */}
           <motion.section
             id="comparison"
             className="anchor-target"
@@ -428,7 +434,6 @@ export function PageContent() {
             viewport={{ once: true, amount: 0.1 }}
             variants={sectionReveal}
           >
-            {/* Radial glow backdrop */}
             <div
               aria-hidden
               className="absolute inset-0 -z-10 pointer-events-none"
@@ -437,7 +442,6 @@ export function PageContent() {
               }}
             />
             <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28 text-center">
-              {/* Circular portrait with glow rings */}
               <motion.div className="flex justify-center" variants={fadeUp}>
                 <div className="portrait-glow-ring relative h-48 w-48 sm:h-56 sm:w-56 lg:h-64 lg:w-64 rounded-full overflow-hidden border-4 border-[hsl(var(--background))] shadow-soft-lg">
                   <Image
@@ -450,7 +454,6 @@ export function PageContent() {
                 </div>
               </motion.div>
 
-              {/* Massive centered headline */}
               <motion.blockquote
                 className="mt-10 text-4xl font-extrabold leading-[1.05] tracking-tight text-[var(--foreground)] sm:text-5xl md:text-6xl lg:text-7xl font-[family-name:var(--font-display)]"
                 variants={fadeUp}
@@ -471,7 +474,6 @@ export function PageContent() {
                 changes, your site changes fast.
               </motion.p>
 
-              {/* Stat chips row */}
               <motion.div
                 className="mt-8 flex flex-wrap items-center justify-center gap-3 sm:gap-4"
                 variants={staggerContainer}
