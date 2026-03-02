@@ -156,7 +156,7 @@ export const sendPortfolioEmail = internalAction({
       return null;
     }
 
-    const portfolioUrl = "https://tbtreeservice.com";
+    const portfolioUrl = "https://tbtreeservice.org";
     const score = clampScore(lead.pageSpeedData?.performanceScore);
     const rawBusinessName = lead.googleData.businessName;
     const rawName = args.recipientName?.trim() || "there";
