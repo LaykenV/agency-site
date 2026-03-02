@@ -55,7 +55,7 @@ http.route({
       const rawBody = await request.text();
       try {
           const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, { apiVersion: "2025-10-29.clover" });
-          const event = stripe.webhooks.constructEvent(
+          const event = await stripe.webhooks.constructEventAsync(
               rawBody,
               signature,
               process.env.STRIPE_WEBHOOK_SECRET as string,
@@ -349,4 +349,3 @@ http.route({ path: "/api/ingest-lead", method: "OPTIONS", handler: handleClientA
 http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
 
 export default http;
-
