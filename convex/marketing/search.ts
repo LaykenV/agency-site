@@ -331,6 +331,26 @@ export const triggerMockupEmail = mutation({
   },
 });
 
+export const triggerPortfolioEmail = mutation({
+  args: {
+    leadId: v.id("scraped_leads"),
+    recipientEmail: v.string(),
+    recipientName: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    await ctx.scheduler.runAfter(0, internal.marketing.emails.sendPortfolioEmail, {
+      leadId: args.leadId,
+      recipientEmail: normalizeEmail(args.recipientEmail),
+      recipientName: args.recipientName,
+    });
+
+    return null;
+  },
+});
+
 export const triggerFollowUpEmail = mutation({
   args: {
     leadId: v.id("scraped_leads"),

@@ -285,6 +285,7 @@ function MarketingAdminContent() {
   const updateLeadStatus = useMutation(api.marketing.search.updateLeadStatus);
   const triggerMockupEmail = useMutation(api.marketing.search.triggerMockupEmail);
   const triggerFollowUpEmail = useMutation(api.marketing.search.triggerFollowUpEmail);
+  const triggerPortfolioEmail = useMutation(api.marketing.search.triggerPortfolioEmail);
   const convertToProspect = useMutation(api.marketing.search.convertToProspect);
 
   const activeLeads = selectedSearchId ? leadsForSearch : latestLeads;
@@ -397,6 +398,23 @@ function MarketingAdminContent() {
     } catch (error) {
       console.error(error);
       alert("Failed to queue email");
+    }
+  };
+
+  const handleSendPortfolioEmail = async (lead: ScrapedLeadRow) => {
+    const fallback = lead.contactEmail ?? "";
+    const recipientEmail = window.prompt("Recipient email", fallback)?.trim();
+    if (!recipientEmail) return;
+
+    try {
+      await triggerPortfolioEmail({
+        leadId: lead._id,
+        recipientEmail,
+      });
+      alert("Portfolio email queued");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to queue portfolio email");
     }
   };
 
@@ -996,6 +1014,12 @@ function MarketingAdminContent() {
                               className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                             >
                               Send Mockup Email
+                            </button>
+                            <button
+                              onClick={() => void handleSendPortfolioEmail(lead)}
+                              className="rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+                            >
+                              Send Portfolio Email
                             </button>
                             <button
                               onClick={() => markCalled({ leadId: lead._id })}

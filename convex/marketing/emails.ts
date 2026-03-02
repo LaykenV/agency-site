@@ -140,6 +140,121 @@ export const sendMockupEmail = internalAction({
   },
 });
 
+export const sendPortfolioEmail = internalAction({
+  args: {
+    leadId: v.id("scraped_leads"),
+    recipientEmail: v.string(),
+    recipientName: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const lead = await ctx.runQuery(internal.marketing.search.internalGetLeadById, {
+      leadId: args.leadId,
+    });
+
+    if (!lead) {
+      return null;
+    }
+
+    const portfolioUrl = "https://tbtreeservice.com";
+    const score = clampScore(lead.pageSpeedData?.performanceScore);
+    const rawBusinessName = lead.googleData.businessName;
+    const rawName = args.recipientName?.trim() || "there";
+    const businessName = escapeHtml(rawBusinessName);
+    const name = escapeHtml(rawName);
+
+    const outreachAngle = lead.aiAnalysis?.outreachAngle
+      ? `<p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">${escapeHtml(lead.aiAnalysis.outreachAngle)}</p>`
+      : "";
+
+    const scoreBox =
+      typeof score === "number" && score < 80
+        ? `<div style="margin:16px 0;padding:12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;">Your current mobile speed score is <strong>${score}/100</strong>. We typically target 90+.</div>`
+        : "";
+
+    const tech = lead.websiteData?.technology;
+    const techBox = tech
+      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${EMAIL_STYLES.primaryColor};background:#eff6ff;color:#1e3a8a;">We can outperform your current ${escapeHtml(tech)} setup with a faster custom build.</div>`
+      : "";
+
+    const painPoints = lead.aiAnalysis?.painPoints;
+    const painPointsList =
+      painPoints && painPoints.length > 0
+        ? `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;">${painPoints.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>`
+        : "";
+
+    const html = getEmailWrapper(`
+      ${getEmailHeader(`A faster website for ${businessName}`, "Here's what we can do")}
+      <div style="padding:28px 24px;">
+        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We took a look at ${businessName}'s web presence and wanted to show you what a modern, high-performance site looks like for a local service business.</p>
+        ${outreachAngle}
+        <div style="text-align:center;margin:24px 0;">
+          ${getCtaButton("See a Site We Built", portfolioUrl)}
+        </div>
+        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textMuted};font-size:14px;text-align:center;">This is a real site we built for a local tree service company.</p>
+        ${scoreBox}
+        ${techBox}
+        ${painPointsList}
+        ${getInfoBox("What you get with our $199/mo plan", [
+          "Custom site design and build",
+          "Unlimited edits handled for you",
+          "Fast hosting + ongoing maintenance",
+          "Clear local-service conversion focused layout",
+        ])}
+        <p style="margin:20px 0 0;color:${EMAIL_STYLES.textMuted};">Interested? Reply here and we can schedule a quick call to talk about ${businessName}.</p>
+      </div>
+      ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
+    `);
+
+    const text = [
+      `Hi ${rawName},`,
+      "",
+      `We looked at ${rawBusinessName}'s web presence and wanted to show you what a faster site looks like.`,
+      "",
+      `See a site we built for a local service business: ${portfolioUrl}`,
+      "",
+      typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "",
+      "",
+      "Our $199/mo plan includes:",
+      "- Custom site build",
+      "- Unlimited edits",
+      "- Fast hosting and maintenance",
+      "",
+      `Reply to this email or contact ${SUPPORT_EMAIL} to schedule a call.`,
+    ]
+      .filter(Boolean)
+      .join("\n");
+
+    await resend.sendEmail(ctx, {
+      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
+      to: args.recipientEmail,
+      subject: `${rawBusinessName}: see what a faster website looks like`,
+      html,
+      text,
+      replyTo: [SUPPORT_EMAIL],
+      headers: getListUnsubscribeHeaders(),
+    });
+
+    await ctx.runMutation(internal.marketing.search.internalMarkEmailSent, {
+      leadId: args.leadId,
+      followUpAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+      isFollowUp: false,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "admin",
+      kind: "marketing.outreach_sent",
+      payload: {
+        leadId: args.leadId,
+        recipientEmail: args.recipientEmail,
+      },
+    });
+
+    return null;
+  },
+});
+
 export const sendFollowUpEmail = internalAction({
   args: {
     leadId: v.id("scraped_leads"),
