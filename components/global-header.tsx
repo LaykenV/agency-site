@@ -14,7 +14,7 @@ import { Logo } from "@/components/logo";
 export function GlobalHeader() {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
-  const isDemo = pathname.startsWith("/demo");
+  const isAudit = pathname.startsWith("/audit");
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
@@ -96,8 +96,8 @@ export function GlobalHeader() {
     };
   }, []);
 
-  // Hide header entirely on demo pages — they have their own chrome
-  if (isDemo) return null;
+  // Hide header entirely on audit pages - they have their own chrome
+  if (isAudit) return null;
 
   return (
     <header

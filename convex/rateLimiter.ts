@@ -6,6 +6,6 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   leadSubmission: { kind: "token bucket", rate: 5, period: MINUTE, capacity: 5 },
   // Analytics pixel: 60 per minute per project (high volume expected)
   analyticsPixel: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 60 },
-  // Demo preview impressions: throttle to reduce abusive token hammering
-  marketingDemoView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
+  // Audit report impressions: throttle to reduce abusive token hammering
+  marketingAuditView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
 });

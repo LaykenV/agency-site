@@ -17,8 +17,8 @@ import {
   resend,
 } from "../emails";
 
-function getDemoUrl(token: string): string {
-  return `${getBaseUrl()}/demo/${token}`;
+function getAuditUrl(token: string): string {
+  return `${getBaseUrl()}/audit/${token}`;
 }
 
 function clampScore(score?: number): number | undefined {
@@ -26,7 +26,7 @@ function clampScore(score?: number): number | undefined {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-export const sendMockupEmail = internalAction({
+export const sendAuditEmail = internalAction({
   args: {
     leadId: v.id("scraped_leads"),
     recipientEmail: v.string(),
@@ -42,7 +42,7 @@ export const sendMockupEmail = internalAction({
       return null;
     }
 
-    const demoUrl = getDemoUrl(lead.demoToken);
+    const auditUrl = getAuditUrl(lead.demoToken);
     const score = clampScore(lead.pageSpeedData?.performanceScore);
     const rawBusinessName = lead.googleData.businessName;
     const rawName = args.recipientName?.trim() || "there";
@@ -51,36 +51,41 @@ export const sendMockupEmail = internalAction({
     const primaryColor = lead.websiteData?.primaryColor ?? EMAIL_STYLES.primaryColor;
 
     const scoreBox =
-      typeof score === "number" && score < 80
-        ? `<div style="margin:16px 0;padding:12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;">Your current mobile speed score is <strong>${score}/100</strong>. We typically target 90+.</div>`
+      typeof score === "number"
+        ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${score >= 80 ? "#10b981" : "#f59e0b"};background:${score >= 80 ? "#ecfdf5" : "#fffbeb"};color:${score >= 80 ? "#065f46" : "#92400e"};">Current mobile speed score: <strong>${score}/100</strong>${score < 80 ? " (below our 90+ target)." : "."}</div>`
         : "";
 
     const tech = lead.websiteData?.technology;
     const techBox = tech
-      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${escapeHtml(primaryColor)};background:#eff6ff;color:#1e3a8a;">We can outperform your current ${escapeHtml(tech)} setup with a faster custom build.</div>`
+      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${escapeHtml(primaryColor)};background:#eff6ff;color:#1e3a8a;">Current platform detected: <strong>${escapeHtml(tech)}</strong>. We can improve speed and conversions with a modern custom build.</div>`
       : "";
 
-    const screenshot = lead.demoScreenshotUrl
-      ? `<a href="${escapeHtml(demoUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(lead.demoScreenshotUrl)}" alt="Website preview" style="display:block;width:100%;max-width:560px;border-radius:10px;border:1px solid #e5e7eb;" /></a>`
-      : "";
+    const painPoints = lead.aiAnalysis?.painPoints ?? [];
+    const painPointsList =
+      painPoints.length > 0
+        ? `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;">${painPoints
+            .slice(0, 5)
+            .map((point) => `<li>${escapeHtml(point)}</li>`)
+            .join("")}</ul>`
+        : `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;"><li>Site speed appears lower than top local competitors.</li><li>Mobile-first conversion layout can be improved.</li><li>Clearer service structure can help local rankings.</li></ul>`;
 
     const html = getEmailWrapper(`
       <div style="background: linear-gradient(135deg, ${escapeHtml(primaryColor)} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
         <div class="gmail-blend-screen">
           <div class="gmail-blend-difference">
-            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:24px;font-weight:700;">We built a preview of your new website</h1>
-            <p style="margin:10px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;">for ${businessName}</p>
+            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:24px;font-weight:700;">Free Website Audit for ${businessName}</h1>
+            <p style="margin:10px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;">We found issues that may be costing you calls</p>
           </div>
         </div>
       </div>
       <div style="padding:28px 24px;">
         <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
-        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We drafted a live website preview for ${businessName} based on your current web presence and local market expectations.</p>
-        ${screenshot}
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We reviewed ${businessName}'s current online presence and put together a free audit report with specific opportunities to improve speed and conversions.</p>
         ${scoreBox}
+        ${painPointsList}
         ${techBox}
         <div style="text-align:center;margin:24px 0;">
-          ${getCtaButton("See Your Website Preview", demoUrl)}
+          ${getCtaButton("See Your Full Audit Report", auditUrl)}
         </div>
         ${getInfoBox("What you get with our $199/mo plan", [
           "Custom site design and build",
@@ -88,7 +93,7 @@ export const sendMockupEmail = internalAction({
           "Fast hosting + ongoing maintenance",
           "Clear local-service conversion focused layout",
         ])}
-        <p style="margin:20px 0 0;color:${EMAIL_STYLES.textMuted};">Prefer to talk first? Reply here and we can schedule a quick 15-minute call.</p>
+        <p style="margin:20px 0 0;color:${EMAIL_STYLES.textMuted};">Reply here if you want to walk through the audit together on a quick 15-minute call.</p>
       </div>
       ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
     `);
@@ -96,10 +101,13 @@ export const sendMockupEmail = internalAction({
     const text = [
       `Hi ${rawName},`,
       "",
-      `We built a website preview for ${rawBusinessName}.`,
-      `View it here: ${demoUrl}`,
+      `We ran a free website audit for ${rawBusinessName}.`,
+      `View it here: ${auditUrl}`,
       "",
-      typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "",
+      typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "PageSpeed score: unavailable",
+      ...(painPoints.length
+        ? ["Key issues:", ...painPoints.slice(0, 5).map((point) => `- ${point}`)]
+        : []),
       "",
       "Our $199/mo plan includes:",
       "- Custom site build",
@@ -114,7 +122,7 @@ export const sendMockupEmail = internalAction({
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
-      subject: `${rawBusinessName}: your website preview is ready`,
+      subject: `${rawBusinessName}: we found issues with your website`,
       html,
       text,
       replyTo: [SUPPORT_EMAIL],
@@ -270,19 +278,19 @@ export const sendFollowUpEmail = internalAction({
       return null;
     }
 
-    const demoUrl = getDemoUrl(lead.demoToken);
+    const auditUrl = getAuditUrl(lead.demoToken);
     const rawBusinessName = lead.googleData.businessName;
     const businessName = escapeHtml(rawBusinessName);
 
     const html = getEmailWrapper(`
-      ${getEmailHeader("Quick follow-up on your website preview")}
+      ${getEmailHeader(`Quick follow-up on your website audit for ${businessName}`)}
       <div style="padding:28px 24px;">
         <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Wanted to bump this in case it got buried.</p>
-        <p style="margin:0 0 18px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">Your live preview for ${businessName} is still up:</p>
+        <p style="margin:0 0 18px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">Your website audit report for ${businessName} is still available:</p>
         <div style="text-align:center;margin:24px 0;">
-          ${getCtaButton("Open My Preview", demoUrl)}
+          ${getCtaButton("View Your Audit Report", auditUrl)}
         </div>
-        <p style="margin:0;color:${EMAIL_STYLES.textMuted};">If you'd like, we can also walk through it together in a short call.</p>
+        <p style="margin:0;color:${EMAIL_STYLES.textMuted};">If you'd like, we can walk through the issues and fix plan together in a short call.</p>
       </div>
       ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
     `);
@@ -290,7 +298,7 @@ export const sendFollowUpEmail = internalAction({
     const text = [
       "Quick follow-up:",
       "",
-      `Your preview for ${rawBusinessName} is here: ${demoUrl}`,
+      `Your audit report for ${rawBusinessName} is here: ${auditUrl}`,
       "",
       "Reply to this email if you want a quick walkthrough.",
     ].join("\n");
@@ -298,7 +306,7 @@ export const sendFollowUpEmail = internalAction({
     await resend.sendEmail(ctx, {
       from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
       to: args.recipientEmail,
-      subject: `${rawBusinessName}: quick follow-up on your website preview`,
+      subject: `${rawBusinessName}: your website audit is still available`,
       html,
       text,
       replyTo: [SUPPORT_EMAIL],

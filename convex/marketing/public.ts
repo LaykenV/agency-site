@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "../_generated/server";
 import { rateLimiter } from "../rateLimiter";
 
-export const getDemoData = query({
+export const getAuditData = query({
   args: {
     token: v.string(),
   },
@@ -11,8 +11,20 @@ export const getDemoData = query({
       businessName: v.string(),
       description: v.string(),
       phone: v.optional(v.string()),
-      primaryColor: v.optional(v.string()),
-      imageUrl: v.optional(v.string()),
+      websiteUrl: v.optional(v.string()),
+      address: v.optional(v.string()),
+      rating: v.optional(v.number()),
+      reviewCount: v.optional(v.number()),
+      screenshotUrl: v.optional(v.string()),
+      technology: v.optional(v.string()),
+      isHttps: v.optional(v.boolean()),
+      performanceScore: v.optional(v.number()),
+      fcp: v.optional(v.number()),
+      lcp: v.optional(v.number()),
+      cls: v.optional(v.number()),
+      painPoints: v.array(v.string()),
+      sellingPoints: v.array(v.string()),
+      outreachAngle: v.optional(v.string()),
       review: v.optional(
         v.object({
           author: v.string(),
@@ -40,21 +52,33 @@ export const getDemoData = query({
         lead.aiAnalysis?.businessDescription ??
         `${lead.googleData.businessName} can benefit from a modern, high-converting website refresh.`,
       phone: lead.googleData.phone,
-      primaryColor: lead.websiteData?.primaryColor,
-      imageUrl: lead.websiteData?.heroImageUrl ?? lead.googleData.photoUrl,
+      websiteUrl: lead.googleData.websiteUrl,
+      address: lead.googleData.formattedAddress,
+      rating: lead.googleData.rating,
+      reviewCount: lead.googleData.reviewCount,
+      screenshotUrl: lead.websiteData?.screenshotUrl,
+      technology: lead.websiteData?.technology,
+      isHttps: lead.websiteData?.hasHttps,
+      performanceScore: lead.pageSpeedData?.performanceScore,
+      fcp: lead.pageSpeedData?.fcp,
+      lcp: lead.pageSpeedData?.lcp,
+      cls: lead.pageSpeedData?.cls,
+      painPoints: lead.aiAnalysis?.painPoints ?? [],
+      sellingPoints: lead.aiAnalysis?.sellingPoints ?? [],
+      outreachAngle: lead.aiAnalysis?.outreachAngle,
       review: lead.googleData.topReview,
       demoViewedAt: lead.demoViewedAt,
     };
   },
 });
 
-export const recordDemoView = mutation({
+export const recordAuditView = mutation({
   args: {
     token: v.string(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { ok } = await rateLimiter.limit(ctx, "marketingDemoView", {
+    const { ok } = await rateLimiter.limit(ctx, "marketingAuditView", {
       key: args.token,
     });
 

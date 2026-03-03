@@ -23,6 +23,15 @@ const INDUSTRY_SLUGS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: "/demo/:token",
+        destination: "/audit/:token",
+        permanent: true,
+      },
+    ];
+  },
   // Rewrite SEO-friendly URLs to dynamic routes
   // Maps /websites-for-{industry} → /services/{industry}
   // Users see /websites-for-plumbers in browser, Next.js routes to /services/plumbers internally

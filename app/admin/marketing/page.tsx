@@ -283,7 +283,7 @@ function MarketingAdminContent() {
   const markCalled = useMutation(api.marketing.search.markCalled);
   const setFollowUp = useMutation(api.marketing.search.setFollowUp);
   const updateLeadStatus = useMutation(api.marketing.search.updateLeadStatus);
-  const triggerMockupEmail = useMutation(api.marketing.search.triggerMockupEmail);
+  const triggerAuditEmail = useMutation(api.marketing.search.triggerAuditEmail);
   const triggerFollowUpEmail = useMutation(api.marketing.search.triggerFollowUpEmail);
   const triggerPortfolioEmail = useMutation(api.marketing.search.triggerPortfolioEmail);
   const convertToProspect = useMutation(api.marketing.search.convertToProspect);
@@ -384,17 +384,17 @@ function MarketingAdminContent() {
     }
   };
 
-  const handleSendMockupEmail = async (lead: ScrapedLeadRow) => {
+  const handleSendAuditEmail = async (lead: ScrapedLeadRow) => {
     const fallback = lead.contactEmail ?? "";
     const recipientEmail = window.prompt("Recipient email", fallback)?.trim();
     if (!recipientEmail) return;
 
     try {
-      await triggerMockupEmail({
+      await triggerAuditEmail({
         leadId: lead._id,
         recipientEmail,
       });
-      alert("Mockup email queued");
+      alert("Audit email queued");
     } catch (error) {
       console.error(error);
       alert("Failed to queue email");
@@ -820,14 +820,14 @@ function MarketingAdminContent() {
                           <div className="flex flex-wrap items-center gap-3">
                             {lead.demoToken ? (
                               <Link
-                                href={`/demo/${lead.demoToken}`}
+                                href={`/audit/${lead.demoToken}`}
                                 target="_blank"
                                 className="inline-flex text-sm font-semibold text-primary hover:text-primary/80"
                               >
-                                View Demo Page
+                                View Audit Report
                               </Link>
                             ) : (
-                              <p className="text-xs text-muted-foreground">No demo token yet.</p>
+                              <p className="text-xs text-muted-foreground">No audit token yet.</p>
                             )}
                             {lead.googleData.googleMapsUrl ? (
                               <a
@@ -869,7 +869,7 @@ function MarketingAdminContent() {
                               <p><span className="font-medium text-muted-foreground">Type:</span> {lead.googleData.primaryType}</p>
                             ) : null}
                             <p><span className="font-medium text-muted-foreground">HTTPS:</span> {lead.websiteData?.hasHttps === true ? "Yes" : lead.websiteData?.hasHttps === false ? "No" : "-"}</p>
-                            <p><span className="font-medium text-muted-foreground">Demo Viewed:</span> {formatDate(lead.demoViewedAt)}</p>
+                            <p><span className="font-medium text-muted-foreground">Audit Viewed:</span> {formatDate(lead.demoViewedAt)}</p>
                             {lead.emailSentAt ? <p><span className="font-medium text-muted-foreground">Email Sent:</span> {formatDate(lead.emailSentAt)}</p> : null}
                             {lead.calledAt ? <p><span className="font-medium text-muted-foreground">Last Called:</span> {formatDate(lead.calledAt)}</p> : null}
                             <p><span className="font-medium text-muted-foreground">Contact Attempts:</span> {lead.contactAttempts}</p>
@@ -1010,10 +1010,10 @@ function MarketingAdminContent() {
                               Call Help
                             </Link>
                             <button
-                              onClick={() => void handleSendMockupEmail(lead)}
+                              onClick={() => void handleSendAuditEmail(lead)}
                               className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                             >
-                              Send Mockup Email
+                              Send Audit Email
                             </button>
                             <button
                               onClick={() => void handleSendPortfolioEmail(lead)}

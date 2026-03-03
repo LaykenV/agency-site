@@ -767,8 +767,8 @@ export const screenshotDemoPage = internalAction({
         return { leadId: args.leadId, status: "skipped" };
       }
 
-      const demoUrl = `${getAppBaseUrl()}/demo/${lead.demoToken}?source=firecrawl-screenshot`;
-      const screenshotUrl = await runFirecrawlScreenshot(demoUrl);
+      const auditUrl = `${getAppBaseUrl()}/audit/${lead.demoToken}?source=firecrawl-screenshot`;
+      const screenshotUrl = await runFirecrawlScreenshot(auditUrl);
 
       if (screenshotUrl) {
         await ctx.runMutation(internal.marketing.search.internalUpdateLeadDemoScreenshot, {

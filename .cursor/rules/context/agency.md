@@ -44,10 +44,10 @@ Lead Generation: Automated outbound pipeline (`/admin/marketing`)
 - Search by city + industry to discover local businesses at scale (Google Places).
 - Scrape websites + capture mobile performance signals (Firecrawl + PageSpeed).
 - AI score each lead for fit and outreach angle (Groq).
-- Qualified leads (`fitScore >= 6`) receive a UUID demo token and public preview link: `/demo/{token}` (example: `/demo/token`).
-- Demo pages render from tokenized lead data and include a style picker (6 visual variations).
-- Firecrawl captures a screenshot of the default demo layout for outreach emails.
-- Outreach emails drive prospects to the demo link; first visit sets `demoViewedAt` for follow-up prioritization.
+- Qualified leads (`fitScore >= 6`) receive a UUID demo token and public audit report link: `/audit/{token}`.
+- Audit pages present a website audit report showing performance scores, issues found, portfolio examples, and a CTA to schedule a consultation.
+- Firecrawl captures a screenshot of the audit page for outreach emails.
+- Outreach emails drive prospects to the audit link; first visit sets `demoViewedAt` for follow-up prioritization.
 - One-click “Convert to Prospect” moves qualified leads into the core sales workflow.
 
 IV. The Golden Path (End-to-End Client Journey)
@@ -127,7 +127,7 @@ VI. Application Architecture
 - Stack: Next.js (App Router), Vercel, better-auth (magic links), Resend (email), Stripe (subscriptions), Convex (DB + functions + file storage), Cal.com (scheduling).
 - Marketing pipeline stack (outbound acquisition):
   - Admin route: `/admin/marketing` (searches, leads, follow-ups)
-  - Public demo route: `/demo/[token]` (tokenized, non-indexed)
+  - Public audit route: `/audit/[token]` (tokenized, non-indexed, redirects from `/demo/[token]`)
   - Convex modules: `convex/marketing/workflow.ts`, `convex/marketing/pipeline.ts`, `convex/marketing/search.ts`, `convex/marketing/emails.ts`, `convex/marketing/public.ts`
   - Orchestration: `@convex-dev/workflow` with bounded parallelism for external APIs
   - External APIs: Google Places, Firecrawl, PageSpeed Insights, Groq
@@ -164,7 +164,7 @@ VI. Application Architecture
   - /portal/success (post-checkout sync + redirect)
   - /admin (admin portal, server-gated by ADMIN_EMAIL env var)
   - /admin/marketing (outbound pipeline control center)
-  - /demo/[token] (public live preview pages for outreach)
+  - /audit/[token] (public audit report pages for outreach, redirects from /demo/[token])
 - Webhooks:
   - /api/stripe (Stripe billing events)
   - /api/cal-webhook (scheduling events)
@@ -177,10 +177,10 @@ VI. Application Architecture
   - Payment Success + Terms copy
   - Kickoff reminder
   - Dunning and failed payment notices
-  - Marketing mockup + follow-up emails with demo links and preview screenshots
+  - Marketing audit + follow-up emails with audit report links and screenshots
 
 VII. Data Model (Convex) — Updated Schema
-Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; agreements, activity_log, scheduled_calls, and edit_requests tables; plus client template Hub tables for leads and analytics (`client_leads`, `client_analytics`). The outbound marketing system adds `marketing_searches` and `scraped_leads` (tokenized demo previews and outreach tracking). `projects.projectId` is the public project identifier used by the portal route and by template sites (currently a generated UUID string; can be made human-readable later if desired).
+Note: Renamed onboarding_sessions → prospects; project created when user lands on /portal/agreement; agreements, activity_log, scheduled_calls, and edit_requests tables; plus client template Hub tables for leads and analytics (`client_leads`, `client_analytics`). The outbound marketing system adds `marketing_searches` and `scraped_leads` (tokenized audit reports and outreach tracking). `projects.projectId` is the public project identifier used by the portal route and by template sites (currently a generated UUID string; can be made human-readable later if desired).
 
 Schema (schema.ts)
 import { defineSchema, defineTable } from "convex/server";
@@ -685,7 +685,7 @@ Terms of Service essentials (MVP outline)
 IX. Admin and Ops
 - Admin actions:
   - Create prospect, send welcome email, resend agreement link, create Stripe Checkout Session (server-triggered after agreement), manual status overrides.
-  - Run outbound marketing searches, review/qualify scraped leads, trigger mockup/follow-up outreach emails, and convert qualified leads into prospects.
+  - Run outbound marketing searches, review/qualify scraped leads, trigger audit/follow-up outreach emails, and convert qualified leads into prospects.
   - Admin portal at `/admin` (server-gated by ADMIN_EMAIL env var):
     - Prospects tab: View all prospects, create/edit prospects, send magic links
     - Projects tab: View all projects sorted by recent activity, update project status, manage admin notes (myNotes), update deployment URLs (live/staging/vercelProjectId). When expanded, displays full build details:
@@ -744,10 +744,10 @@ XI. Roadmap
   - Server-side token pre-fetch via `getToken()` → `initialToken` prop for instant session hydration
   - Rate limiting configured: 3 sends/min, 10 verifications/min
   - Session cookie caching (5 min) to reduce DB calls
-- V1.6: Outbound marketing pipeline + tokenized demo previews ✅
+- V1.6: Outbound marketing pipeline + tokenized audit reports ✅
   - `/admin/marketing` control center for search, scrape, analyze, outreach, and follow-up workflows
-  - Tokenized public preview links at `/demo/{token}` (example: `/demo/token`) with first-view tracking (`demoViewedAt`)
-  - AI qualification + personalized outreach with demo screenshots and one-click conversion to prospects
+  - Tokenized public audit report links at `/audit/{token}` with first-view tracking (`demoViewedAt`)
+  - AI qualification + personalized outreach with audit screenshots and one-click conversion to prospects
 
 Example high-level flow (pseudo)
 - GET /portal/agreement

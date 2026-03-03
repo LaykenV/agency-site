@@ -81,15 +81,15 @@ function summarizeLeadForProspect(lead: ScrapedLeadDoc): string {
     ? lead.aiAnalysis.painPoints.join("; ")
     : "None captured";
   const outreachAngle = lead.aiAnalysis?.outreachAngle ?? "None captured";
-  const demoLink = lead.demoToken
-    ? `/demo/${lead.demoToken}`
-    : "No demo generated";
+  const auditLink = lead.demoToken
+    ? `/audit/${lead.demoToken}`
+    : "No audit generated";
 
   return [
     `Fit score: ${fitScore}`,
     `Pain points: ${painPoints}`,
     `Outreach angle: ${outreachAngle}`,
-    `Demo link: ${demoLink}`,
+    `Audit link: ${auditLink}`,
   ].join("\n");
 }
 
@@ -311,7 +311,7 @@ export const markCalled = mutation({
   },
 });
 
-export const triggerMockupEmail = mutation({
+export const triggerAuditEmail = mutation({
   args: {
     leadId: v.id("scraped_leads"),
     recipientEmail: v.string(),
@@ -321,7 +321,7 @@ export const triggerMockupEmail = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
 
-    await ctx.scheduler.runAfter(0, internal.marketing.emails.sendMockupEmail, {
+    await ctx.scheduler.runAfter(0, internal.marketing.emails.sendAuditEmail, {
       leadId: args.leadId,
       recipientEmail: normalizeEmail(args.recipientEmail),
       recipientName: args.recipientName,

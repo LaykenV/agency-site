@@ -1,22 +1,22 @@
 # Marketing Pipeline — System Documentation
 
-**Last Updated:** February 16, 2026
+**Last Updated:** March 3, 2026
 
 ---
 
 ## Overview
 
-The Marketing Pipeline automates lead generation for Acadiana Web Design. It replaces the manual process of searching Google Maps, assessing businesses one by one, and creating prospects by hand. The system searches a city + industry combo, scrapes Google listings and business websites in bulk, uses AI to score and qualify leads, generates live demo preview pages, sends personalized outreach emails, and tracks the full sales pipeline — all from `/admin/marketing`.
+The Marketing Pipeline automates lead generation for Acadiana Web Design. It replaces the manual process of searching Google Maps, assessing businesses one by one, and creating prospects by hand. The system searches a city + industry combo, scrapes Google listings and business websites in bulk, uses AI to score and qualify leads, generates website audit report pages, sends personalized outreach emails, and tracks the full sales pipeline — all from `/admin/marketing`.
 
 ### End-to-End Flow
 
 1. **Search** — Admin enters city + industry on `/admin/marketing`. Google Places API finds businesses.
 2. **Scrape** — Firecrawl analyzes each business's website. PageSpeed Insights scores their mobile speed.
 3. **Analyze** — Groq AI scores each lead's fit (1-10) and generates personalized pain points, selling points, and outreach angles.
-4. **Demo Page** — `/demo/{token}` (for example, `/demo/token`) renders a tokenized public preview page with lead data and a built-in style picker (6 visual variations).
-5. **Screenshot** — Firecrawl screenshots the default demo variation for embedding in outreach emails.
-6. **Email** — Personalized mockup email with the demo screenshot and "See Your Website Preview" CTA.
-7. **Track** — When the prospect visits the demo page, `demoViewedAt` is recorded as a follow-up signal.
+4. **Audit Page** — `/audit/{token}` renders a tokenized website audit report showing performance scores, issues found, portfolio examples, and a consultation CTA.
+5. **Screenshot** — Firecrawl screenshots the audit page for embedding in outreach emails.
+6. **Email** — Personalized audit email with screenshot and "See Your Full Audit Report" CTA.
+7. **Track** — When the prospect visits the audit page, `demoViewedAt` is recorded as a follow-up signal.
 8. **Convert** — One-click "Convert to Prospect" creates a prospect pre-filled with all scraped data, entering the normal sales workflow.
 
 ---
@@ -47,19 +47,19 @@ convex/marketing/
   workflow.ts     — WorkflowManager instance + marketingSearchWorkflow
   pipeline.ts     — "use node" actions: executeSearch, scrapeOneLead, analyzeOneLead, screenshotDemoPage
   search.ts       — Admin-gated mutations, queries, internal mutations
-  emails.ts       — "use node" actions: sendMockupEmail, sendFollowUpEmail
-  public.ts       — Public queries/mutations for the demo page (no auth)
+  emails.ts       — "use node" actions: sendAuditEmail, sendFollowUpEmail
+  public.ts       — Public queries/mutations for the audit page (no auth)
 
 app/admin/marketing/
   page.tsx        — Admin UI: Searches, Leads, Follow-ups tabs
 
-app/demo/[token]/
-  page.tsx        — Public demo preview page (server component)
+app/audit/[token]/
+  page.tsx        — Public audit report page (server component)
 
-components/demo/
-  DemoVariations.tsx  — Client style picker + 6 standalone business website variants with image orientation detection
-  DemoBanner.tsx      — Fixed bottom attribution bar with Cal.com booking link
-  DemoViewTracker.tsx — Client component that fires recordDemoView on mount
+components/audit/
+  AuditReport.tsx     — Website audit report with performance scorecard, issues, portfolio, and CTA
+  AuditBanner.tsx     — Fixed bottom attribution bar with Cal.com consultation link
+  AuditViewTracker.tsx — Client component that fires recordAuditView on mount
 ```
 
 ### Modified Files
@@ -69,7 +69,7 @@ components/demo/
 | `convex/schema.ts` | Added `marketing_searches` and `scraped_leads` tables |
 | `convex/validators.ts` | Added marketing validators and document validators |
 | `convex/convex.config.ts` | Added `@convex-dev/workflow` component |
-| `convex/rateLimiter.ts` | Added `marketingDemoView` rate limit (10/min per token) |
+| `convex/rateLimiter.ts` | Added `marketingAuditView` rate limit (10/min per token) |
 | `app/admin/page.tsx` | Added "Marketing Pipeline" navigation link |
 
 ### Dependencies
@@ -281,7 +281,7 @@ All public mutations and queries are admin-gated via `requireAdmin(ctx)`.
 | `updateLeadContactEmail` | `leadId, contactEmail` | `null` | Set email (normalized to lowercase) |
 | `setFollowUp` | `leadId, followUpAt` | `null` | Schedule follow-up, sets status to `"follow_up"` |
 | `markCalled` | `leadId` | `null` | Sets `calledAt`, increments `contactAttempts`, status `"contacted"` |
-| `triggerMockupEmail` | `leadId, recipientEmail, recipientName?` | `null` | Schedules `sendMockupEmail` via `ctx.scheduler.runAfter(0, ...)` |
+| `triggerAuditEmail` | `leadId, recipientEmail, recipientName?` | `null` | Schedules `sendAuditEmail` via `ctx.scheduler.runAfter(0, ...)` |
 | `triggerFollowUpEmail` | `leadId, recipientEmail` | `null` | Schedules `sendFollowUpEmail` via `ctx.scheduler.runAfter(0, ...)` |
 | `convertToProspect` | `leadId` | `id("prospects")` | Creates prospect from lead data, marks lead as `"converted"` |
 
@@ -324,7 +324,7 @@ All functions are `internalAction` (Node.js runtime).
 | `executeSearch` | `searchId` | `id[]` | Google Places search, creates leads, returns lead IDs |
 | `scrapeOneLead` | `leadId` | `{leadId, status}` | Firecrawl scrape + PageSpeed + email extraction |
 | `analyzeOneLead` | `leadId` | `{leadId, status}` | Groq AI scoring and qualification |
-| `screenshotDemoPage` | `leadId` | `{leadId, status}` | Firecrawl screenshot of the demo page |
+| `screenshotDemoPage` | `leadId` | `{leadId, status}` | Firecrawl screenshot of the audit page |
 
 ### `convex/marketing/emails.ts`
 
@@ -332,93 +332,87 @@ All functions are `internalAction` (Node.js runtime). Sends via `@convex-dev/res
 
 | Function | Args | Description |
 |----------|------|-------------|
-| `sendMockupEmail` | `leadId, recipientEmail, recipientName?` | Full outreach email with screenshot, speed callout, tech callout |
-| `sendFollowUpEmail` | `leadId, recipientEmail` | Shorter follow-up referencing the demo link |
+| `sendAuditEmail` | `leadId, recipientEmail, recipientName?` | Audit outreach email with screenshot, speed callout, pain points, and audit report CTA |
+| `sendFollowUpEmail` | `leadId, recipientEmail` | Shorter follow-up referencing the audit report link |
 
 **Sender:** `Acadiana Web Design <outreach@acadianawebdesign.com>`
 
 **After sending:** Updates `emailSentAt`, sets `followUpAt` to 7 days later, sets status to `"contacted"` (or `"follow_up"` for follow-ups), increments `contactAttempts`, logs activity.
 
-**Security:** All user-controlled values (`businessName`, `recipientName`, `technology`, `primaryColor`, `demoUrl`, `demoScreenshotUrl`) are escaped via `escapeHtml()` to prevent XSS in email HTML.
+**Security:** All user-controlled values (`businessName`, `recipientName`, `technology`, `auditUrl`, `demoScreenshotUrl`) are escaped via `escapeHtml()` to prevent XSS in email HTML.
 
 ### `convex/marketing/public.ts`
 
-No admin guard — these are public endpoints for the demo page.
+No admin guard — these are public endpoints for the audit page.
 
 | Function | Type | Args | Returns | Description |
 |----------|------|------|---------|-------------|
-| `getDemoData` | Query | `token` | Object or null | Returns rendering data for the demo page |
-| `recordDemoView` | Mutation | `token` | null | Records `demoViewedAt` (first view only, rate limited) |
+| `getAuditData` | Query | `token` | Object or null | Returns full audit data for the audit report page |
+| `recordAuditView` | Mutation | `token` | null | Records `demoViewedAt` (first view only, rate limited) |
 
-**`getDemoData` returns:** `{ businessName, description, phone, primaryColor, imageUrl, review?, demoViewedAt? }`
+**`getAuditData` returns:** `{ businessName, description, phone, websiteUrl, address, rating, reviewCount, screenshotUrl, technology, isHttps, performanceScore, fcp, lcp, cls, painPoints[], sellingPoints[], outreachAngle, review?, demoViewedAt? }`
 
-**Image priority:** Website hero image (`websiteData.heroImageUrl`) takes priority over Google photo (`googleData.photoUrl`).
-
-**Rate limiting:** `recordDemoView` is rate-limited to 10 requests per minute per token via `@convex-dev/rate-limiter`. The mutation also checks `demoViewedAt` before writing to prevent duplicate timestamps.
+**Rate limiting:** `recordAuditView` is rate-limited to 10 requests per minute per token via `@convex-dev/rate-limiter`. The mutation also checks `demoViewedAt` before writing to prevent duplicate timestamps.
 
 ---
 
-## Demo Page
+## Audit Page
 
-**Route:** `/demo/[token]` (public, no auth required)
+**Route:** `/audit/[token]` (public, no auth required; `/demo/[token]` permanently redirects here via `next.config.ts`)
 
 **Rendering:** Next.js server component using `fetchQuery` from `convex/nextjs` for SSR. Returns 404 via `notFound()` for invalid tokens.
 
-**SEO:** `robots: { index: false, follow: false }` — demo pages are not indexed by search engines.
+**SEO:** `robots: { index: false, follow: false }` — audit pages are not indexed by search engines.
 
-### How `/demo/{token}` Works
+### How `/audit/{token}` Works
 
-1. **Token creation** — During `analyzeOneLead`, qualified leads (`fitScore >= 6`) get a UUID `demoToken` via `crypto.randomUUID()`. This token is stored on the lead and used in URLs like `/demo/{token}`.
+1. **Token creation** — During `analyzeOneLead`, qualified leads (`fitScore >= 6`) get a UUID `demoToken` via `crypto.randomUUID()`. This token is stored on the lead and used in URLs like `/audit/{token}`.
 
-2. **Server fetch by token** — `app/demo/[token]/page.tsx` reads the route param and calls `api.marketing.public.getDemoData`. The query resolves the lead through the `by_demoToken` index and returns a slim render payload (`businessName`, `description`, `phone`, `primaryColor`, `imageUrl`, optional review).
+2. **Server fetch by token** — `app/audit/[token]/page.tsx` reads the route param and calls `api.marketing.public.getAuditData`. The query resolves the lead through the `by_demoToken` index and returns the full audit payload (business info, performance scores, pain points, selling points, screenshot, technology, HTTPS status, etc.).
 
 3. **404 on invalid token** — If no lead matches the token, the page calls `notFound()`.
 
-4. **Client-side style system** — `DemoVariations` renders all content internally (no server-built `originalContent`). It detects image orientation via a hidden `<img>` `onLoad` handler and adapts each variant's layout for portrait vs landscape. A floating picker lets prospects switch between six styles:
-   - `Classic` — clean full-page site with hero, services hint, testimonial, phone CTA
-   - `Modern` — minimal geometric grid with thin borders and structured sections
-   - `Bold` — full-viewport dramatic hero with dark overlay and massive typography
-   - `Elegant` — serif editorial with masthead, fine dividers, grayscale image hover
-   - `Warm` — soft rounded shapes, warm earth tones, blob shadows
-   - `Premium` — dark cinematic with gold accents, split content grid
+4. **Audit report layout** — `AuditReport` renders a structured report with these sections:
+   - **Header** — Dark gradient with business name, address, rating stars, review count
+   - **Current Site Screenshot** — Their site screenshot + URL, or "No website" state
+   - **Performance Scorecard** — SVG circular gauge for speed score + FCP/LCP/CLS metric cards with color-coded thresholds
+   - **Issues Found** — AI pain points + tech platform warning + HTTPS warning + speed warning
+   - **Portfolio Section** — "What a Modern Site Looks Like" with 3 hardcoded portfolio examples
+   - **CTA Section** — "Ready to Fix These Issues?" + $199/mo pitch + Cal.com scheduling button
 
-   All variants use the business phone as the primary CTA (click-to-call). No agency branding, pricing copy, or Cal.com links appear in the main content — those live only in the banner.
-
-   The selected style is local UI state only (not persisted to Convex).
-
-5. **View tracking** — `DemoViewTracker` runs on mount and calls `recordDemoView({ token })`. Backend protection includes:
+5. **View tracking** — `AuditViewTracker` runs on mount and calls `recordAuditView({ token })`. Backend protection includes:
    - token-bucket rate limit: 10 requests/minute per token
    - first-view-only write: `demoViewedAt` is set once and ignored on repeat visits
+   - `skipTracking` prop for Firecrawl screenshot visits (via `?source=firecrawl-screenshot` query param)
 
-6. **Persistent attribution bar** — `DemoBanner` is always fixed at the bottom with "Preview by Acadiana Web Design" text and a Cal.com "Schedule a Call" booking link.
+6. **Persistent attribution bar** — `AuditBanner` is always fixed at the bottom with "Free audit by Acadiana Web Design" text and a Cal.com "Schedule a Free Consultation" booking link (utm_source=audit).
 
 ---
 
 ## Outreach Emails
 
-### Mockup Email
+### Audit Email
 
-Personalized teaser driving the prospect to the live demo page.
+Personalized outreach driving the prospect to their website audit report.
 
 **Sections:**
-1. Gradient header using their `primaryColor` with headline: "We built a preview of your new website"
-2. Demo screenshot as clickable image linking to `/demo/{token}` (if available)
-3. Speed score callout (if score < 80): shows their score vs. target 90+
-4. Technology callout (if Wix/Squarespace/etc.): "We can outperform your current {tech} setup"
-5. Primary CTA button: "See Your Website Preview"
-6. Value prop box: $199/mo plan details (custom design, unlimited edits, fast hosting, conversion-focused layout)
-7. Reply CTA: "Reply here and we can schedule a quick 15-minute call"
-8. Footer with company address (CAN-SPAM compliance)
+1. Header: "Free Website Audit for {businessName}"
+2. Speed score callout with their performance score
+3. Key issues list from AI pain points
+4. Technology callout (if Wix/Squarespace/etc.)
+5. Primary CTA button: "See Your Full Audit Report"
+6. $199/mo plan info box (custom design, unlimited edits, fast hosting)
+7. Footer with company address (CAN-SPAM compliance)
 
-**Subject line:** `{businessName}: your website preview is ready`
+**Subject line:** `{businessName}: we found issues with your website`
 
 ### Follow-Up Email
 
-Shorter follow-up sent 7 days after the initial mockup.
+Shorter follow-up sent 7 days after the initial audit email.
 
-**Content:** "Wanted to bump this in case it got buried" + demo link + offer for a walkthrough call.
+**Content:** References "audit report" + link to the audit page + offer for a walkthrough call.
 
-**Subject line:** `{businessName}: quick follow-up on your website preview`
+**Subject line:** `{businessName}: your website audit is still available`
 
 ### Email Headers
 
@@ -443,7 +437,7 @@ The `convertToProspect` mutation bridges the marketing funnel into the sales fun
 | `phone` | `googleData.phone` |
 | `currentWebsite` | `googleData.websiteUrl` |
 | `businessDescription` | `aiAnalysis.businessDescription` or `googleData.primaryType` |
-| `prospectNotes` | Formatted summary: fit score, pain points, outreach angle, demo link |
+| `prospectNotes` | Formatted summary: fit score, pain points, outreach angle, audit link |
 | `myNotes` | `lead.adminNotes` |
 
 The lead's status is set to `"converted"` and `convertedToProspectId` links back to the new prospect. Activity is logged as `marketing.lead_converted`.
@@ -464,10 +458,10 @@ The lead's status is set to `"converted"` and `convertedToProspectId` links back
 
 - **Pipeline summary bar:** Clickable status badges with counts (New, Qualified, Contacted, Follow-up, Converted)
 - **Expandable lead cards** with two-column layout:
-  - **Left column:** Website hero image + Google photo (side by side), current site screenshot, demo/Maps links, phone (click-to-call), website URL (or "No website" in red), business type, HTTPS status, demo viewed timestamp, email sent timestamp, last called timestamp, contact attempts, errors, site metadata (title/description), PageSpeed breakdown (score, FCP, LCP, CLS), brand color swatch with hex, top review with stars
+  - **Left column:** Website hero image + Google photo (side by side), current site screenshot, audit/Maps links, phone (click-to-call), website URL (or "No website" in red), business type, HTTPS status, audit viewed timestamp, email sent timestamp, last called timestamp, contact attempts, errors, site metadata (title/description), PageSpeed breakdown (score, FCP, LCP, CLS), brand color swatch with hex, top review with stars
   - **Right column:** AI description (blue), outreach angle (green), pain points (red), selling points (green), contact email input, admin notes textarea (auto-saves on blur), follow-up date picker, action buttons
 - **Collapsed row badges:** Business name, Google rating + review count, speed score (color-coded: green >= 70, yellow >= 40, red < 40), technology badge, address
-- **Action buttons:** Send Mockup Email, Mark Called, Schedule Follow-up, Convert to Prospect, Disqualify
+- **Action buttons:** Send Audit Email, Mark Called, Schedule Follow-up, Convert to Prospect, Disqualify
 
 ### Tab 3: Follow-ups
 
@@ -484,7 +478,7 @@ The lead's status is set to `"converted"` and `convertedToProspectId` links back
 | `GOOGLE_PLACES_API_KEY` | Yes | Google Places API authentication |
 | `GOOGLE_PAGESPEED_API_KEY` | No | Falls back to `GOOGLE_PLACES_API_KEY` |
 | `FIRECRAWL_API_KEY` | Yes | Firecrawl scraping and screenshots |
-| `SITE_URL` or `NEXT_PUBLIC_APP_URL` | Yes (production) | Base URL for demo page links and screenshots. Falls back to `http://localhost:3000`. Must be a publicly accessible URL for Firecrawl screenshots. |
+| `SITE_URL` or `NEXT_PUBLIC_APP_URL` | Yes (production) | Base URL for audit page links and screenshots. Falls back to `http://localhost:3000`. Must be a publicly accessible URL for Firecrawl screenshots. |
 
 **Google Cloud Console setup:** The PageSpeed Insights API must be enabled in the Google Cloud project associated with your API key. Navigate to the API Library and enable "PageSpeed Insights API".
 
@@ -511,7 +505,7 @@ When scraping, the lead status is set to `"scraping"` before the API call. If th
 Each pipeline action catches its own errors, writes `status: "error"` to the individual lead, and returns normally so the workflow continues processing other leads.
 
 ### UI Cannot Call internalActions Directly
-Email sending is an `internalAction`. The admin UI calls `triggerMockupEmail` / `triggerFollowUpEmail` mutations, which schedule the internal actions via `ctx.scheduler.runAfter(0, ...)`.
+Email sending is an `internalAction`. The admin UI calls `triggerAuditEmail` / `triggerFollowUpEmail` mutations, which schedule the internal actions via `ctx.scheduler.runAfter(0, ...)`.
 
 ### Email Security
 All user-controlled values in email HTML are escaped via `escapeHtml()` to prevent XSS. Plain text bodies and subject lines use raw business/person names so recipients do not see HTML entities (for example, `&amp;`). The `contactEmail` field from automated scraping only writes if no admin-set email exists (admin manual entry takes priority).

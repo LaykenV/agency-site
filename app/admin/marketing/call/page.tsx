@@ -328,12 +328,12 @@ function CallHelpContent() {
                 ) : null}
                 {lead.demoToken ? (
                   <a
-                    href={`/demo/${lead.demoToken}`}
+                    href={`/audit/${lead.demoToken}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center rounded-lg bg-primary/15 px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/25"
                   >
-                    Open Demo
+                    Open Audit
                   </a>
                 ) : null}
               </div>
