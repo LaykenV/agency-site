@@ -18,511 +18,267 @@ type AuditReportData = {
   fcp?: number;
   lcp?: number;
   cls?: number;
-  painPoints: Array<string>;
-  sellingPoints: Array<string>;
+  painPoints: string[];
+  sellingPoints: string[];
   outreachAngle?: string;
-  review?: {
-    author: string;
-    text: string;
-    rating: number;
-  };
+  review?: { author: string; text: string; rating: number };
 };
 
-type Tone = {
-  badge: string;
-  ring: string;
-  text: string;
-  label: string;
-};
-
-type PortfolioItem = {
-  name: string;
-  niche: string;
-  siteUrl: string;
-  imageSrc: string;
-  imageAlt: string;
-  imageWidth: number;
-  imageHeight: number;
-};
-
-const PORTFOLIO: Array<PortfolioItem> = [
-  {
-    name: "TB Tree Service",
-    niche: "Tree Services",
-    siteUrl: "https://tbtreeservice.org/",
-    imageSrc: "/client-tb-tree.png",
-    imageAlt: "TB Tree Service website screenshot",
-    imageWidth: 1916,
-    imageHeight: 992,
-  },
-  {
-    name: "All About Towing",
-    niche: "Towing Services",
-    siteUrl: "https://allabouttowingservice.com/",
-    imageSrc: "/client-all-about-towin.png",
-    imageAlt: "All About Towing website screenshot",
-    imageWidth: 2940,
-    imageHeight: 1656,
-  },
-  {
-    name: "Bordelon's Tree Service",
-    niche: "Tree Services",
-    siteUrl: "https://bordelons-tree-service.vercel.app/",
-    imageSrc: "/client-bordelons.png",
-    imageAlt: "Bordelon's Tree Service website screenshot",
-    imageWidth: 2940,
-    imageHeight: 1660,
-  },
+const PORTFOLIO = [
+  { name: "TB Tree Service", niche: "Tree Services", siteUrl: "https://tbtreeservice.org/", imageSrc: "/client-tb-tree.png", imageWidth: 1916, imageHeight: 992 },
+  { name: "All About Towing", niche: "Towing Services", siteUrl: "https://allabouttowingservice.com/", imageSrc: "/client-all-about-towin.png", imageWidth: 2940, imageHeight: 1656 },
+  { name: "Bordelon's Tree Service", niche: "Tree Services", siteUrl: "https://bordelons-tree-service.vercel.app/", imageSrc: "/client-bordelons.png", imageWidth: 2940, imageHeight: 1660 },
 ];
 
-function clampScore(score?: number): number | undefined {
-  if (typeof score !== "number" || Number.isNaN(score)) {
-    return undefined;
-  }
-  return Math.max(0, Math.min(100, Math.round(score)));
+function clamp(s?: number) {
+  if (typeof s !== "number" || Number.isNaN(s)) return undefined;
+  return Math.max(0, Math.min(100, Math.round(s)));
 }
 
-function formatMs(ms?: number): string {
-  if (typeof ms !== "number" || Number.isNaN(ms)) {
-    return "N/A";
-  }
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function formatCls(cls?: number): string {
-  if (typeof cls !== "number" || Number.isNaN(cls)) {
-    return "N/A";
-  }
-  return cls.toFixed(3);
-}
-
-function getSpeedTone(score?: number): Tone {
-  if (typeof score !== "number") {
-    return {
-      badge: "bg-slate-700/50 text-slate-200",
-      ring: "stroke-slate-400",
-      text: "text-slate-100",
-      label: "Not available",
-    };
-  }
-
-  if (score >= 90) {
-    return {
-      badge: "bg-emerald-500/20 text-emerald-200",
-      ring: "stroke-emerald-400",
-      text: "text-emerald-200",
-      label: "Strong",
-    };
-  }
-
-  if (score >= 50) {
-    return {
-      badge: "bg-amber-500/20 text-amber-200",
-      ring: "stroke-amber-300",
-      text: "text-amber-200",
-      label: "Needs work",
-    };
-  }
-
-  return {
-    badge: "bg-rose-500/20 text-rose-200",
-    ring: "stroke-rose-300",
-    text: "text-rose-200",
-    label: "Critical",
-  };
-}
-
-function getFcpTone(value?: number): Tone {
-  if (typeof value !== "number") {
-    return {
-      badge: "bg-slate-100 text-slate-600",
-      ring: "",
-      text: "text-slate-900",
-      label: "Not available",
-    };
-  }
-  if (value <= 1800) {
-    return {
-      badge: "bg-emerald-100 text-emerald-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Good",
-    };
-  }
-  if (value <= 3000) {
-    return {
-      badge: "bg-amber-100 text-amber-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Improve",
-    };
-  }
-  return {
-    badge: "bg-rose-100 text-rose-700",
-    ring: "",
-    text: "text-slate-900",
-    label: "Poor",
-  };
-}
-
-function getLcpTone(value?: number): Tone {
-  if (typeof value !== "number") {
-    return {
-      badge: "bg-slate-100 text-slate-600",
-      ring: "",
-      text: "text-slate-900",
-      label: "Not available",
-    };
-  }
-  if (value <= 2500) {
-    return {
-      badge: "bg-emerald-100 text-emerald-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Good",
-    };
-  }
-  if (value <= 4000) {
-    return {
-      badge: "bg-amber-100 text-amber-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Improve",
-    };
-  }
-  return {
-    badge: "bg-rose-100 text-rose-700",
-    ring: "",
-    text: "text-slate-900",
-    label: "Poor",
-  };
-}
-
-function getClsTone(value?: number): Tone {
-  if (typeof value !== "number") {
-    return {
-      badge: "bg-slate-100 text-slate-600",
-      ring: "",
-      text: "text-slate-900",
-      label: "Not available",
-    };
-  }
-  if (value <= 0.1) {
-    return {
-      badge: "bg-emerald-100 text-emerald-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Good",
-    };
-  }
-  if (value <= 0.25) {
-    return {
-      badge: "bg-amber-100 text-amber-700",
-      ring: "",
-      text: "text-slate-900",
-      label: "Improve",
-    };
-  }
-  return {
-    badge: "bg-rose-100 text-rose-700",
-    ring: "",
-    text: "text-slate-900",
-    label: "Poor",
-  };
-}
-
-function buildIssues(data: AuditReportData): Array<string> {
+function buildIssues(data: AuditReportData): string[] {
   const issues = [...data.painPoints];
-  const score = clampScore(data.performanceScore);
-
-  if (!data.websiteUrl) {
-    issues.push("No official website URL is listed, which can reduce lead trust and conversions.");
-  }
-
-  if (typeof score === "number" && score < 90) {
-    issues.push(`Performance score is ${score}/100. Faster pages usually capture more calls.`);
-  }
-
-  if (data.technology) {
-    issues.push(`Current technology stack (${data.technology}) may be limiting speed and flexibility.`);
-  }
-
-  if (data.isHttps === false) {
-    issues.push("HTTPS is not fully configured, which can hurt trust and browser security signals.");
-  }
-
-  if (issues.length === 0) {
-    issues.push("No critical issues were flagged automatically. A manual UX and SEO pass is still recommended.");
-  }
-
-  return Array.from(new Set(issues)).slice(0, 8);
+  const score = clamp(data.performanceScore);
+  if (typeof score === "number" && score < 90) issues.push(`Performance score is ${score}/100.`);
+  if (data.technology && data.technology !== "custom") issues.push(`Running on ${data.technology}.`);
+  if (data.isHttps === false) issues.push("No HTTPS encryption.");
+  if (!data.websiteUrl) issues.push("No website URL found.");
+  return Array.from(new Set(issues)).slice(0, 6);
 }
 
-function ScoreGauge({ score }: { score?: number }) {
-  const safeScore = clampScore(score);
-  const radius = 68;
-  const circumference = 2 * Math.PI * radius;
-  const progress = typeof safeScore === "number" ? safeScore / 100 : 0;
-  const offset = circumference * (1 - progress);
-  const tone = getSpeedTone(safeScore);
+function ScoreArc({ score }: { score?: number }) {
+  const safe = clamp(score);
+  const r = 58;
+  const circ = 2 * Math.PI * r;
+  const pct = typeof safe === "number" ? safe / 100 : 0;
+  const offset = circ * (1 - pct);
+  const color =
+    typeof safe === "number"
+      ? safe >= 90
+        ? "#34d399"
+        : safe >= 50
+          ? "#fbbf24"
+          : "#f87171"
+      : "#475569";
 
   return (
-    <div className="relative flex h-44 w-44 items-center justify-center">
-      <svg viewBox="0 0 180 180" className="h-44 w-44 -rotate-90">
-        <circle cx="90" cy="90" r={radius} className="stroke-slate-700" strokeWidth="14" fill="none" />
+    <div className="relative mx-auto flex h-40 w-40 items-center justify-center">
+      <svg viewBox="0 0 140 140" className="h-40 w-40 -rotate-90">
+        <circle cx="70" cy="70" r={r} stroke="#1e293b" strokeWidth="12" fill="none" />
         <circle
-          cx="90"
-          cy="90"
-          r={radius}
-          strokeWidth="14"
+          cx="70"
+          cy="70"
+          r={r}
+          strokeWidth="12"
           fill="none"
-          strokeDasharray={circumference}
+          strokeDasharray={circ}
           strokeDashoffset={offset}
           strokeLinecap="round"
-          className={tone.ring}
+          stroke={color}
+          style={{ filter: `drop-shadow(0 0 8px ${color}60)` }}
         />
       </svg>
       <div className="absolute text-center">
-        <p className="text-4xl font-black tracking-tight text-white">
-          {typeof safeScore === "number" ? safeScore : "--"}
+        <p className="font-mono text-4xl font-black" style={{ color }}>
+          {typeof safe === "number" ? safe : "—"}
         </p>
-        <p className="text-xs uppercase tracking-[0.16em] text-slate-300">Performance</p>
       </div>
     </div>
   );
 }
 
-function MetricCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: string;
-  tone: Tone;
-}) {
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{label}</p>
-      <p className={`mt-2 text-2xl font-black tracking-tight ${tone.text}`}>{value}</p>
-      <span className={`mt-2 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${tone.badge}`}>
-        {tone.label}
-      </span>
-    </article>
-  );
-}
-
 export function AuditReport({ data }: { data: AuditReportData }) {
-  const safeScore = clampScore(data.performanceScore);
-  const speedTone = getSpeedTone(safeScore);
+  const score = clamp(data.performanceScore);
   const issues = buildIssues(data);
-  const now = new Date().toLocaleDateString();
+
+  const metricColor = (state: "good" | "bad" | "unknown") =>
+    state === "bad" ? "text-red-400" : state === "good" ? "text-emerald-400" : "text-white/40";
+  const metrics: Array<{ label: string; value: string; state: "good" | "bad" | "unknown" }> = [
+    {
+      label: "FCP",
+      value: typeof data.fcp === "number" ? `${(data.fcp / 1000).toFixed(1)}s` : "—",
+      state: typeof data.fcp === "number" ? (data.fcp > 1800 ? "bad" : "good") : "unknown",
+    },
+    {
+      label: "LCP",
+      value: typeof data.lcp === "number" ? `${(data.lcp / 1000).toFixed(1)}s` : "—",
+      state: typeof data.lcp === "number" ? (data.lcp > 2500 ? "bad" : "good") : "unknown",
+    },
+    {
+      label: "CLS",
+      value: typeof data.cls === "number" ? data.cls.toFixed(3) : "—",
+      state: typeof data.cls === "number" ? (data.cls > 0.1 ? "bad" : "good") : "unknown",
+    },
+    {
+      label: "HTTPS",
+      value: data.isHttps === undefined ? "?" : data.isHttps ? "YES" : "NO",
+      state: data.isHttps === undefined ? "unknown" : data.isHttps ? "good" : "bad",
+    },
+  ];
 
   return (
-    <main className="relative overflow-hidden bg-slate-950 pb-28 text-slate-100">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_22%,rgba(59,130,246,0.32),transparent_35%),radial-gradient(circle_at_84%_18%,rgba(14,165,233,0.2),transparent_40%),linear-gradient(to_bottom,rgba(15,23,42,0.95),rgba(2,6,23,1))]"
-      />
-
-      <div className="relative mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-8 md:px-8 md:py-12">
-        <section className="rounded-3xl border border-slate-800/80 bg-slate-900/70 p-6 shadow-[0_30px_80px_-40px_rgba(59,130,246,0.75)] backdrop-blur md:p-8">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-300">
-                Website Audit Report
-              </p>
-              <h1 className="mt-3 font-[family-name:var(--font-sora)] text-3xl font-black tracking-tight text-white md:text-5xl">
-                {data.businessName}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-relaxed text-slate-300 md:text-base">
-                {data.description}
-              </p>
+    <main className="min-h-screen bg-[#0a0a0f] pb-28 text-white">
+      <div className="mx-auto max-w-7xl px-4 pt-10">
+        {/* — Title — */}
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="font-mono text-xs text-white/30">AUDIT_REPORT</p>
+            <h1 className="mt-1 font-[family-name:var(--font-sora)] text-3xl font-black tracking-tight md:text-5xl">
+              {data.businessName}
+            </h1>
+          </div>
+          {typeof score === "number" && (
+            <div className="flex items-center gap-2">
+              <span
+                className={`inline-flex h-3 w-3 rounded-full ${
+                  score >= 90 ? "bg-emerald-400" : score >= 50 ? "bg-amber-400" : "bg-red-400"
+                }`}
+                style={{
+                  boxShadow: `0 0 12px ${score >= 90 ? "#34d39960" : score >= 50 ? "#fbbf2460" : "#f8717160"}`,
+                }}
+              />
+              <span className="font-mono text-sm text-white/50">
+                {score >= 90 ? "HEALTHY" : score >= 50 ? "DEGRADED" : "CRITICAL"}
+              </span>
             </div>
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${speedTone.badge}`}>
-              Speed status: {speedTone.label}
-            </span>
+          )}
+        </div>
+
+        {/* — Bento grid — */}
+        <div className="mt-8 grid gap-3 md:grid-cols-3 lg:grid-cols-4">
+          {/* Score card — large */}
+          <div className="md:col-span-1 rounded-2xl border border-white/5 bg-white/[0.02] p-6 backdrop-blur">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">Performance</p>
+            <div className="mt-4">
+              <ScoreArc score={score} />
+            </div>
+            <p className="mt-3 text-center font-mono text-xs text-white/40">Mobile Speed</p>
           </div>
 
-          <div className="mt-6 grid gap-3 text-sm text-slate-200 md:grid-cols-4">
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Address</p>
-              <p className="mt-1 font-medium text-slate-100">{data.address ?? "Not available"}</p>
+          {/* Screenshot — spans 2-3 cols */}
+          <div className="md:col-span-2 lg:col-span-3 rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden">
+            <div className="flex items-center gap-2 border-b border-white/5 px-4 py-2.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-amber-500/80" />
+              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
+              <span className="ml-2 truncate font-mono text-xs text-white/20">{data.websiteUrl ?? "no website"}</span>
             </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Google rating</p>
-              <p className="mt-1 font-medium text-slate-100">
-                {typeof data.rating === "number" ? `${data.rating.toFixed(1)} / 5` : "Not available"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Reviews</p>
-              <p className="mt-1 font-medium text-slate-100">
-                {typeof data.reviewCount === "number" ? data.reviewCount : "Not available"}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-3">
-              <p className="text-[11px] uppercase tracking-[0.12em] text-slate-400">Report date</p>
-              <p className="mt-1 font-medium text-slate-100">{now}</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-xl md:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <h2 className="font-[family-name:var(--font-sora)] text-2xl font-black tracking-tight md:text-3xl">
-              Current Site Screenshot
-            </h2>
-            {data.websiteUrl ? (
-              <a
-                href={data.websiteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100"
-              >
-                {data.websiteUrl}
-              </a>
-            ) : null}
-          </div>
-
-          {data.screenshotUrl ? (
-            <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+            {data.screenshotUrl ? (
               <Image
                 src={data.screenshotUrl}
-                alt={`${data.businessName} website screenshot`}
+                alt={`${data.businessName} website`}
                 width={1440}
                 height={860}
                 unoptimized
-                className="h-auto w-full"
+                className="w-full h-auto"
               />
-            </div>
-          ) : (
-            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
-              <p className="text-sm text-slate-600">No current website screenshot is available yet.</p>
-              <p className="mt-2 text-xs text-slate-500">
-                {data.websiteUrl
-                  ? "We detected a site URL, but a screenshot was not captured."
-                  : "No website URL was detected for this business."}
-              </p>
-            </div>
-          )}
-
-          {data.review ? (
-            <blockquote className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Top review ({data.review.rating}/5)</p>
-              <p className="mt-2 text-sm leading-relaxed text-slate-700">
-                &ldquo;{data.review.text}&rdquo;
-              </p>
-              <footer className="mt-2 text-xs font-semibold text-slate-600">{data.review.author}</footer>
-            </blockquote>
-          ) : null}
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-white to-slate-100 p-6 text-slate-900 shadow-xl md:p-8">
-          <h2 className="font-[family-name:var(--font-sora)] text-2xl font-black tracking-tight md:text-3xl">
-            Performance Scorecard
-          </h2>
-          <div className="mt-6 grid items-center gap-6 lg:grid-cols-[220px_1fr]">
-            <div className="mx-auto">
-              <ScoreGauge score={safeScore} />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <MetricCard label="FCP" value={formatMs(data.fcp)} tone={getFcpTone(data.fcp)} />
-              <MetricCard label="LCP" value={formatMs(data.lcp)} tone={getLcpTone(data.lcp)} />
-              <MetricCard label="CLS" value={formatCls(data.cls)} tone={getClsTone(data.cls)} />
-            </div>
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-rose-200 bg-white p-6 text-slate-900 shadow-xl md:p-8">
-          <h2 className="font-[family-name:var(--font-sora)] text-2xl font-black tracking-tight md:text-3xl">
-            Issues Found
-          </h2>
-          <div className="mt-5 grid gap-3">
-            {issues.map((issue, index) => (
-              <article key={issue} className="flex gap-3 rounded-2xl border border-rose-100 bg-rose-50/60 p-4">
-                <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-rose-600 text-xs font-bold text-white">
-                  {index + 1}
-                </span>
-                <p className="text-sm leading-relaxed text-slate-700">{issue}</p>
-              </article>
-            ))}
+            ) : (
+              <div className="flex h-48 items-center justify-center text-white/20">
+                <p className="font-mono text-sm">NO_WEBSITE_DETECTED</p>
+              </div>
+            )}
           </div>
 
-          {data.outreachAngle ? (
-            <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-sky-700">Priority opportunity</p>
-              <p className="mt-2 text-sm text-slate-700">{data.outreachAngle}</p>
+          {/* Metrics — 4 small cards */}
+          {metrics.map((m) => (
+            <div key={m.label} className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">{m.label}</p>
+              <p className={`mt-3 font-mono text-2xl font-black ${metricColor(m.state)}`}>{m.value}</p>
             </div>
-          ) : null}
+          ))}
 
-          {data.sellingPoints.length > 0 ? (
-            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700">Fix plan highlights</p>
-              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
-                {data.sellingPoints.slice(0, 4).map((point) => (
-                  <li key={point}>{point}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </section>
-
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 text-slate-900 shadow-xl md:p-8">
-          <h2 className="font-[family-name:var(--font-sora)] text-2xl font-black tracking-tight md:text-3xl">
-            What a Modern Site Looks Like
-          </h2>
-          <p className="mt-2 text-sm text-slate-600">
-            Real websites we built for local service businesses focused on speed and conversions.
-          </p>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">
-            {PORTFOLIO.map((item) => (
-              <article key={item.siteUrl} className="group overflow-hidden rounded-2xl border border-slate-200 bg-slate-50">
-                <Image
-                  src={item.imageSrc}
-                  alt={item.imageAlt}
-                  width={item.imageWidth}
-                  height={item.imageHeight}
-                  className="h-44 w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                />
-                <div className="space-y-1 p-4">
-                  <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">{item.niche}</p>
-                  <p className="text-base font-bold text-slate-900">{item.name}</p>
-                  <a
-                    href={item.siteUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex text-sm font-semibold text-blue-700 hover:text-blue-600"
-                  >
-                    Visit live site
-                  </a>
+          {/* Issues — large card */}
+          <div className="md:col-span-2 lg:col-span-2 rounded-2xl border border-red-500/10 bg-red-500/[0.03] p-6">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-red-400/60">Issues ({issues.length})</p>
+            <div className="mt-4 space-y-3">
+              {issues.map((issue, i) => (
+                <div key={issue} className="flex items-start gap-3">
+                  <span className="mt-0.5 font-mono text-xs text-red-400/40">{String(i + 1).padStart(2, "0")}</span>
+                  <p className="text-sm text-white/70">{issue}</p>
                 </div>
-              </article>
+              ))}
+            </div>
+          </div>
+
+          {/* Tech + Review card */}
+          <div className="md:col-span-1 lg:col-span-2 rounded-2xl border border-white/5 bg-white/[0.02] p-6">
+            {data.technology && (
+              <div className="mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">Platform</p>
+                <p className="mt-2 text-lg font-bold capitalize text-white/80">{data.technology}</p>
+              </div>
+            )}
+            {typeof data.rating === "number" && (
+              <div className="mb-4">
+                <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">Google Rating</p>
+                <p className="mt-2 text-lg font-bold text-amber-400">
+                  {data.rating.toFixed(1)}{" "}
+                  <span className="text-sm font-normal text-white/30">
+                    / 5
+                    {typeof data.reviewCount === "number" ? ` (${data.reviewCount} reviews)` : ""}
+                  </span>
+                </p>
+              </div>
+            )}
+            {data.review && (
+              <div className="mt-4 border-t border-white/5 pt-4">
+                <p className="text-sm italic text-white/50">&ldquo;{data.review.text.slice(0, 120)}{data.review.text.length > 120 ? "…" : ""}&rdquo;</p>
+                <p className="mt-2 font-mono text-xs text-white/30">— {data.review.author}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* — Portfolio row — */}
+        <section className="mt-12">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">Portfolio</p>
+          <h2 className="mt-2 font-[family-name:var(--font-sora)] text-2xl font-black tracking-tight">
+            What we build
+          </h2>
+          <div className="mt-6 grid gap-3 md:grid-cols-3">
+            {PORTFOLIO.map((p) => (
+              <a
+                key={p.siteUrl}
+                href={p.siteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group overflow-hidden rounded-2xl border border-white/5 bg-white/[0.02] transition-colors hover:border-white/10"
+              >
+                <Image
+                  src={p.imageSrc}
+                  alt={p.name}
+                  width={p.imageWidth}
+                  height={p.imageHeight}
+                  className="h-44 w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="p-4">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-white/30">{p.niche}</p>
+                  <p className="mt-1 text-sm font-semibold text-white/80">{p.name}</p>
+                </div>
+              </a>
             ))}
           </div>
         </section>
 
-        <section className="rounded-3xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-cyan-50 p-6 text-slate-900 shadow-xl md:p-8">
-          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-sky-700">Ready to Fix These Issues?</p>
-              <h2 className="mt-3 font-[family-name:var(--font-sora)] text-3xl font-black tracking-tight text-slate-900 md:text-4xl">
-                Custom site build for $199/month
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-700">
-                No large upfront invoice. You get a modern conversion-focused site, hosting, support,
-                and unlimited edits in one monthly plan.
-              </p>
-              {data.phone ? (
-                <p className="mt-2 text-sm font-semibold text-slate-800">Questions now? Call {data.phone}</p>
-              ) : null}
-            </div>
-
+        {/* — CTA — */}
+        <section className="mt-16">
+          <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-gradient-to-br from-blue-600/20 via-transparent to-purple-600/10 p-8 text-center md:p-14">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-24 left-1/2 h-48 w-96 -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl"
+            />
+            <Image src="/logo.png" alt="Acadiana Web Design" width={40} height={40} className="relative mx-auto rounded" />
+            <p className="relative mt-3 text-sm font-semibold text-white/70">Acadiana Web Design</p>
+            <h2 className="relative mt-4 font-[family-name:var(--font-sora)] text-3xl font-black tracking-tight md:text-4xl">
+              $0 Down. $199/mo. Everything included.
+            </h2>
+            <p className="relative mx-auto mt-3 max-w-md text-sm text-white/50">
+              Custom design &middot; Fast hosting &middot; Unlimited edits &middot; 95+ Performance
+            </p>
             <a
               href={CAL_LINK}
-              className="inline-flex items-center justify-center rounded-full bg-sky-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-sky-500"
+              className="relative mt-8 inline-flex rounded-full bg-white px-8 py-3 text-sm font-bold text-black transition-transform hover:scale-105"
             >
-              Book Your Free Consultation
+              Schedule Free Consultation
             </a>
           </div>
         </section>
