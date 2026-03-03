@@ -26,6 +26,32 @@ function clampScore(score?: number): number | undefined {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+function getScoreColor(score: number): { color: string; bg: string; label: string } {
+  if (score >= 80) return { color: "#10b981", bg: "#ecfdf5", label: "Good" };
+  if (score >= 50) return { color: "#f59e0b", bg: "#fffbeb", label: "Needs Work" };
+  return { color: "#ef4444", bg: "#fef2f2", label: "Poor" };
+}
+
+function getSpeedGauge(score: number): string {
+  const { color, label } = getScoreColor(score);
+  const barWidth = Math.max(4, score);
+
+  return `
+    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0;">
+      <tr>
+        <td align="center" style="padding:0;">
+          <div style="font-size:48px;font-weight:800;color:${color};letter-spacing:-2px;line-height:1;">${score}</div>
+          <div style="font-size:13px;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:4px 0 12px;">${label}</div>
+          <div style="background:#e5e7eb;border-radius:4px;height:8px;width:100%;max-width:200px;margin:0 auto;">
+            <div style="background:${color};border-radius:4px;height:8px;width:${barWidth}%;"></div>
+          </div>
+          <div style="font-size:11px;color:#9ca3af;margin-top:6px;">Mobile Speed Score</div>
+        </td>
+      </tr>
+    </table>
+  `;
+}
+
 export const sendAuditEmail = internalAction({
   args: {
     leadId: v.id("scraped_leads"),
@@ -50,50 +76,80 @@ export const sendAuditEmail = internalAction({
     const name = escapeHtml(rawName);
     const primaryColor = lead.websiteData?.primaryColor ?? EMAIL_STYLES.primaryColor;
 
-    const scoreBox =
+    // Screenshot + speed gauge section
+    const screenshotUrl = lead.websiteData?.screenshotUrl;
+    const screenshotSection = screenshotUrl
+      ? `<div style="margin:0 0 8px;border-radius:8px;overflow:hidden;border:1px solid ${EMAIL_STYLES.border};">
+           <img src="${escapeHtml(screenshotUrl)}" alt="${businessName} website" width="552" style="display:block;width:100%;height:auto;border-radius:8px 8px 0 0;" />
+         </div>`
+      : "";
+
+    const gaugeSection =
       typeof score === "number"
-        ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${score >= 80 ? "#10b981" : "#f59e0b"};background:${score >= 80 ? "#ecfdf5" : "#fffbeb"};color:${score >= 80 ? "#065f46" : "#92400e"};">Current mobile speed score: <strong>${score}/100</strong>${score < 80 ? " (below our 90+ target)." : "."}</div>`
+        ? `<div style="background:${getScoreColor(score).bg};border-radius:8px;padding:20px 16px;margin:0 0 20px;border:1px solid ${EMAIL_STYLES.border};">
+             ${getSpeedGauge(score)}
+           </div>`
         : "";
 
     const tech = lead.websiteData?.technology;
-    const techBox = tech
-      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${escapeHtml(primaryColor)};background:#eff6ff;color:#1e3a8a;">Current platform detected: <strong>${escapeHtml(tech)}</strong>. We can improve speed and conversions with a modern custom build.</div>`
-      : "";
+    const techLine =
+      tech && tech !== "custom"
+        ? `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x26A0; Built on <strong>${escapeHtml(tech)}</strong> &mdash; limited speed &amp; flexibility</td></tr>`
+        : "";
 
     const painPoints = lead.aiAnalysis?.painPoints ?? [];
-    const painPointsList =
+    const issueRows =
       painPoints.length > 0
-        ? `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;">${painPoints
-            .slice(0, 5)
-            .map((point) => `<li>${escapeHtml(point)}</li>`)
-            .join("")}</ul>`
-        : `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;"><li>Site speed appears lower than top local competitors.</li><li>Mobile-first conversion layout can be improved.</li><li>Clearer service structure can help local rankings.</li></ul>`;
+        ? painPoints
+            .slice(0, 4)
+            .map(
+              (point) =>
+                `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; ${escapeHtml(point)}</td></tr>`
+            )
+            .join("")
+        : `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; Mobile speed below top local competitors</td></tr>
+           <tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; Conversion layout can be improved</td></tr>`;
+
+    const issuesSection = `
+      <div style="margin:0 0 24px;">
+        <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;color:${EMAIL_STYLES.textDark};">Issues we found</h3>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%">
+          ${issueRows}
+          ${techLine}
+        </table>
+      </div>
+    `;
+
+    // Branded footer section — logo + minimal copy
+    const logoUrl = `${getBaseUrl()}/logo.png`;
+    const brandSection = `
+      <div style="text-align:center;margin:32px 0 8px;padding:24px 16px 0;border-top:1px solid ${EMAIL_STYLES.border};">
+        <img src="${logoUrl}" alt="Acadiana Web Design" width="36" height="36" style="display:inline-block;margin:0 auto 10px;" />
+        <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:${EMAIL_STYLES.textDark};">Acadiana Web Design</p>
+        <p style="margin:0;font-size:13px;color:${EMAIL_STYLES.textMuted};line-height:1.5;">Fast, modern websites for local businesses &mdash; $199/mo, everything included.</p>
+      </div>
+    `;
 
     const html = getEmailWrapper(`
       <div style="background: linear-gradient(135deg, ${escapeHtml(primaryColor)} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
         <div class="gmail-blend-screen">
           <div class="gmail-blend-difference">
-            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:24px;font-weight:700;">Free Website Audit for ${businessName}</h1>
-            <p style="margin:10px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;">We found issues that may be costing you calls</p>
+            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:22px;font-weight:700;">Website Audit for ${businessName}</h1>
+            <p style="margin:8px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;font-size:14px;">We found issues that may be costing you customers</p>
           </div>
         </div>
       </div>
       <div style="padding:28px 24px;">
         <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
-        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We reviewed ${businessName}'s current online presence and put together a free audit report with specific opportunities to improve speed and conversions.</p>
-        ${scoreBox}
-        ${painPointsList}
-        ${techBox}
-        <div style="text-align:center;margin:24px 0;">
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We ran a free audit on ${businessName}'s website. Here's a snapshot of what we found:</p>
+        ${screenshotSection}
+        ${gaugeSection}
+        ${issuesSection}
+        <div style="text-align:center;margin:28px 0;">
           ${getCtaButton("See Your Full Audit Report", auditUrl)}
         </div>
-        ${getInfoBox("What you get with our $199/mo plan", [
-          "Custom site design and build",
-          "Unlimited edits handled for you",
-          "Fast hosting + ongoing maintenance",
-          "Clear local-service conversion focused layout",
-        ])}
-        <p style="margin:20px 0 0;color:${EMAIL_STYLES.textMuted};">Reply here if you want to walk through the audit together on a quick 15-minute call.</p>
+        <p style="margin:0;text-align:center;color:${EMAIL_STYLES.textMuted};font-size:13px;">Reply to this email if you'd like a quick walkthrough.</p>
+        ${brandSection}
       </div>
       ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
     `);
@@ -102,17 +158,15 @@ export const sendAuditEmail = internalAction({
       `Hi ${rawName},`,
       "",
       `We ran a free website audit for ${rawBusinessName}.`,
-      `View it here: ${auditUrl}`,
+      `View your full report: ${auditUrl}`,
       "",
-      typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "PageSpeed score: unavailable",
+      typeof score === "number" ? `Mobile speed score: ${score}/100` : "",
       ...(painPoints.length
-        ? ["Key issues:", ...painPoints.slice(0, 5).map((point) => `- ${point}`)]
+        ? ["Issues found:", ...painPoints.slice(0, 4).map((point) => `- ${point}`)]
         : []),
       "",
-      "Our $199/mo plan includes:",
-      "- Custom site build",
-      "- Unlimited edits",
-      "- Fast hosting and maintenance",
+      "Acadiana Web Design",
+      "Fast, modern websites for local businesses — $199/mo, everything included.",
       "",
       `Reply to this email or contact ${SUPPORT_EMAIL} to schedule a call.`,
     ]
