@@ -27,6 +27,7 @@ import type * as marketing_pipeline from "../marketing/pipeline.js";
 import type * as marketing_public from "../marketing/public.js";
 import type * as marketing_search from "../marketing/search.js";
 import type * as marketing_workflow from "../marketing/workflow.js";
+import type * as notifications from "../notifications.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
 import type * as onboarding_sessions from "../onboarding/sessions.js";
 import type * as projects from "../projects.js";
@@ -34,6 +35,7 @@ import type * as prospects from "../prospects.js";
 import type * as rateLimiter from "../rateLimiter.js";
 import type * as stripeActions from "../stripeActions.js";
 import type * as stripeHelpers from "../stripeHelpers.js";
+import type * as twilio from "../twilio.js";
 import type * as validators from "../validators.js";
 
 import type {
@@ -62,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   "marketing/public": typeof marketing_public;
   "marketing/search": typeof marketing_search;
   "marketing/workflow": typeof marketing_workflow;
+  notifications: typeof notifications;
   "onboarding/agent": typeof onboarding_agent;
   "onboarding/sessions": typeof onboarding_sessions;
   projects: typeof projects;
@@ -69,6 +72,7 @@ declare const fullApi: ApiFromModules<{
   rateLimiter: typeof rateLimiter;
   stripeActions: typeof stripeActions;
   stripeHelpers: typeof stripeHelpers;
+  twilio: typeof twilio;
   validators: typeof validators;
 }>;
 
@@ -5036,6 +5040,309 @@ export declare const components: {
             | "failed";
         },
         null
+      >;
+    };
+  };
+  twilio: {
+    messages: {
+      create: FunctionReference<
+        "action",
+        "internal",
+        {
+          account_sid: string;
+          auth_token: string;
+          body: string;
+          callback?: string;
+          from: string;
+          status_callback: string;
+          to: string;
+        },
+        {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }
+      >;
+      getByCounterparty: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; counterparty: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      getBySid: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; sid: string },
+        {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        } | null
+      >;
+      getFrom: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; from: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      getFromTwilioBySidAndInsert: FunctionReference<
+        "action",
+        "internal",
+        {
+          account_sid: string;
+          auth_token: string;
+          incomingMessageCallback?: string;
+          sid: string;
+        },
+        {
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }
+      >;
+      getTo: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number; to: string },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      list: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      listIncoming: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      listOutgoing: FunctionReference<
+        "query",
+        "internal",
+        { account_sid: string; limit?: number },
+        Array<{
+          account_sid: string;
+          api_version: string;
+          body: string;
+          counterparty?: string;
+          date_created: string;
+          date_sent: string | null;
+          date_updated: string | null;
+          direction: string;
+          error_code: number | null;
+          error_message: string | null;
+          from: string;
+          messaging_service_sid: string | null;
+          num_media: string;
+          num_segments: string;
+          price: string | null;
+          price_unit: string | null;
+          rest?: any;
+          sid: string;
+          status: string;
+          subresource_uris: { feedback?: string; media: string } | null;
+          to: string;
+          uri: string;
+        }>
+      >;
+      updateStatus: FunctionReference<
+        "mutation",
+        "internal",
+        { account_sid: string; sid: string; status: string },
+        null
+      >;
+    };
+    phone_numbers: {
+      create: FunctionReference<
+        "action",
+        "internal",
+        { account_sid: string; auth_token: string; number: string },
+        any
+      >;
+      updateSmsUrl: FunctionReference<
+        "action",
+        "internal",
+        {
+          account_sid: string;
+          auth_token: string;
+          sid: string;
+          sms_url: string;
+        },
+        any
       >;
     };
   };

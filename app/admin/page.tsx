@@ -852,6 +852,10 @@ function ProjectsTab() {
                               <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Domain Preference</p>
                               <p className="text-sm text-[var(--foreground)]">{project.buildDetails.domainPreference || "-"}</p>
                             </div>
+                            <div>
+                              <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Lead SMS Alerts</p>
+                              <p className="text-sm text-[var(--foreground)]">{project.buildDetails.notificationPhone || "-"}</p>
+                            </div>
                           </div>
                           {(project.buildDetails.brand.logoStorageId || (project.buildDetails.brand.imageStorageIds && project.buildDetails.brand.imageStorageIds.length > 0)) && (
                             <div className="mt-2">
@@ -1101,6 +1105,10 @@ function ProjectsTab() {
                                     <div>
                                       <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Domain Preference</p>
                                       <p className="text-sm text-[var(--foreground)]">{project.buildDetails.domainPreference || "-"}</p>
+                                    </div>
+                                    <div>
+                                      <p className="text-xs font-semibold text-[var(--muted-foreground)] uppercase mb-1">Lead SMS Alerts</p>
+                                      <p className="text-sm text-[var(--foreground)]">{project.buildDetails.notificationPhone || "-"}</p>
                                     </div>
                                     {project.buildDetails.inspirationLinks && project.buildDetails.inspirationLinks.length > 0 && (
                                       <div className="md:col-span-2">

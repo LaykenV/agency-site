@@ -72,10 +72,14 @@ export const triageLead = internalAction({
     // 3. Load project context for business info
     let companyName = "Unknown business";
     let projectId = lead.projectId;
+    let notificationPhone: string | undefined;
+    let projectName = "your website";
     try {
       const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
         projectId: lead.projectId,
       });
+      notificationPhone = project?.buildDetails?.notificationPhone;
+      projectName = project?.buildDetails?.headline ?? projectName;
       if (project?.prospectId) {
         const prospect = await ctx.runQuery(
           internal.prospects.internalGetProspectById,
@@ -141,8 +145,8 @@ export const triageLead = internalAction({
       },
     });
 
-    // 7. Schedule email notification if not spam (based on persisted verdict)
-    // This prevents a rare race where multiple triage runs disagree: we only email
+    // 7. Schedule notifications if not spam (based on persisted verdict).
+    // This prevents a rare race where multiple triage runs disagree: we only notify
     // if the lead is actually stored as allow/review.
     const persistedLead = await ctx.runQuery(internal.clientLeads.getLeadById, {
       leadId: args.leadId,
@@ -155,18 +159,30 @@ export const triageLead = internalAction({
       // Safety fallback (shouldn't happen): if verdict is missing, use the current result.
       ((!persistedVerdict || persistedVerdict === "untriaged") &&
         (result.verdict === "allow" || result.verdict === "review"));
+    const leadData = {
+      name: (persistedLead ?? lead).data.name,
+      email: (persistedLead ?? lead).data.email,
+      phone: (persistedLead ?? lead).data.phone,
+      message: (persistedLead ?? lead).data.message,
+    };
 
     if (shouldEmail) {
       await ctx.scheduler.runAfter(0, internal.emails.sendLeadNotification, {
         projectId,
         leadId: args.leadId,
-        leadData: {
-          name: (persistedLead ?? lead).data.name,
-          email: (persistedLead ?? lead).data.email,
-          phone: (persistedLead ?? lead).data.phone,
-          message: (persistedLead ?? lead).data.message,
-        },
+        leadData,
       });
+
+      if (notificationPhone) {
+        await ctx.scheduler.runAfter(0, internal.notifications.sendLeadNotificationSms, {
+          to: notificationPhone,
+          leadName: leadData.name,
+          leadPhone: leadData.phone,
+          leadEmail: leadData.email,
+          leadMessage: leadData.message,
+          projectName,
+        });
+      }
     } else {
       console.log("[leadTriage] Suppressing email for spam lead", {
         leadId: args.leadId,

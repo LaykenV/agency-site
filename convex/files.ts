@@ -125,6 +125,7 @@ export const deleteFile = mutation({
         domainPreference: existingBuildDetails.domainPreference,
         inspirationLinks: existingBuildDetails.inspirationLinks,
         myNotes: existingBuildDetails.myNotes,
+        notificationPhone: existingBuildDetails.notificationPhone,
         brand: {
           colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
           logoStorageId: updatedLogoStorageId,
@@ -156,4 +157,3 @@ export const deleteFile = mutation({
     return { success: true };
   },
 });
-

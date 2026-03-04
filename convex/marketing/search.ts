@@ -331,6 +331,46 @@ export const triggerAuditEmail = mutation({
   },
 });
 
+export const triggerBulkAuditEmail = mutation({
+  args: {
+    leads: v.array(
+      v.object({
+        leadId: v.id("scraped_leads"),
+        recipientEmail: v.string(),
+        recipientName: v.optional(v.string()),
+      })
+    ),
+  },
+  returns: v.object({
+    scheduled: v.number(),
+    skipped: v.number(),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    let scheduled = 0;
+    let skipped = 0;
+
+    for (const entry of args.leads) {
+      const lead = await ctx.db.get(entry.leadId);
+      if (!lead || !lead.demoToken) {
+        skipped++;
+        continue;
+      }
+
+      await ctx.scheduler.runAfter(0, internal.marketing.emails.sendAuditEmail, {
+        leadId: entry.leadId,
+        recipientEmail: normalizeEmail(entry.recipientEmail),
+        recipientName: entry.recipientName,
+      });
+
+      scheduled++;
+    }
+
+    return { scheduled, skipped };
+  },
+});
+
 export const triggerPortfolioEmail = mutation({
   args: {
     leadId: v.id("scraped_leads"),

@@ -60,6 +60,7 @@ type CalBooking = {
 
 type BuildDetailsFormData = {
   domainPreference: string;
+  notificationPhone: string;
   inspirationLinks: string[];
   brand: {
     colorScheme: { primary: string; accent: string };
@@ -85,6 +86,20 @@ type EditRequest = {
 // ============================================================================
 const pillBase =
   "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium shadow-sm";
+const E164_PHONE_REGEX = /^\+[1-9]\d{9,14}$/;
+
+function normalizePhone(input: string): string | undefined {
+  const raw = input.trim();
+  if (!raw) return undefined;
+
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return undefined;
+
+  const normalized = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+  if (!E164_PHONE_REGEX.test(normalized)) return undefined;
+
+  return normalized;
+}
 
 function toTitleCase(text: string): string {
   return text
@@ -276,6 +291,7 @@ function AwaitingAssetsSection({
   buildDetails?: {
     headline: string | null;
     domainPreference: string | null;
+    notificationPhone?: string;
     inspirationLinks: string[];
     brand: {
       colorScheme: { primary: string; accent: string };
@@ -338,6 +354,12 @@ function AwaitingAssetsSection({
                   <p className="text-sm mt-1 font-mono">{buildDetails.domainPreference}</p>
                 </div>
               )}
+              {buildDetails.notificationPhone && (
+                <div>
+                  <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Lead Text Alerts</p>
+                  <p className="text-sm mt-1 font-mono">{buildDetails.notificationPhone}</p>
+                </div>
+              )}
               <div>
                 <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">Colors</p>
                 <div className="flex items-center gap-2 mt-1">
@@ -364,6 +386,7 @@ function AwaitingAssetsSection({
             projectId={projectId}
             initialValues={buildDetails ? {
               domainPreference: buildDetails.domainPreference ?? "",
+              notificationPhone: buildDetails.notificationPhone ?? "",
               inspirationLinks: buildDetails.inspirationLinks,
               brand: {
                 colorScheme: buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
@@ -451,6 +474,7 @@ function BuildDetailsForm({
   const [pending, setPending] = useState(false);
   const [formData, setFormData] = useState<BuildDetailsFormData>({
     domainPreference: initialValues?.domainPreference ?? "",
+    notificationPhone: initialValues?.notificationPhone ?? "",
     inspirationLinks: initialValues?.inspirationLinks ?? [],
     brand: {
       colorScheme: initialValues?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
@@ -511,6 +535,7 @@ function BuildDetailsForm({
   // Track initial snapshot to detect dirty state and to reset on cancel
   const initialSnapshot = useMemo(() => {
     const domainPreference = (initialValues?.domainPreference ?? "").trim();
+    const notificationPhone = normalizePhone(initialValues?.notificationPhone ?? "") ?? "";
     const inspirationLinks = (initialValues?.inspirationLinks ?? []).map((u) => u.trim());
     const primary = (initialValues?.brand?.colorScheme?.primary ?? "#111827").trim();
     const accent = (initialValues?.brand?.colorScheme?.accent ?? "#6EE7B7").trim();
@@ -518,6 +543,7 @@ function BuildDetailsForm({
     const imageStorageIds = initialValues?.brand?.imageStorageIds ?? [];
     return {
       domainPreference,
+      notificationPhone,
       inspirationLinks,
       brand: {
         colorScheme: { primary, accent },
@@ -532,6 +558,7 @@ function BuildDetailsForm({
   const normalizedNow = useMemo(() => {
     return {
       domainPreference: formData.domainPreference.trim(),
+      notificationPhone: normalizePhone(formData.notificationPhone) ?? "",
       inspirationLinks: formData.inspirationLinks.map((u) => u.trim()),
       brand: {
         colorScheme: {
@@ -573,7 +600,14 @@ function BuildDetailsForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    const notificationPhoneInput = formData.notificationPhone.trim();
+    const normalizedNotificationPhone = normalizePhone(formData.notificationPhone);
+    if (notificationPhoneInput && !normalizedNotificationPhone) {
+      toast.error("Enter a valid phone number in E.164 format (e.g. +13375551234).");
+      return;
+    }
+
     setPending(true);
 
     try {
@@ -623,6 +657,7 @@ function BuildDetailsForm({
       await upsertBuildDetails({
         projectId,
         domainPreference: formData.domainPreference.trim() || undefined,
+        notificationPhone: normalizedNotificationPhone ?? "",
         inspirationLinks: formData.inspirationLinks.length > 0 ? formData.inspirationLinks : undefined,
         brand: {
           colorScheme: formData.brand.colorScheme,
@@ -659,6 +694,20 @@ function BuildDetailsForm({
             onChange={(e) => setFormData({ ...formData, domainPreference: e.target.value })}
             placeholder="e.g., mycompany.com or leave blank if undecided"
           />
+        </div>
+
+        <div>
+          <Label htmlFor="notificationPhone" className="mb-1.5 inline-block">Lead SMS Alerts</Label>
+          <Input
+            id="notificationPhone"
+            type="tel"
+            value={formData.notificationPhone}
+            onChange={(e) => setFormData({ ...formData, notificationPhone: e.target.value })}
+            placeholder="+1 (337) 555-1234"
+          />
+          <p className="mt-1 text-xs text-[var(--secondary)]">
+            Optional. We&apos;ll text this number when a new website lead comes in.
+          </p>
         </div>
 
         <div>
@@ -935,6 +984,7 @@ function BuildDetailsForm({
               // Reset form to initial snapshot
               const next: BuildDetailsFormData = {
                 domainPreference: initialSnapshot.domainPreference,
+                notificationPhone: initialSnapshot.notificationPhone,
                 inspirationLinks: initialSnapshot.inspirationLinks,
                 brand: {
                   colorScheme: {

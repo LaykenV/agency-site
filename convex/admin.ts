@@ -115,6 +115,7 @@ export const listProjects = query({
       domainPreference: v.union(v.string(), v.null()),
       inspirationLinks: v.array(v.string()),
       myNotes: v.union(v.string(), v.null()),
+      notificationPhone: v.optional(v.string()),
       brand: v.object({
         colorScheme: v.object({
           primary: v.string(),
@@ -167,6 +168,7 @@ export const listProjects = query({
             domainPreference: p.buildDetails.domainPreference,
             inspirationLinks: p.buildDetails.inspirationLinks,
             myNotes: p.buildDetails.myNotes,
+            notificationPhone: p.buildDetails.notificationPhone,
             brand: {
               colorScheme: p.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
               logoStorageId: p.buildDetails.brand.logoStorageId,
@@ -502,6 +504,7 @@ export const updateProjectMyNotes = mutation({
       domainPreference: existingBuildDetails.domainPreference,
       inspirationLinks: existingBuildDetails.inspirationLinks,
       myNotes: normalizedNotes,
+      notificationPhone: existingBuildDetails.notificationPhone,
       brand: existingBuildDetails.brand,
       brandAssetsUploaded: existingBuildDetails.brandAssetsUploaded,
     } : {
@@ -509,6 +512,7 @@ export const updateProjectMyNotes = mutation({
       domainPreference: null,
       inspirationLinks: [],
       myNotes: normalizedNotes,
+      notificationPhone: undefined,
       brand: {
         colorScheme: { primary: "#111827", accent: "#6EE7B7" },
       },

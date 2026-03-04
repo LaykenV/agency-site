@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
@@ -287,6 +287,13 @@ function MarketingAdminContent() {
   const triggerFollowUpEmail = useMutation(api.marketing.search.triggerFollowUpEmail);
   const triggerPortfolioEmail = useMutation(api.marketing.search.triggerPortfolioEmail);
   const convertToProspect = useMutation(api.marketing.search.convertToProspect);
+  const triggerBulkAuditEmail = useMutation(api.marketing.search.triggerBulkAuditEmail);
+
+  // Bulk selection state
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set());
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ scheduled: number; skipped: number } | null>(null);
 
   const activeLeads = selectedSearchId ? leadsForSearch : latestLeads;
   const selectedSearch = useMemo(() => {
@@ -308,6 +315,63 @@ function MarketingAdminContent() {
       converted: countFor("converted"),
     };
   }, [activeLeads]);
+
+  // Bulk selection computed values
+  const eligibleLeads = useMemo(() => {
+    return (activeLeads ?? []).filter((l) => l.contactEmail && l.demoToken);
+  }, [activeLeads]);
+
+  const selectedEligible = useMemo(() => {
+    return eligibleLeads.filter((l) => selectedLeadIds.has(l._id));
+  }, [eligibleLeads, selectedLeadIds]);
+
+  const selectedAlreadySent = useMemo(() => {
+    return selectedEligible.filter((l) => l.emailSentAt);
+  }, [selectedEligible]);
+
+  const selectedIneligible = useMemo(() => {
+    return (activeLeads ?? []).filter(
+      (l) => selectedLeadIds.has(l._id) && (!l.contactEmail || !l.demoToken)
+    );
+  }, [activeLeads, selectedLeadIds]);
+
+  const toggleLeadSelection = useCallback((leadId: string) => {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(leadId)) {
+        next.delete(leadId);
+      } else {
+        next.add(leadId);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAllEligible = useCallback(() => {
+    setSelectedLeadIds(new Set(eligibleLeads.map((l) => l._id)));
+  }, [eligibleLeads]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedLeadIds(new Set());
+  }, []);
+
+  const handleBulkSend = async () => {
+    setBulkSending(true);
+    try {
+      const leads = selectedEligible.map((l) => ({
+        leadId: l._id as Id<"scraped_leads">,
+        recipientEmail: l.contactEmail!,
+        recipientName: l.googleData.businessName,
+      }));
+      const result = await triggerBulkAuditEmail({ leads });
+      setBulkResult(result);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to send bulk emails");
+    } finally {
+      setBulkSending(false);
+    }
+  };
 
   const handleCreateSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -458,6 +522,7 @@ function MarketingAdminContent() {
     setStatusFilter("all");
     setSelectedSearchId(null);
     setExpandedLeadId(null);
+    setSelectedLeadIds(new Set());
   };
 
   return (
@@ -654,6 +719,7 @@ function MarketingAdminContent() {
                     onChange={(e) => {
                       setStatusFilter(e.target.value as LeadStatusFilter);
                       setExpandedLeadId(null);
+                      setSelectedLeadIds(new Set());
                     }}
                     className="h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                   >
@@ -673,6 +739,7 @@ function MarketingAdminContent() {
                           : (value as Id<"marketing_searches">)
                       );
                       setExpandedLeadId(null);
+                      setSelectedLeadIds(new Set());
                     }}
                     className="h-9 max-w-[360px] rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
                   >
@@ -699,6 +766,123 @@ function MarketingAdminContent() {
               </p>
             </div>
 
+            {/* Bulk action toolbar */}
+            {selectedLeadIds.size > 0 && (
+              <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/30 bg-card p-3 shadow-lg">
+                <div className="flex flex-wrap items-center gap-3 text-sm">
+                  <span className="font-semibold text-foreground">
+                    {selectedLeadIds.size} selected
+                  </span>
+                  <button
+                    onClick={selectAllEligible}
+                    className="text-xs font-medium text-primary hover:text-primary/80"
+                  >
+                    Select all eligible ({eligibleLeads.length})
+                  </button>
+                  <button
+                    onClick={clearSelection}
+                    className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <button
+                  onClick={() => {
+                    setBulkResult(null);
+                    setBulkModalOpen(true);
+                  }}
+                  disabled={selectedEligible.length === 0}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                >
+                  Send Audit Email ({selectedEligible.length})
+                </button>
+              </div>
+            )}
+
+            {/* Bulk send confirmation modal */}
+            {bulkModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                <div className="w-full max-w-lg rounded-xl border border-border bg-card p-6 shadow-2xl">
+                  {bulkResult ? (
+                    // Success state
+                    <div className="space-y-4 text-center">
+                      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/15">
+                        <span className="text-2xl text-emerald-600">&#10003;</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground">Emails Scheduled</h3>
+                      <p className="text-sm text-muted-foreground">
+                        {bulkResult.scheduled} email{bulkResult.scheduled !== 1 ? "s" : ""} scheduled
+                        {bulkResult.skipped > 0 &&
+                          `, ${bulkResult.skipped} skipped (missing audit/deleted)`}
+                      </p>
+                      <button
+                        onClick={() => {
+                          setBulkModalOpen(false);
+                          setBulkResult(null);
+                          clearSelection();
+                        }}
+                        className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                      >
+                        Done
+                      </button>
+                    </div>
+                  ) : (
+                    // Confirmation state
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold text-foreground">
+                        Send Audit Emails
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedEligible.length} recipient{selectedEligible.length !== 1 ? "s" : ""} will receive an audit email.
+                      </p>
+
+                      {selectedAlreadySent.length > 0 && (
+                        <div className="rounded-lg bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-300">
+                          {selectedAlreadySent.length} lead{selectedAlreadySent.length !== 1 ? "s have" : " has"} already been emailed. Sending again will be a re-send.
+                        </div>
+                      )}
+
+                      {selectedIneligible.length > 0 && (
+                        <p className="text-xs text-muted-foreground">
+                          {selectedIneligible.length} selected lead{selectedIneligible.length !== 1 ? "s" : ""} will be skipped (missing email or audit).
+                        </p>
+                      )}
+
+                      <div className="max-h-48 overflow-y-auto rounded-lg border border-border">
+                        <div className="divide-y divide-border">
+                          {selectedEligible.map((lead) => (
+                            <div key={lead._id} className="flex items-center justify-between px-3 py-2 text-sm">
+                              <span className="font-medium text-foreground">{lead.googleData.businessName}</span>
+                              <span className="text-muted-foreground">{lead.contactEmail}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-3 pt-2">
+                        <button
+                          onClick={() => setBulkModalOpen(false)}
+                          disabled={bulkSending}
+                          className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => void handleBulkSend()}
+                          disabled={bulkSending || selectedEligible.length === 0}
+                          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+                        >
+                          {bulkSending
+                            ? "Sending..."
+                            : `Send ${selectedEligible.length} Email${selectedEligible.length !== 1 ? "s" : ""}`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Lead cards */}
             <div className="space-y-3">
               {activeLeads?.map((lead) => {
@@ -719,6 +903,13 @@ function MarketingAdminContent() {
                 return (
                   <div key={lead._id} className="rounded-xl border border-border bg-card transition-colors hover:border-primary/30">
                     <div className="flex flex-wrap items-center gap-2 p-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedLeadIds.has(lead._id)}
+                        onChange={() => toggleLeadSelection(lead._id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="h-4 w-4 shrink-0 rounded border-border accent-primary cursor-pointer"
+                      />
                       <button
                         onClick={() =>
                           setExpandedLeadId((prev) => (prev === lead._id ? null : lead._id))

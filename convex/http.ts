@@ -248,7 +248,7 @@ http.route({
       },
     });
 
-    // 6. Schedule AI triage (triage will send email if verdict is not spam)
+    // 6. Schedule AI triage (triage handles all non-spam notifications)
     await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
       leadId,
     });

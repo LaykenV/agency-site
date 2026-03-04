@@ -5,6 +5,23 @@ import { projectStatusValidator, buildDetailsValidator, deploymentValidator, cal
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 
+const E164_NOTIFICATION_PHONE_REGEX = /^\+[1-9]\d{9,14}$/;
+
+function normalizeNotificationPhone(input: string): string | undefined {
+  const raw = input.trim();
+  if (!raw) return undefined;
+
+  const digits = raw.replace(/\D/g, "");
+  if (!digits) return undefined;
+
+  const normalized = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+  if (!E164_NOTIFICATION_PHONE_REGEX.test(normalized)) {
+    throw new Error("Invalid notification phone number. Use E.164 format (e.g. +13375551234).");
+  }
+
+  return normalized;
+}
+
 export const findOrCreateProjectForProspect = mutation({
   args: {
     prospectId: v.id("prospects"),
@@ -203,6 +220,10 @@ export const getByProjectIdSlug = internalQuery({
       projectStatus: v.optional(projectStatusValidator),
       authUserId: v.string(),
       prospectId: v.optional(v.id("prospects")),
+      buildDetails: v.optional(v.object({
+        headline: v.union(v.string(), v.null()),
+        notificationPhone: v.optional(v.string()),
+      })),
       deployment: v.optional(deploymentValidator),
     }),
     v.null()
@@ -221,6 +242,12 @@ export const getByProjectIdSlug = internalQuery({
       projectStatus: project.projectStatus,
       authUserId: project.authUserId,
       prospectId: project.prospectId,
+      buildDetails: project.buildDetails
+        ? {
+            headline: project.buildDetails.headline,
+            notificationPhone: project.buildDetails.notificationPhone,
+          }
+        : undefined,
       deployment: project.deployment,
     };
   },
@@ -244,6 +271,7 @@ export const getPortalProject = query({
         headline: v.union(v.string(), v.null()),
         domainPreference: v.union(v.string(), v.null()),
         inspirationLinks: v.array(v.string()),
+        notificationPhone: v.optional(v.string()),
         brand: v.object({
           colorScheme: v.object({
             primary: v.string(),
@@ -284,6 +312,7 @@ export const getPortalProject = query({
       headline: project.buildDetails.headline,
       domainPreference: project.buildDetails.domainPreference,
       inspirationLinks: project.buildDetails.inspirationLinks,
+      notificationPhone: project.buildDetails.notificationPhone,
       brand: {
         colorScheme: project.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: project.buildDetails.brand.logoStorageId,
@@ -337,6 +366,7 @@ export const upsertBuildDetails = mutation({
     projectId: v.id("projects"),
     headline: v.optional(v.string()),
     domainPreference: v.optional(v.string()),
+    notificationPhone: v.optional(v.string()),
     inspirationLinks: v.optional(v.array(v.string())),
     brand: v.optional(v.object({
       colorScheme: v.optional(v.object({
@@ -365,6 +395,10 @@ export const upsertBuildDetails = mutation({
 
     const now = Date.now();
     const existingBuildDetails = project.buildDetails;
+    const normalizedNotificationPhone =
+      args.notificationPhone !== undefined
+        ? normalizeNotificationPhone(args.notificationPhone)
+        : undefined;
 
     // Shallow merge with existing buildDetails
     const updatedBuildDetails = {
@@ -372,6 +406,9 @@ export const upsertBuildDetails = mutation({
       domainPreference: args.domainPreference !== undefined ? args.domainPreference : existingBuildDetails?.domainPreference ?? null,
       inspirationLinks: args.inspirationLinks !== undefined ? args.inspirationLinks : existingBuildDetails?.inspirationLinks ?? [],
       myNotes: existingBuildDetails?.myNotes ?? null, // Preserve admin-only field
+      notificationPhone: args.notificationPhone !== undefined
+        ? normalizedNotificationPhone || undefined
+        : existingBuildDetails?.notificationPhone,
       brand: {
         colorScheme: args.brand?.colorScheme !== undefined ? args.brand.colorScheme : existingBuildDetails?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: args.logoStorageId !== undefined ? args.logoStorageId : existingBuildDetails?.brand?.logoStorageId,
@@ -460,6 +497,7 @@ export const createEditRequest = mutation({
         domainPreference: existingBuildDetails.domainPreference,
         inspirationLinks: existingBuildDetails.inspirationLinks,
         myNotes: existingBuildDetails.myNotes,
+        notificationPhone: existingBuildDetails.notificationPhone,
         brand: {
           colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
           logoStorageId: existingBuildDetails.brand?.logoStorageId,
@@ -471,6 +509,7 @@ export const createEditRequest = mutation({
         domainPreference: null,
         inspirationLinks: [],
         myNotes: null,
+        notificationPhone: undefined,
         brand: {
           colorScheme: { primary: "#111827", accent: "#6EE7B7" },
           imageStorageIds: updatedImageIds,

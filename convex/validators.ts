@@ -48,6 +48,7 @@ export const buildDetailsValidator = v.object({
   domainPreference: v.union(v.string(), v.null()),
   inspirationLinks: v.array(v.string()),
   myNotes: v.union(v.string(), v.null()),
+  notificationPhone: v.optional(v.string()),
   brand: v.object({
     colorScheme: v.object({
       primary: v.string(),
