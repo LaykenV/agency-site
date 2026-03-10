@@ -1613,7 +1613,7 @@ function LiveSupportPanel({
               ) : (
                 <>
                   {/* Page Views */}
-                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                  <div className="p-3 rounded-xl bg-[var(--background)]/80 border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_18%)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <Eye className="h-3.5 w-3.5 text-[hsl(var(--primary))]" />
                       <span className="text-base font-bold tabular-nums">
@@ -1627,7 +1627,7 @@ function LiveSupportPanel({
                   </div>
 
                   {/* Leads This Month */}
-                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                  <div className="p-3 rounded-xl bg-[var(--background)]/80 border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_18%)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <UserPlus className="h-3.5 w-3.5 text-emerald-500" />
                       <span className="text-base font-bold tabular-nums">
@@ -1641,7 +1641,7 @@ function LiveSupportPanel({
                   </div>
 
                   {/* Total Leads */}
-                  <div className="p-3 rounded-xl bg-[var(--background)]/60 border border-[var(--border)]/50">
+                  <div className="p-3 rounded-xl bg-[var(--background)]/80 border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_18%)] shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
                     <div className="flex items-center gap-1.5 mb-0.5">
                       <Users className="h-3.5 w-3.5 text-[var(--muted-foreground)]" />
                       <span className="text-base font-bold tabular-nums">
@@ -1686,13 +1686,13 @@ function LiveSupportPanel({
       </div>
 
       {/* Tab navigation */}
-      <div className="flex items-center gap-1 p-1 rounded-xl bg-[var(--muted)]/50 w-fit">
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_14%)] bg-[hsl(var(--muted)/0.5)] w-fit">
         <button
           onClick={() => setActiveTab("overview")}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             activeTab === "overview"
-              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
-              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              ? "bg-[var(--background)] text-[hsl(var(--primary))] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_0_0_1px_color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_22%)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[hsl(var(--muted)/0.5)]"
           }`}
         >
           <span className="flex items-center gap-2">
@@ -1704,8 +1704,8 @@ function LiveSupportPanel({
           onClick={() => setActiveTab("support")}
           className={`px-4 py-2 text-sm font-medium rounded-lg transition-all ${
             activeTab === "support"
-              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
-              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              ? "bg-[var(--background)] text-[hsl(var(--primary))] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_0_0_1px_color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_22%)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[hsl(var(--muted)/0.5)]"
           }`}
         >
           <span className="flex items-center gap-2">

@@ -112,14 +112,14 @@ export function RecentLeads({ projectId, limit = 50 }: RecentLeadsProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 mb-4 p-1 rounded-lg bg-[var(--muted)]">
+      <div className="flex gap-1 mb-4 p-1 rounded-lg border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_14%)] bg-[hsl(var(--muted)/0.5)]">
         <button
           type="button"
           onClick={() => { setActiveTab("inbox"); setExpandedId(null); }}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
             activeTab === "inbox"
-              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
-              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              ? "bg-[var(--background)] text-[hsl(var(--primary))] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_0_0_1px_color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_22%)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[hsl(var(--muted)/0.5)]"
           }`}
         >
           <Inbox className="h-3.5 w-3.5" />
@@ -133,10 +133,10 @@ export function RecentLeads({ projectId, limit = 50 }: RecentLeadsProps) {
         <button
           type="button"
           onClick={() => { setActiveTab("spam"); setExpandedId(null); }}
-          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+          className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
             activeTab === "spam"
-              ? "bg-[var(--background)] text-[var(--foreground)] shadow-sm"
-              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+              ? "bg-[var(--background)] text-[hsl(var(--primary))] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_0_0_1px_color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_22%)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[hsl(var(--muted)/0.5)]"
           }`}
         >
           <ShieldAlert className="h-3.5 w-3.5" />
@@ -199,7 +199,7 @@ export function RecentLeads({ projectId, limit = 50 }: RecentLeadsProps) {
             return (
               <div
                 key={lead._id}
-                className="rounded-xl border border-[var(--border)] bg-[var(--background)] overflow-hidden transition-shadow hover:shadow-sm"
+                className="rounded-xl border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_14%)] bg-[var(--background)] overflow-hidden transition-all hover:shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_28%)]"
               >
                 {/* Compact row - always visible */}
                 <button
@@ -247,7 +247,7 @@ export function RecentLeads({ projectId, limit = 50 }: RecentLeadsProps) {
 
                 {/* Expanded details */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 pt-2 border-t border-[var(--border)] bg-[var(--muted)]/20">
+                  <div className="px-4 pb-4 pt-2 border-t border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_10%)] bg-[hsl(var(--muted)/0.15)]">
                     {/* Triage reason chips (for spam/review) */}
                     {lead.triage?.reasons && lead.triage.reasons.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-3">
@@ -312,7 +312,7 @@ export function RecentLeads({ projectId, limit = 50 }: RecentLeadsProps) {
 
                     {/* Message */}
                     {lead.data.message && (
-                      <div className="mt-3 p-3 rounded-lg bg-[var(--background)] border border-[var(--border)]">
+                      <div className="mt-3 p-3 rounded-lg bg-[var(--background)] border border-[color-mix(in_hsl,hsl(var(--border)),hsl(var(--primary))_12%)]">
                         <div className="flex items-start gap-2">
                           <MessageSquare className="h-4 w-4 text-[var(--muted-foreground)] flex-shrink-0 mt-0.5" />
                           <p className="text-sm text-[var(--foreground)] whitespace-pre-wrap">
