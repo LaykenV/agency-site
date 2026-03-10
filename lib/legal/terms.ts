@@ -1,5 +1,5 @@
-export const TERMS_VERSION = "2026-01-14" as const;
-export const TERMS_LAST_UPDATED = "2026-01-14" as const;
+export const TERMS_VERSION = "2026-03-10" as const;
+export const TERMS_LAST_UPDATED = "2026-03-10" as const;
 
 export type TermsContentBlock =
   | { type: "paragraph"; text: string }
@@ -148,6 +148,53 @@ export const TERMS_SECTIONS: Array<TermsSection> = [
       {
         type: "paragraph",
         text: "We will schedule periodic review calls to ensure the site continues to reflect your business goals. Missed or repeatedly rescheduled meetings may extend the overall delivery timeline.",
+      },
+    ],
+  },
+  {
+    anchor: "sms-lead-notifications",
+    title: "SMS Lead Notifications",
+    blocks: [
+      {
+        type: "paragraph",
+        text: "As part of your subscription, we may send SMS text messages to the phone number you provide to notify you when a new lead is submitted through your website's contact form. These messages contain the lead's name, email, phone number (if provided), and message so you can follow up promptly.",
+      },
+      {
+        type: "subheading",
+        text: "Consent & Opt-In",
+      },
+      {
+        type: "paragraph",
+        text: "By providing your phone number during onboarding or through your client portal, you consent to receive automated SMS lead notifications from Acadiana Web Design. Consent is not a condition of purchase. You may use the service without providing a phone number.",
+      },
+      {
+        type: "subheading",
+        text: "Message Frequency & Rates",
+      },
+      {
+        type: "paragraph",
+        text: "Message frequency varies based on the number of leads your website receives. You will receive one SMS per lead submission. Message and data rates may apply depending on your mobile carrier and plan.",
+      },
+      {
+        type: "subheading",
+        text: "Opt-Out & Help",
+      },
+      {
+        type: "list",
+        items: [
+          "Reply STOP to any message to opt out of SMS notifications at any time.",
+          "Reply HELP to any message for support information.",
+          "You may also contact us at support@acadianawebdesign.com to opt out or get help.",
+          "Opting out of SMS does not affect your subscription or lead delivery via email.",
+        ],
+      },
+      {
+        type: "subheading",
+        text: "SMS Provider",
+      },
+      {
+        type: "paragraph",
+        text: "SMS messages are sent via Twilio. Your phone number is stored securely and is not shared with third parties for marketing purposes. For details on how we handle your data, see our Privacy Policy.",
       },
     ],
   },

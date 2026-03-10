@@ -400,9 +400,10 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
                   <span>Local Developer</span>
                 </div>
               </div>
-              <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">
-                Terms
-              </Link>
+              <div className="flex items-center gap-3">
+                <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">Terms</Link>
+                <Link href="/legal/privacy" className="footer-link text-xs sm:text-sm">Privacy</Link>
+              </div>
             </div>
           </footer>
         </main>

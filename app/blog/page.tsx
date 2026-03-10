@@ -218,9 +218,10 @@ export default function BlogPage() {
                 © {new Date().getFullYear()} Acadiana Web Design
               </p>
             </div>
-            <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">
-              Terms
-            </Link>
+            <div className="flex items-center gap-3">
+              <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">Terms</Link>
+              <Link href="/legal/privacy" className="footer-link text-xs sm:text-sm">Privacy</Link>
+            </div>
           </div>
         </footer>
       </main>
