@@ -705,8 +705,11 @@ function BuildDetailsForm({
             onChange={(e) => setFormData({ ...formData, notificationPhone: e.target.value })}
             placeholder="+1 (337) 555-1234"
           />
-          <p className="mt-1 text-xs text-[var(--secondary)]">
-            Optional. We&apos;ll text this number when a new website lead comes in.
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--secondary)]">
+            Optional. By providing your phone number, you agree to receive SMS lead notifications from Acadiana Web Design. Message frequency varies based on lead volume. Msg &amp; data rates may apply. Reply STOP to opt out. Reply HELP for support.{" "}
+            <a href="/legal/terms#sms-lead-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Terms</a>
+            {" & "}
+            <a href="/legal/privacy#sms-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Privacy</a>.
           </p>
         </div>
 
