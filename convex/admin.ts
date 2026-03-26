@@ -116,6 +116,11 @@ export const listProjects = query({
       inspirationLinks: v.array(v.string()),
       myNotes: v.union(v.string(), v.null()),
       notificationPhone: v.optional(v.string()),
+      smsConsent: v.optional(v.object({
+        acceptedAt: v.number(),
+        disclosureVersion: v.string(),
+        source: v.string(),
+      })),
       brand: v.object({
         colorScheme: v.object({
           primary: v.string(),
@@ -169,6 +174,7 @@ export const listProjects = query({
             inspirationLinks: p.buildDetails.inspirationLinks,
             myNotes: p.buildDetails.myNotes,
             notificationPhone: p.buildDetails.notificationPhone,
+            smsConsent: p.buildDetails.smsConsent,
             brand: {
               colorScheme: p.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
               logoStorageId: p.buildDetails.brand.logoStorageId,
@@ -505,6 +511,7 @@ export const updateProjectMyNotes = mutation({
       inspirationLinks: existingBuildDetails.inspirationLinks,
       myNotes: normalizedNotes,
       notificationPhone: existingBuildDetails.notificationPhone,
+      smsConsent: existingBuildDetails.smsConsent,
       brand: existingBuildDetails.brand,
       brandAssetsUploaded: existingBuildDetails.brandAssetsUploaded,
     } : {
@@ -513,6 +520,7 @@ export const updateProjectMyNotes = mutation({
       inspirationLinks: [],
       myNotes: normalizedNotes,
       notificationPhone: undefined,
+      smsConsent: undefined,
       brand: {
         colorScheme: { primary: "#111827", accent: "#6EE7B7" },
       },

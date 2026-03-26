@@ -52,8 +52,8 @@ export default function SmsConsentPage() {
                 <p>
                   Business owners subscribe to SMS lead notifications when they sign up for our
                   Website-as-a-Service plan. During the onboarding process, clients provide their phone
-                  number through our client portal and explicitly agree to receive SMS notifications when
-                  new leads submit a contact form on their website.
+                  number through our client portal and must actively check an unchecked consent box before
+                  SMS notifications are enabled when new leads submit a contact form on their website.
                 </p>
                 <p>
                   Consent is not a condition of purchase. Clients may use the service without providing a
@@ -71,12 +71,13 @@ export default function SmsConsentPage() {
               <div className="mt-6">
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 md:p-8">
                   <p className="text-sm font-semibold text-[var(--foreground)]">
-                    When clients provide their phone number, they see the following disclosure:
+                    When clients enter a phone number, they see the following unchecked checkbox disclosure:
                   </p>
                   <blockquote className="mt-4 rounded-xl border-l-4 border-[var(--primary)] bg-[var(--muted)]/50 p-4 text-sm italic text-[var(--muted-foreground)]">
-                    &ldquo;By providing your phone number, you agree to receive SMS lead notifications from
-                    Acadiana Web Design. Message frequency varies based on lead volume. Msg &amp; data
-                    rates may apply. Reply STOP to opt out. Reply HELP for support. Terms &amp; Privacy.&rdquo;
+                    &ldquo;I agree to receive SMS lead notifications from Acadiana Web Design. Message
+                    frequency varies based on lead volume. Msg &amp; data rates may apply. Reply STOP
+                    to opt out. Reply HELP for support. Consent is not a condition of purchase.
+                    Terms &amp; Privacy.&rdquo;
                   </blockquote>
                 </div>
               </div>
@@ -110,6 +111,7 @@ export default function SmsConsentPage() {
                 <dl className="grid gap-4 sm:grid-cols-2">
                   {[
                     { label: "Brand", value: "Acadiana Web Design" },
+                    { label: "Opt-In Method", value: "Unchecked checkbox in the client portal" },
                     { label: "Message Frequency", value: "Varies (one per lead submission)" },
                     { label: "Opt-Out", value: "Reply STOP to any message" },
                     { label: "Help", value: "Reply HELP or email support" },

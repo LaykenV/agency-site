@@ -49,6 +49,11 @@ export const buildDetailsValidator = v.object({
   inspirationLinks: v.array(v.string()),
   myNotes: v.union(v.string(), v.null()),
   notificationPhone: v.optional(v.string()),
+  smsConsent: v.optional(v.object({
+    acceptedAt: v.number(),
+    disclosureVersion: v.string(),
+    source: v.string(),
+  })),
   brand: v.object({
     colorScheme: v.object({
       primary: v.string(),

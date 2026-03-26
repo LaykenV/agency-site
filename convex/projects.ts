@@ -223,6 +223,11 @@ export const getByProjectIdSlug = internalQuery({
       buildDetails: v.optional(v.object({
         headline: v.union(v.string(), v.null()),
         notificationPhone: v.optional(v.string()),
+        smsConsent: v.optional(v.object({
+          acceptedAt: v.number(),
+          disclosureVersion: v.string(),
+          source: v.string(),
+        })),
       })),
       deployment: v.optional(deploymentValidator),
     }),
@@ -246,6 +251,7 @@ export const getByProjectIdSlug = internalQuery({
         ? {
             headline: project.buildDetails.headline,
             notificationPhone: project.buildDetails.notificationPhone,
+            smsConsent: project.buildDetails.smsConsent,
           }
         : undefined,
       deployment: project.deployment,
@@ -272,6 +278,11 @@ export const getPortalProject = query({
         domainPreference: v.union(v.string(), v.null()),
         inspirationLinks: v.array(v.string()),
         notificationPhone: v.optional(v.string()),
+        smsConsent: v.optional(v.object({
+          acceptedAt: v.number(),
+          disclosureVersion: v.string(),
+          source: v.string(),
+        })),
         brand: v.object({
           colorScheme: v.object({
             primary: v.string(),
@@ -313,6 +324,7 @@ export const getPortalProject = query({
       domainPreference: project.buildDetails.domainPreference,
       inspirationLinks: project.buildDetails.inspirationLinks,
       notificationPhone: project.buildDetails.notificationPhone,
+      smsConsent: project.buildDetails.smsConsent,
       brand: {
         colorScheme: project.buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: project.buildDetails.brand.logoStorageId,
@@ -367,6 +379,8 @@ export const upsertBuildDetails = mutation({
     headline: v.optional(v.string()),
     domainPreference: v.optional(v.string()),
     notificationPhone: v.optional(v.string()),
+    smsConsentAccepted: v.optional(v.boolean()),
+    smsConsentDisclosureVersion: v.optional(v.string()),
     inspirationLinks: v.optional(v.array(v.string())),
     brand: v.optional(v.object({
       colorScheme: v.optional(v.object({
@@ -395,10 +409,32 @@ export const upsertBuildDetails = mutation({
 
     const now = Date.now();
     const existingBuildDetails = project.buildDetails;
+    const existingNotificationPhone = existingBuildDetails?.notificationPhone;
     const normalizedNotificationPhone =
       args.notificationPhone !== undefined
         ? normalizeNotificationPhone(args.notificationPhone)
         : undefined;
+    const isSameNotificationPhone =
+      normalizedNotificationPhone !== undefined && existingNotificationPhone === normalizedNotificationPhone;
+
+    if (args.notificationPhone !== undefined && normalizedNotificationPhone && !isSameNotificationPhone && !args.smsConsentAccepted) {
+      throw new Error("SMS consent is required before saving a new phone number.");
+    }
+
+    const nextSmsConsent =
+      args.notificationPhone !== undefined
+        ? normalizedNotificationPhone
+          ? isSameNotificationPhone && args.smsConsentAccepted !== false && existingBuildDetails?.smsConsent
+            ? existingBuildDetails.smsConsent
+            : args.smsConsentAccepted
+              ? {
+                  acceptedAt: now,
+                  disclosureVersion: args.smsConsentDisclosureVersion ?? "2026-03-20",
+                  source: "portal_build_details_checkbox",
+                }
+              : undefined
+          : undefined
+        : existingBuildDetails?.smsConsent;
 
     // Shallow merge with existing buildDetails
     const updatedBuildDetails = {
@@ -409,6 +445,7 @@ export const upsertBuildDetails = mutation({
       notificationPhone: args.notificationPhone !== undefined
         ? normalizedNotificationPhone || undefined
         : existingBuildDetails?.notificationPhone,
+      smsConsent: nextSmsConsent,
       brand: {
         colorScheme: args.brand?.colorScheme !== undefined ? args.brand.colorScheme : existingBuildDetails?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
         logoStorageId: args.logoStorageId !== undefined ? args.logoStorageId : existingBuildDetails?.brand?.logoStorageId,
@@ -498,6 +535,7 @@ export const createEditRequest = mutation({
         inspirationLinks: existingBuildDetails.inspirationLinks,
         myNotes: existingBuildDetails.myNotes,
         notificationPhone: existingBuildDetails.notificationPhone,
+        smsConsent: existingBuildDetails.smsConsent,
         brand: {
           colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
           logoStorageId: existingBuildDetails.brand?.logoStorageId,
@@ -510,6 +548,7 @@ export const createEditRequest = mutation({
         inspirationLinks: [],
         myNotes: null,
         notificationPhone: undefined,
+        smsConsent: undefined,
         brand: {
           colorScheme: { primary: "#111827", accent: "#6EE7B7" },
           imageStorageIds: updatedImageIds,

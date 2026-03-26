@@ -165,7 +165,7 @@ export const TERMS_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "By providing your phone number during onboarding or through your client portal, you consent to receive automated SMS lead notifications from Acadiana Web Design. Consent is not a condition of purchase. You may use the service without providing a phone number.",
+        text: "By providing your phone number during onboarding or through your client portal and affirmatively checking the SMS consent box, you consent to receive automated SMS lead notifications from Acadiana Web Design. Consent is not a condition of purchase. You may use the service without providing a phone number.",
       },
       {
         type: "subheading",
@@ -332,4 +332,3 @@ const buildCanonicalHtml = (): string => {
 export const TERMS_CANONICAL_HTML = buildCanonicalHtml();
 
 export const TERMS_HASH_INPUT = TERMS_CANONICAL_HTML;
-

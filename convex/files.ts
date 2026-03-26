@@ -126,6 +126,7 @@ export const deleteFile = mutation({
         inspirationLinks: existingBuildDetails.inspirationLinks,
         myNotes: existingBuildDetails.myNotes,
         notificationPhone: existingBuildDetails.notificationPhone,
+        smsConsent: existingBuildDetails.smsConsent,
         brand: {
           colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
           logoStorageId: updatedLogoStorageId,

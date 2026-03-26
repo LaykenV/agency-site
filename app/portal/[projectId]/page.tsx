@@ -61,6 +61,7 @@ type CalBooking = {
 type BuildDetailsFormData = {
   domainPreference: string;
   notificationPhone: string;
+  smsConsentAccepted: boolean;
   inspirationLinks: string[];
   brand: {
     colorScheme: { primary: string; accent: string };
@@ -80,6 +81,8 @@ type EditRequest = {
   details?: string;
   attachments?: Id<"_storage">[];
 };
+
+const SMS_CONSENT_DISCLOSURE_VERSION = "2026-03-20";
 
 // ============================================================================
 // UI UTILITIES
@@ -292,6 +295,11 @@ function AwaitingAssetsSection({
     headline: string | null;
     domainPreference: string | null;
     notificationPhone?: string;
+    smsConsent?: {
+      acceptedAt: number;
+      disclosureVersion: string;
+      source: string;
+    };
     inspirationLinks: string[];
     brand: {
       colorScheme: { primary: string; accent: string };
@@ -387,6 +395,7 @@ function AwaitingAssetsSection({
             initialValues={buildDetails ? {
               domainPreference: buildDetails.domainPreference ?? "",
               notificationPhone: buildDetails.notificationPhone ?? "",
+              smsConsentAccepted: Boolean(buildDetails.smsConsent),
               inspirationLinks: buildDetails.inspirationLinks,
               brand: {
                 colorScheme: buildDetails.brand.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
@@ -475,6 +484,7 @@ function BuildDetailsForm({
   const [formData, setFormData] = useState<BuildDetailsFormData>({
     domainPreference: initialValues?.domainPreference ?? "",
     notificationPhone: initialValues?.notificationPhone ?? "",
+    smsConsentAccepted: initialValues?.smsConsentAccepted ?? false,
     inspirationLinks: initialValues?.inspirationLinks ?? [],
     brand: {
       colorScheme: initialValues?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
@@ -544,6 +554,7 @@ function BuildDetailsForm({
     return {
       domainPreference,
       notificationPhone,
+      smsConsentAccepted: initialValues?.smsConsentAccepted ?? false,
       inspirationLinks,
       brand: {
         colorScheme: { primary, accent },
@@ -559,6 +570,7 @@ function BuildDetailsForm({
     return {
       domainPreference: formData.domainPreference.trim(),
       notificationPhone: normalizePhone(formData.notificationPhone) ?? "",
+      smsConsentAccepted: formData.smsConsentAccepted,
       inspirationLinks: formData.inspirationLinks.map((u) => u.trim()),
       brand: {
         colorScheme: {
@@ -605,6 +617,15 @@ function BuildDetailsForm({
     const normalizedNotificationPhone = normalizePhone(formData.notificationPhone);
     if (notificationPhoneInput && !normalizedNotificationPhone) {
       toast.error("Enter a valid phone number in E.164 format (e.g. +13375551234).");
+      return;
+    }
+
+    if (
+      normalizedNotificationPhone &&
+      normalizedNotificationPhone !== initialSnapshot.notificationPhone &&
+      !formData.smsConsentAccepted
+    ) {
+      toast.error("You must explicitly agree to SMS lead notifications before saving a phone number.");
       return;
     }
 
@@ -658,6 +679,8 @@ function BuildDetailsForm({
         projectId,
         domainPreference: formData.domainPreference.trim() || undefined,
         notificationPhone: normalizedNotificationPhone ?? "",
+        smsConsentAccepted: normalizedNotificationPhone ? formData.smsConsentAccepted : false,
+        smsConsentDisclosureVersion: SMS_CONSENT_DISCLOSURE_VERSION,
         inspirationLinks: formData.inspirationLinks.length > 0 ? formData.inspirationLinks : undefined,
         brand: {
           colorScheme: formData.brand.colorScheme,
@@ -702,14 +725,40 @@ function BuildDetailsForm({
             id="notificationPhone"
             type="tel"
             value={formData.notificationPhone}
-            onChange={(e) => setFormData({ ...formData, notificationPhone: e.target.value })}
+            onChange={(e) =>
+              setFormData((current) => {
+                const nextPhone = e.target.value;
+                const nextNormalized = normalizePhone(nextPhone) ?? "";
+                const consentedNormalized = normalizePhone(initialSnapshot.notificationPhone) ?? "";
+                const isSameAsConsented =
+                  nextNormalized !== "" && consentedNormalized !== "" && nextNormalized === consentedNormalized;
+
+                return {
+                  ...current,
+                  notificationPhone: nextPhone,
+                  smsConsentAccepted: isSameAsConsented ? initialSnapshot.smsConsentAccepted : false,
+                };
+              })
+            }
             placeholder="+1 (337) 555-1234"
           />
+          <label className="mt-3 flex items-start gap-3 rounded-xl border border-[var(--border)]/70 bg-[var(--card)]/60 p-3 text-xs leading-relaxed text-[var(--secondary)]">
+            <input
+              type="checkbox"
+              checked={formData.smsConsentAccepted}
+              onChange={(e) => setFormData({ ...formData, smsConsentAccepted: e.target.checked })}
+              disabled={!formData.notificationPhone.trim()}
+              className="mt-0.5 h-4 w-4 rounded border-[var(--border)]"
+            />
+            <span>
+              I agree to receive SMS lead notifications from Acadiana Web Design at the phone number above. Message frequency varies based on lead volume. Msg &amp; data rates may apply. Reply STOP to opt out. Reply HELP for support. Consent is not a condition of purchase.{" "}
+              <a href="/legal/terms#sms-lead-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Terms</a>
+              {" & "}
+              <a href="/legal/privacy#sms-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Privacy</a>.
+            </span>
+          </label>
           <p className="mt-1.5 text-xs leading-relaxed text-[var(--secondary)]">
-            Optional. By providing your phone number, you agree to receive SMS lead notifications from Acadiana Web Design. Message frequency varies based on lead volume. Msg &amp; data rates may apply. Reply STOP to opt out. Reply HELP for support.{" "}
-            <a href="/legal/terms#sms-lead-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Terms</a>
-            {" & "}
-            <a href="/legal/privacy#sms-notifications" target="_blank" rel="noopener noreferrer" className="underline hover:text-[var(--foreground)] transition-colors">Privacy</a>.
+            Optional. Leave this blank if you only want lead notifications by email.
           </p>
         </div>
 
@@ -988,6 +1037,7 @@ function BuildDetailsForm({
               const next: BuildDetailsFormData = {
                 domainPreference: initialSnapshot.domainPreference,
                 notificationPhone: initialSnapshot.notificationPhone,
+                smsConsentAccepted: initialSnapshot.smsConsentAccepted,
                 inspirationLinks: initialSnapshot.inspirationLinks,
                 brand: {
                   colorScheme: {

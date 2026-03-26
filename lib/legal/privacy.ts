@@ -63,7 +63,7 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
     blocks: [
       {
         type: "paragraph",
-        text: "If you provide a phone number, we use it to send SMS lead notifications when someone submits a contact form on your website. Message frequency varies based on lead volume. Message and data rates may apply.",
+        text: "If you provide a phone number and affirmatively opt in through the client portal checkbox, we use it to send SMS lead notifications when someone submits a contact form on your website. Message frequency varies based on lead volume. Message and data rates may apply.",
       },
       {
         type: "list",
