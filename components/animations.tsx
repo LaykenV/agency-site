@@ -47,12 +47,11 @@ export const scaleCard: Variants = {
 };
 
 export const floatCard: Variants = {
-  hidden: { opacity: 0, y: 22, scale: 0.985, filter: "blur(8px)" },
+  hidden: { opacity: 0, y: 22, scale: 0.985 },
   visible: (delay: number = 0) => ({
     opacity: 1,
     y: 0,
     scale: 1,
-    filter: "blur(0px)",
     transition: {
       type: "spring",
       damping: 18,

@@ -71,7 +71,7 @@ export function HorizontalScroller({
   }, [items.length]);
 
   return (
-    <div className={cn(className)}>
+    <div className={cn("overflow-hidden", className)}>
       <div
         ref={trackRef}
         onScroll={handleScroll}

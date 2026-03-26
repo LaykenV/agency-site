@@ -199,12 +199,23 @@
   z-index: 2147483646;
 }
 
+/* Prevent horizontal scrollbar gap on mobile */
+html, body {
+  overflow-x: clip;
+}
+
 body {
+  /* Only transition theme-switch colors; scoped to background + color for perf */
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
+}
+
+/* GPU-promote animated elements */
+.motion-will-change {
+  will-change: transform, opacity;
 }
 
 /* Button styling */
@@ -220,7 +231,7 @@ body {
   background: var(--muted);
   color: var(--foreground);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .btn-icon:hover {
@@ -869,7 +880,7 @@ body {
     box-shadow:
       0 6px 14px -6px hsl(var(--foreground) / 0.18),
       inset 0 1px 0 hsl(var(--foreground) / 0.08);
-    transition: all 0.18s ease;
+    transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
   }
   .pill:hover {
     border-color: color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 20%);
@@ -1621,6 +1632,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    overflow: hidden; /* contain the negative-margin track */
   }
 
   .reviews-track {
@@ -1628,7 +1640,7 @@ body {
     gap: 1rem;
     overflow-x: auto;
     padding: 0.5rem 1.25rem 2.25rem; /* extra bottom space so indicators don't touch next section */
-    margin-inline: -1.25rem; /* extend to viewport edges for peek */
+    margin-inline: -1.25rem; /* extend to viewport edges for peek — contained by parent overflow:hidden */
     scroll-snap-type: x mandatory;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -2618,7 +2630,8 @@ body {
 .hamburger svg {
   height: 32px;
   width: 32px;
-  transition: transform 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 350ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
 }
 
 .line {
@@ -2627,8 +2640,8 @@ body {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2.5;
-  transition: stroke-dasharray 600ms cubic-bezier(0.4, 0, 0.2, 1),
-              stroke-dashoffset 600ms cubic-bezier(0.4, 0, 0.2, 1);
+  transition: stroke-dasharray 350ms cubic-bezier(0.4, 0, 0.2, 1),
+              stroke-dashoffset 350ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .line-top-bottom {
@@ -2651,14 +2664,14 @@ body {
     radial-gradient(120% 120% at 100% 100%, hsl(var(--accent) / 0.12), transparent 62%),
     hsl(var(--card));
   border: 1px solid color-mix(in hsl, hsl(var(--border)), hsl(var(--primary)) 22%);
-  backdrop-filter: saturate(140%) blur(16px);
-  -webkit-backdrop-filter: saturate(140%) blur(16px);
+  backdrop-filter: saturate(120%) blur(10px);
+  -webkit-backdrop-filter: saturate(120%) blur(10px);
   box-shadow:
-    0 28px 64px -28px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
-    0 14px 36px -16px color-mix(in hsl, hsl(var(--accent)), hsl(var(--background)) 70%),
+    0 20px 48px -24px color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 55%),
     inset 0 1px 0 hsl(var(--foreground) / 0.06);
   transform: translateZ(0);
   backface-visibility: hidden;
+  will-change: transform, opacity;
 }
 
 html.dark .mobile-menu-panel {
@@ -2777,7 +2790,7 @@ html.dark .mobile-menu-panel {
   box-shadow:
     inset 0 1px 0 hsl(0 0% 100% / 0.12),
     0 8px 20px -12px hsl(var(--primary) / 0.15);
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
 }
 .btn-ghost-cta:hover {
   border-color: color-mix(in hsl, hsl(var(--primary)), hsl(var(--background)) 25%);
@@ -2845,7 +2858,7 @@ html.dark .mobile-menu-panel {
   border-bottom: 1px solid hsl(var(--border) / 0.5);
   text-decoration: none;
   color: inherit;
-  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition: background-color 0.22s cubic-bezier(0.22, 1, 0.36, 1), color 0.22s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
 .editorial-row:last-child {
   border-bottom: none;
