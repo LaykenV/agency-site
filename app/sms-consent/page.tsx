@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { type Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -73,12 +74,13 @@ export default function SmsConsentPage() {
                   <p className="text-sm font-semibold text-[var(--foreground)]">
                     When clients enter a phone number, they see the following unchecked checkbox disclosure:
                   </p>
-                  <blockquote className="mt-4 rounded-xl border-l-4 border-[var(--primary)] bg-[var(--muted)]/50 p-4 text-sm italic text-[var(--muted-foreground)]">
-                    &ldquo;I agree to receive SMS lead notifications from Acadiana Web Design. Message
-                    frequency varies based on lead volume. Msg &amp; data rates may apply. Reply STOP
-                    to opt out. Reply HELP for support. Consent is not a condition of purchase.
-                    Terms &amp; Privacy.&rdquo;
-                  </blockquote>
+                  <Image
+                    src="/sms-consent.png"
+                    alt="Screenshot of the SMS consent checkbox in the client portal showing the unchecked checkbox with full disclosure text including STOP and HELP instructions"
+                    width={856}
+                    height={188}
+                    className="mt-4 rounded-xl border border-[var(--border)]"
+                  />
                 </div>
               </div>
               <div className="mt-10 h-px w-full bg-gradient-to-r from-transparent via-[var(--border)] to-transparent opacity-50" />
