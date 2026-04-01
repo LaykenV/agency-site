@@ -316,6 +316,34 @@ function MarketingAdminContent() {
     };
   }, [activeLeads]);
 
+  const sortedActiveLeads = useMemo(() => {
+    if (!activeLeads) {
+      return activeLeads;
+    }
+
+    return activeLeads
+      .map((lead, index) => ({ lead, index }))
+      .sort((a, b) => {
+        const aFit = a.lead.aiAnalysis?.fitScore;
+        const bFit = b.lead.aiAnalysis?.fitScore;
+
+        if (typeof aFit === "number" && typeof bFit === "number") {
+          return bFit - aFit || a.index - b.index;
+        }
+
+        if (typeof aFit === "number") {
+          return -1;
+        }
+
+        if (typeof bFit === "number") {
+          return 1;
+        }
+
+        return a.index - b.index;
+      })
+      .map(({ lead }) => lead);
+  }, [activeLeads]);
+
   // Bulk selection computed values
   const eligibleLeads = useMemo(() => {
     return (activeLeads ?? []).filter((l) => l.contactEmail && l.demoToken);
@@ -885,7 +913,7 @@ function MarketingAdminContent() {
 
             {/* Lead cards */}
             <div className="space-y-3">
-              {activeLeads?.map((lead) => {
+              {sortedActiveLeads?.map((lead) => {
                 const fitScore = lead.aiAnalysis?.fitScore;
                 const fitClass =
                   typeof fitScore === "number"
@@ -1244,7 +1272,7 @@ function MarketingAdminContent() {
                 );
               })}
 
-              {!activeLeads?.length ? (
+              {!sortedActiveLeads?.length ? (
                 <div className="rounded-xl border border-border bg-card p-8 text-center text-sm text-muted-foreground">
                   No leads found for this filter.
                 </div>

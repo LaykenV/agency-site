@@ -21,18 +21,38 @@ import { Loader2 } from "lucide-react";
 const MAGIC_LINK_STORAGE_KEY = "portal_magic_link_sent";
 
 export default function PortalPage() {
+  const [isRecheckingSession, setIsRecheckingSession] = useState(true);
+
+  useEffect(() => {
+    let isActive = true;
+
+    const recheckSession = async () => {
+      try {
+        await authClient.getSession();
+      } catch (error) {
+        console.error("[portal] failed to recheck session", error);
+      } finally {
+        if (isActive) {
+          setIsRecheckingSession(false);
+        }
+      }
+    };
+
+    void recheckSession();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
+
   return (
     <>
       <AuthLoading>
-        <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
-          <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
-            <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
-          </div>
-        </div>
+        <PortalLoadingView />
       </AuthLoading>
 
       <Unauthenticated>
-        <UnauthenticatedView />
+        <UnauthenticatedView isRecheckingSession={isRecheckingSession} />
       </Unauthenticated>
 
       <Authenticated>
@@ -42,11 +62,25 @@ export default function PortalPage() {
   );
 }
 
-function UnauthenticatedView() {
+function PortalLoadingView() {
+  return (
+    <div className="flex min-h-[calc(100dvh_-_var(--global-header-height))] items-center justify-center bg-[var(--background)] text-[var(--foreground)]">
+      <div className="flex flex-col items-center gap-3 text-sm text-[var(--secondary)]">
+        <Loader2 className="h-10 w-10 animate-spin text-[var(--primary)]" />
+      </div>
+    </div>
+  );
+}
+
+function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boolean }) {
   const convex = useConvex();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "unknown" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  if (isRecheckingSession) {
+    return <PortalLoadingView />;
+  }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();

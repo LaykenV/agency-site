@@ -18,6 +18,12 @@ import { magicLinkClient } from "better-auth/client/plugins";
  * - magicLinkClient(): Enables magic link authentication
  */
 export const authClient = createAuthClient({
+  sessionOptions: {
+    // Revalidate auth state when users return to an idle tab so client-side
+    // navigation doesn't briefly render as signed out until a hard refresh.
+    refetchOnWindowFocus: true,
+    refetchWhenOffline: false,
+  },
   plugins: [
     // Convex integration plugin (required)
     convexClient(),
