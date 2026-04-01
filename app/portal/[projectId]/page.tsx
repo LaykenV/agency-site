@@ -268,7 +268,6 @@ function AuthenticatedProjectView() {
                 projectId={project._id}
                 projectSlug={projectId}
                 liveUrl={project.deployment?.liveUrl}
-                domainPreference={project.buildDetails?.domainPreference ?? undefined}
                 editRequests={editRequests ?? []}
                 subscriptionCreatedAt={subscription?._creationTime}
               />
@@ -1431,14 +1430,12 @@ function LiveSupportPanel({
   projectId,
   projectSlug,
   liveUrl,
-  domainPreference,
   editRequests = [],
   subscriptionCreatedAt,
 }: {
   projectId: Id<"projects">;
   projectSlug: string;
   liveUrl?: string;
-  domainPreference?: string;
   editRequests?: EditRequest[];
   subscriptionCreatedAt?: number;
 }) {

@@ -78,10 +78,6 @@ function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boo
   const [status, setStatus] = useState<"idle" | "loading" | "unknown" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (isRecheckingSession) {
-    return <PortalLoadingView />;
-  }
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = email.trim().toLowerCase();
@@ -150,6 +146,10 @@ function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boo
     }
     return null;
   }, [status, errorMessage]);
+
+  if (isRecheckingSession) {
+    return <PortalLoadingView />;
+  }
 
   // Login form view
   return (
