@@ -1,5 +1,5 @@
-export const TERMS_VERSION = "2026-03-10" as const;
-export const TERMS_LAST_UPDATED = "2026-03-10" as const;
+export const TERMS_VERSION = "2026-04-08" as const;
+export const TERMS_LAST_UPDATED = "2026-04-08" as const;
 
 export type TermsContentBlock =
   | { type: "paragraph"; text: string }
@@ -165,7 +165,7 @@ export const TERMS_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "By providing your phone number during onboarding or through your client portal and affirmatively checking the SMS consent box, you consent to receive automated SMS lead notifications from Acadiana Web Design. Consent is not a condition of purchase. You may use the service without providing a phone number.",
+        text: "By providing your phone number during onboarding or through your client portal and affirmatively checking the separate SMS consent box, you consent to receive automated SMS lead notifications from Acadiana Web Design. Consent is not a condition of purchase. You may use the service without providing a phone number.",
       },
       {
         type: "subheading",
@@ -194,7 +194,7 @@ export const TERMS_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "SMS messages are sent via Twilio. Your phone number is stored securely and is not shared with third parties for marketing purposes. For details on how we handle your data, see our Privacy Policy.",
+        text: "SMS messages are sent via Twilio. Mobile information and SMS opt-in consent are not shared with third parties or affiliates for marketing or promotional purposes. Text messaging originator opt-in data and consent will not be shared with any third parties. Carriers are not liable for delayed or undelivered messages. For details on how we handle your data, see our Privacy Policy.",
       },
     ],
   },

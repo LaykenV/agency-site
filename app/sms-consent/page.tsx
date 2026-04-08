@@ -5,7 +5,7 @@ import { type Metadata } from "next";
 export const metadata: Metadata = {
   title: "SMS Consent — Acadiana Web Design",
   description:
-    "Learn how Acadiana Web Design clients consent to receive SMS lead notifications as part of their Website-as-a-Service subscription.",
+    "Learn how Acadiana Web Design clients optionally opt in to receive SMS lead notifications through a separate unchecked checkbox in the client portal.",
 };
 
 export default function SmsConsentPage() {
@@ -51,10 +51,9 @@ export default function SmsConsentPage() {
               </h2>
               <div className="mt-6 space-y-4 text-[var(--muted-foreground)]">
                 <p>
-                  Business owners subscribe to SMS lead notifications when they sign up for our
-                  Website-as-a-Service plan. During the onboarding process, clients provide their phone
-                  number through our client portal and must actively check an unchecked consent box before
-                  SMS notifications are enabled when new leads submit a contact form on their website.
+                  Business owners can optionally add a mobile number for lead notifications inside the
+                  client portal. SMS alerts stay disabled unless the client enters a phone number and
+                  separately checks an unchecked consent box authorizing SMS lead notifications.
                 </p>
                 <p>
                   Consent is not a condition of purchase. Clients may use the service without providing a
@@ -93,12 +92,12 @@ export default function SmsConsentPage() {
               </h2>
               <div className="mt-6">
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6 font-mono text-sm leading-relaxed text-[var(--muted-foreground)]">
-                  <p>New lead for All About Towing</p>
-                  <p>Name: John Smith</p>
-                  <p>Email: john@example.com</p>
-                  <p>Phone: (337) 555-1234</p>
-                  <p>Message: I need a tow truck at 123 Main St.</p>
-                  <p className="mt-2">Reply to this lead ASAP for the best chance of closing.</p>
+                  <p>Acadiana Web Design: New lead for [Client Business Name]</p>
+                  <p>Name: [Lead Name]</p>
+                  <p>Email: [Lead Email]</p>
+                  <p>Phone: [Lead Phone]</p>
+                  <p>Message: [Lead Message]</p>
+                  <p className="mt-2">Reply STOP to opt out.</p>
                 </div>
               </div>
               <div className="mt-10 h-px w-full bg-gradient-to-r from-transparent via-[var(--border)] to-transparent opacity-50" />
@@ -138,6 +137,31 @@ export default function SmsConsentPage() {
               <div className="mt-10 h-px w-full bg-gradient-to-r from-transparent via-[var(--border)] to-transparent opacity-50" />
             </section>
 
+            <section>
+              <h2 className="heading-gradient-soft text-2xl font-bold tracking-tight md:text-3xl">
+                Public Reviewer Proof
+              </h2>
+              <div className="mt-6 space-y-4 text-[var(--muted-foreground)]">
+                <p>
+                  Because the real opt-in flow lives inside an authenticated client portal, we maintain a
+                  public reviewer page that shows the exact unchecked checkbox UI and disclosure used in
+                  production.
+                </p>
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-6">
+                  <p className="text-sm font-semibold text-[var(--foreground)]">
+                    Public screenshot URL for gated opt-in review:
+                  </p>
+                  <a
+                    href="https://acadianawebdesign.com/sms-consent/screenshot"
+                    className="mt-3 block break-all font-mono text-sm text-[var(--primary)] hover:underline"
+                  >
+                    https://acadianawebdesign.com/sms-consent/screenshot
+                  </a>
+                </div>
+              </div>
+              <div className="mt-10 h-px w-full bg-gradient-to-r from-transparent via-[var(--border)] to-transparent opacity-50" />
+            </section>
+
             {/* Data & Privacy */}
             <section>
               <h2 className="heading-gradient-soft text-2xl font-bold tracking-tight md:text-3xl">
@@ -146,8 +170,8 @@ export default function SmsConsentPage() {
               <div className="mt-6 space-y-4 text-[var(--muted-foreground)]">
                 <ul className="ml-4 list-disc space-y-2 pl-2 marker:text-[var(--primary)]">
                   <li className="pl-2">Your phone number is stored securely and used only for lead notifications.</li>
-                  <li className="pl-2">We do not sell, rent, or share your phone number with third parties for marketing purposes.</li>
-                  <li className="pl-2">Your phone number is not shared with third parties.</li>
+                  <li className="pl-2">Mobile information and SMS opt-in consent are not shared with third parties or affiliates for marketing or promotional purposes.</li>
+                  <li className="pl-2">Text messaging originator opt-in data and consent are not shared with any third parties.</li>
                   <li className="pl-2">SMS messages are delivered via Twilio.</li>
                 </ul>
               </div>

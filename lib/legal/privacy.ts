@@ -2,8 +2,8 @@ import type { TermsSection, TermsContentBlock } from "./terms";
 
 export type { TermsSection as PrivacySection, TermsContentBlock as PrivacyContentBlock };
 
-export const PRIVACY_VERSION = "2026-03-10" as const;
-export const PRIVACY_LAST_UPDATED = "2026-03-10" as const;
+export const PRIVACY_VERSION = "2026-04-08" as const;
+export const PRIVACY_LAST_UPDATED = "2026-04-08" as const;
 
 export const PRIVACY_SECTIONS: Array<TermsSection> = [
   {
@@ -63,7 +63,7 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
     blocks: [
       {
         type: "paragraph",
-        text: "If you provide a phone number and affirmatively opt in through the client portal checkbox, we use it to send SMS lead notifications when someone submits a contact form on your website. Message frequency varies based on lead volume. Message and data rates may apply.",
+        text: "If you provide a phone number and affirmatively opt in through the separate client portal checkbox, we use it to send SMS lead notifications when someone submits a contact form on your website. Message frequency varies based on lead volume. Message and data rates may apply.",
       },
       {
         type: "list",
@@ -75,7 +75,7 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "Your phone number is not shared with third parties for marketing purposes. SMS messages are delivered through our provider, Twilio. See our Terms of Service for full SMS terms.",
+        text: "Mobile information and SMS opt-in consent are not shared with third parties or affiliates for marketing or promotional purposes. Text messaging originator opt-in data and consent will not be shared with any third parties. SMS messages are delivered through our provider, Twilio. See our Terms of Service for full SMS terms.",
       },
     ],
   },

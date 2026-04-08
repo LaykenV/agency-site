@@ -141,10 +141,10 @@ export default function SmsConsentScreenshotPage() {
             </div>
 
             <div className="rounded-3xl border border-[var(--border)]/70 bg-gradient-to-br from-[var(--card)] to-[var(--muted)]/50 p-6 text-sm text-[var(--muted-foreground)]">
-              Use this URL in the Twilio campaign submission if the reviewer needs a public reference
-              for the gated opt-in flow:
+              Use this full URL directly in the Twilio campaign message flow field when the reviewer
+              needs a public reference for the gated opt-in flow:
               <div className="mt-4 rounded-2xl border border-[var(--border)] bg-[var(--background)] px-4 py-3 font-mono text-xs text-[var(--foreground)]">
-                /sms-consent/screenshot
+                https://acadianawebdesign.com/sms-consent/screenshot
               </div>
             </div>
           </aside>
