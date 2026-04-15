@@ -26,6 +26,8 @@ export const sendLeadNotificationSms = internalAction({
     const source = args.projectLiveUrl ?? "your website";
     const timestamp = new Date().toLocaleString("en-US", {
       timeZone: "America/Chicago",
+      month: "short",
+      day: "numeric",
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
