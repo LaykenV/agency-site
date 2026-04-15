@@ -11,7 +11,7 @@ export const sendLeadNotificationSms = internalAction({
     leadPhone: v.optional(v.string()),
     leadEmail: v.string(),
     leadMessage: v.optional(v.string()),
-    projectName: v.string(),
+    projectLiveUrl: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -23,17 +23,26 @@ export const sendLeadNotificationSms = internalAction({
       return null;
     }
 
+    const source = args.projectLiveUrl ?? "your website";
+    const timestamp = new Date().toLocaleString("en-US", {
+      timeZone: "America/Chicago",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+
     const body = [
-      `New lead for ${args.projectName}`,
-      `Name: ${args.leadName}`,
-      `Email: ${args.leadEmail}`,
-      args.leadPhone ? `Phone: ${args.leadPhone}` : undefined,
-      args.leadMessage?.trim()
-        ? `Message: ${args.leadMessage.trim()}`
-        : "Message: (none provided)",
-      "Reply to this lead ASAP for the best chance of closing.",
+      `New lead from ${source}`,
+      "",
+      args.leadName,
+      args.leadEmail,
+      args.leadPhone ?? undefined,
+      "",
+      args.leadMessage?.trim() || "No message provided.",
+      "",
+      `Received at ${timestamp}`,
     ]
-      .filter((line): line is string => Boolean(line))
+      .filter((line): line is string => line !== undefined)
       .join("\n");
 
     try {
@@ -44,7 +53,7 @@ export const sendLeadNotificationSms = internalAction({
     } catch (error) {
       console.error("[notifications] Failed to send lead SMS", {
         to: args.to,
-        projectName: args.projectName,
+        projectLiveUrl: args.projectLiveUrl,
         error,
       });
     }

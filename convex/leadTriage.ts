@@ -74,14 +74,14 @@ export const triageLead = internalAction({
     let projectId = lead.projectId;
     let notificationPhone: string | undefined;
     let smsConsentRecorded = false;
-    let projectName = "your website";
+    let projectLiveUrl: string | undefined;
     try {
       const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
         projectId: lead.projectId,
       });
       notificationPhone = project?.buildDetails?.notificationPhone;
       smsConsentRecorded = Boolean(project?.buildDetails?.smsConsent);
-      projectName = project?.buildDetails?.headline ?? projectName;
+      projectLiveUrl = project?.deployment?.liveUrl;
       if (project?.prospectId) {
         const prospect = await ctx.runQuery(
           internal.prospects.internalGetProspectById,
@@ -182,7 +182,7 @@ export const triageLead = internalAction({
           leadPhone: leadData.phone,
           leadEmail: leadData.email,
           leadMessage: leadData.message,
-          projectName,
+          projectLiveUrl,
         });
       }
     } else {
