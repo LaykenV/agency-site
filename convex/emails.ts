@@ -536,6 +536,20 @@ export const sendLeadNotification = internalAction({
       headers: getListUnsubscribeHeaders(),
     });
 
+    await ctx.runMutation(internal.activityLog.logActivity, {
+      projectId: project._id,
+      prospectId: project.prospectId,
+      actor: "system",
+      kind: "lead.email_notification_sent",
+      payload: {
+        leadId: args.leadId,
+        recipientEmail: clientEmail,
+        leadName: args.leadData.name,
+        leadEmail: args.leadData.email,
+        provider: "resend",
+      },
+    });
+
     console.log("[emails] lead notification sent successfully", {
       projectId: args.projectId,
       clientEmail,

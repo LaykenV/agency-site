@@ -5,6 +5,7 @@ import { Agent } from "@convex-dev/agent";
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { components, internal } from "./_generated/api";
 
 // ---------------------------------------------------------------------------
@@ -72,6 +73,8 @@ export const triageLead = internalAction({
     // 3. Load project context for business info
     let companyName = "Unknown business";
     let projectId = lead.projectId;
+    let projectDbId: Id<"projects"> | undefined;
+    let prospectId: Id<"prospects"> | undefined;
     let notificationPhone: string | undefined;
     let smsConsentRecorded = false;
     let projectLiveUrl: string | undefined;
@@ -79,6 +82,8 @@ export const triageLead = internalAction({
       const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
         projectId: lead.projectId,
       });
+      projectDbId = project?._id;
+      prospectId = project?.prospectId;
       notificationPhone = project?.buildDetails?.notificationPhone;
       smsConsentRecorded = Boolean(project?.buildDetails?.smsConsent);
       projectLiveUrl = project?.deployment?.liveUrl;
@@ -175,8 +180,11 @@ export const triageLead = internalAction({
         leadData,
       });
 
-      if (notificationPhone && smsConsentRecorded) {
+      if (notificationPhone && smsConsentRecorded && projectDbId) {
         await ctx.scheduler.runAfter(0, internal.notifications.sendLeadNotificationSms, {
+          projectDbId,
+          prospectId,
+          leadId: args.leadId,
           to: notificationPhone,
           leadName: leadData.name,
           leadPhone: leadData.phone,

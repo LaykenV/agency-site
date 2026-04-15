@@ -186,6 +186,8 @@ emails going to spam on outlook
 
 //polish GBP
 ---------------
+
+phone and email flags for contact and contact tab on live dashboard to update phone
 get user
 cold call 337-306-3705
 

@@ -2,10 +2,14 @@
 
 import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getTwilioClient } from "./twilio";
 
 export const sendLeadNotificationSms = internalAction({
   args: {
+    projectDbId: v.id("projects"),
+    prospectId: v.optional(v.id("prospects")),
+    leadId: v.id("client_leads"),
     to: v.string(),
     leadName: v.string(),
     leadPhone: v.optional(v.string()),
@@ -51,6 +55,20 @@ export const sendLeadNotificationSms = internalAction({
       await twilio.sendMessage(ctx, {
         to: args.to,
         body,
+      });
+
+      await ctx.runMutation(internal.activityLog.logActivity, {
+        projectId: args.projectDbId,
+        prospectId: args.prospectId,
+        actor: "system",
+        kind: "lead.sms_notification_sent",
+        payload: {
+          leadId: args.leadId,
+          recipientPhone: args.to,
+          leadName: args.leadName,
+          leadEmail: args.leadEmail,
+          provider: "twilio",
+        },
       });
     } catch (error) {
       console.error("[notifications] Failed to send lead SMS", {
