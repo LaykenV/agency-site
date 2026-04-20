@@ -4,6 +4,10 @@ import { authComponent } from "./auth";
 import { projectStatusValidator, buildDetailsValidator, deploymentValidator, calBookingValidator } from "./validators";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
+import {
+  buildBuildDetails,
+  deleteProjectStorageIdsIfUnreferenced,
+} from "./projectStorage";
 
 const E164_NOTIFICATION_PHONE_REGEX = /^\+[1-9]\d{9,14}$/;
 
@@ -436,28 +440,57 @@ export const upsertBuildDetails = mutation({
           : undefined
         : existingBuildDetails?.smsConsent;
 
-    // Shallow merge with existing buildDetails
-    const updatedBuildDetails = {
-      headline: args.headline !== undefined ? args.headline : existingBuildDetails?.headline ?? null,
-      domainPreference: args.domainPreference !== undefined ? args.domainPreference : existingBuildDetails?.domainPreference ?? null,
-      inspirationLinks: args.inspirationLinks !== undefined ? args.inspirationLinks : existingBuildDetails?.inspirationLinks ?? [],
-      myNotes: existingBuildDetails?.myNotes ?? null, // Preserve admin-only field
-      notificationPhone: args.notificationPhone !== undefined
-        ? normalizedNotificationPhone || undefined
-        : existingBuildDetails?.notificationPhone,
-      smsConsent: nextSmsConsent,
-      brand: {
-        colorScheme: args.brand?.colorScheme !== undefined ? args.brand.colorScheme : existingBuildDetails?.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
-        logoStorageId: args.logoStorageId !== undefined ? args.logoStorageId : existingBuildDetails?.brand?.logoStorageId,
-        imageStorageIds: args.imageStorageIds !== undefined ? args.imageStorageIds : existingBuildDetails?.brand?.imageStorageIds,
-      },
-      brandAssetsUploaded: Boolean(args.logoStorageId || args.imageStorageIds || existingBuildDetails?.brandAssetsUploaded),
-    };
+    const updatedBuildDetails = buildBuildDetails({
+      existingBuildDetails,
+      headline: args.headline,
+      domainPreference: args.domainPreference,
+      inspirationLinks: args.inspirationLinks,
+      myNotes: existingBuildDetails?.myNotes,
+      notificationPhone:
+        args.notificationPhone !== undefined
+          ? normalizedNotificationPhone ?? null
+          : undefined,
+      smsConsent:
+        args.notificationPhone !== undefined ? nextSmsConsent ?? null : undefined,
+      colorScheme: args.brand?.colorScheme,
+      logoStorageId: args.logoStorageId,
+      imageStorageIds: args.imageStorageIds,
+    });
 
     await ctx.db.patch(args.projectId, {
       buildDetails: updatedBuildDetails,
       updatedAt: now,
     });
+
+    const storageIdsToDelete = new Set<typeof updatedBuildDetails.brand.logoStorageId>();
+    const existingLogoStorageId = existingBuildDetails?.brand?.logoStorageId;
+    if (
+      args.logoStorageId !== undefined &&
+      existingLogoStorageId &&
+      existingLogoStorageId !== updatedBuildDetails.brand.logoStorageId
+    ) {
+      storageIdsToDelete.add(existingLogoStorageId);
+    }
+
+    if (args.imageStorageIds !== undefined) {
+      const nextImageStorageIds = new Set(
+        updatedBuildDetails.brand.imageStorageIds ?? [],
+      );
+      for (const storageId of existingBuildDetails?.brand?.imageStorageIds ?? []) {
+        if (!nextImageStorageIds.has(storageId)) {
+          storageIdsToDelete.add(storageId);
+        }
+      }
+    }
+
+    await deleteProjectStorageIdsIfUnreferenced(
+      ctx,
+      args.projectId,
+      Array.from(storageIdsToDelete).filter(
+        (storageId): storageId is NonNullable<typeof storageId> =>
+          storageId !== undefined,
+      ),
+    );
 
     await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
       projectId: args.projectId,
@@ -517,50 +550,7 @@ export const createEditRequest = mutation({
       updatedAt: now,
     });
 
-    // Union attachmentIds into project brand images if present
     if (args.attachmentIds && args.attachmentIds.length > 0) {
-      const existingBuildDetails = project.buildDetails;
-      const existingImageIds = existingBuildDetails?.brand?.imageStorageIds ?? [];
-      
-      // Use Set for deduplication
-      const mergedIds = new Set<string>();
-      existingImageIds.forEach(id => mergedIds.add(id));
-      args.attachmentIds.forEach(id => mergedIds.add(id));
-      
-      const updatedImageIds = Array.from(mergedIds) as typeof args.attachmentIds;
-      
-      const updatedBuildDetails = existingBuildDetails ? {
-        headline: existingBuildDetails.headline,
-        domainPreference: existingBuildDetails.domainPreference,
-        inspirationLinks: existingBuildDetails.inspirationLinks,
-        myNotes: existingBuildDetails.myNotes,
-        notificationPhone: existingBuildDetails.notificationPhone,
-        smsConsent: existingBuildDetails.smsConsent,
-        brand: {
-          colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
-          logoStorageId: existingBuildDetails.brand?.logoStorageId,
-          imageStorageIds: updatedImageIds,
-        },
-        brandAssetsUploaded: true,
-      } : {
-        headline: null,
-        domainPreference: null,
-        inspirationLinks: [],
-        myNotes: null,
-        notificationPhone: undefined,
-        smsConsent: undefined,
-        brand: {
-          colorScheme: { primary: "#111827", accent: "#6EE7B7" },
-          imageStorageIds: updatedImageIds,
-        },
-        brandAssetsUploaded: true,
-      };
-
-      await ctx.db.patch(args.projectId, {
-        buildDetails: updatedBuildDetails,
-        updatedAt: now,
-      });
-
       await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
         projectId: args.projectId,
         prospectId: project.prospectId,
@@ -569,7 +559,6 @@ export const createEditRequest = mutation({
         payload: {
           requestId,
           count: args.attachmentIds.length,
-          assetsRecordedViaTicket: true,
         },
       });
     }

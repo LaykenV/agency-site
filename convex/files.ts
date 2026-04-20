@@ -3,6 +3,11 @@ import { v } from "convex/values";
 import { authComponent } from "./auth";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import {
+  buildBuildDetails,
+  deleteProjectStorageIdsIfUnreferenced,
+  listProjectStorageIds,
+} from "./projectStorage";
 
 export const generateUploadUrl = mutation({
   args: {},
@@ -35,14 +40,7 @@ export const getUrls = query({
       throw new Error("Unauthorized");
     }
 
-    // Verify all storage IDs belong to this project
-    const projectStorageIds = new Set<string>();
-    if (project.buildDetails?.brand?.logoStorageId) {
-      projectStorageIds.add(project.buildDetails.brand.logoStorageId);
-    }
-    if (project.buildDetails?.brand?.imageStorageIds) {
-      project.buildDetails.brand.imageStorageIds.forEach(id => projectStorageIds.add(id));
-    }
+    const projectStorageIds = await listProjectStorageIds(ctx, args.projectId);
 
     // Only return URLs for storage IDs that belong to this project
     const result: Record<Id<"_storage">, string> = {};
@@ -77,83 +75,81 @@ export const deleteFile = mutation({
       throw new Error("Unauthorized");
     }
 
-    // Verify the storage ID belongs to this project
-    const projectStorageIds = new Set<string>();
-    if (project.buildDetails?.brand?.logoStorageId) {
-      projectStorageIds.add(project.buildDetails.brand.logoStorageId);
-    }
-    if (project.buildDetails?.brand?.imageStorageIds) {
-      project.buildDetails.brand.imageStorageIds.forEach(id => projectStorageIds.add(id));
-    }
+    const projectStorageIds = await listProjectStorageIds(ctx, args.projectId);
 
     if (!projectStorageIds.has(args.storageId)) {
       throw new Error("Storage ID does not belong to this project");
     }
 
-    await ctx.storage.delete(args.storageId);
+    const now = Date.now();
+    const existingBuildDetails = project.buildDetails;
+    const isLogo = existingBuildDetails?.brand?.logoStorageId === args.storageId;
+    const isBrandImage =
+      existingBuildDetails?.brand?.imageStorageIds?.includes(args.storageId) ??
+      false;
 
-    // Fetch fresh project state after deletion
-    const updatedProject = await ctx.db.get(args.projectId);
-    if (!updatedProject) {
-      throw new Error("Project not found after deletion");
-    }
-
-    // Determine what type of file this is from the fresh project state
-    // This prevents race conditions if the project state changed between fetches
-    const isLogo = updatedProject.buildDetails?.brand?.logoStorageId === args.storageId;
-    const isBrandImage = updatedProject.buildDetails?.brand?.imageStorageIds?.includes(args.storageId) ?? false;
-
-    // Update project buildDetails to remove references to deleted file
-    const existingBuildDetails = updatedProject.buildDetails;
-    if (existingBuildDetails) {
-      let updatedLogoStorageId = existingBuildDetails.brand?.logoStorageId;
-      let updatedImageStorageIds = existingBuildDetails.brand?.imageStorageIds ?? [];
-
-      if (isLogo) {
-        updatedLogoStorageId = undefined;
-      }
-
-      if (isBrandImage) {
-        updatedImageStorageIds = updatedImageStorageIds.filter(id => id !== args.storageId);
-      }
-
-      // Recalculate brandAssetsUploaded: true if logo exists OR imageStorageIds has at least one item
-      const brandAssetsUploaded = Boolean(updatedLogoStorageId || updatedImageStorageIds.length > 0);
-
-      const updatedBuildDetails = {
-        headline: existingBuildDetails.headline,
-        domainPreference: existingBuildDetails.domainPreference,
-        inspirationLinks: existingBuildDetails.inspirationLinks,
-        myNotes: existingBuildDetails.myNotes,
-        notificationPhone: existingBuildDetails.notificationPhone,
-        smsConsent: existingBuildDetails.smsConsent,
-        brand: {
-          colorScheme: existingBuildDetails.brand?.colorScheme ?? { primary: "#111827", accent: "#6EE7B7" },
-          logoStorageId: updatedLogoStorageId,
-          imageStorageIds: updatedImageStorageIds.length > 0 ? updatedImageStorageIds : undefined,
-        },
-        brandAssetsUploaded,
-      };
-
+    if (existingBuildDetails && (isLogo || isBrandImage)) {
       await ctx.db.patch(args.projectId, {
-        buildDetails: updatedBuildDetails,
-        updatedAt: Date.now(),
-      });
-
-      // Log activity for file deletion
-      await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
-        projectId: args.projectId,
-        prospectId: updatedProject.prospectId,
-        actor: "user",
-        kind: "file.deleted",
-        payload: {
-          storageId: args.storageId,
-          wasLogo: isLogo,
-          wasBrandImage: isBrandImage,
-          brandAssetsUploaded,
-        },
+        buildDetails: buildBuildDetails({
+          existingBuildDetails,
+          myNotes: existingBuildDetails.myNotes,
+          logoStorageId: isLogo
+            ? null
+            : existingBuildDetails.brand?.logoStorageId,
+          imageStorageIds: isBrandImage
+            ? existingBuildDetails.brand?.imageStorageIds?.filter(
+                (storageId) => storageId !== args.storageId,
+              )
+            : existingBuildDetails.brand?.imageStorageIds,
+        }),
+        updatedAt: now,
       });
     }
+
+    const updatedRequestIds: Array<Id<"edit_requests">> = [];
+    for await (const request of ctx.db
+      .query("edit_requests")
+      .withIndex("by_projectId", (q) => q.eq("projectId", args.projectId))) {
+      if (!request.attachments?.includes(args.storageId)) {
+        continue;
+      }
+
+      updatedRequestIds.push(request._id);
+      const remainingAttachments = request.attachments.filter(
+        (storageId) => storageId !== args.storageId,
+      );
+
+      await ctx.db.patch(request._id, {
+        attachments:
+          remainingAttachments.length > 0 ? remainingAttachments : undefined,
+        updatedAt: now,
+      });
+    }
+
+    const deletedStorageIds = await deleteProjectStorageIdsIfUnreferenced(
+      ctx,
+      args.projectId,
+      [args.storageId],
+    );
+
+    const refreshedProject = await ctx.db.get(args.projectId);
+    const brandAssetsUploaded =
+      refreshedProject?.buildDetails?.brandAssetsUploaded ?? false;
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      projectId: args.projectId,
+      prospectId: project.prospectId,
+      actor: "user",
+      kind: "file.deleted",
+      payload: {
+        storageId: args.storageId,
+        wasLogo: isLogo,
+        wasBrandImage: isBrandImage,
+        removedFromRequestIds: updatedRequestIds,
+        storageDeleted: deletedStorageIds.includes(args.storageId),
+        brandAssetsUploaded,
+      },
+    });
 
     return { success: true };
   },
