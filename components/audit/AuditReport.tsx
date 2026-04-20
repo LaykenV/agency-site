@@ -27,7 +27,7 @@ type AuditReportData = {
 const PORTFOLIO = [
   { name: "TB Tree Service", niche: "Tree Services", siteUrl: "https://tbtreeservice.org/", imageSrc: "/client-tb-tree.png", imageWidth: 1916, imageHeight: 992 },
   { name: "All About Towing", niche: "Towing Services", siteUrl: "https://allabouttowingservice.com/", imageSrc: "/client-all-about-towin.png", imageWidth: 2940, imageHeight: 1656 },
-  { name: "Bordelon's Tree Service", niche: "Tree Services", siteUrl: "https://bordelons-tree-service.vercel.app/", imageSrc: "/client-bordelons.png", imageWidth: 2940, imageHeight: 1660 },
+  { name: "Bordelon's Tree Service", niche: "Tree Services", siteUrl: "https://bordelonstreeremoval.com/", imageSrc: "/client-bordelons.png", imageWidth: 2940, imageHeight: 1660 },
 ];
 
 function clamp(s?: number) {

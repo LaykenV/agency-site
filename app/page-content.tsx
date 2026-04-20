@@ -51,7 +51,7 @@ const REVIEWS = [
     role: "Tree Service Website",
     location: "Louisiana",
     rating: 5,
-    siteUrl: "https://bordelons-tree-service.vercel.app/",
+    siteUrl: "https://bordelonstreeremoval.com/",
     imageSrc: "/client-bordelons.png",
     imageAlt: "Bordelon's Tree Service website homepage screenshot",
     imageWidth: 2940,
