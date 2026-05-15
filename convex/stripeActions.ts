@@ -71,7 +71,7 @@ export const syncStripeCustomer = internalAction({
 
     const pm = sub.default_payment_method;
     const card = pm && typeof pm !== "string" ? (pm.card ?? null) : null;
-    await ctx.runMutation(internal.stripeHelpers.writeSubscription, {
+    const { previousStatus } = await ctx.runMutation(internal.stripeHelpers.writeSubscription, {
       userId,
       stripeCustomerId: args.stripeCustomerId,
       subscriptionId: sub.id,
@@ -83,6 +83,7 @@ export const syncStripeCustomer = internalAction({
       paymentBrand: card?.brand ?? undefined,
       paymentLast4: card?.last4 ?? undefined,
     });
+    const statusChanged = previousStatus !== sub.status;
 
     const metadata = sub.metadata ?? {};
     const projectIdRaw = metadata.projectId;
@@ -100,17 +101,19 @@ export const syncStripeCustomer = internalAction({
           expectedCurrentStatus: "AWAITING_PAYMENT",
         });
 
-        await ctx.runMutation(internal.activityLog.logActivity, {
-          projectId,
-          prospectId,
-          actor: "system",
-          kind: "payment.subscription_activated",
-          payload: {
-            stripeCustomerId: args.stripeCustomerId,
-            subscriptionId: sub.id,
-            status: sub.status,
-          },
-        });
+        if (statusChanged) {
+          await ctx.runMutation(internal.activityLog.logActivity, {
+            projectId,
+            prospectId,
+            actor: "system",
+            kind: "payment.subscription_activated",
+            payload: {
+              stripeCustomerId: args.stripeCustomerId,
+              subscriptionId: sub.id,
+              status: sub.status,
+            },
+          });
+        }
 
         // Trigger welcome email ONLY if we were the call that successfully transitioned the status
         // This prevents duplicate emails when both webhook and client-side sync run simultaneously
@@ -118,7 +121,7 @@ export const syncStripeCustomer = internalAction({
           const agreement = await ctx.runQuery(internal.agreement.internalGetLatestAgreementForProject, {
             projectId,
           });
-          
+
           if (agreement) {
             // Schedule the welcome email to be sent after the snapshot is ready
             // We pass all necessary data to avoid additional queries
@@ -134,17 +137,19 @@ export const syncStripeCustomer = internalAction({
         sub.status === "canceled" ||
         sub.status === "paused"
       ) {
-        await ctx.runMutation(internal.activityLog.logActivity, {
-          projectId,
-          prospectId,
-          actor: "system",
-          kind: "payment.subscription_status_changed",
-          payload: {
-            stripeCustomerId: args.stripeCustomerId,
-            subscriptionId: sub.id,
-            status: sub.status,
-          },
-        });
+        if (statusChanged) {
+          await ctx.runMutation(internal.activityLog.logActivity, {
+            projectId,
+            prospectId,
+            actor: "system",
+            kind: "payment.subscription_status_changed",
+            payload: {
+              stripeCustomerId: args.stripeCustomerId,
+              subscriptionId: sub.id,
+              status: sub.status,
+            },
+          });
+        }
       }
     }
     return null;

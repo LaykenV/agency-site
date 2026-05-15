@@ -140,10 +140,7 @@ function getCorsHeaders(
 // LEAD INGESTION ENDPOINT
 // ============================================================================
 
-http.route({
-  path: "/api/ingest-lead",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
+const ingestLeadHandler = httpAction(async (ctx, request) => {
     const origin = request.headers.get("origin");
 
     let body: { projectId?: string; source?: string; data?: unknown };
@@ -257,17 +254,25 @@ http.route({
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  }),
+  });
+
+http.route({
+  path: "/api/ingest-lead",
+  method: "POST",
+  handler: ingestLeadHandler,
+});
+
+http.route({
+  path: "/api/v1/ingest-lead",
+  method: "POST",
+  handler: ingestLeadHandler,
 });
 
 // ============================================================================
 // ANALYTICS PIXEL ENDPOINT
 // ============================================================================
 
-http.route({
-  path: "/api/analytics/pixel",
-  method: "POST",
-  handler: httpAction(async (ctx, request) => {
+const analyticsPixelHandler = httpAction(async (ctx, request) => {
     const origin = request.headers.get("origin");
 
     let body: { projectId?: string; path?: string };
@@ -318,7 +323,18 @@ http.route({
     });
 
     return new Response(null, { status: 204, headers: corsHeaders });
-  }),
+  });
+
+http.route({
+  path: "/api/analytics/pixel",
+  method: "POST",
+  handler: analyticsPixelHandler,
+});
+
+http.route({
+  path: "/api/v1/analytics/pixel",
+  method: "POST",
+  handler: analyticsPixelHandler,
 });
 
 // ============================================================================
@@ -346,6 +362,8 @@ const handleClientApiPreflight = httpAction(async (_ctx, request) => {
 });
 
 http.route({ path: "/api/ingest-lead", method: "OPTIONS", handler: handleClientApiPreflight });
+http.route({ path: "/api/v1/ingest-lead", method: "OPTIONS", handler: handleClientApiPreflight });
 http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
+http.route({ path: "/api/v1/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
 
 export default http;

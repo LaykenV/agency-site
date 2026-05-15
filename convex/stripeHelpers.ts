@@ -65,7 +65,7 @@ export const writeSubscription = internalMutation({
     paymentBrand: v.optional(v.string()),
     paymentLast4: v.optional(v.string()),
   },
-  returns: v.null(),
+  returns: v.object({ previousStatus: v.union(v.string(), v.null()) }),
   handler: async (ctx, args) => {
     const existing = await ctx.db
       .query("subscriptions")
@@ -86,10 +86,10 @@ export const writeSubscription = internalMutation({
     } as const;
     if (!existing) {
       await ctx.db.insert("subscriptions", doc);
-    } else {
-      await ctx.db.patch(existing._id, doc);
+      return { previousStatus: null };
     }
-    return null;
+    await ctx.db.patch(existing._id, doc);
+    return { previousStatus: existing.status };
   },
 });
 
