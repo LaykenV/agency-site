@@ -23,16 +23,22 @@ const LIGHT_VARS: React.CSSProperties = {
   colorScheme: "light",
 };
 
-export function PublicAuditReportClient({ token }: { token: string }) {
+export function PublicAuditReportClient({
+  token,
+  skipTracking = false,
+}: {
+  token: string;
+  skipTracking?: boolean;
+}) {
   const audit = useQuery(api.publicAudits.getByToken, { token });
   const recordView = useMutation(api.publicAudits.recordView);
 
   useEffect(() => {
-    if (audit?.status !== "ready") {
+    if (skipTracking || audit?.status !== "ready") {
       return;
     }
     void recordView({ token });
-  }, [audit?.status, recordView, token]);
+  }, [audit?.status, recordView, skipTracking, token]);
 
   if (
     audit === undefined ||

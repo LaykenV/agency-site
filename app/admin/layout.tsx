@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getToken } from "@/lib/auth-server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
+import { isAdminEmail } from "@/lib/admin-access";
 
 export default async function AdminLayout({
   children,
@@ -31,26 +32,11 @@ export default async function AdminLayout({
       redirect("/");
     }
     
-    const userEmail = user.email.trim().toLowerCase();
-    const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const adminEmailsStr = process.env.ADMIN_EMAILS?.trim();
-    
-    let isAdmin = false;
-    
-    if (adminEmail && userEmail === adminEmail) {
-      isAdmin = true;
-    }
-    
-    if (!isAdmin && adminEmailsStr) {
-      const adminEmails = adminEmailsStr.split(",").map(e => e.trim().toLowerCase());
-      isAdmin = adminEmails.includes(userEmail);
-    }
+    const isAdmin = isAdminEmail(user);
     
     if (!isAdmin) {
       console.log("[admin layout] access denied", {
-        userEmail,
-        adminEmail,
-        adminEmailsStr,
+        userEmail: user.email,
         isAdmin,
       });
       redirect("/");

@@ -5,6 +5,8 @@ import { api } from "@/convex/_generated/api";
 import { AuditBanner } from "@/components/audit/AuditBanner";
 import { AuditReport } from "@/components/audit/AuditReport";
 import { AuditViewTracker } from "@/components/audit/AuditViewTracker";
+import { isAdminEmail } from "@/lib/admin-access";
+import { getToken } from "@/lib/auth-server";
 
 export const metadata: Metadata = {
   robots: {
@@ -23,6 +25,11 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
   const { source } = await searchParams;
   const sourceValue = Array.isArray(source) ? source[0] : source;
   const audit = await fetchQuery(api.marketing.public.getAuditData, { token });
+  const authToken = await getOptionalAuthToken();
+  const currentUser = authToken
+    ? await fetchQuery(api.auth.getCurrentUser, {}, { token: authToken })
+    : null;
+  const skipTracking = sourceValue === "firecrawl-screenshot" || isAdminEmail(currentUser);
 
   if (!audit) {
     notFound();
@@ -30,9 +37,17 @@ export default async function AuditPage({ params, searchParams }: AuditPageProps
 
   return (
     <>
-      <AuditViewTracker token={token} skipTracking={sourceValue === "firecrawl-screenshot"} />
+      <AuditViewTracker token={token} skipTracking={skipTracking} />
       <AuditReport data={audit} />
       <AuditBanner />
     </>
   );
+}
+
+async function getOptionalAuthToken() {
+  try {
+    return await getToken();
+  } catch {
+    return null;
+  }
 }
