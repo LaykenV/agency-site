@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Marketing Plan — Week 1 — Acadiana Web Design</title>
+<style>
+  :root {
+    --blue: hsl(215, 85%, 55%);
+    --blue-dark: hsl(215, 85%, 30%);
+    --blue-soft: hsl(215, 85%, 96%);
+    --gold: hsl(43, 74%, 52%);
+    --gold-dark: hsl(43, 74%, 35%);
+    --gold-soft: hsl(43, 74%, 95%);
+    --ink: hsl(215, 25%, 15%);
+    --muted: hsl(215, 15%, 45%);
+    --line: hsl(215, 20%, 88%);
+    --bg: hsl(40, 25%, 98%);
+    --surface: #fff;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+    font-size: 16px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+
+  /* Nav */
+  nav.top {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 12px 0;
+  }
+  nav .row { display: flex; align-items: center; gap: 24px; justify-content: space-between; flex-wrap: wrap; }
+  nav .brand { font-weight: 700; color: var(--blue-dark); font-size: 15px; letter-spacing: 0.02em; }
+  nav .links { display: flex; flex-wrap: wrap; gap: 16px; font-size: 14px; }
+  nav .links a { color: var(--muted); text-decoration: none; }
+  nav .links a:hover { color: var(--blue-dark); }
+
+  /* Hero */
+  header.hero {
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    color: white;
+    padding: 56px 0 64px;
+  }
+  header.hero h1 { margin: 0 0 8px; font-size: 38px; line-height: 1.1; letter-spacing: -0.02em; }
+  header.hero .sub { opacity: 0.9; font-size: 17px; max-width: 760px; margin-top: 8px; }
+  header.hero .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  header.hero .tag {
+    background: rgba(255,255,255,0.18);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  header.hero .tag.gold { background: var(--gold); color: var(--blue-dark); font-weight: 700; }
+
+  /* Section */
+  section { padding: 48px 0; border-bottom: 1px solid var(--line); }
+  section h2 {
+    font-size: 26px; margin: 0 0 6px;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+  section h2 .num { color: var(--blue); font-weight: 800; margin-right: 12px; font-variant-numeric: tabular-nums; }
+  section .lead { color: var(--muted); margin: 0 0 28px; font-size: 16px; max-width: 760px; }
+  section h3 { font-size: 18px; margin: 24px 0 10px; }
+
+  /* Callout */
+  .callout {
+    background: var(--gold-soft);
+    border-left: 4px solid var(--gold);
+    padding: 14px 18px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  .callout.blue { background: var(--blue-soft); border-color: var(--blue); }
+  .callout strong { color: var(--blue-dark); }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+  table th, table td {
+    text-align: left;
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 14px;
+    vertical-align: top;
+  }
+  table th {
+    background: var(--blue-soft);
+    color: var(--blue-dark);
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  table tr:last-child td { border-bottom: none; }
+
+  /* Day */
+  .day {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 6px 6px 14px;
+    margin-bottom: 14px;
+  }
+  .day-head {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    padding: 14px 16px 6px;
+  }
+  .day-head .name { font-size: 18px; font-weight: 700; }
+  .day-head .focus { font-size: 12px; color: var(--gold-dark); text-transform: uppercase; font-weight: 700; letter-spacing: 0.06em; background: var(--gold-soft); padding: 4px 10px; border-radius: 999px; }
+  .day-head .hours { font-size: 13px; color: var(--muted); }
+
+  /* Checkbox row */
+  .check {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.12s;
+    user-select: none;
+  }
+  .check:hover { background: var(--blue-soft); }
+  .check input { margin-top: 4px; transform: scale(1.2); accent-color: var(--blue); cursor: pointer; }
+  .check.done { color: var(--muted); }
+  .check.done .text { text-decoration: line-through; }
+  .check .text { flex: 1; }
+  .check .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Script blocks */
+  .script {
+    background: hsl(215, 30%, 12%);
+    color: hsl(40, 25%, 95%);
+    padding: 18px 20px;
+    border-radius: var(--radius);
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    margin: 12px 0;
+    border-left: 3px solid var(--gold);
+    overflow-x: auto;
+  }
+  .script .note {
+    display: block;
+    color: hsl(43, 60%, 75%);
+    font-style: italic;
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  .script-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 20px 0 4px;
+  }
+
+  /* Anti list */
+  .anti { list-style: none; padding: 0; }
+  .anti li {
+    position: relative;
+    padding: 10px 0 10px 32px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .anti li:last-child { border-bottom: none; }
+  .anti li::before {
+    content: "✕";
+    position: absolute;
+    left: 4px;
+    top: 9px;
+    color: hsl(0, 60%, 50%);
+    font-weight: 700;
+    font-size: 18px;
+  }
+
+  /* Footer / context */
+  footer.ctx {
+    background: hsl(215, 30%, 12%);
+    color: hsl(40, 25%, 90%);
+    padding: 56px 0;
+    margin-top: 0;
+  }
+  footer.ctx h2 { color: white; }
+  footer.ctx .lead { color: hsl(40, 20%, 72%); }
+  footer.ctx h3 { color: var(--gold); margin-top: 28px; }
+  footer.ctx table { background: hsl(215, 25%, 18%); }
+  footer.ctx table th { background: hsl(215, 25%, 22%); color: var(--gold); }
+  footer.ctx table td { border-color: hsl(215, 25%, 25%); color: hsl(40, 25%, 90%); }
+  footer.ctx code { background: hsl(215, 30%, 22%); padding: 2px 6px; border-radius: 4px; font-size: 13px; }
+  footer.ctx ul { padding-left: 20px; }
+  footer.ctx li { margin: 6px 0; }
+
+  /* Misc */
+  .kbd { background: var(--blue-soft); color: var(--blue-dark); padding: 2px 6px; border-radius: 4px; font-size: 13px; font-family: "SF Mono", Menlo, monospace; font-weight: 600; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .client-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .client-card h4 { margin: 0 0 8px; font-size: 16px; }
+  .client-card .links { font-size: 13px; color: var(--muted); }
+  .client-card .links a { color: var(--blue-dark); display: block; margin: 2px 0; word-break: break-all; }
+  .targets {
+    background: var(--gold-soft);
+    border: 1px solid hsl(43, 74%, 80%);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin: 16px 0;
+  }
+  .targets h4 { margin: 0 0 8px; color: var(--gold-dark); font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .targets ul { margin: 0; padding-left: 18px; }
+
+  .reset-btn {
+    margin-top: 16px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .reset-btn:hover { background: var(--blue-soft); color: var(--blue-dark); border-color: var(--blue); }
+
+  @media (max-width: 720px) {
+    nav .links { gap: 10px; font-size: 13px; }
+    header.hero h1 { font-size: 28px; }
+    section { padding: 36px 0; }
+    .wrap { padding: 0 18px; }
+  }
+
+  @media print {
+    nav.top, footer.ctx { display: none; }
+    header.hero { background: white; color: black; padding: 20px 0; }
+    section { break-inside: avoid; page-break-inside: avoid; }
+    .day { break-inside: avoid; }
+    .script { background: #f5f5f5; color: black; border-left: 3px solid #333; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="top">
+  <div class="wrap row">
+    <div class="brand">Acadiana Web Design — Week 1</div>
+    <div class="links">
+      <a href="#overview">Overview</a>
+      <a href="#weekend">Weekend Prep</a>
+      <a href="#days">Day-by-Day</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#scripts">Scripts</a>
+      <a href="#tracking">Tracking</a>
+      <a href="#anti">Don't Do</a>
+      <a href="#context">Context</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>Week 1 — Youngsville First</h1>
+    <p class="sub">12 focused hours. 9 drop-ins. 5 warm calls. 3 review asks. 3 partnership pings. ~25 audit emails sent. Target: <strong>2–3 booked conversations</strong> and at least <strong>1 Google review live</strong> by Friday.</p>
+    <div class="tags">
+      <span class="tag gold">$199/mo · 12mo · veteran-owned</span>
+      <span class="tag">Youngsville-first geography</span>
+      <span class="tag">Tier 1 only: drop-ins · referrals · partnerships</span>
+      <span class="tag">No paid ads · No cold dialing at scale</span>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================ -->
+<section id="overview">
+  <div class="wrap">
+    <h2><span class="num">1</span>This week at a glance</h2>
+    <p class="lead">2–3 focused hours per day. Saturday is materials prep. Sunday is review asks and Monday's print run. Mon/Tue/Thu are drop-in days in Youngsville. Wed is partnerships + follow-ups.</p>
+
+    <table>
+      <thead>
+        <tr><th style="width: 80px;">Day</th><th>Block 1 (~1hr)</th><th>Block 2 (~1–2hr)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Sat</strong></td><td>Build materials kit (cards, audit print template)</td><td>Run 3 Youngsville searches + bulk-email ~25 qualified leads</td></tr>
+        <tr><td><strong>Sun</strong></td><td>Print &amp; route Monday's 3 drop-ins</td><td>Send review asks to 3 free clients (text first)</td></tr>
+        <tr><td><strong>Mon</strong></td><td>Drop-ins: 3 stops in Youngsville</td><td>Sign-spotting log on the drive back</td></tr>
+        <tr><td><strong>Tue</strong></td><td>Drop-ins: 3 more stops (different Youngsville areas)</td><td>Warm calls: 5 sign-spotted businesses</td></tr>
+        <tr><td><strong>Wed</strong></td><td>Partnership openers: 3 emails + 1 walk-in</td><td>Phone follow-ups on Mon drop-ins</td></tr>
+        <tr><td><strong>Thu</strong></td><td>Drop-ins: 3 stops (Broussard overflow if pool thin)</td><td>Phone follow-ups on Tue drop-ins</td></tr>
+        <tr><td><strong>Fri</strong></td><td>Review check + one nudge to non-responders</td><td>Plan Week 2 from this week's data</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout blue">
+      <strong>Why Youngsville first?</strong> You live there. The "I'm your neighbor, veteran-owned, drove past your shop today" angle is the strongest version of your moat. Lafayette metro is the fallback pool — Youngsville is the home base. Saturate it before expanding.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="weekend">
+  <div class="wrap">
+    <h2><span class="num">2</span>Weekend prep — Sat &amp; Sun</h2>
+    <p class="lead">Without this, Monday doesn't happen. Block the time on your calendar now.</p>
+
+    <h3>Saturday morning — Materials kit (3 hours, one-time)</h3>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="name">📦 Materials checklist</span>
+        <span class="focus">One-time build</span>
+      </div>
+      <label class="check" data-task="mat-cards">
+        <input type="checkbox">
+        <div class="text"><strong>Order business cards</strong> (Vistaprint same-day pickup if available, otherwise overnight). 250 cards. Front: name + agency + phone + URL. Back: <em>"Free site audit for local Louisiana businesses. Scan."</em> + QR code to your onboarding page.</div>
+      </label>
+      <label class="check" data-task="mat-printer">
+        <input type="checkbox">
+        <div class="text"><strong>Pick the printer</strong> for audit reports. Home color printer works if toner is good; otherwise FedEx Office (Ambassador Caffery) or Office Depot for color prints. Test print one report and verify the screenshot &amp; gauge are legible.</div>
+      </label>
+      <label class="check" data-task="mat-stickies">
+        <input type="checkbox">
+        <div class="text"><strong>Buy supplies</strong>: sticky notes (3×3 yellow), paperclips, sharpies. Total ~$15 at Walmart Youngsville or Dollar General.</div>
+      </label>
+      <label class="check" data-task="mat-template">
+        <input type="checkbox">
+        <div class="text"><strong>Write the sticky-note template</strong> once. Practice writing it 10x so it looks natural, not robotic:<br><em>"Saw your shop — ran a quick site check, results inside. No pitch, just thought you'd want to see it. — Layken, (337) XXX-XXXX"</em></div>
+      </label>
+      <label class="check" data-task="mat-pack">
+        <input type="checkbox">
+        <div class="text"><strong>Assemble one sample packet</strong> end-to-end so you know the workflow before doing it for real Sunday night.</div>
+      </label>
+    </div>
+
+    <h3>Saturday afternoon — Run searches + bulk email (2 hours)</h3>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="name">🚀 Fire the pipeline</span>
+        <span class="focus">Marketing pipeline</span>
+      </div>
+      <label class="check" data-task="search-1">
+        <input type="checkbox">
+        <div class="text"><strong>Run search #1</strong>: <code>/admin/marketing</code> → city: <em>Youngsville</em>, industry: <em>plumber</em></div>
+      </label>
+      <label class="check" data-task="search-2">
+        <input type="checkbox">
+        <div class="text"><strong>Run search #2</strong>: city: <em>Youngsville</em>, industry: <em>landscaper</em> (or <em>lawn care</em>)</div>
+      </label>
+      <label class="check" data-task="search-3">
+        <input type="checkbox">
+        <div class="text"><strong>Run search #3</strong>: city: <em>Youngsville</em>, industry: <em>general contractor</em> (or <em>roofer</em>)</div>
+      </label>
+      <label class="check" data-task="pick-9">
+        <input type="checkbox">
+        <div class="text"><strong>Pick the 9 drop-in targets</strong> from the qualified pool (fitScore ≥ 6). Sort by: weakest current site + closest to your house + highest review count. <span class="meta">Mark them in admin notes / your sheet so you don't accidentally email them.</span></div>
+      </label>
+      <label class="check" data-task="email-review">
+        <input type="checkbox">
+        <div class="text"><strong>Spot-check the email template.</strong> Open <code>convex/marketing/emails.ts</code> or send one test to yourself via <code>triggerAuditEmail</code> first. Read it like a contractor would. Subject line, opening line, the audit screenshot embed, signature.</div>
+      </label>
+      <label class="check" data-task="email-pick-20">
+        <input type="checkbox">
+        <div class="text"><strong>Pick ~20 qualified leads for bulk email</strong> — must have a valid email address, fitScore ≥ 6, and NOT be in your 9 drop-in list. Sort by fitScore descending.</div>
+      </label>
+      <label class="check" data-task="email-send">
+        <input type="checkbox">
+        <div class="text"><strong>Bulk-send audit emails</strong> via <code>triggerBulkAuditEmail</code> in <code>/admin/marketing</code>. Cap at 20–25 — you need to actually handle replies. Each email is personalized + includes audit screenshot.</div>
+      </label>
+      <div class="callout">
+        <strong>Why ~20, not all 60?</strong> If even 5% reply that's 1 inbound this week — you can handle that on top of drop-ins. Sending 200 emails creates inbound you can't follow up on, and leads go cold in 48 hours.
+      </div>
+      <div class="callout blue">
+        <strong>Two parallel channels, different recipients:</strong> the 9 drop-in targets get the <em>physical</em> packet (printed audit + card + sticky note). The next ~20 get the <em>digital</em> audit email. Don't double-send — the surprise of the physical drop-off is the moat.
+      </div>
+    </div>
+
+    <h3>Sunday — Review asks + print Monday's run</h3>
+
+    <div class="day">
+      <div class="day-head">
+        <span class="name">📨 Reviews + 📄 prints</span>
+        <span class="focus">Activate existing assets</span>
+        <span class="hours">~1 hour total</span>
+      </div>
+      <label class="check" data-task="sun-pull-links">
+        <input type="checkbox">
+        <div class="text"><strong>Pull direct review links</strong> for each of your 3 free clients. In Google Business Profile (yours, or theirs if you manage it): <em>Share → "Get more reviews"</em> for the Google link. Facebook: their page → about → URL with <code>/reviews</code> appended.</div>
+      </label>
+      <label class="check" data-task="sun-fill-section">
+        <input type="checkbox">
+        <div class="text"><strong>Fill in the Reviews section below</strong> with the 3 client names + their direct links so they're ready to copy/paste.</div>
+      </label>
+      <label class="check" data-task="sun-text-1">
+        <input type="checkbox">
+        <div class="text"><strong>Send review text #1</strong> (All About Towing). Send between 6–8pm — best open rate.</div>
+      </label>
+      <label class="check" data-task="sun-text-2">
+        <input type="checkbox">
+        <div class="text"><strong>Send review text #2</strong> (TB Tree Service).</div>
+      </label>
+      <label class="check" data-task="sun-text-3">
+        <input type="checkbox">
+        <div class="text"><strong>Send review text #3</strong> (3rd free client).</div>
+      </label>
+      <label class="check" data-task="sun-print">
+        <input type="checkbox">
+        <div class="text"><strong>Print Monday's 3 audit packets.</strong> Open <code>/audit/{token}/print</code> for each lead (the dedicated print view — light theme, letter-sized, color-exact). Hit "Print" or Cmd+P. Paperclip card, sticky note on top.</div>
+      </label>
+      <label class="check" data-task="sun-route">
+        <input type="checkbox">
+        <div class="text"><strong>Plan Monday's route</strong> in Google Maps. Pin all 3 stops, optimize order. Aim for a 30–40 min loop you can do during a lunch break.</div>
+      </label>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="days">
+  <div class="wrap">
+    <h2><span class="num">3</span>Day-by-day execution — Mon → Fri</h2>
+    <p class="lead">Each task is a checkbox. Your progress is saved in your browser. Open this same file all week to track.</p>
+
+    <!-- MONDAY -->
+    <div class="day">
+      <div class="day-head">
+        <span class="name">Monday</span>
+        <span class="focus">Drop-ins · Youngsville</span>
+        <span class="hours">2–3 hrs</span>
+      </div>
+      <label class="check" data-task="mon-emailcheck"><input type="checkbox"><div class="text"><strong>Morning: check Saturday's email opens.</strong> In <code>/admin/marketing</code>, look at the 20 bulk-emailed leads — anyone with <code>demoViewedAt</code> set already? Those are the warmest possible follow-up calls this week. Note them.</div></label>
+      <label class="check" data-task="mon-1"><input type="checkbox"><div class="text"><strong>Drop-in #1</strong> — first Youngsville business. <span class="meta">Walk in, ask for owner by name, hand over packet, walk out. 90 seconds.</span></div></label>
+      <label class="check" data-task="mon-2"><input type="checkbox"><div class="text"><strong>Drop-in #2</strong></div></label>
+      <label class="check" data-task="mon-3"><input type="checkbox"><div class="text"><strong>Drop-in #3</strong></div></label>
+      <label class="check" data-task="mon-log"><input type="checkbox"><div class="text"><strong>Log all 3 in tracking sheet</strong> (date, business, "drop-in", "touched", "call Wed/Thu")</div></label>
+      <label class="check" data-task="mon-signs"><input type="checkbox"><div class="text"><strong>Sign-spotting on the drive back.</strong> Voice-memo any business sign / vehicle wrap / yard sign without a website (or with an obvious Facebook-only presence). Aim for 5+.</div></label>
+      <label class="check" data-task="mon-research"><input type="checkbox"><div class="text"><strong>Tonight (15 min)</strong>: Google each sign-spotted business. Confirm gap (no site / dead site / FB-only). Add to tracking sheet with the angle.</div></label>
+    </div>
+
+    <!-- TUESDAY -->
+    <div class="day">
+      <div class="day-head">
+        <span class="name">Tuesday</span>
+        <span class="focus">Drop-ins + warm calls</span>
+        <span class="hours">2–3 hrs</span>
+      </div>
+      <label class="check" data-task="tue-1"><input type="checkbox"><div class="text"><strong>Drop-in #4</strong> — different part of Youngsville than Monday</div></label>
+      <label class="check" data-task="tue-2"><input type="checkbox"><div class="text"><strong>Drop-in #5</strong></div></label>
+      <label class="check" data-task="tue-3"><input type="checkbox"><div class="text"><strong>Drop-in #6</strong></div></label>
+      <label class="check" data-task="tue-log"><input type="checkbox"><div class="text"><strong>Log all 3 in tracking sheet</strong></div></label>
+      <label class="check" data-task="tue-call1"><input type="checkbox"><div class="text"><strong>Warm call #1</strong> — sign-spotted business from Monday. <span class="meta">Use the sign-spot warm call script below.</span></div></label>
+      <label class="check" data-task="tue-call2"><input type="checkbox"><div class="text"><strong>Warm call #2</strong></div></label>
+      <label class="check" data-task="tue-call3"><input type="checkbox"><div class="text"><strong>Warm call #3</strong></div></label>
+      <label class="check" data-task="tue-call4"><input type="checkbox"><div class="text"><strong>Warm call #4</strong></div></label>
+      <label class="check" data-task="tue-call5"><input type="checkbox"><div class="text"><strong>Warm call #5</strong></div></label>
+    </div>
+
+    <!-- WEDNESDAY -->
+    <div class="day">
+      <div class="day-head">
+        <span class="name">Wednesday</span>
+        <span class="focus">Partnerships + Mon follow-ups</span>
+        <span class="hours">2–3 hrs</span>
+      </div>
+
+      <div class="targets">
+        <h4>Partnership targets (pick 4 — 3 emails, 1 walk-in)</h4>
+        <ul>
+          <li><strong>FastSigns Lafayette / Signs Now</strong> — they see every small biz buying signage. <em>Walk-in. Bring two coffees.</em></li>
+          <li><strong>A local accountant / bookkeeper</strong> serving contractors (search "bookkeeper Youngsville")</li>
+          <li><strong>A commercial print shop</strong> (business cards, brochures — they meet new owners)</li>
+          <li><strong>An insurance agent</strong> doing contractor/GL policies (search "general liability insurance Lafayette")</li>
+          <li><strong>Youngsville Chamber of Commerce</strong> — email about membership + introducer events</li>
+        </ul>
+      </div>
+
+      <label class="check" data-task="wed-walkin"><input type="checkbox"><div class="text"><strong>Walk-in to strongest partner</strong> (recommended: FastSigns Lafayette). Use the partnership opener script below in person.</div></label>
+      <label class="check" data-task="wed-email1"><input type="checkbox"><div class="text"><strong>Send partnership email #1</strong></div></label>
+      <label class="check" data-task="wed-email2"><input type="checkbox"><div class="text"><strong>Send partnership email #2</strong></div></label>
+      <label class="check" data-task="wed-email3"><input type="checkbox"><div class="text"><strong>Send partnership email #3</strong></div></label>
+      <label class="check" data-task="wed-fu-check"><input type="checkbox"><div class="text"><strong>Check <code>/admin/marketing</code> for audit views.</strong> Any of Mon's 3 drop-ins OR Saturday's 20 bulk-emailed leads with <code>demoViewedAt</code> set = hot lead. Call them first.</div></label>
+      <label class="check" data-task="wed-email-fu"><input type="checkbox"><div class="text"><strong>Warm-call any bulk-email leads who opened the audit but haven't replied.</strong> Use the sign-spot script but swap the opener: <em>"Hey, I'm Layken — you opened the site report I sent on Saturday, just wanted to see if you had any questions."</em></div></label>
+      <label class="check" data-task="wed-fu1"><input type="checkbox"><div class="text"><strong>Follow-up call to Mon drop-in #1</strong></div></label>
+      <label class="check" data-task="wed-fu2"><input type="checkbox"><div class="text"><strong>Follow-up call to Mon drop-in #2</strong></div></label>
+      <label class="check" data-task="wed-fu3"><input type="checkbox"><div class="text"><strong>Follow-up call to Mon drop-in #3</strong></div></label>
+    </div>
+
+    <!-- THURSDAY -->
+    <div class="day">
+      <div class="day-head">
+        <span class="name">Thursday</span>
+        <span class="focus">Drop-ins + Tue follow-ups</span>
+        <span class="hours">2–3 hrs</span>
+      </div>
+      <label class="check" data-task="thu-1"><input type="checkbox"><div class="text"><strong>Drop-in #7</strong> — Youngsville if pool has fresh targets, otherwise overflow into Broussard</div></label>
+      <label class="check" data-task="thu-2"><input type="checkbox"><div class="text"><strong>Drop-in #8</strong></div></label>
+      <label class="check" data-task="thu-3"><input type="checkbox"><div class="text"><strong>Drop-in #9</strong></div></label>
+      <label class="check" data-task="thu-fu-check"><input type="checkbox"><div class="text"><strong>Check <code>/admin/marketing</code> for Tue audit views.</strong> Prioritize hot leads.</div></label>
+      <label class="check" data-task="thu-fu1"><input type="checkbox"><div class="text"><strong>Follow-up call to Tue drop-in #1</strong></div></label>
+      <label class="check" data-task="thu-fu2"><input type="checkbox"><div class="text"><strong>Follow-up call to Tue drop-in #2</strong></div></label>
+      <label class="check" data-task="thu-fu3"><input type="checkbox"><div class="text"><strong>Follow-up call to Tue drop-in #3</strong></div></label>
+    </div>
+
+    <!-- FRIDAY -->
+    <div class="day">
+      <div class="day-head">
+        <span class="name">Friday</span>
+        <span class="focus">Review + plan</span>
+        <span class="hours">1–2 hrs</span>
+      </div>
+      <label class="check" data-task="fri-rev1"><input type="checkbox"><div class="text"><strong>Check Google &amp; Facebook for client reviews.</strong> Count how many landed.</div></label>
+      <label class="check" data-task="fri-nudge"><input type="checkbox"><div class="text"><strong>Send ONE nudge text</strong> to any non-responding free client. One only — never a third in the same cycle. Drop it for now if still silent, retry in 3 weeks.</div></label>
+      <label class="check" data-task="fri-thanks"><input type="checkbox"><div class="text"><strong>For each review that landed</strong>: send the thank-you + referral ask (script below).</div></label>
+      <label class="check" data-task="fri-fu"><input type="checkbox"><div class="text"><strong>Follow up on any Thu drop-ins</strong> only if they opened the audit page early.</div></label>
+      <label class="check" data-task="fri-metrics"><input type="checkbox"><div class="text"><strong>Fill in this week's metrics</strong> in the tracking section below.</div></label>
+      <label class="check" data-task="fri-plan"><input type="checkbox"><div class="text"><strong>Plan Week 2 routes.</strong> Pick the next 9 prospects. Run 3 more searches if pool is thin (rotate industry: HVAC, electrical, pressure washing, fencing).</div></label>
+    </div>
+
+    <button class="reset-btn" onclick="resetAll()">Reset all checkboxes</button>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="reviews">
+  <div class="wrap">
+    <h2><span class="num">4</span>The 3 review asks</h2>
+    <p class="lead">You mentioned reviews would help when you set them up but never directly asked. The ask is overdue and they're expecting it. Fill in the links below first, then send.</p>
+
+    <div class="grid">
+      <div class="client-card">
+        <h4>All About Towing — Alexandria, LA</h4>
+        <div class="links">
+          Google: <a href="#">[paste Google review link]</a>
+          Facebook: <a href="#">[paste FB page reviews link]</a>
+          Phone: <span style="color:var(--muted)">[fill in]</span>
+        </div>
+      </div>
+      <div class="client-card">
+        <h4>TB Tree Service — Central LA</h4>
+        <div class="links">
+          Google: <a href="#">[paste Google review link]</a>
+          Facebook: <a href="#">[paste FB page reviews link]</a>
+          Phone: <span style="color:var(--muted)">[fill in]</span>
+        </div>
+      </div>
+      <div class="client-card">
+        <h4>Free Client #3</h4>
+        <div class="links">
+          Name: <span style="color:var(--muted)">[fill in]</span><br>
+          Google: <a href="#">[paste Google review link]</a>
+          Facebook: <a href="#">[paste FB page reviews link]</a>
+          Phone: <span style="color:var(--muted)">[fill in]</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="script-title">Sunday evening text (6–8pm — highest open rate)</div>
+    <div class="script">Hey [Name] — quick favor. When I set the site up I mentioned reviews would help me a ton. Mind dropping a quick Google + Facebook review when you get a sec this week?
+
+Google: [direct review link]
+Facebook: [direct page link]
+
+If you're not sure what to say, something like "Layken built our site in a few days, [phone rings more / I don't have to think about it / etc.] — happy I went with him" is perfect. Doesn't need to be long.
+
+Thanks man, owe ya.<span class="note">Why this works: acknowledges prior expectation, specific time window, gives them the words to use, two links with Google first.</span></div>
+
+    <div class="script-title">Wednesday nudge (if no response by then)</div>
+    <div class="script">Hey, no pressure if this week's bad — just bumping this up in case it got buried. Here's the Google link again: [link]<span class="note">One nudge max. Two creates resentment.</span></div>
+
+    <div class="script-title">Thank you + referral ask (Friday, after the review lands)</div>
+    <div class="script">Thank you, seriously. One more thing if you're open to it: if a local business owner ever asks who built your site, would you mention me? I'm pushing hard this month to get my first few paying clients in Acadiana.<span class="note">This activates the referral channel. The review is the warm-up.</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="scripts">
+  <div class="wrap">
+    <h2><span class="num">5</span>Scripts library</h2>
+    <p class="lead">Memorize the flow, not the words. The goal is to sound like a neighbor, not a salesman.</p>
+
+    <h3>Drop-in (90 seconds, owner present)</h3>
+    <div class="script">"Hey [Name], I'm Layken with Acadiana Web Design — local guy, live right here in Youngsville. Veteran. I won't take your time.
+
+I ran a quick performance check on your site, thought you might want to see it. No pitch, just leaving it for you. My card's in there if anything stands out.
+
+Have a good one."<span class="note">Hand over packet. Eye contact. Walk out. Do NOT pitch. Do NOT linger. The audit is the pitch. The follow-up call is the close.</span></div>
+
+    <h3>Drop-in (owner NOT present)</h3>
+    <div class="script">"No problem — could you make sure [Name] gets this? It's a site report I put together for them. Thanks."<span class="note">Hand to whoever's at the counter. Leave. Don't try to extract info or schedule.</span></div>
+
+    <h3>Drop-in follow-up call (3–5 days after, Wed or Thu)</h3>
+    <div class="script">"Hey [Name], it's Layken — dropped off the site report at your shop Monday. Just calling to see if you had a chance to look at it.
+
+[Pause. Let them answer.]
+
+If YES: Cool. Any questions on what I flagged?
+
+If NO: No worries. The biggest thing I saw was [their #1 issue from the audit]. Want me to send you a quick walkthrough by email, or want to grab 15 min next week to look at it together?"<span class="note">Goal: book the 15-min Cal.com call. NOT to close. Close happens on that call.</span></div>
+
+    <h3>Sign-spot warm call (Tuesday evening)</h3>
+    <div class="script">"Hey, is this [Business Name]? — Hi [Name if you got it], my name's Layken, I run Acadiana Web Design here in Youngsville. I saw your [truck on Chemin Metairie / yard sign on Verot School / etc.] earlier today and went to check out your website — looks like y'all don't have one yet, is that right?
+
+[Let them answer.]"<span class="note">These are WARM because: you saw their truck/sign, you know their service area, you confirmed the gap. Not cold dialing. Don't pitch in opener — make them tell you they have the problem.</span></div>
+
+    <div class="script-title">Branch responses</div>
+    <div class="script">"We don't, just Facebook" →
+  "Yeah, that's actually super common around here. I do $199/month websites — no upfront cost, live in 72 hours, I handle everything. Worth a 10-minute call this week to see if it makes sense?"
+
+"We've been meaning to" →
+  "Yeah I hear that a lot. The reason I called — I do this for local trades for $199/month, no money down. Would you be open to me sending you a 2-minute video of what I built for another Louisiana service business?"
+
+"Not interested" →
+  "No problem, appreciate you taking the call. Have a good one." [Hang up. Don't push.]<span class="note">"Not selling, filtering." If they're not a fit, you just saved 20 minutes. The right ones self-identify.</span></div>
+
+    <h3>Partnership email opener</h3>
+    <div class="script">Subject: Quick partnership idea — local web design for your contractor clients
+
+Hey [Name],
+
+Layken Varholdt here — I run Acadiana Web Design, a $199/mo website service for local trades and service businesses (plumbers, landscapers, towing, etc.). Veteran-owned, based in Youngsville.
+
+I'm reaching out because [sign shop / accountant / agent] sees exactly the kind of businesses I help, way earlier than I do. I'd love to chat about a referral arrangement — I pay $200 per client that signs up through you, or 10% of their first-year subscription (~$240).
+
+Could I buy you a coffee next week and walk you through what I do? 15 minutes, no obligation.
+
+— Layken
+[phone] | [URL]<span class="note">Personalize the [sign shop / accountant / agent] piece per recipient. Generic = ignored.</span></div>
+
+    <h3>Partnership walk-in (FastSigns or similar)</h3>
+    <div class="script">"Hey, I'm Layken — I run Acadiana Web Design, a $199/month site service for local trades. Veteran-owned, in Youngsville.
+
+I'm here because y'all see the businesses I help way earlier than I do — every new shop in town comes through here for signage. Would it be worth a 15-minute conversation about a referral arrangement? I pay $200 per signed client, no friction on your end.
+
+Is there a manager around, or should I leave my card and come back?"<span class="note">Bring coffees if it's morning. Bring your business card and one printed audit example as a leave-behind.</span></div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="tracking">
+  <div class="wrap">
+    <h2><span class="num">6</span>Tracking — keep it dumb</h2>
+    <p class="lead">A Google Sheet. One row per touch. Build it Saturday with these columns. Update it nightly.</p>
+
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Business</th><th>Channel</th><th>Stage</th><th>Next action</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><em>2026-05-18</em></td><td><em>Example Plumbing Co</em></td><td><em>drop-in</em></td><td><em>touched</em></td><td><em>call</em></td><td><em>2026-05-20</em></td></tr>
+        <tr><td colspan="6" style="text-align:center;color:var(--muted)">(repeat per touch)</td></tr>
+      </tbody>
+    </table>
+
+    <p><strong>Channels:</strong> <span class="kbd">drop-in</span> <span class="kbd">warm call</span> <span class="kbd">partnership</span> <span class="kbd">referral</span> <span class="kbd">inbound</span></p>
+    <p><strong>Stages:</strong> <span class="kbd">touched</span> → <span class="kbd">conversation</span> → <span class="kbd">audit-viewed</span> → <span class="kbd">booked</span> → <span class="kbd">closed</span></p>
+
+    <h3>This week's targets (fill in Friday)</h3>
+
+    <table>
+      <thead>
+        <tr><th>Metric</th><th>Target</th><th>Actual</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Drop-ins completed</td><td>9</td><td>____</td></tr>
+        <tr><td>Bulk audit emails sent</td><td>~20</td><td>____</td></tr>
+        <tr><td>Warm calls completed (sign-spot + email opens)</td><td>5+</td><td>____</td></tr>
+        <tr><td>Audit pages viewed (<code>demoViewedAt</code> set)</td><td>5+</td><td>____</td></tr>
+        <tr><td>Email replies (any)</td><td>1–2</td><td>____</td></tr>
+        <tr><td>Booked 15-min calls</td><td>2–3</td><td>____</td></tr>
+        <tr><td>Reviews landed (of 3)</td><td>2–3</td><td>____</td></tr>
+        <tr><td>Partnership replies</td><td>1–2</td><td>____</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout">
+      <strong>Ignore (this week):</strong> total leads scraped, website analytics, email open rates, social media metrics. Volume is not the bottleneck — conversion is. Track what you can actually act on.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section id="anti">
+  <div class="wrap">
+    <h2><span class="num">7</span>What NOT to do this week</h2>
+    <p class="lead">Your instinct will pull you toward these. The 90-day plan is explicit: they're either deferred to Tier 2 (Day 30+) or skipped entirely. Re-read this list every morning before opening anything new.</p>
+
+    <ul class="anti">
+      <li><strong>No mass cold dialing.</strong> Sign-spotted calls only — you've seen them, gap is confirmed, that's warm. A month of paralysis on cold dialing is the reason this plan exists.</li>
+      <li><strong>No Google Ads yet.</strong> Day 30+. You don't have conversion data to optimize against.</li>
+      <li><strong>No Facebook ads / retargeting yet.</strong> Day 30+.</li>
+      <li><strong>No new tooling.</strong> The pipeline + a Google Sheet are enough. No CRM, no email sequencer, no AI marketing agent service.</li>
+      <li><strong>No more than 3 marketing searches this week.</strong> You can't action what you generate.</li>
+      <li><strong>No drop-ins outside Youngsville (Broussard overflow Thu only if pool is thin).</strong> 45-min drives for one stop = wasted hour.</li>
+      <li><strong>No same-day rerun after a rough drop-in.</strong> Move on. Activity beats perfection.</li>
+      <li><strong>No LinkedIn content / TikTok / IG posting.</strong> Wrong audience, content treadmill, won't move the needle this week.</li>
+      <li><strong>No outsourced marketing services</strong> like Enrichlabs. Your pipeline already does this — outsourcing the moat kills the moat.</li>
+      <li><strong>No pitching during a drop-in.</strong> Hand over the packet, walk out. The follow-up call is the pitch.</li>
+      <li><strong>No third nudge</strong> on review-ask non-responders. One reminder, then drop it for 3 weeks.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<footer class="ctx" id="context">
+  <div class="wrap">
+    <h2><span class="num" style="color:var(--gold)">8</span>Context dump for AI agents</h2>
+    <p class="lead">Paste this section (or link this entire file) when starting a chat with a fresh agent. Everything below is the canonical context for this marketing push.</p>
+
+    <h3>The business</h3>
+    <ul>
+      <li><strong>Acadiana Web Design</strong> — veteran-owned Website-as-a-Service for local trades / service businesses in Acadiana, Louisiana.</li>
+      <li><strong>Offer:</strong> $0 down, $199/mo, 12-month minimum, everything included (custom 7-page site, hosting, domain, SSL, unlimited edits, support, analytics, client portal).</li>
+      <li><strong>Founder:</strong> Layken Varholdt. Based in <strong>Youngsville, LA</strong>.</li>
+      <li><strong>Target verticals:</strong> plumbers, landscapers, roofers, tree services, towing, HVAC, electricians, painters, pressure washers, pest control, cleaning, fencing, general contractors.</li>
+      <li><strong>"Yes" profile:</strong> good Google reviews, owner-operator, time-poor, no site / weak Wix-Squarespace-GoDaddy site / Facebook-only.</li>
+    </ul>
+
+    <h3>Current state (as of 2026-05-15)</h3>
+    <ul>
+      <li><strong>3 free clients</strong> (family / personal connections). <strong>0 paying clients.</strong></li>
+      <li>Public testimonials: <strong>All About Towing</strong> (Alexandria, LA) and <strong>TB Tree Service</strong> (Central LA).</li>
+      <li>Full product is built: marketing site, client portal, admin panel, Stripe billing, automated outbound pipeline (Google Places → Firecrawl → PageSpeed → Groq scoring → tokenized <code>/audit/{token}</code> pages → personalized outreach emails).</li>
+      <li><strong>Bottleneck:</strong> not top-of-funnel. The human conversion step. A month of paralysis on cold-dialing is the evidence. This plan routes around it.</li>
+    </ul>
+
+    <h3>Active channel framework</h3>
+    <table>
+      <thead><tr><th>Tier</th><th>Channels</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td><strong>1 — now</strong></td><td>Client referrals · in-person drop-ins · local partnerships</td><td>This week</td></tr>
+        <tr><td><strong>2 — Day 30+</strong></td><td>Google Search Ads · FB/IG retargeting · direct mail · programmatic local SEO</td><td>Deferred</td></tr>
+        <tr><td><strong>3 — skip</strong></td><td>Mass cold dialing · LinkedIn ads/content · broad "web design" SEO · social organic · outsourced marketing services</td><td>Off the table</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Week 1 specifics (this file)</h3>
+    <ul>
+      <li><strong>Capacity:</strong> 2–3 focused hours/day, ~12 hours/week.</li>
+      <li><strong>Geography:</strong> Youngsville first. Broussard as overflow on Thu only.</li>
+      <li><strong>Materials:</strong> built Saturday — leave-behind packet = printed <code>/audit/{token}/print</code> (dedicated print page, light theme, letter-sized, 1–2 pages) + business card + handwritten sticky note.</li>
+      <li><strong>Review asks:</strong> first formal asks of the 3 free clients (informal mention was made at setup, never a direct ask).</li>
+      <li><strong>Pipeline reset:</strong> dev data wiped manually (2026-05-15). 3 real Youngsville searches run Saturday.</li>
+      <li><strong>Bulk email send:</strong> Saturday after searches, ~20 qualified leads (excluding the 9 drop-in targets) get the AI-personalized audit email via <code>triggerBulkAuditEmail</code>. Email templates rewritten 2026-05-15.</li>
+      <li><strong>Print path:</strong> use <code>/audit/{token}/print</code> — dedicated letter-sized light-theme print view exists. Built 2026-05-15.</li>
+      <li><strong>Targets:</strong> 9 drop-ins · ~20 bulk emails · 5+ warm calls · 3 review asks · 3 partnership pings → 2–3 booked conversations · 1+ Google review live.</li>
+    </ul>
+
+    <h3>Key documents (canonical sources of truth)</h3>
+    <ul>
+      <li><code>BUSINESS.md</code> — business model, pricing, 90-day plan, decision rules, mindset anchors</li>
+      <li><code>CLIENT_LIFECYCLE.md</code> — end-to-end client lifecycle (lead → live → ops)</li>
+      <li><code>ARCHITECTURE.md</code> — technical blueprint, schema, hub/spoke contract</li>
+      <li><code>README.md</code> — dev commands, env vars, repo layout</li>
+    </ul>
+
+    <h3>Critical mindset anchors (from BUSINESS.md)</h3>
+    <ul>
+      <li><strong>Not selling, filtering.</strong> The target self-identifies by having the problem.</li>
+      <li><strong>Local + veteran + face-to-face is the moat.</strong> Don't outsource it.</li>
+      <li><strong>First 3–5 cold-started closes change everything psychologically.</strong> Until then, every strategy is theoretical.</li>
+      <li><strong>Activity beats perfection.</strong> A mediocre drop-in that happens beats a perfect call script that doesn't.</li>
+      <li><strong>One closed client pays for months of experimenting.</strong> $199 × 4 ≈ $800. Math is on the founder's side.</li>
+    </ul>
+
+    <h3>What this living file is for</h3>
+    <p>Open in the browser daily. Check off tasks as they happen — progress saves locally in this browser. End of Friday, review the metrics section, then update or rebuild for Week 2 based on what actually worked.</p>
+  </div>
+</footer>
+
+<script>
+  // Persist checkboxes in localStorage, scoped to this file.
+  const KEY = 'awd-marketing-week-1-v1';
+  function loadState() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
+    catch { return {}; }
+  }
+  function saveState(state) {
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }
+  function init() {
+    const state = loadState();
+    document.querySelectorAll('label.check').forEach(label => {
+      const id = label.dataset.task;
+      if (!id) return;
+      const input = label.querySelector('input[type="checkbox"]');
+      if (state[id]) {
+        input.checked = true;
+        label.classList.add('done');
+      }
+      input.addEventListener('change', () => {
+        const s = loadState();
+        if (input.checked) {
+          s[id] = true;
+          label.classList.add('done');
+        } else {
+          delete s[id];
+          label.classList.remove('done');
+        }
+        saveState(s);
+      });
+    });
+  }
+  function resetAll() {
+    if (!confirm('Reset all checkboxes? This clears all tracked progress for Week 1.')) return;
+    localStorage.removeItem(KEY);
+    document.querySelectorAll('label.check').forEach(label => {
+      const input = label.querySelector('input[type="checkbox"]');
+      input.checked = false;
+      label.classList.remove('done');
+    });
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+</script>
+
+</body>
+</html>

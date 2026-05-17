@@ -333,6 +333,31 @@ export const scrapedLeadDocValidator = v.object({
   updatedAt: v.number(),
 });
 
+export const publicAuditStatusValidator = v.union(
+  v.literal("queued"),
+  v.literal("running"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
+export const publicAuditDocValidator = v.object({
+  _id: v.id("public_audits"),
+  _creationTime: v.number(),
+  token: v.string(),
+  submittedUrl: v.string(),
+  normalizedUrl: v.string(),
+  source: v.optional(v.string()),
+  prospectId: v.optional(v.id("prospects")),
+  status: publicAuditStatusValidator,
+  websiteData: v.optional(websiteDataValidator),
+  pageSpeedData: v.optional(pageSpeedDataValidator),
+  aiAnalysis: v.optional(aiLeadAnalysisValidator),
+  viewedAt: v.optional(v.number()),
+  error: v.optional(v.string()),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+});
+
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;
 export const PLAN_TEXT_MAX_LENGTH = 280;
 export const SESSION_EXPIRY_DAYS = 30;

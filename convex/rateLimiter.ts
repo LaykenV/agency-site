@@ -8,4 +8,6 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   analyticsPixel: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 60 },
   // Audit report impressions: throttle to reduce abusive token hammering
   marketingAuditView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
+  // Public QR audit intake: keep drive-by scans from burning external API quota.
+  publicAuditSubmit: { kind: "token bucket", rate: 3, period: MINUTE, capacity: 3 },
 });

@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Business Card — Acadiana Web Design</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+  /* ─────────────────────────────────────────────
+     Bigger, simpler, fewer elements.
+     Front: brand+price hero, identity row, footer.
+     Back: Get Your Sitescore + sub + big QR.
+     No amber. No gimmicks. No tiny text.
+     Print at 3.75″ × 2.25″ with 0.125″ bleed.
+     ───────────────────────────────────────────── */
+
+  :root {
+    --bg: hsl(225 38% 95%);
+    --ink: hsl(222 72% 28%);
+    --ink-soft: hsl(225 30% 35%);
+    --ink-muted: hsl(225 20% 50%);
+    --primary: hsl(215 85% 55%);
+    --primary-deep: hsl(215 88% 42%);
+    --primary-darker: hsl(215 88% 30%);
+
+    --font-sora: "Sora", -apple-system, sans-serif;
+    --font-body: "Plus Jakarta Sans", -apple-system, sans-serif;
+    --font-serif: "Instrument Serif", "Times New Roman", serif;
+    --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    background: hsl(220 28% 11%);
+    color: var(--ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ───────── STAGE ───────── */
+  .stage {
+    min-height: 100vh;
+    padding: 56px 24px 80px;
+    background:
+      radial-gradient(1200px 600px at 30% 0%, hsl(215 60% 22%) 0%, transparent 60%),
+      radial-gradient(900px 480px at 80% 90%, hsl(215 50% 14%) 0%, transparent 60%),
+      hsl(220 28% 11%);
+  }
+  .stage-inner { max-width: 1080px; margin: 0 auto; }
+
+  .stage h1 {
+    color: #f4f7ff;
+    font-family: var(--font-sora);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    margin: 0 0 8px;
+  }
+  .stage h1 em {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: hsl(215 90% 70%);
+    font-size: 1.1em;
+  }
+  .stage .lead {
+    color: hsl(220 12% 72%);
+    font-size: 14px;
+    max-width: 620px;
+    line-height: 1.55;
+    margin: 0 0 36px;
+  }
+
+  .card-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px;
+    margin-bottom: 28px;
+  }
+  @media (max-width: 860px) { .card-row { grid-template-columns: 1fr; } }
+
+  .card-frame { display: flex; flex-direction: column; gap: 14px; }
+  .card-label {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: hsl(220 12% 65%);
+  }
+  .card-label .dot {
+    display: inline-block;
+    width: 5px; height: 5px;
+    border-radius: 999px;
+    background: hsl(215 88% 60%);
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* ═══════════════════ THE CARD ═══════════════════ */
+  .card {
+    width: 7.5in;
+    height: 4.5in;
+    padding: 0.45in 0.5in;
+    position: relative;
+    overflow: hidden;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse 160% 110% at 50% -20%, hsl(215 85% 55% / 0.42) 0%, hsl(215 85% 55% / 0.18) 38%, transparent 75%),
+      radial-gradient(ellipse 140% 90% at 50% 120%, hsl(215 85% 55% / 0.18) 0%, transparent 65%),
+      linear-gradient(180deg, hsl(225 38% 96%) 0%, hsl(225 32% 92%) 100%);
+    box-shadow:
+      0 30px 60px -20px rgba(0,0,0,0.6),
+      0 10px 20px -8px rgba(0,0,0,0.4);
+  }
+  @media (max-width: 860px) {
+    .card { width: 100%; height: auto; aspect-ratio: 3.75 / 2.25; padding: 6% 6.66%; }
+  }
+
+  /* Bleed/safety guides */
+  .card.show-guides .guide-trim,
+  .card.show-guides .guide-safe { display: block; }
+  .guide-trim, .guide-safe {
+    display: none;
+    position: absolute;
+    pointer-events: none;
+  }
+  .guide-trim { inset: 0.25in; border: 1px dashed rgba(220, 60, 60, 0.6); }
+  .guide-safe { inset: 0.5in; border: 1px dashed rgba(60, 130, 220, 0.5); }
+
+  /* ═══════════════════ FRONT ═══════════════════ */
+  .front {
+    display: grid;
+    grid-template-rows: 1fr auto auto;
+    gap: 0.28in;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HERO — brand left, price right */
+  .front-hero {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.3in;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.22in;
+  }
+  .brand-logo {
+    width: 1.05in;
+    height: 1.05in;
+    flex-shrink: 0;
+    display: block;
+  }
+  .brand-name {
+    font-family: var(--font-sora);
+    font-weight: 800;
+    font-size: 0.42in;
+    line-height: 0.95;
+    letter-spacing: -0.025em;
+    color: var(--ink);
+  }
+  .brand-name .it {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--primary-deep);
+    font-size: 1.08em;
+    letter-spacing: -0.005em;
+  }
+
+  .offer {
+    text-align: right;
+    line-height: 1;
+  }
+  .offer-price {
+    font-family: var(--font-sora);
+    font-weight: 900;
+    font-size: 0.88in;
+    letter-spacing: -0.035em;
+    color: var(--primary-deep);
+    line-height: 0.88;
+  }
+  .offer-price .mo {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 0.5em;
+    color: var(--ink-soft);
+    letter-spacing: -0.01em;
+    margin-left: 0.02in;
+  }
+  .offer-sub {
+    margin-top: 0.1in;
+    font-family: var(--font-mono);
+    font-size: 0.135in;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+
+  /* SERVICES STRIP — one-line summary between hero and identity */
+  .front-services {
+    text-align: center;
+    font-family: var(--font-mono);
+    font-size: 0.18in;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-weight: 500;
+    line-height: 1.2;
+  }
+  .front-services .accent {
+    color: var(--primary-deep);
+    font-weight: 700;
+  }
+  .front-services .sep {
+    color: var(--primary);
+    margin: 0 0.06in;
+    font-weight: 700;
+  }
+  .front-services .dash {
+    color: var(--ink-muted);
+    margin: 0 0.1in;
+  }
+
+  /* IDENTITY — two strong lines */
+  .front-id {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1in;
+    padding: 0.18in 0;
+    border-top: 1px solid hsl(215 30% 75%);
+    border-bottom: 1px solid hsl(215 30% 75%);
+  }
+  .id-line {
+    display: flex;
+    align-items: baseline;
+    gap: 0.16in;
+  }
+  .id-label {
+    font-family: var(--font-mono);
+    font-size: 0.135in;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-weight: 500;
+    min-width: 1in;
+  }
+  .id-value {
+    font-family: var(--font-sora);
+    font-weight: 700;
+    font-size: 0.21in;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .id-value.alt {
+    font-weight: 600;
+    font-size: 0.17in;
+    color: var(--ink-soft);
+  }
+  .id-value.alt .accent {
+    color: var(--primary-deep);
+    font-weight: 700;
+  }
+
+  /* FOOTER — contact */
+  .front-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.2in;
+  }
+  .foot-cell {
+    display: flex;
+    align-items: baseline;
+    gap: 0.1in;
+  }
+  .foot-cell .label {
+    font-family: var(--font-mono);
+    font-size: 0.115in;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-muted);
+    font-weight: 500;
+  }
+  .foot-cell .val {
+    font-family: var(--font-sora);
+    font-weight: 700;
+    font-size: 0.2in;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .foot-cell .val.url {
+    font-weight: 600;
+    color: var(--primary-deep);
+    font-size: 0.18in;
+  }
+
+  /* ═══════════════════ BACK ═══════════════════ */
+  .back {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.36in;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .back-left {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.16in;
+  }
+
+  .back-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.135in;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--primary-deep);
+    font-weight: 500;
+  }
+
+  .back-hero {
+    font-family: var(--font-sora);
+    font-weight: 900;
+    font-size: 0.78in;
+    line-height: 0.88;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    margin: 0;
+  }
+  .back-hero .it {
+    font-family: var(--font-serif);
+    font-style: italic;
+    font-weight: 400;
+    color: var(--primary-deep);
+    font-size: 1.05em;
+    letter-spacing: -0.015em;
+  }
+
+  .back-sub {
+    margin: 0;
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.21in;
+    line-height: 1.25;
+    color: var(--ink-soft);
+    max-width: 3.3in;
+  }
+  .back-sub strong {
+    font-family: var(--font-sora);
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .back-qr {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.12in;
+  }
+  .qr-box {
+    width: 2.6in;
+    height: 2.6in;
+    background: white;
+    padding: 0.1in;
+    border: 1px solid hsl(215 30% 75%);
+    position: relative;
+    box-shadow: 0 6px 18px -8px rgba(14, 36, 64, 0.25);
+  }
+  .qr-box::before,
+  .qr-box::after {
+    content: "";
+    position: absolute;
+    width: 0.22in;
+    height: 0.22in;
+    border: 2px solid var(--primary);
+  }
+  .qr-box::before { top: -3px; left: -3px; border-right: 0; border-bottom: 0; }
+  .qr-box::after { bottom: -3px; right: -3px; border-left: 0; border-top: 0; }
+  .qr-box img { width: 100%; height: 100%; display: block; }
+
+  /* ───────── CONTROLS ───────── */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 24px 0 24px;
+  }
+  .btn {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    font-family: var(--font-sora);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    border-radius: 4px;
+  }
+  .btn:hover { background: var(--primary-deep); }
+  .btn.secondary {
+    background: transparent;
+    color: hsl(220 12% 78%);
+    border: 1px solid hsl(220 12% 35%);
+  }
+  .btn.secondary:hover { background: hsl(220 16% 16%); color: white; border-color: var(--primary); }
+
+  .notice {
+    background: hsl(220 24% 14%);
+    border-left: 3px solid var(--primary);
+    padding: 16px 20px;
+    color: hsl(220 12% 80%);
+    font-size: 13.5px;
+    line-height: 1.6;
+    margin-bottom: 14px;
+    border-radius: 0 6px 6px 0;
+  }
+  .notice strong { color: hsl(215 90% 75%); }
+  .notice code {
+    background: hsl(220 28% 11%);
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #f4f7ff;
+    border-radius: 3px;
+  }
+
+  /* ───────── PRINT — 3.75" × 2.25" with bleed ─────────
+     Halve every inch value used in preview (preview is 2× print).
+     Padding 0.225in includes bleed (0.125) + interior margin (0.1). */
+  @media print {
+    @page { size: 3.75in 2.25in; margin: 0; }
+    body, html { background: white !important; margin: 0 !important; }
+    .stage {
+      background: white !important;
+      padding: 0 !important;
+      min-height: 0 !important;
+    }
+    .stage > .stage-inner > *:not(.print-pages) { display: none !important; }
+    .print-pages { display: block !important; }
+    .print-pages .card {
+      width: 3.75in !important;
+      height: 2.25in !important;
+      padding: 0.225in 0.25in !important;
+      box-shadow: none !important;
+      page-break-after: always;
+    }
+    .print-pages .card:last-child { page-break-after: auto; }
+    .print-pages .card.show-guides .guide-trim,
+    .print-pages .card.show-guides .guide-safe { display: none !important; }
+
+    /* FRONT — halve everything */
+    .print-pages .front { gap: 0.14in; }
+    .print-pages .brand-logo { width: 0.525in; height: 0.525in; }
+    .print-pages .brand { gap: 0.11in; }
+    .print-pages .brand-name { font-size: 0.21in; }
+    .print-pages .offer-price { font-size: 0.44in; }
+    .print-pages .offer-sub { font-size: 0.0675in; margin-top: 0.05in; }
+    .print-pages .front-services { font-size: 0.09in; }
+    .print-pages .front-services .sep { margin: 0 0.03in; }
+    .print-pages .front-services .dash { margin: 0 0.05in; }
+    .print-pages .front-id { gap: 0.05in; padding: 0.09in 0; }
+    .print-pages .id-label { font-size: 0.0675in; min-width: 0.5in; }
+    .print-pages .id-value { font-size: 0.105in; }
+    .print-pages .id-value.alt { font-size: 0.085in; }
+    .print-pages .id-line { gap: 0.08in; }
+    .print-pages .foot-cell .label { font-size: 0.0575in; }
+    .print-pages .foot-cell .val { font-size: 0.1in; }
+    .print-pages .foot-cell .val.url { font-size: 0.09in; }
+    .print-pages .foot-cell { gap: 0.05in; }
+
+    /* BACK — halve everything */
+    .print-pages .back { gap: 0.18in; }
+    .print-pages .back-left { gap: 0.08in; }
+    .print-pages .back-eyebrow { font-size: 0.0675in; }
+    .print-pages .back-hero { font-size: 0.39in; }
+    .print-pages .back-sub { font-size: 0.105in; max-width: 1.65in; }
+    .print-pages .qr-box { width: 1.3in; height: 1.3in; padding: 0.05in; }
+    .print-pages .qr-box::before,
+    .print-pages .qr-box::after { width: 0.11in; height: 0.11in; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="stage-inner">
+    <h1>Business <em>Card</em> · v3</h1>
+    <p class="lead">Bigger type throughout. Pull quote removed. Two structural rules carve the front into hero / identity / footer. Back is just headline + sub + big QR. Preview is scaled 2×; print exports at 3.75″ × 2.25″ with bleed.</p>
+
+    <div class="card-row">
+      <div class="card-frame">
+        <div class="card-label"><span class="dot"></span>Front · trim 3.5″ × 2″</div>
+        <div class="card front" id="front-preview">
+          <div class="guide-trim"></div>
+          <div class="guide-safe"></div>
+
+          <div class="front-hero">
+            <div class="brand">
+              <img class="brand-logo" alt="Acadiana Web Design" src="./public/logo.png">
+              <div class="brand-name">Acadiana<br><span class="it">Web Design</span></div>
+            </div>
+
+            <div class="offer">
+              <div class="offer-price">$199<span class="mo">/mo</span></div>
+              <div class="offer-sub">$0 down · 72-hour launch</div>
+            </div>
+          </div>
+
+          <div class="front-services">
+            Design<span class="sep">·</span>Build<span class="sep">·</span>Host<span class="sep">·</span>Maintain<span class="dash">—</span><span class="accent">One Flat Price</span>
+          </div>
+
+          <div class="front-id">
+            <div class="id-line">
+              <span class="id-label">Founder</span>
+              <span class="id-value">Layken Varholdt</span>
+            </div>
+            <div class="id-line">
+              <span class="id-label">Based in</span>
+              <span class="id-value alt"><span class="accent">Youngsville, LA</span> · Veteran-Owned</span>
+            </div>
+          </div>
+
+          <div class="front-foot">
+            <div class="foot-cell">
+              <span class="label">Call</span>
+              <span class="val">(337) 306-3705</span>
+            </div>
+            <div class="foot-cell">
+              <span class="val url">acadianawebdesign.com</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-frame">
+        <div class="card-label"><span class="dot"></span>Back · trim 3.5″ × 2″</div>
+        <div class="card back" id="back-preview">
+          <div class="guide-trim"></div>
+          <div class="guide-safe"></div>
+
+          <div class="back-left">
+            <div class="back-eyebrow">Acadiana Web Design</div>
+
+            <h3 class="back-hero">Get your<br><span class="it">Sitescore.</span></h3>
+
+            <p class="back-sub">
+              Score your website in <strong>60 seconds.</strong> No signup.
+            </p>
+          </div>
+
+          <div class="back-qr">
+            <div class="qr-box">
+              <img alt="QR → acadianawebdesign.com/audit"
+                   src="https://api.qrserver.com/v1/create-qr-code/?size=600x600&data=https%3A%2F%2Facadianawebdesign.com%2Faudit&margin=0&ecc=M&format=png">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="btn" onclick="window.print()">Export PDF (2 pages, 3.75″ × 2.25″)</button>
+      <button class="btn secondary" onclick="toggleGuides()">Toggle bleed &amp; safety guides</button>
+    </div>
+
+    <div class="notice">
+      <strong>Print export:</strong> click "Export PDF" → in Chrome's print dialog set <strong>Destination: Save as PDF</strong>, <strong>Margins: None</strong>, <strong>Background graphics: ON</strong> (critical — or the gradient drops out). Paper size should auto-detect 3.75″ × 2.25″.
+    </div>
+
+    <div class="notice">
+      <strong>Logo loading:</strong> from <code>./public/logo.png</code> — open this file from the project root so the relative path resolves. Hard-refresh (Cmd+Shift+R) if still broken.
+    </div>
+
+    <div class="print-pages" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+  const printHost = document.querySelector('.print-pages');
+  const frontClone = document.getElementById('front-preview').cloneNode(true);
+  const backClone = document.getElementById('back-preview').cloneNode(true);
+  [frontClone, backClone].forEach(el => {
+    el.removeAttribute('id');
+    el.classList.remove('show-guides');
+  });
+  printHost.appendChild(frontClone);
+  printHost.appendChild(backClone);
+
+  function toggleGuides() {
+    document.getElementById('front-preview').classList.toggle('show-guides');
+    document.getElementById('back-preview').classList.toggle('show-guides');
+  }
+</script>
+
+</body>
+</html>

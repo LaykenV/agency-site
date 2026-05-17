@@ -14,13 +14,18 @@ import { Logo } from "@/components/logo";
 export function GlobalHeader() {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
-  const isAudit = pathname.startsWith("/audit");
+  // The tokenized audit reports render their own chrome (AuditBanner pinned
+  // bottom + dark theme), so we suppress the global header there. The public
+  // intake page at /audit is a marketing page and keeps the header.
+  const isAuditReport =
+    pathname.startsWith("/audit/") && pathname !== "/audit/request";
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
   const isGradientPage =
     pathname === "/" ||
     pathname === "/3" ||
+    pathname === "/audit" ||
     pathname.startsWith("/websites-for-") ||
     // Match /services/[industry] pages like /services/plumbers
     /^\/services\/[a-z-]+$/.test(pathname) ||
@@ -96,8 +101,8 @@ export function GlobalHeader() {
     };
   }, []);
 
-  // Hide header entirely on audit pages - they have their own chrome
-  if (isAudit) return null;
+  // Hide header on tokenized audit report pages - they have their own chrome
+  if (isAuditReport) return null;
 
   return (
     <header

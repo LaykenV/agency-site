@@ -18,6 +18,7 @@ import {
   websiteDataValidator,
   pageSpeedDataValidator,
   aiLeadAnalysisValidator,
+  publicAuditStatusValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -199,6 +200,25 @@ export default defineSchema({
     .index("by_placeId", ["placeId"])
     .index("by_demoToken", ["demoToken"])
     .index("by_followUpAt", ["followUpAt"])
+    .index("by_createdAt", ["createdAt"]),
+
+  public_audits: defineTable({
+    token: v.string(),
+    submittedUrl: v.string(),
+    normalizedUrl: v.string(),
+    source: v.optional(v.string()),
+    prospectId: v.optional(v.id("prospects")),
+    status: publicAuditStatusValidator,
+    websiteData: v.optional(websiteDataValidator),
+    pageSpeedData: v.optional(pageSpeedDataValidator),
+    aiAnalysis: v.optional(aiLeadAnalysisValidator),
+    viewedAt: v.optional(v.number()),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_token", ["token"])
+    .index("by_prospectId", ["prospectId"])
     .index("by_createdAt", ["createdAt"]),
 
   //errorReports - future

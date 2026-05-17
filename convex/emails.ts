@@ -34,6 +34,15 @@ const EMAIL_STYLES = {
 
 const COMPANY_NAME = 'Acadiana Web Design';
 
+// Founder identity — used as the from-line / sender block on 1:1 outreach
+// (audit, portfolio, follow-up) so it reads like a human, not a brand list.
+const FOUNDER_NAME = 'Layken Varholdt';
+const FOUNDER_EMAIL = 'layken@acadianawebdesign.com';
+const FOUNDER_FROM_LINE = `${FOUNDER_NAME} <${FOUNDER_EMAIL}>`;
+const FOUNDER_PHONE_DISPLAY = '(337) 306-3705';
+const FOUNDER_PHONE_TEL = '+13373063705';
+const FOUNDER_CITY = 'Youngsville, LA';
+
 // Get the base URL for email assets and links
 function getBaseUrl(): string {
   return process.env.NEXT_PUBLIC_APP_URL 
@@ -102,8 +111,14 @@ export function getCtaButton(text: string, href: string, variant: 'primary' | 's
   `;
 }
 
-// Email wrapper with consistent styling
-export function getEmailWrapper(content: string): string {
+// Email wrapper with consistent styling. Pass `preheader` to control the
+// inbox-preview snippet — without it, mail clients show the first visible
+// copy in the body, which wastes the highest-leverage real estate in any
+// outbound email.
+export function getEmailWrapper(content: string, preheader?: string): string {
+  const preheaderBlock = preheader
+    ? `<div style="display:none;font-size:1px;color:#fefefe;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">${escapeHtml(preheader)}</div>`
+    : '';
   return `
     <!DOCTYPE html>
     <html>
@@ -125,6 +140,7 @@ export function getEmailWrapper(content: string): string {
         </style>
       </head>
       <body class="body" style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: ${EMAIL_STYLES.background};">
+        ${preheaderBlock}
         <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
           <div style="background: ${EMAIL_STYLES.cardBackground}; border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); overflow: hidden;">
             ${content}
@@ -133,6 +149,21 @@ export function getEmailWrapper(content: string): string {
       </body>
     </html>
   `;
+}
+
+// Founder signature — for 1:1 outbound, signs as Layken not "the team".
+export function getFounderSignatureHtml(): string {
+  return `
+    <p style="margin:28px 0 0;color:${EMAIL_STYLES.textDark};line-height:1.6;font-size:15px;">
+      &mdash; Layken<br>
+      <span style="color:${EMAIL_STYLES.textMuted};font-size:14px;">${COMPANY_NAME} &middot; ${FOUNDER_CITY}</span><br>
+      <a href="tel:${FOUNDER_PHONE_TEL}" style="color:${EMAIL_STYLES.textMuted};text-decoration:none;font-size:14px;">${FOUNDER_PHONE_DISPLAY}</a>
+    </p>
+  `;
+}
+
+export function getFounderSignatureText(): string {
+  return `— Layken\n${COMPANY_NAME} · ${FOUNDER_CITY}\n${FOUNDER_PHONE_DISPLAY}`;
 }
 
 // Info box with left border accent
@@ -186,7 +217,18 @@ export function getListUnsubscribeHeaders(): { name: string; value: string }[] {
 }
 
 // Re-export EMAIL_STYLES for use in auth.ts
-export { EMAIL_STYLES, COMPANY_NAME, getBaseUrl, SUPPORT_EMAIL };
+export {
+  EMAIL_STYLES,
+  COMPANY_NAME,
+  getBaseUrl,
+  SUPPORT_EMAIL,
+  FOUNDER_NAME,
+  FOUNDER_EMAIL,
+  FOUNDER_FROM_LINE,
+  FOUNDER_PHONE_DISPLAY,
+  FOUNDER_PHONE_TEL,
+  FOUNDER_CITY,
+};
 
 // Placeholder test email function for debugging
 export const sendTestEmail = internalAction({

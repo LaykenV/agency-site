@@ -5,14 +5,14 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import {
   EMAIL_STYLES,
-  SUPPORT_EMAIL,
+  FOUNDER_EMAIL,
+  FOUNDER_FROM_LINE,
+  FOUNDER_PHONE_DISPLAY,
   escapeHtml,
   getBaseUrl,
-  getCtaButton,
-  getEmailFooter,
-  getEmailHeader,
   getEmailWrapper,
-  getInfoBox,
+  getFounderSignatureHtml,
+  getFounderSignatureText,
   getListUnsubscribeHeaders,
   resend,
 } from "../emails";
@@ -26,30 +26,39 @@ function clampScore(score?: number): number | undefined {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
-function getScoreColor(score: number): { color: string; bg: string; label: string } {
-  if (score >= 80) return { color: "#10b981", bg: "#ecfdf5", label: "Good" };
-  if (score >= 50) return { color: "#f59e0b", bg: "#fffbeb", label: "Needs Work" };
-  return { color: "#ef4444", bg: "#fef2f2", label: "Poor" };
+// Conversational opening line tied to whatever we actually know about the
+// prospect's site — score > technology > nothing. Avoids generic "we ran a
+// free audit" framing that signals bulk outreach.
+function buildAuditOpener(args: {
+  businessName: string;
+  websiteUrl?: string;
+  score?: number;
+  technology?: string;
+}): string {
+  if (!args.websiteUrl) {
+    return `I couldn't find a website for ${args.businessName} — every Google search for your business right now is a missed customer.`;
+  }
+  if (typeof args.score === "number") {
+    return `Pulled up ${args.businessName}'s site this morning and ran it through Google's mobile speed test. It scored ${args.score}/100 — Google penalizes anything under 90 in local search rankings.`;
+  }
+  if (args.technology && args.technology !== "custom") {
+    return `Pulled up ${args.businessName}'s site this morning. It's built on ${args.technology}, which caps how fast it can load on mobile — and Google penalizes slow sites in local search.`;
+  }
+  return `Pulled up ${args.businessName}'s site this morning and ran it through a few of the tools Google uses to rank local businesses. Found a couple things worth knowing.`;
 }
 
-function getSpeedGauge(score: number): string {
-  const { color, label } = getScoreColor(score);
-  const barWidth = Math.max(4, score);
-
-  return `
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0;">
-      <tr>
-        <td align="center" style="padding:0;">
-          <div style="font-size:48px;font-weight:800;color:${color};letter-spacing:-2px;line-height:1;">${score}</div>
-          <div style="font-size:13px;color:${color};font-weight:600;text-transform:uppercase;letter-spacing:1px;margin:4px 0 12px;">${label}</div>
-          <div style="background:#e5e7eb;border-radius:4px;height:8px;width:100%;max-width:200px;margin:0 auto;">
-            <div style="background:${color};border-radius:4px;height:8px;width:${barWidth}%;"></div>
-          </div>
-          <div style="font-size:11px;color:#9ca3af;margin-top:6px;">Mobile Speed Score</div>
-        </td>
-      </tr>
-    </table>
-  `;
+function buildAuditPreheader(args: {
+  businessName: string;
+  score?: number;
+  websiteUrl?: string;
+}): string {
+  if (!args.websiteUrl) {
+    return `No website on Google for ${args.businessName} — here's what that's costing you.`;
+  }
+  if (typeof args.score === "number") {
+    return `Your mobile speed score is ${args.score}/100 — here's what's costing you customers.`;
+  }
+  return `Quick look at ${args.businessName}'s site — a couple of things worth knowing.`;
 }
 
 export const sendAuditEmail = internalAction({
@@ -71,115 +80,102 @@ export const sendAuditEmail = internalAction({
     const auditUrl = getAuditUrl(lead.demoToken);
     const score = clampScore(lead.pageSpeedData?.performanceScore);
     const rawBusinessName = lead.googleData.businessName;
-    const rawName = args.recipientName?.trim() || "there";
     const businessName = escapeHtml(rawBusinessName);
-    const name = escapeHtml(rawName);
-    const primaryColor = lead.websiteData?.primaryColor ?? EMAIL_STYLES.primaryColor;
+    const websiteUrl = lead.googleData.websiteUrl;
+    const technology = lead.websiteData?.technology;
+    const trimmedName = args.recipientName?.trim();
 
-    // Screenshot + speed gauge section
+    const rawOpener = buildAuditOpener({
+      businessName: rawBusinessName,
+      websiteUrl,
+      score,
+      technology,
+    });
+    const opener = escapeHtml(rawOpener);
+
+    // Personal greeting only when we actually know their first name. Generic
+    // "Hi there," reads as bulk and trains the recipient to skim past.
+    const greetingHtml = trimmedName
+      ? `<p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${escapeHtml(trimmedName)},</p>`
+      : "";
+
+    // Lightweight proof-of-work: keep the screenshot (shows we actually
+    // looked at their site) but drop the gradient banner and bullet boxes
+    // that scream "template".
     const screenshotUrl = lead.websiteData?.screenshotUrl;
     const screenshotSection = screenshotUrl
-      ? `<div style="margin:0 0 8px;border-radius:8px;overflow:hidden;border:1px solid ${EMAIL_STYLES.border};">
-           <img src="${escapeHtml(screenshotUrl)}" alt="${businessName} website" width="552" style="display:block;width:100%;height:auto;border-radius:8px 8px 0 0;" />
+      ? `<div style="margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid ${EMAIL_STYLES.border};">
+           <img src="${escapeHtml(screenshotUrl)}" alt="${businessName} website" width="552" style="display:block;width:100%;height:auto;" />
          </div>`
       : "";
 
-    const gaugeSection =
-      typeof score === "number"
-        ? `<div style="background:${getScoreColor(score).bg};border-radius:8px;padding:20px 16px;margin:0 0 20px;border:1px solid ${EMAIL_STYLES.border};">
-             ${getSpeedGauge(score)}
-           </div>`
-        : "";
-
-    const tech = lead.websiteData?.technology;
-    const techLine =
-      tech && tech !== "custom"
-        ? `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x26A0; Built on <strong>${escapeHtml(tech)}</strong> &mdash; limited speed &amp; flexibility</td></tr>`
-        : "";
-
-    const painPoints = lead.aiAnalysis?.painPoints ?? [];
-    const issueRows =
-      painPoints.length > 0
-        ? painPoints
-            .slice(0, 4)
-            .map(
-              (point) =>
-                `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; ${escapeHtml(point)}</td></tr>`
-            )
-            .join("")
-        : `<tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; Mobile speed below top local competitors</td></tr>
-           <tr><td style="padding:6px 0 6px 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">&#x2022; Conversion layout can be improved</td></tr>`;
-
-    const issuesSection = `
-      <div style="margin:0 0 24px;">
-        <h3 style="margin:0 0 8px;font-size:15px;font-weight:600;color:${EMAIL_STYLES.textDark};">Issues we found</h3>
-        <table cellpadding="0" cellspacing="0" border="0" width="100%">
-          ${issueRows}
-          ${techLine}
-        </table>
-      </div>
+    const reportLink = `
+      <p style="margin:20px 0 8px;font-size:15px;color:${EMAIL_STYLES.textDark};line-height:1.6;">
+        I put the full breakdown on one page — no signup, no follow-up sequence:
+      </p>
+      <p style="margin:0 0 4px;">
+        <a href="${auditUrl}" style="color:${EMAIL_STYLES.primaryColor};font-weight:600;font-size:16px;text-decoration:underline;">See your audit report &rarr;</a>
+      </p>
+      <p style="margin:0 0 20px;font-size:12px;color:${EMAIL_STYLES.textLight};word-break:break-all;">${auditUrl}</p>
     `;
 
-    // Branded footer section — logo + minimal copy
-    const logoUrl = `${getBaseUrl()}/logo.png`;
-    const brandSection = `
-      <div style="text-align:center;margin:32px 0 8px;padding:24px 16px 0;border-top:1px solid ${EMAIL_STYLES.border};">
-        <img src="${logoUrl}" alt="Acadiana Web Design" width="36" height="36" style="display:inline-block;margin:0 auto 10px;" />
-        <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:${EMAIL_STYLES.textDark};">Acadiana Web Design</p>
-        <p style="margin:0;font-size:13px;color:${EMAIL_STYLES.textMuted};line-height:1.5;">Fast, modern websites for local businesses &mdash; $199/mo, everything included.</p>
-      </div>
+    const permissionLine = `
+      <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:15px;">
+        If now's not the right time, no worries &mdash; I'll send one more note next week and then close the file.
+      </p>
     `;
 
-    const html = getEmailWrapper(`
-      <div style="background: linear-gradient(135deg, ${escapeHtml(primaryColor)} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 28px 24px; text-align:center;">
-        <div class="gmail-blend-screen">
-          <div class="gmail-blend-difference">
-            <h1 style="margin:0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;font-size:22px;font-weight:700;">Website Audit for ${businessName}</h1>
-            <p style="margin:8px 0 0;color:#ffffff !important;-webkit-text-fill-color:#ffffff !important;opacity:0.92;font-size:14px;">We found issues that may be costing you customers</p>
-          </div>
-        </div>
-      </div>
-      <div style="padding:28px 24px;">
-        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
-        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We ran a free audit on ${businessName}'s website. Here's a snapshot of what we found:</p>
+    const psLine = `
+      <p style="margin:24px 0 0;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:14px;">
+        P.S. &mdash; Built <a href="https://tbtreeservice.org" style="color:${EMAIL_STYLES.textMuted};">tbtreeservice.org</a> in 9 days. Same setup I'd use for ${businessName}.
+      </p>
+    `;
+
+    const preheader = buildAuditPreheader({
+      businessName: rawBusinessName,
+      score,
+      websiteUrl,
+    });
+
+    const html = getEmailWrapper(
+      `
+      <div style="padding:32px 28px;">
+        ${greetingHtml}
+        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">${opener}</p>
         ${screenshotSection}
-        ${gaugeSection}
-        ${issuesSection}
-        <div style="text-align:center;margin:28px 0;">
-          ${getCtaButton("See Your Full Audit Report", auditUrl)}
-        </div>
-        <p style="margin:0;text-align:center;color:${EMAIL_STYLES.textMuted};font-size:13px;">Reply to this email if you'd like a quick walkthrough.</p>
-        ${brandSection}
+        ${reportLink}
+        ${permissionLine}
+        ${getFounderSignatureHtml()}
+        ${psLine}
       </div>
-      ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
-    `);
+    `,
+      preheader,
+    );
 
     const text = [
-      `Hi ${rawName},`,
+      trimmedName ? `Hi ${trimmedName},` : "",
       "",
-      `We ran a free website audit for ${rawBusinessName}.`,
-      `View your full report: ${auditUrl}`,
+      rawOpener,
       "",
-      typeof score === "number" ? `Mobile speed score: ${score}/100` : "",
-      ...(painPoints.length
-        ? ["Issues found:", ...painPoints.slice(0, 4).map((point) => `- ${point}`)]
-        : []),
+      "I put the full breakdown on one page — no signup, no follow-up sequence:",
+      auditUrl,
       "",
-      "Acadiana Web Design",
-      "Fast, modern websites for local businesses — $199/mo, everything included.",
+      "If now's not the right time, no worries — I'll send one more note next week and then close the file.",
       "",
-      `Reply to this email or contact ${SUPPORT_EMAIL} to schedule a call.`,
+      getFounderSignatureText(),
+      "",
+      `P.S. — Built tbtreeservice.org in 9 days. Same setup I'd use for ${rawBusinessName}.`,
     ]
-      .filter(Boolean)
+      .filter((line) => line !== undefined && line !== null)
       .join("\n");
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
+      from: FOUNDER_FROM_LINE,
       to: args.recipientEmail,
-      subject: `${rawBusinessName}: we found issues with your website`,
+      subject: `quick thing about ${rawBusinessName}'s site`,
       html,
       text,
-      replyTo: [SUPPORT_EMAIL],
+      replyTo: [FOUNDER_EMAIL],
       headers: getListUnsubscribeHeaders(),
     });
 
@@ -202,6 +198,9 @@ export const sendAuditEmail = internalAction({
   },
 });
 
+// Alternative first-touch: instead of an audit, lead with a side-by-side
+// comparison against a real site we built. One concrete reference beats a
+// portfolio gallery — the prospect can see the gap, not browse it.
 export const sendPortfolioEmail = internalAction({
   args: {
     leadId: v.id("scraped_leads"),
@@ -221,80 +220,96 @@ export const sendPortfolioEmail = internalAction({
     const portfolioUrl = "https://tbtreeservice.org";
     const score = clampScore(lead.pageSpeedData?.performanceScore);
     const rawBusinessName = lead.googleData.businessName;
-    const rawName = args.recipientName?.trim() || "there";
     const businessName = escapeHtml(rawBusinessName);
-    const name = escapeHtml(rawName);
+    const trimmedName = args.recipientName?.trim();
 
-    const outreachAngle = lead.aiAnalysis?.outreachAngle
-      ? `<p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">${escapeHtml(lead.aiAnalysis.outreachAngle)}</p>`
+    const greetingHtml = trimmedName
+      ? `<p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${escapeHtml(trimmedName)},</p>`
       : "";
 
-    const scoreBox =
-      typeof score === "number" && score < 80
-        ? `<div style="margin:16px 0;padding:12px;border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;">Your current mobile speed score is <strong>${score}/100</strong>. We typically target 90+.</div>`
-        : "";
+    // Three differences the prospect can verify in 30 seconds — concrete >
+    // adjectives. Speed line uses their real number if we have it.
+    const speedDiff =
+      typeof score === "number"
+        ? `Mobile load time &mdash; theirs scores 95+/100, yours scores ${score}/100`
+        : `Mobile load time &mdash; theirs scores 95+/100, most sites in your category score below 50`;
 
-    const tech = lead.websiteData?.technology;
-    const techBox = tech
-      ? `<div style="margin:16px 0;padding:12px;border-left:4px solid ${EMAIL_STYLES.primaryColor};background:#eff6ff;color:#1e3a8a;">We can outperform your current ${escapeHtml(tech)} setup with a faster custom build.</div>`
-      : "";
+    const differences = [
+      speedDiff,
+      "Phone number visible the second the page loads &mdash; not buried in a header menu",
+      "One tap from Google search to a call &mdash; no contact form maze",
+    ];
+    const diffsHtml = differences
+      .map(
+        (d, i) =>
+          `<tr>
+             <td style="padding:8px 12px 8px 0;vertical-align:top;color:${EMAIL_STYLES.primaryColor};font-weight:700;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;">${String(i + 1).padStart(2, "0")}</td>
+             <td style="padding:8px 0;color:${EMAIL_STYLES.textDark};font-size:15px;line-height:1.6;">${d}</td>
+           </tr>`,
+      )
+      .join("");
 
-    const painPoints = lead.aiAnalysis?.painPoints;
-    const painPointsList =
-      painPoints && painPoints.length > 0
-        ? `<ul style="margin:16px 0;padding-left:20px;color:${EMAIL_STYLES.textMuted};line-height:1.8;">${painPoints.map((p) => `<li>${escapeHtml(p)}</li>`).join("")}</ul>`
-        : "";
+    const preheader = `Three differences between ${rawBusinessName} and a site I built last quarter.`;
 
-    const html = getEmailWrapper(`
-      ${getEmailHeader(`A faster website for ${businessName}`, "Here's what we can do")}
-      <div style="padding:28px 24px;">
-        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${name},</p>
-        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">We took a look at ${businessName}'s web presence and wanted to show you what a modern, high-performance site looks like for a local service business.</p>
-        ${outreachAngle}
-        <div style="text-align:center;margin:24px 0;">
-          ${getCtaButton("See a Site We Built", portfolioUrl)}
-        </div>
-        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textMuted};font-size:14px;text-align:center;">This is a real site we built for a local tree service company.</p>
-        ${scoreBox}
-        ${techBox}
-        ${painPointsList}
-        ${getInfoBox("What you get with our $199/mo plan", [
-          "Custom site design and build",
-          "Unlimited edits handled for you",
-          "Fast hosting + ongoing maintenance",
-          "Clear local-service conversion focused layout",
-        ])}
-        <p style="margin:20px 0 0;color:${EMAIL_STYLES.textMuted};">Interested? Reply here and we can schedule a quick call to talk about ${businessName}.</p>
+    const html = getEmailWrapper(
+      `
+      <div style="padding:32px 28px;">
+        ${greetingHtml}
+        <p style="margin:0 0 18px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">
+          Looked at ${businessName}'s site next to one I built last quarter for a local tree service (<a href="${portfolioUrl}" style="color:${EMAIL_STYLES.primaryColor};">tbtreeservice.org</a>).
+        </p>
+        <p style="margin:0 0 12px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">
+          Three differences that matter for ranking on Google for local searches:
+        </p>
+        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin:0 0 20px;">
+          ${diffsHtml}
+        </table>
+        <p style="margin:0 0 12px;color:${EMAIL_STYLES.textDark};font-size:15px;line-height:1.6;">
+          If any of that sounds worth fixing on ${businessName}, reply "yes" and I'll send a 3-page plan tailored to your site.
+        </p>
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:15px;">
+          If not, no worries &mdash; I'll send one more note next week and then close the file.
+        </p>
+        ${getFounderSignatureHtml()}
+        <p style="margin:24px 0 0;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:14px;">
+          P.S. &mdash; $199/mo flat. Custom design, fast hosting, unlimited edits. No upfront.
+        </p>
       </div>
-      ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
-    `);
+    `,
+      preheader,
+    );
 
     const text = [
-      `Hi ${rawName},`,
+      trimmedName ? `Hi ${trimmedName},` : "",
       "",
-      `We looked at ${rawBusinessName}'s web presence and wanted to show you what a faster site looks like.`,
+      `Looked at ${rawBusinessName}'s site next to one I built last quarter for a local tree service (${portfolioUrl}).`,
       "",
-      `See a site we built for a local service business: ${portfolioUrl}`,
+      "Three differences that matter for ranking on Google for local searches:",
       "",
-      typeof score === "number" ? `Current mobile PageSpeed score: ${score}/100` : "",
+      typeof score === "number"
+        ? `01  Mobile load time — theirs scores 95+/100, yours scores ${score}/100`
+        : "01  Mobile load time — theirs scores 95+/100, most sites in your category score below 50",
+      "02  Phone number visible the second the page loads — not buried in a header menu",
+      "03  One tap from Google search to a call — no contact form maze",
       "",
-      "Our $199/mo plan includes:",
-      "- Custom site build",
-      "- Unlimited edits",
-      "- Fast hosting and maintenance",
+      `If any of that sounds worth fixing on ${rawBusinessName}, reply "yes" and I'll send a 3-page plan tailored to your site.`,
       "",
-      `Reply to this email or contact ${SUPPORT_EMAIL} to schedule a call.`,
+      "If not, no worries — I'll send one more note next week and then close the file.",
+      "",
+      getFounderSignatureText(),
+      "",
+      "P.S. — $199/mo flat. Custom design, fast hosting, unlimited edits. No upfront.",
     ]
-      .filter(Boolean)
+      .filter((line) => line !== undefined && line !== null)
       .join("\n");
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
+      from: FOUNDER_FROM_LINE,
       to: args.recipientEmail,
-      subject: `${rawBusinessName}: see what a faster website looks like`,
+      subject: `built one of these for a tree service`,
       html,
       text,
-      replyTo: [SUPPORT_EMAIL],
+      replyTo: [FOUNDER_EMAIL],
       headers: getListUnsubscribeHeaders(),
     });
 
@@ -317,6 +332,9 @@ export const sendPortfolioEmail = internalAction({
   },
 });
 
+// 7-day bump. Doesn't re-pitch — gives the recipient an easy graceful exit
+// ("close the file?") which paradoxically lifts replies because saying no
+// is frictionless and saying yes feels like the rescue.
 export const sendFollowUpEmail = internalAction({
   args: {
     leadId: v.id("scraped_leads"),
@@ -334,36 +352,45 @@ export const sendFollowUpEmail = internalAction({
 
     const auditUrl = getAuditUrl(lead.demoToken);
     const rawBusinessName = lead.googleData.businessName;
-    const businessName = escapeHtml(rawBusinessName);
 
-    const html = getEmailWrapper(`
-      ${getEmailHeader(`Quick follow-up on your website audit for ${businessName}`)}
-      <div style="padding:28px 24px;">
-        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Wanted to bump this in case it got buried.</p>
-        <p style="margin:0 0 18px;color:${EMAIL_STYLES.textMuted};line-height:1.6;">Your website audit report for ${businessName} is still available:</p>
-        <div style="text-align:center;margin:24px 0;">
-          ${getCtaButton("View Your Audit Report", auditUrl)}
-        </div>
-        <p style="margin:0;color:${EMAIL_STYLES.textMuted};">If you'd like, we can walk through the issues and fix plan together in a short call.</p>
+    const preheader = `Should I close the file on ${rawBusinessName} or hold it open?`;
+
+    const html = getEmailWrapper(
+      `
+      <div style="padding:32px 28px;">
+        <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">
+          Hey &mdash; last time I'll bump this. Should I close the file or hold it open?
+        </p>
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};font-size:15px;line-height:1.6;">
+          Your audit's still here if it helps:
+          <a href="${auditUrl}" style="color:${EMAIL_STYLES.primaryColor};font-weight:600;text-decoration:underline;">view report &rarr;</a>
+        </p>
+        <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.6;">
+          Either way works &mdash; just a one-word reply ("close" or "hold") and I'll do the rest. Or call/text me direct: <a href="tel:+13373063705" style="color:${EMAIL_STYLES.textMuted};">${FOUNDER_PHONE_DISPLAY}</a>.
+        </p>
+        ${getFounderSignatureHtml()}
       </div>
-      ${getEmailFooter(new Date().getFullYear(), "Acadiana Web Design, Lafayette, LA")}
-    `);
+    `,
+      preheader,
+    );
 
     const text = [
-      "Quick follow-up:",
+      "Hey — last time I'll bump this. Should I close the file or hold it open?",
       "",
-      `Your audit report for ${rawBusinessName} is here: ${auditUrl}`,
+      `Your audit's still here if it helps: ${auditUrl}`,
       "",
-      "Reply to this email if you want a quick walkthrough.",
+      `Either way works — just a one-word reply ("close" or "hold") and I'll do the rest. Or call/text me direct: ${FOUNDER_PHONE_DISPLAY}.`,
+      "",
+      getFounderSignatureText(),
     ].join("\n");
 
     await resend.sendEmail(ctx, {
-      from: "Acadiana Web Design <outreach@acadianawebdesign.com>",
+      from: FOUNDER_FROM_LINE,
       to: args.recipientEmail,
-      subject: `${rawBusinessName}: your website audit is still available`,
+      subject: `close the file?`,
       html,
       text,
-      replyTo: [SUPPORT_EMAIL],
+      replyTo: [FOUNDER_EMAIL],
       headers: getListUnsubscribeHeaders(),
     });
 
