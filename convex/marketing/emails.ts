@@ -34,7 +34,16 @@ function getMarketingEmailHeader(): string {
   const logoUrl = getBrandLogoUrl();
   return `
     <div style="padding:28px 28px 0;text-align:left;">
-      <img src="${logoUrl}" alt="Acadiana Web Design" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:10px;" />
+      <table cellpadding="0" cellspacing="0" border="0" role="presentation">
+        <tr>
+          <td style="width:48px;padding:0 12px 0 0;vertical-align:middle;">
+            <img src="${logoUrl}" alt="" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:10px;" />
+          </td>
+          <td style="vertical-align:middle;">
+            <p style="margin:0;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.2;font-weight:700;">Acadiana Web Design</p>
+          </td>
+        </tr>
+      </table>
     </div>
   `;
 }
@@ -59,6 +68,9 @@ function getMarketingEmailFooter(): string {
           </td>
         </tr>
       </table>
+      <p style="margin:16px 0 0;color:${EMAIL_STYLES.textMuted};font-size:13px;line-height:1.5;">
+        Fast, modern websites for local businesses &mdash; $199/mo, everything included.
+      </p>
     </div>
   `;
 }
@@ -208,7 +220,7 @@ export const sendAuditEmail = internalAction({
 
     const auditPreview = buildAuditPreviewCard({
       businessName,
-      screenshotUrl: lead.demoScreenshotUrl ?? lead.websiteData?.screenshotUrl,
+      screenshotUrl: lead.websiteData?.screenshotUrl,
       score,
       auditUrl,
     });
@@ -229,12 +241,6 @@ export const sendAuditEmail = internalAction({
       </p>
     `;
 
-    const psLine = `
-      <p style="margin:24px 0 0;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:14px;">
-        P.S. &mdash; Built <a href="https://tbtreeservice.org" style="color:${EMAIL_STYLES.textMuted};">tbtreeservice.org</a> in 9 days. Same setup I'd use for ${businessName}.
-      </p>
-    `;
-
     const preheader = buildAuditPreheader({
       businessName: rawBusinessName,
       score,
@@ -251,7 +257,6 @@ export const sendAuditEmail = internalAction({
         ${reportLink}
         ${permissionLine}
         ${getMarketingEmailFooter()}
-        ${psLine}
       </div>
     `,
       preheader,
@@ -269,7 +274,7 @@ export const sendAuditEmail = internalAction({
       "",
       getFounderSignatureText(),
       "",
-      `P.S. — Built tbtreeservice.org in 9 days. Same setup I'd use for ${rawBusinessName}.`,
+      "Fast, modern websites for local businesses — $199/mo, everything included.",
     ]
       .filter((line) => line !== undefined && line !== null)
       .join("\n");
@@ -402,6 +407,8 @@ export const sendPortfolioEmail = internalAction({
       "If not, no worries — I'll send one more note next week and then close the file.",
       "",
       getFounderSignatureText(),
+      "",
+      "Fast, modern websites for local businesses — $199/mo, everything included.",
     ]
       .filter((line) => line !== undefined && line !== null)
       .join("\n");
