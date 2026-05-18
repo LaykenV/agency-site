@@ -26,6 +26,113 @@ function clampScore(score?: number): number | undefined {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
+function getBrandLogoUrl(): string {
+  return `${getBaseUrl()}/logo.png`;
+}
+
+function getMarketingEmailHeader(): string {
+  const logoUrl = getBrandLogoUrl();
+  return `
+    <div style="padding:28px 28px 0;text-align:left;">
+      <img src="${logoUrl}" alt="Acadiana Web Design" width="48" height="48" style="display:block;width:48px;height:48px;border-radius:10px;" />
+    </div>
+  `;
+}
+
+function getMarketingEmailFooter(): string {
+  const logoUrl = getBrandLogoUrl();
+  return `
+    <div style="margin:28px 0 0;padding:20px 0 0;border-top:1px solid ${EMAIL_STYLES.border};">
+      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;">
+        <tr>
+          <td style="width:48px;padding:0 12px 0 0;vertical-align:top;">
+            <img src="${logoUrl}" alt="" width="40" height="40" style="display:block;width:40px;height:40px;border-radius:8px;" />
+          </td>
+          <td style="vertical-align:top;">
+            <p style="margin:0;color:${EMAIL_STYLES.textDark};font-size:15px;line-height:1.5;font-weight:600;">Layken Varholdt</p>
+            <p style="margin:1px 0 0;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.5;">Acadiana Web Design &middot; Youngsville, LA</p>
+            <p style="margin:1px 0 0;color:${EMAIL_STYLES.textMuted};font-size:14px;line-height:1.5;">
+              <a href="tel:+13373063705" style="color:${EMAIL_STYLES.textMuted};text-decoration:none;">${FOUNDER_PHONE_DISPLAY}</a>
+              <span style="color:${EMAIL_STYLES.textLight};"> &middot; </span>
+              <a href="mailto:${FOUNDER_EMAIL}" style="color:${EMAIL_STYLES.textMuted};text-decoration:none;">${FOUNDER_EMAIL}</a>
+            </p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+function getScoreColor(score: number): string {
+  if (score >= 90) return "#16a34a";
+  if (score >= 50) return "#d97706";
+  return "#dc2626";
+}
+
+function getScoreLabel(score: number): string {
+  if (score >= 90) return "Strong";
+  if (score >= 50) return "Needs work";
+  return "Urgent";
+}
+
+function buildAuditPreviewCard(args: {
+  businessName: string;
+  screenshotUrl?: string;
+  score?: number;
+  auditUrl: string;
+}): string {
+  const screenshot = args.screenshotUrl
+    ? `<a href="${args.auditUrl}" style="display:block;text-decoration:none;">
+         <img src="${escapeHtml(args.screenshotUrl)}" alt="${args.businessName} audit preview" width="552" style="display:block;width:100%;height:auto;" />
+       </a>`
+    : "";
+
+  const score = typeof args.score === "number" ? args.score : undefined;
+  const scoreColor = score !== undefined ? getScoreColor(score) : EMAIL_STYLES.textMuted;
+
+  const scoreBlock =
+    score !== undefined
+      ? `<td style="width:112px;padding:14px 16px 14px 0;text-align:right;vertical-align:middle;">
+           <div style="display:inline-block;min-width:76px;border:2px solid ${scoreColor};border-radius:999px;padding:10px 0;text-align:center;">
+             <div style="font-size:28px;line-height:1;font-weight:800;color:${scoreColor};">${score}</div>
+             <div style="margin-top:2px;font-size:10px;line-height:1.2;font-weight:700;color:${EMAIL_STYLES.textMuted};text-transform:uppercase;letter-spacing:0.08em;">/ 100</div>
+           </div>
+         </td>`
+      : "";
+
+  const label = score !== undefined ? getScoreLabel(score) : "Audit ready";
+
+  return `
+    <div style="margin:20px 0;border:1px solid ${EMAIL_STYLES.border};border-radius:10px;overflow:hidden;background:${EMAIL_STYLES.cardBackground};">
+      ${screenshot}
+      <table cellpadding="0" cellspacing="0" border="0" role="presentation" style="width:100%;background:${EMAIL_STYLES.background};">
+        <tr>
+          <td style="padding:14px 16px;vertical-align:middle;">
+            <p style="margin:0 0 3px;color:${EMAIL_STYLES.textDark};font-size:14px;font-weight:700;">${args.businessName} site score</p>
+            <p style="margin:0;color:${EMAIL_STYLES.textMuted};font-size:13px;line-height:1.4;">${label} mobile performance preview from the audit page.</p>
+          </td>
+          ${scoreBlock}
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+function buildPortfolioPreviewCard(portfolioUrl: string): string {
+  const imageUrl = `${getBaseUrl()}/client-tb-tree.png`;
+  return `
+    <div style="margin:20px 0;border:1px solid ${EMAIL_STYLES.border};border-radius:10px;overflow:hidden;background:${EMAIL_STYLES.cardBackground};">
+      <a href="${portfolioUrl}" style="display:block;text-decoration:none;">
+        <img src="${imageUrl}" alt="TB Tree Service website preview" width="552" style="display:block;width:100%;height:auto;" />
+      </a>
+      <div style="padding:12px 16px;background:${EMAIL_STYLES.background};">
+        <p style="margin:0;color:${EMAIL_STYLES.textDark};font-size:14px;font-weight:700;">TB Tree Service</p>
+        <p style="margin:3px 0 0;color:${EMAIL_STYLES.textMuted};font-size:13px;line-height:1.4;">Fast local service site built for calls from mobile search.</p>
+      </div>
+    </div>
+  `;
+}
+
 // Conversational opening line tied to whatever we actually know about the
 // prospect's site — score > technology > nothing. Avoids generic "we ran a
 // free audit" framing that signals bulk outreach.
@@ -99,15 +206,12 @@ export const sendAuditEmail = internalAction({
       ? `<p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;">Hi ${escapeHtml(trimmedName)},</p>`
       : "";
 
-    // Lightweight proof-of-work: keep the screenshot (shows we actually
-    // looked at their site) but drop the gradient banner and bullet boxes
-    // that scream "template".
-    const screenshotUrl = lead.websiteData?.screenshotUrl;
-    const screenshotSection = screenshotUrl
-      ? `<div style="margin:20px 0;border-radius:8px;overflow:hidden;border:1px solid ${EMAIL_STYLES.border};">
-           <img src="${escapeHtml(screenshotUrl)}" alt="${businessName} website" width="552" style="display:block;width:100%;height:auto;" />
-         </div>`
-      : "";
+    const auditPreview = buildAuditPreviewCard({
+      businessName,
+      screenshotUrl: lead.demoScreenshotUrl ?? lead.websiteData?.screenshotUrl,
+      score,
+      auditUrl,
+    });
 
     const reportLink = `
       <p style="margin:20px 0 8px;font-size:15px;color:${EMAIL_STYLES.textDark};line-height:1.6;">
@@ -139,13 +243,14 @@ export const sendAuditEmail = internalAction({
 
     const html = getEmailWrapper(
       `
+      ${getMarketingEmailHeader()}
       <div style="padding:32px 28px;">
         ${greetingHtml}
         <p style="margin:0 0 16px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">${opener}</p>
-        ${screenshotSection}
+        ${auditPreview}
         ${reportLink}
         ${permissionLine}
-        ${getFounderSignatureHtml()}
+        ${getMarketingEmailFooter()}
         ${psLine}
       </div>
     `,
@@ -218,6 +323,7 @@ export const sendPortfolioEmail = internalAction({
     }
 
     const portfolioUrl = "https://tbtreeservice.org";
+    const portfolioPreview = buildPortfolioPreviewCard(portfolioUrl);
     const score = clampScore(lead.pageSpeedData?.performanceScore);
     const rawBusinessName = lead.googleData.businessName;
     const businessName = escapeHtml(rawBusinessName);
@@ -253,11 +359,13 @@ export const sendPortfolioEmail = internalAction({
 
     const html = getEmailWrapper(
       `
+      ${getMarketingEmailHeader()}
       <div style="padding:32px 28px;">
         ${greetingHtml}
         <p style="margin:0 0 18px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">
           Looked at ${businessName}'s site next to one I built last quarter for a local tree service (<a href="${portfolioUrl}" style="color:${EMAIL_STYLES.primaryColor};">tbtreeservice.org</a>).
         </p>
+        ${portfolioPreview}
         <p style="margin:0 0 12px;color:${EMAIL_STYLES.textDark};font-size:16px;line-height:1.6;">
           Three differences that matter for ranking on Google for local searches:
         </p>
@@ -270,10 +378,7 @@ export const sendPortfolioEmail = internalAction({
         <p style="margin:0 0 20px;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:15px;">
           If not, no worries &mdash; I'll send one more note next week and then close the file.
         </p>
-        ${getFounderSignatureHtml()}
-        <p style="margin:24px 0 0;color:${EMAIL_STYLES.textMuted};line-height:1.6;font-size:14px;">
-          P.S. &mdash; $199/mo flat. Custom design, fast hosting, unlimited edits. No upfront.
-        </p>
+        ${getMarketingEmailFooter()}
       </div>
     `,
       preheader,
@@ -297,8 +402,6 @@ export const sendPortfolioEmail = internalAction({
       "If not, no worries — I'll send one more note next week and then close the file.",
       "",
       getFounderSignatureText(),
-      "",
-      "P.S. — $199/mo flat. Custom design, fast hosting, unlimited edits. No upfront.",
     ]
       .filter((line) => line !== undefined && line !== null)
       .join("\n");
