@@ -18,6 +18,7 @@ import {
   websiteDataValidator,
   pageSpeedDataValidator,
   aiLeadAnalysisValidator,
+  physicalPresenceValidator,
   publicAuditStatusValidator,
 } from "./validators";
 
@@ -183,6 +184,7 @@ export default defineSchema({
     demoScreenshotUrl: v.optional(v.string()),
     demoViewedAt: v.optional(v.number()),
     contactEmail: v.optional(v.string()),
+    physicalPresence: v.optional(physicalPresenceValidator),
     emailSentAt: v.optional(v.number()),
     calledAt: v.optional(v.number()),
     followUpAt: v.optional(v.number()),

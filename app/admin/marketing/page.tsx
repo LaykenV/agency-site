@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
+import { Eye, Mail } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
@@ -22,6 +23,16 @@ type LeadStatusFilter =
   | "converted"
   | "disqualified"
   | "error";
+
+type PhysicalPresenceStatus =
+  | "walk_in_likely"
+  | "office_or_yard_likely"
+  | "service_area_only"
+  | "uncertain"
+  | "not_operational";
+
+type PhysicalPresenceFilter = "all" | PhysicalPresenceStatus;
+type BooleanLeadFilter = "all" | "yes" | "no";
 
 type MarketingSearchRow = {
   _id: Id<"marketing_searches">;
@@ -56,6 +67,21 @@ type ScrapedLeadRow = {
     reviewCount?: number;
     googleMapsUrl?: string;
     primaryType?: string;
+    types?: Array<string>;
+    businessStatus?: string;
+    pureServiceAreaBusiness?: boolean;
+    location?: {
+      latitude: number;
+      longitude: number;
+    };
+    regularOpeningHours?: {
+      openNow?: boolean;
+      weekdayDescriptions?: Array<string>;
+    };
+    currentOpeningHours?: {
+      openNow?: boolean;
+      weekdayDescriptions?: Array<string>;
+    };
     photoUrl?: string;
     topReview?: {
       author: string;
@@ -87,6 +113,12 @@ type ScrapedLeadRow = {
     sellingPoints: Array<string>;
     outreachAngle: string;
     analyzedAt: number;
+  };
+  physicalPresence?: {
+    status: PhysicalPresenceStatus;
+    confidence: number;
+    reasons: Array<string>;
+    inferredAt: number;
   };
 };
 
@@ -170,6 +202,14 @@ const STATUS_FILTERS: Array<LeadStatusFilter> = [
   "error",
 ];
 const ALL_SEARCHES_FILTER = "__all_searches__";
+const PHYSICAL_PRESENCE_FILTERS: Array<PhysicalPresenceFilter> = [
+  "all",
+  "walk_in_likely",
+  "office_or_yard_likely",
+  "service_area_only",
+  "uncertain",
+  "not_operational",
+];
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   new: "New",
@@ -184,6 +224,31 @@ const LEAD_STATUS_LABELS: Record<string, string> = {
   converted: "Converted",
   not_interested: "Not Interested",
   error: "Error",
+};
+
+const PHYSICAL_PRESENCE_LABELS: Record<PhysicalPresenceStatus, string> = {
+  walk_in_likely: "Walk-in likely",
+  office_or_yard_likely: "Office/yard likely",
+  service_area_only: "Service-area only",
+  uncertain: "Uncertain",
+  not_operational: "Not operational",
+};
+
+const PHYSICAL_REASON_LABELS: Record<string, string> = {
+  operational_on_google: "Operational",
+  not_marked_service_area_only: "Not service-area only",
+  pure_service_area_business: "Service-area business",
+  public_formatted_address: "Public address",
+  precise_map_location: "Precise map pin",
+  street_level_address: "Street address",
+  structured_address: "Structured address",
+  business_hours_listed: "Hours listed",
+  walk_in_or_office_category: "Walk-in category",
+  office_or_yard_category: "Office/yard category",
+  mobile_service_category: "Mobile service category",
+  limited_google_location_signals: "Limited signals",
+  business_status_closed_temporarily: "Temporarily closed",
+  business_status_closed_permanently: "Permanently closed",
 };
 
 function formatDate(ts?: number): string {
@@ -203,6 +268,22 @@ function statusBadgeClass(status: string): string {
   }
   if (["contacted", "follow_up", "responded"].includes(status)) {
     return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  }
+  return "bg-muted text-muted-foreground";
+}
+
+function physicalPresenceBadgeClass(status?: PhysicalPresenceStatus): string {
+  if (status === "walk_in_likely") {
+    return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
+  }
+  if (status === "office_or_yard_likely") {
+    return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
+  }
+  if (status === "service_area_only") {
+    return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
+  }
+  if (status === "not_operational") {
+    return "bg-red-500/15 text-red-700 dark:text-red-300";
   }
   return "bg-muted text-muted-foreground";
 }
@@ -240,6 +321,10 @@ function MarketingAdminContent() {
     useState<Id<"marketing_searches"> | null>(null);
   const [expandedLeadId, setExpandedLeadId] = useState<Id<"scraped_leads"> | null>(null);
   const [statusFilter, setStatusFilter] = useState<LeadStatusFilter>("all");
+  const [physicalPresenceFilter, setPhysicalPresenceFilter] =
+    useState<PhysicalPresenceFilter>("all");
+  const [emailFilter, setEmailFilter] = useState<BooleanLeadFilter>("all");
+  const [auditViewedFilter, setAuditViewedFilter] = useState<BooleanLeadFilter>("all");
 
   const [city, setCity] = useState("");
   const [state, setState] = useState<(typeof STATE_OPTIONS)[number]>("LA");
@@ -316,12 +401,32 @@ function MarketingAdminContent() {
     };
   }, [activeLeads]);
 
-  const sortedActiveLeads = useMemo(() => {
-    if (!activeLeads) {
-      return activeLeads;
+  const filteredActiveLeads = useMemo(() => {
+    let items = activeLeads ?? [];
+
+    if (physicalPresenceFilter !== "all") {
+      items = items.filter((lead) => lead.physicalPresence?.status === physicalPresenceFilter);
     }
 
-    return activeLeads
+    if (emailFilter !== "all") {
+      items = items.filter((lead) => Boolean(lead.contactEmail) === (emailFilter === "yes"));
+    }
+
+    if (auditViewedFilter !== "all") {
+      items = items.filter(
+        (lead) => Boolean(lead.demoViewedAt) === (auditViewedFilter === "yes")
+      );
+    }
+
+    return activeLeads ? items : activeLeads;
+  }, [activeLeads, auditViewedFilter, emailFilter, physicalPresenceFilter]);
+
+  const sortedActiveLeads = useMemo(() => {
+    if (!filteredActiveLeads) {
+      return filteredActiveLeads;
+    }
+
+    return filteredActiveLeads
       .map((lead, index) => ({ lead, index }))
       .sort((a, b) => {
         const aFit = a.lead.aiAnalysis?.fitScore;
@@ -342,12 +447,12 @@ function MarketingAdminContent() {
         return a.index - b.index;
       })
       .map(({ lead }) => lead);
-  }, [activeLeads]);
+  }, [filteredActiveLeads]);
 
   // Bulk selection computed values
   const eligibleLeads = useMemo(() => {
-    return (activeLeads ?? []).filter((l) => l.contactEmail && l.demoToken);
-  }, [activeLeads]);
+    return (filteredActiveLeads ?? []).filter((l) => l.contactEmail && l.demoToken);
+  }, [filteredActiveLeads]);
 
   const selectedEligible = useMemo(() => {
     return eligibleLeads.filter((l) => selectedLeadIds.has(l._id));
@@ -358,10 +463,10 @@ function MarketingAdminContent() {
   }, [selectedEligible]);
 
   const selectedIneligible = useMemo(() => {
-    return (activeLeads ?? []).filter(
+    return (filteredActiveLeads ?? []).filter(
       (l) => selectedLeadIds.has(l._id) && (!l.contactEmail || !l.demoToken)
     );
-  }, [activeLeads, selectedLeadIds]);
+  }, [filteredActiveLeads, selectedLeadIds]);
 
   const toggleLeadSelection = useCallback((leadId: string) => {
     setSelectedLeadIds((prev) => {
@@ -548,6 +653,9 @@ function MarketingAdminContent() {
 
   const handleResetLeadFilters = () => {
     setStatusFilter("all");
+    setPhysicalPresenceFilter("all");
+    setEmailFilter("all");
+    setAuditViewedFilter("all");
     setSelectedSearchId(null);
     setExpandedLeadId(null);
     setSelectedLeadIds(new Set());
@@ -758,6 +866,49 @@ function MarketingAdminContent() {
                     ))}
                   </select>
                   <select
+                    value={physicalPresenceFilter}
+                    onChange={(e) => {
+                      setPhysicalPresenceFilter(e.target.value as PhysicalPresenceFilter);
+                      setExpandedLeadId(null);
+                      setSelectedLeadIds(new Set());
+                    }}
+                    className="h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                  >
+                    {PHYSICAL_PRESENCE_FILTERS.map((status) => (
+                      <option key={status} value={status}>
+                        {status === "all"
+                          ? "All location types"
+                          : PHYSICAL_PRESENCE_LABELS[status]}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={emailFilter}
+                    onChange={(e) => {
+                      setEmailFilter(e.target.value as BooleanLeadFilter);
+                      setExpandedLeadId(null);
+                      setSelectedLeadIds(new Set());
+                    }}
+                    className="h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                  >
+                    <option value="all">All email states</option>
+                    <option value="yes">Has email</option>
+                    <option value="no">No email</option>
+                  </select>
+                  <select
+                    value={auditViewedFilter}
+                    onChange={(e) => {
+                      setAuditViewedFilter(e.target.value as BooleanLeadFilter);
+                      setExpandedLeadId(null);
+                      setSelectedLeadIds(new Set());
+                    }}
+                    className="h-9 rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground"
+                  >
+                    <option value="all">All audit views</option>
+                    <option value="yes">Audit viewed</option>
+                    <option value="no">Audit not viewed</option>
+                  </select>
+                  <select
                     value={selectedSearchId ?? ALL_SEARCHES_FILTER}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -780,7 +931,13 @@ function MarketingAdminContent() {
                   </select>
                   <button
                     onClick={handleResetLeadFilters}
-                    disabled={statusFilter === "all" && !selectedSearchId}
+                    disabled={
+                      statusFilter === "all" &&
+                      physicalPresenceFilter === "all" &&
+                      emailFilter === "all" &&
+                      auditViewedFilter === "all" &&
+                      !selectedSearchId
+                    }
                     className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Reset
@@ -927,6 +1084,7 @@ function MarketingAdminContent() {
                 const tech = lead.websiteData?.technology;
                 const gRating = lead.googleData.rating;
                 const reviewCount = lead.googleData.reviewCount;
+                const physicalPresence = lead.physicalPresence;
 
                 return (
                   <div key={lead._id} className="rounded-xl border border-border bg-card transition-colors hover:border-primary/30">
@@ -968,11 +1126,44 @@ function MarketingAdminContent() {
                             Speed {speedScore}
                           </span>
                         ) : null}
+                        {lead.contactEmail ? (
+                          <span
+                            title={`Email: ${lead.contactEmail}`}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-sky-500/15 text-sky-700 dark:text-sky-300"
+                          >
+                            <Mail className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span className="sr-only">Has email</span>
+                          </span>
+                        ) : null}
+                        {lead.demoViewedAt ? (
+                          <span
+                            title={`Audit viewed ${formatDate(lead.demoViewedAt)}`}
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                          >
+                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                            <span className="sr-only">Audit viewed</span>
+                          </span>
+                        ) : null}
                         {tech ? (
                           <span className="rounded-full bg-purple-500/15 px-2.5 py-1 text-xs font-semibold text-purple-700 dark:text-purple-300">
                             {tech}
                           </span>
                         ) : null}
+                        {physicalPresence ? (
+                          <span
+                            className={clsx(
+                              "rounded-full px-2.5 py-1 text-xs font-semibold",
+                              physicalPresenceBadgeClass(physicalPresence.status)
+                            )}
+                          >
+                            {PHYSICAL_PRESENCE_LABELS[physicalPresence.status]}{" "}
+                            {physicalPresence.confidence}%
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-semibold text-muted-foreground">
+                            Location unknown
+                          </span>
+                        )}
                         <span className="ml-auto text-xs text-muted-foreground">{lead.googleData.formattedAddress}</span>
                       </button>
                       <Link
@@ -1087,6 +1278,15 @@ function MarketingAdminContent() {
                             {lead.googleData.primaryType ? (
                               <p><span className="font-medium text-muted-foreground">Type:</span> {lead.googleData.primaryType}</p>
                             ) : null}
+                            {lead.googleData.businessStatus ? (
+                              <p><span className="font-medium text-muted-foreground">Google Status:</span> {lead.googleData.businessStatus}</p>
+                            ) : null}
+                            {typeof lead.googleData.pureServiceAreaBusiness === "boolean" ? (
+                              <p>
+                                <span className="font-medium text-muted-foreground">Pure Service Area:</span>{" "}
+                                {lead.googleData.pureServiceAreaBusiness ? "Yes" : "No"}
+                              </p>
+                            ) : null}
                             <p><span className="font-medium text-muted-foreground">HTTPS:</span> {lead.websiteData?.hasHttps === true ? "Yes" : lead.websiteData?.hasHttps === false ? "No" : "-"}</p>
                             <p><span className="font-medium text-muted-foreground">Audit Viewed:</span> {formatDate(lead.demoViewedAt)}</p>
                             {lead.emailSentAt ? <p><span className="font-medium text-muted-foreground">Email Sent:</span> {formatDate(lead.emailSentAt)}</p> : null}
@@ -1094,6 +1294,40 @@ function MarketingAdminContent() {
                             <p><span className="font-medium text-muted-foreground">Contact Attempts:</span> {lead.contactAttempts}</p>
                             {lead.error ? <p className="text-red-600 dark:text-red-400"><span className="font-medium">Error:</span> {lead.error}</p> : null}
                           </div>
+
+                          {physicalPresence ? (
+                            <div className="rounded-lg bg-muted/60 p-3 text-sm text-foreground">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-semibold">Physical Presence</p>
+                                <span
+                                  className={clsx(
+                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                    physicalPresenceBadgeClass(physicalPresence.status)
+                                  )}
+                                >
+                                  {PHYSICAL_PRESENCE_LABELS[physicalPresence.status]} ·{" "}
+                                  {physicalPresence.confidence}%
+                                </span>
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-1.5">
+                                {physicalPresence.reasons.map((reason) => (
+                                  <span
+                                    key={reason}
+                                    className="rounded-full border border-border bg-background px-2 py-0.5 text-xs text-muted-foreground"
+                                  >
+                                    {PHYSICAL_REASON_LABELS[reason] ?? reason.replaceAll("_", " ")}
+                                  </span>
+                                ))}
+                              </div>
+                              {lead.googleData.regularOpeningHours?.weekdayDescriptions?.length ? (
+                                <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
+                                  {lead.googleData.regularOpeningHours.weekdayDescriptions.map((line) => (
+                                    <p key={line}>{line}</p>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          ) : null}
 
                           {/* Website metadata */}
                           {lead.websiteData?.metaTitle || lead.websiteData?.metaDescription ? (

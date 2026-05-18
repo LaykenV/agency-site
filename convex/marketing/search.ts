@@ -14,6 +14,7 @@ import {
   marketingSearchDocValidator,
   marketingSearchStatusValidator,
   pageSpeedDataValidator,
+  physicalPresenceValidator,
   scrapedLeadDocValidator,
   scrapedLeadStatusValidator,
   websiteDataValidator,
@@ -697,6 +698,37 @@ export const internalInsertLead = internalMutation({
       reviewCount: v.optional(v.number()),
       googleMapsUrl: v.optional(v.string()),
       primaryType: v.optional(v.string()),
+      types: v.optional(v.array(v.string())),
+      businessStatus: v.optional(v.string()),
+      pureServiceAreaBusiness: v.optional(v.boolean()),
+      location: v.optional(
+        v.object({
+          latitude: v.number(),
+          longitude: v.number(),
+        })
+      ),
+      addressComponents: v.optional(
+        v.array(
+          v.object({
+            longText: v.optional(v.string()),
+            shortText: v.optional(v.string()),
+            types: v.array(v.string()),
+            languageCode: v.optional(v.string()),
+          })
+        )
+      ),
+      regularOpeningHours: v.optional(
+        v.object({
+          openNow: v.optional(v.boolean()),
+          weekdayDescriptions: v.optional(v.array(v.string())),
+        })
+      ),
+      currentOpeningHours: v.optional(
+        v.object({
+          openNow: v.optional(v.boolean()),
+          weekdayDescriptions: v.optional(v.array(v.string())),
+        })
+      ),
       photoUrl: v.optional(v.string()),
       topReview: v.optional(
         v.object({
@@ -706,6 +738,7 @@ export const internalInsertLead = internalMutation({
         })
       ),
     }),
+    physicalPresence: physicalPresenceValidator,
   },
   returns: v.union(v.id("scraped_leads"), v.null()),
   handler: async (ctx, args) => {
@@ -725,6 +758,7 @@ export const internalInsertLead = internalMutation({
       searchId: args.searchId,
       placeId: args.placeId,
       googleData: args.googleData,
+      physicalPresence: args.physicalPresence,
       status: "new",
       contactAttempts: 0,
       createdAt: now,

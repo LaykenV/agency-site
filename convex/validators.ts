@@ -250,6 +250,38 @@ export const googleReviewValidator = v.object({
   rating: v.number(),
 });
 
+export const googleLocationValidator = v.object({
+  latitude: v.number(),
+  longitude: v.number(),
+});
+
+export const googleAddressComponentValidator = v.object({
+  longText: v.optional(v.string()),
+  shortText: v.optional(v.string()),
+  types: v.array(v.string()),
+  languageCode: v.optional(v.string()),
+});
+
+export const googleOpeningHoursValidator = v.object({
+  openNow: v.optional(v.boolean()),
+  weekdayDescriptions: v.optional(v.array(v.string())),
+});
+
+export const physicalPresenceStatusValidator = v.union(
+  v.literal("walk_in_likely"),
+  v.literal("office_or_yard_likely"),
+  v.literal("service_area_only"),
+  v.literal("uncertain"),
+  v.literal("not_operational"),
+);
+
+export const physicalPresenceValidator = v.object({
+  status: physicalPresenceStatusValidator,
+  confidence: v.number(),
+  reasons: v.array(v.string()),
+  inferredAt: v.number(),
+});
+
 export const googleDataValidator = v.object({
   businessName: v.string(),
   formattedAddress: v.string(),
@@ -259,6 +291,13 @@ export const googleDataValidator = v.object({
   reviewCount: v.optional(v.number()),
   googleMapsUrl: v.optional(v.string()),
   primaryType: v.optional(v.string()),
+  types: v.optional(v.array(v.string())),
+  businessStatus: v.optional(v.string()),
+  pureServiceAreaBusiness: v.optional(v.boolean()),
+  location: v.optional(googleLocationValidator),
+  addressComponents: v.optional(v.array(googleAddressComponentValidator)),
+  regularOpeningHours: v.optional(googleOpeningHoursValidator),
+  currentOpeningHours: v.optional(googleOpeningHoursValidator),
   photoUrl: v.optional(v.string()),
   topReview: v.optional(googleReviewValidator),
 });
@@ -322,6 +361,7 @@ export const scrapedLeadDocValidator = v.object({
   demoScreenshotUrl: v.optional(v.string()),
   demoViewedAt: v.optional(v.number()),
   contactEmail: v.optional(v.string()),
+  physicalPresence: v.optional(physicalPresenceValidator),
   emailSentAt: v.optional(v.number()),
   calledAt: v.optional(v.number()),
   followUpAt: v.optional(v.number()),

@@ -23,8 +23,40 @@ type PlaceResult = {
   userRatingCount?: number;
   googleMapsUri?: string;
   primaryType?: string;
+  types?: Array<string>;
+  businessStatus?: string;
+  pureServiceAreaBusiness?: boolean;
+  location?: { latitude?: number; longitude?: number };
+  addressComponents?: Array<{
+    longText?: string;
+    shortText?: string;
+    types?: Array<string>;
+    languageCode?: string;
+  }>;
+  regularOpeningHours?: {
+    openNow?: boolean;
+    weekdayDescriptions?: Array<string>;
+  };
+  currentOpeningHours?: {
+    openNow?: boolean;
+    weekdayDescriptions?: Array<string>;
+  };
   photos?: Array<{ name?: string }>;
   reviews?: Array<PlaceApiReview>;
+};
+
+type PhysicalPresenceStatus =
+  | "walk_in_likely"
+  | "office_or_yard_likely"
+  | "service_area_only"
+  | "uncertain"
+  | "not_operational";
+
+type PhysicalPresence = {
+  status: PhysicalPresenceStatus;
+  confidence: number;
+  reasons: Array<string>;
+  inferredAt: number;
 };
 
 const FIRECRAWL_ENDPOINT = "https://api.firecrawl.dev/v2/scrape";
@@ -128,6 +160,184 @@ function pickBestReview(reviews?: Array<PlaceApiReview>):
   return candidates[0];
 }
 
+function normalizeOpeningHours(hours?: PlaceResult["regularOpeningHours"]) {
+  if (!hours) return undefined;
+  const weekdayDescriptions = Array.isArray(hours.weekdayDescriptions)
+    ? hours.weekdayDescriptions.filter((value): value is string => typeof value === "string")
+    : undefined;
+
+  return {
+    openNow: typeof hours.openNow === "boolean" ? hours.openNow : undefined,
+    weekdayDescriptions:
+      weekdayDescriptions && weekdayDescriptions.length > 0 ? weekdayDescriptions : undefined,
+  };
+}
+
+function normalizeAddressComponents(components?: PlaceResult["addressComponents"]) {
+  if (!components) return undefined;
+
+  const normalized = components
+    .map((component) => ({
+      longText: component.longText,
+      shortText: component.shortText,
+      types: Array.isArray(component.types)
+        ? component.types.filter((value): value is string => typeof value === "string")
+        : [],
+      languageCode: component.languageCode,
+    }))
+    .filter((component) => component.types.length > 0);
+
+  return normalized.length > 0 ? normalized : undefined;
+}
+
+function hasStreetNumber(place: PlaceResult): boolean {
+  return (
+    place.addressComponents?.some((component) =>
+      component.types?.includes("street_number")
+    ) ?? false
+  );
+}
+
+function hasRoute(place: PlaceResult): boolean {
+  return place.addressComponents?.some((component) => component.types?.includes("route")) ?? false;
+}
+
+function hasHours(place: PlaceResult): boolean {
+  return Boolean(
+    place.regularOpeningHours?.weekdayDescriptions?.length ||
+      typeof place.regularOpeningHours?.openNow === "boolean" ||
+      place.currentOpeningHours?.weekdayDescriptions?.length ||
+      typeof place.currentOpeningHours?.openNow === "boolean"
+  );
+}
+
+function inferPhysicalPresence(place: PlaceResult): PhysicalPresence {
+  const reasons: Array<string> = [];
+  let score = 0;
+
+  if (place.businessStatus && place.businessStatus !== "OPERATIONAL") {
+    return {
+      status: "not_operational",
+      confidence: 95,
+      reasons: [`business_status_${place.businessStatus.toLowerCase()}`],
+      inferredAt: Date.now(),
+    };
+  }
+
+  if (place.businessStatus === "OPERATIONAL") {
+    score += 12;
+    reasons.push("operational_on_google");
+  }
+
+  if (place.pureServiceAreaBusiness === true) {
+    score -= 70;
+    reasons.push("pure_service_area_business");
+  } else if (place.pureServiceAreaBusiness === false) {
+    score += 28;
+    reasons.push("not_marked_service_area_only");
+  }
+
+  if (place.formattedAddress) {
+    score += 18;
+    reasons.push("public_formatted_address");
+  }
+
+  if (
+    typeof place.location?.latitude === "number" &&
+    typeof place.location?.longitude === "number"
+  ) {
+    score += 14;
+    reasons.push("precise_map_location");
+  }
+
+  if (hasStreetNumber(place) && hasRoute(place)) {
+    score += 12;
+    reasons.push("street_level_address");
+  } else if (place.addressComponents?.length) {
+    score += 4;
+    reasons.push("structured_address");
+  }
+
+  if (hasHours(place)) {
+    score += 14;
+    reasons.push("business_hours_listed");
+  }
+
+  const placeTypes = new Set(
+    [place.primaryType, ...(place.types ?? [])].filter(
+      (type): type is string => typeof type === "string" && type.length > 0
+    )
+  );
+  const walkInTypes = new Set([
+    "store",
+    "hardware_store",
+    "home_goods_store",
+    "furniture_store",
+    "car_repair",
+    "auto_repair_shop",
+    "car_dealer",
+    "real_estate_agency",
+    "insurance_agency",
+    "lawyer",
+    "accounting",
+    "dentist",
+    "doctor",
+    "veterinary_care",
+    "hair_care",
+    "beauty_salon",
+  ]);
+  const yardOrOfficeTypes = new Set([
+    "roofing_contractor",
+    "plumber",
+    "electrician",
+    "general_contractor",
+    "moving_company",
+    "storage",
+    "painter",
+    "landscaper",
+  ]);
+  const mobileHeavyTypes = new Set([
+    "locksmith",
+    "cleaning_service",
+    "pest_control_service",
+    "tow_truck_service",
+  ]);
+
+  if ([...placeTypes].some((type) => walkInTypes.has(type))) {
+    score += 14;
+    reasons.push("walk_in_or_office_category");
+  } else if ([...placeTypes].some((type) => yardOrOfficeTypes.has(type))) {
+    score += 7;
+    reasons.push("office_or_yard_category");
+  } else if ([...placeTypes].some((type) => mobileHeavyTypes.has(type))) {
+    score -= 8;
+    reasons.push("mobile_service_category");
+  }
+
+  let status: PhysicalPresenceStatus = "uncertain";
+  if (place.pureServiceAreaBusiness === true) {
+    status = "service_area_only";
+  } else if (score >= 80 && hasHours(place)) {
+    status = "walk_in_likely";
+  } else if (score >= 58) {
+    status = "office_or_yard_likely";
+  } else if (score <= 18) {
+    status = "service_area_only";
+  }
+
+  const confidence =
+    status === "uncertain"
+      ? Math.max(35, Math.min(65, Math.round(score)))
+      : Math.max(55, Math.min(95, Math.round(Math.abs(score))));
+
+  return {
+    status,
+    confidence,
+    reasons: reasons.length ? reasons : ["limited_google_location_signals"],
+    inferredAt: Date.now(),
+  };
+}
+
 async function fetchBestReview(placeId: string): Promise<
   | {
       author: string;
@@ -198,7 +408,7 @@ async function runPlacesSearch(textQuery: string): Promise<Array<PlaceResult>> {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": apiKey,
         "X-Goog-FieldMask":
-          "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.googleMapsUri,places.primaryType,places.photos,places.reviews,nextPageToken",
+          "places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.rating,places.userRatingCount,places.googleMapsUri,places.primaryType,places.types,places.businessStatus,places.pureServiceAreaBusiness,places.location,places.addressComponents,places.regularOpeningHours,places.currentOpeningHours,places.photos,places.reviews,nextPageToken",
       },
       body: JSON.stringify(payload),
     });
@@ -544,6 +754,7 @@ export const executeSearch = internalAction({
       const inlineReview = pickBestReview(place.reviews);
       const topReview = inlineReview ?? (await fetchBestReview(placeId));
       const photoUrl = await fetchPhotoUrl(place.photos?.[0]?.name);
+      const physicalPresence = inferPhysicalPresence(place);
 
       const leadId = await ctx.runMutation(internal.marketing.search.internalInsertLead, {
         searchId: args.searchId,
@@ -558,9 +769,24 @@ export const executeSearch = internalAction({
             typeof place.userRatingCount === "number" ? place.userRatingCount : undefined,
           googleMapsUrl: place.googleMapsUri,
           primaryType: place.primaryType,
+          types: place.types,
+          businessStatus: place.businessStatus,
+          pureServiceAreaBusiness: place.pureServiceAreaBusiness,
+          location:
+            typeof place.location?.latitude === "number" &&
+            typeof place.location?.longitude === "number"
+              ? {
+                  latitude: place.location.latitude,
+                  longitude: place.location.longitude,
+                }
+              : undefined,
+          addressComponents: normalizeAddressComponents(place.addressComponents),
+          regularOpeningHours: normalizeOpeningHours(place.regularOpeningHours),
+          currentOpeningHours: normalizeOpeningHours(place.currentOpeningHours),
           photoUrl,
           topReview,
         },
+        physicalPresence,
       });
 
       if (leadId) {
