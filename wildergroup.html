@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wilder Group — Discovery Call Cheat Sheet</title>
+<style>
+  :root {
+    --bg: #0b1220;
+    --surface: #11192c;
+    --surface-2: #1a2540;
+    --border: #233052;
+    --text: #e6ecf7;
+    --text-dim: #94a3c4;
+    --accent: #4f8cff;
+    --accent-strong: #2563eb;
+    --good: #22c55e;
+    --warn: #f59e0b;
+    --bad: #ef4444;
+    --shadow: 0 4px 16px rgba(0,0,0,0.25);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  header.sticky {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bad);
+    color: white;
+    text-align: center;
+    padding: 10px 16px;
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.4);
+  }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 24px 18px 80px;
+  }
+
+  h1 {
+    font-size: 26px;
+    margin: 8px 0 4px;
+    letter-spacing: -0.2px;
+  }
+
+  h1 + .sub {
+    color: var(--text-dim);
+    font-size: 14px;
+    margin: 0 0 24px;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin: 36px 0 12px;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    letter-spacing: -0.1px;
+  }
+
+  h3 {
+    font-size: 15px;
+    margin: 18px 0 8px;
+    color: var(--text);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  p { margin: 8px 0; }
+
+  ul, ol {
+    padding-left: 22px;
+    margin: 8px 0;
+  }
+
+  li { margin-bottom: 6px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin: 12px 0;
+    box-shadow: var(--shadow);
+  }
+
+  .card.tight { padding: 12px 14px; }
+
+  .quick-ref {
+    background: var(--surface-2);
+    border-left: 4px solid var(--accent);
+  }
+
+  .quick-ref dl {
+    margin: 0;
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 4px 12px;
+    font-size: 14px;
+  }
+
+  .quick-ref dt {
+    color: var(--text-dim);
+    font-weight: 600;
+  }
+
+  .quick-ref dd { margin: 0; }
+
+  .goal {
+    background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    text-align: center;
+    padding: 18px 16px;
+  }
+
+  .goal .label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    opacity: 0.85;
+  }
+
+  .goal .text {
+    font-size: 17px;
+    font-weight: 600;
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+
+  .goal .text.not {
+    font-size: 14px;
+    opacity: 0.9;
+    margin-top: 10px;
+    font-weight: 400;
+  }
+
+  .script {
+    background: #050a16;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d6dfee;
+    margin: 8px 0 14px;
+    white-space: pre-wrap;
+  }
+
+  .script .label {
+    display: inline-block;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    background: var(--accent);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-bottom: 8px;
+  }
+
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 10px 0;
+  }
+
+  .q .num {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 8px;
+  }
+
+  .q .text {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .q .why {
+    color: var(--text-dim);
+    font-size: 13px;
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  .qa {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin: 8px 0;
+  }
+
+  .qa .ask {
+    color: var(--warn);
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+  }
+
+  .qa .ask::before { content: "Q: "; }
+
+  .qa .resp {
+    color: var(--text);
+    font-size: 14px;
+    padding-left: 14px;
+    border-left: 2px solid var(--good);
+  }
+
+  .qa .resp::before {
+    content: "A: ";
+    color: var(--good);
+    font-weight: 700;
+  }
+
+  .donts {
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .donts h3 {
+    color: var(--bad);
+    margin-top: 0;
+  }
+
+  .donts ul { padding-left: 20px; }
+
+  .donts li::marker { color: var(--bad); }
+
+  .dq {
+    background: rgba(245, 158, 11, 0.08);
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .dq h3 {
+    color: var(--warn);
+    margin-top: 0;
+  }
+
+  .checklist {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+
+  .checklist label {
+    display: block;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .checklist label:last-child { border-bottom: none; }
+
+  .checklist input[type="checkbox"] {
+    margin-right: 10px;
+    transform: scale(1.2);
+    vertical-align: middle;
+  }
+
+  .checklist .blank {
+    display: inline-block;
+    min-width: 100px;
+    border-bottom: 1px solid var(--text-dim);
+    margin-left: 6px;
+    color: var(--text-dim);
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+
+  .tag.do { background: var(--good); color: #052e10; }
+  .tag.dont { background: var(--bad); color: #2e0505; }
+  .tag.maybe { background: var(--warn); color: #2e1f05; }
+
+  .pre-call {
+    background: linear-gradient(135deg, #064e3b 0%, #047857 100%);
+    color: white;
+    border: none;
+    padding: 16px;
+  }
+
+  .pre-call h3 {
+    color: white;
+    margin-top: 0;
+  }
+
+  .pre-call ol {
+    margin: 6px 0 0;
+    padding-left: 22px;
+  }
+
+  .pre-call li { color: #d1fae5; }
+
+  footer {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 12px;
+    margin-top: 40px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 480px) {
+    main { padding: 18px 14px 80px; }
+    h1 { font-size: 22px; }
+    h2 { font-size: 18px; }
+    .quick-ref dl { grid-template-columns: 90px 1fr; font-size: 13px; }
+    .script { font-size: 13px; }
+  }
+
+  @media print {
+    header.sticky {
+      position: static;
+      background: white !important;
+      color: #b91c1c !important;
+      border-bottom: 2px solid #b91c1c;
+    }
+    body { background: white; color: black; }
+    .card, .q, .qa, .checklist, .donts, .dq, .pre-call, .goal, .quick-ref {
+      background: white !important;
+      color: black !important;
+      border: 1px solid #999 !important;
+      box-shadow: none !important;
+      page-break-inside: avoid;
+    }
+    .script { background: #f3f3f3 !important; color: black !important; }
+    h2 { color: black !important; border-color: #999 !important; }
+    .qa .ask { color: #b45309 !important; }
+    .qa .resp::before { color: #047857 !important; }
+    .donts h3 { color: #b91c1c !important; }
+    .dq h3 { color: #b45309 !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="sticky">DISCOVERY ONLY · DO NOT QUOTE PRICES · DO NOT PITCH</header>
+
+<main>
+
+  <h1>Wilder Group — Discovery Call Cheat Sheet</h1>
+  <p class="sub">First call with Jennifer Wilder · Goal: learn what she actually wants</p>
+
+  <div class="card quick-ref">
+    <dl>
+      <dt>Contact</dt><dd>Jennifer Wilder, Owner</dd>
+      <dt>Phone</dt><dd>(318) 625-7475</dd>
+      <dt>Email</dt><dd>thewildergroup@att.net</dd>
+      <dt>Brokerage</dt><dd>The Wilder Group</dd>
+      <dt>Team size</dt><dd>16 agents</dd>
+      <dt>Location</dt><dd>Alexandria, LA (Rapides Parish)</dd>
+      <dt>Current site</dt><dd>thewildergroup.net (RealGeeks)</dd>
+      <dt>Co-broker</dt><dd>Rusty Wilder</dd>
+    </dl>
+  </div>
+
+  <div class="card goal">
+    <div class="label">The single goal of this call</div>
+    <div class="text">Find out what she actually wants and whether there's a fit.</div>
+    <div class="text not">NOT the goal: closing, quoting, technical detail, pitching anything specific.</div>
+  </div>
+
+  <h2>Before You Dial</h2>
+
+  <div class="card pre-call">
+    <h3>5 things to remember</h3>
+    <ol>
+      <li>You are <strong>not</strong> selling. You're interviewing her.</li>
+      <li>If she asks "how much?" → defer. Say you need to understand her needs first.</li>
+      <li>Don't trash-talk RealGeeks. Some brokerages should stay on it.</li>
+      <li>Don't oversell your real estate experience. She'd be your first brokerage. Be honest.</li>
+      <li>Goal of call's end: a scheduled follow-up where you walk her through a proposal.</li>
+    </ol>
+  </div>
+
+  <h2>Opener Scripts</h2>
+
+  <div class="script">
+<span class="label">If she answers live</span>Hey Jennifer, this is Layken with Acadiana Web Design out of Youngsville. Got a couple minutes? I won't keep you long — I came across your site at thewildergroup.net and wanted to introduce myself and ask a few questions about how things are going with your website. No pitch — I just want to understand your setup first and see if there's anything I can help with.
+  </div>
+
+  <div class="script">
+<span class="label">If voicemail</span>Hey Jennifer, this is Layken Varholdt with Acadiana Web Design, a Louisiana-based custom web design shop out of Youngsville. I'd love about fifteen minutes of your time to ask a few questions about your website at thewildergroup.net — no sales pitch, just want to learn a little about your setup. You can reach me back at [your number]. Appreciate it, thanks Jennifer.
+  </div>
+
+  <h2>Three Things to Convey Early</h2>
+
+  <div class="card">
+    <ol>
+      <li><strong>You're local.</strong> "I'm based in Youngsville — happy to drive up to Alexandria if it gets serious." Louisiana credibility matters.</li>
+      <li><strong>You build custom sites, not templates.</strong> "I do custom-designed sites for local businesses. Not a template shop." Differentiates from RealGeeks.</li>
+      <li><strong>You're curious, not selling.</strong> "I'd rather understand your situation than pitch you anything generic." Lowers her guard, gets her talking.</li>
+    </ol>
+  </div>
+
+  <h2>Discovery Questions (In Priority Order)</h2>
+
+  <div class="q">
+    <div><span class="num">1</span><span class="text">"How did you end up on RealGeeks? What were you looking for when you signed up?"</span></div>
+    <div class="why">Learn her original intent + how long she's been on the platform. Tells you whether she's evaluated alternatives.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">2</span><span class="text">"How's it working for you right now? What do you love, what frustrates you?"</span></div>
+    <div class="why">The most important question. Shut up and listen. Don't agree or disagree — just take notes. Pain = opportunity.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">3</span><span class="text">"How are your 16 agents actually using the site day-to-day?"</span></div>
+    <div class="why">Reveals whether the team actually adopts the CRM/IDX features or just uses their phone. Critical for sizing the CRM tier.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">4</span><span class="text">"Where do most of your leads come from? IDX searches? Referrals? Walk-ins?"</span></div>
+    <div class="why">Lead source mix tells you what to optimize. If 80% are referrals, IDX matters less. If 80% are organic search, SEO matters most.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">5</span><span class="text">"How are you tracking and following up on leads right now? Happy with the CRM piece?"</span></div>
+    <div class="why">This decides Path A vs Path B. If she's frustrated → Path B (FUB). If she's fine → Path A (Wise Agent).</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">6</span><span class="text">"If you had to name the single biggest frustration with your current setup, what would it be?"</span></div>
+    <div class="why">Forces her to prioritize. Whatever she says is the headline for your proposal.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">7</span><span class="text">"Have you been thinking about a change for a while, or is something specific bringing this up now?"</span></div>
+    <div class="why">Reveals urgency. "Just exploring" = low priority. "Contract is up in March" = real timing.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">8</span><span class="text">"If you could wave a wand and have the perfect setup, what would it actually do for you?"</span></div>
+    <div class="why">Aspirational. Gets her dreaming. Whatever she lists is what you reference back in the proposal.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">9</span><span class="text">"Have you talked to any other web designers about this?"</span></div>
+    <div class="why">Tells you who you're competing with. If she says "Luxury Presence quoted me $15k" — you know your ceiling.</div>
+  </div>
+
+  <div class="q">
+    <div><span class="num">10</span><span class="text">"Besides yourself, who else needs to weigh in on a decision like this?"</span></div>
+    <div class="why">Find the decision-makers. If Rusty (broker) has veto power, you need him on call #2.</div>
+  </div>
+
+  <h2>If She Asks You These Questions</h2>
+
+  <div class="qa">
+    <div class="ask">"So how much would something like this cost?"</div>
+    <div class="resp">"It depends a lot on what you actually need. I don't want to throw a number out before I understand the scope. After this call I can put together a proposal with specifics — that'll be way more useful than me guessing right now."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"Are you a real estate specialist? How many brokerage sites have you done?"</div>
+    <div class="resp">"Honestly, no — I build custom sites for local Louisiana businesses. You'd be my first real estate brokerage specifically, and I want to be upfront about that. If you want someone who only does real estate, there are folks like Luxury Presence and Union Street Media who specialize. What I bring is design quality, being local, and not treating you like a template. If 'real estate specialist' is non-negotiable, I'm not your fit and I'll tell you that."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"Can you actually replace what RealGeeks does?"</div>
+    <div class="resp">"Most of it, yes. The MLS search piece I'd use a tool called IDX Broker — they connect to your MLS the same way RealGeeks does, and they're approved by the local Louisiana MLSs. The CRM piece you'd own directly through a tool like Follow Up Boss or Wise Agent. There's a couple things RealGeeks bundles that we'd either replace differently or skip. I'd rather walk through that in a proposal than try to cover it on the phone."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"What about my MLS feed? Will I lose access?"</div>
+    <div class="resp">"Your MLS membership is yours. It's not tied to RealGeeks. We'd hook into the same feed through IDX Broker — it's an approved vendor for both GSREIN and the Central Louisiana MLS."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"Can you also run my Facebook ads or do marketing for me?"</div>
+    <div class="resp">"Not my specialty — I focus on the website itself. I can recommend folks who do real estate PPC well if you want, but I wouldn't try to bundle that in and do it poorly."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"How long would this take?"</div>
+    <div class="resp">"Realistic custom build is six to eight weeks once we start. There's also an MLS approval window of one to two weeks for the IDX side. But the timeline depends on what we actually scope — let me get clearer on that before I commit."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"Why should I leave RealGeeks?"</div>
+    <div class="resp">"I'm not telling you you should. That's why I'm asking questions before recommending anything. Some brokerages should stay on RealGeeks — if it's working for you, it's working. Others would benefit from a more custom setup. I'd rather find out which one you are than try to convince you."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"Can I see examples of your work?"</div>
+    <div class="resp">"Absolutely. I'll send you a few custom sites I've built for other Louisiana businesses after we hang up. I can put a short proposal together at the same time if you want — based on what you've told me today."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"What does the contract look like?"</div>
+    <div class="resp">"Standard custom web design contract — one-time setup fee, monthly recurring, twelve-month minimum to make sure we both have time to do it right. I'll send the full terms with the proposal. Nothing weird in there."</div>
+  </div>
+
+  <div class="qa">
+    <div class="ask">"My agents hate change. Will this be a nightmare?"</div>
+    <div class="resp">"Honest answer: any platform change has friction. The two things that help are picking a CRM your agents can actually use day-to-day, and migrating clean — keeping RealGeeks running until the new site is fully live. I'd build a training session into the project so nobody's left guessing. But I won't pretend it's painless."</div>
+  </div>
+
+  <h2>What NOT To Do</h2>
+
+  <div class="donts">
+    <h3>Avoid all of these on this call</h3>
+    <ul>
+      <li><strong>Don't quote prices.</strong> Even if she asks twice. "I'll send a proposal" is the right answer.</li>
+      <li><strong>Don't promise specific features.</strong> "I can do X" without scoping is how projects blow up.</li>
+      <li><strong>Don't trash-talk RealGeeks.</strong> She picked it for a reason. Stay neutral.</li>
+      <li><strong>Don't pretend to be a real estate expert.</strong> Honesty about being new to the vertical builds trust.</li>
+      <li><strong>Don't pitch your $199/mo WaaS.</strong> Wrong product for her. Don't even mention it.</li>
+      <li><strong>Don't get pulled into a technical deep-dive.</strong> "I'll cover that in the proposal" is fine.</li>
+      <li><strong>Don't push for a decision today.</strong> First-call closes don't happen on $10k+ projects.</li>
+      <li><strong>Don't agree to scope you can't deliver.</strong> "Let me think about that and get back to you" is allowed.</li>
+    </ul>
+  </div>
+
+  <h2>Closer Script</h2>
+
+  <div class="script">
+<span class="label">Wrap-up</span>Jennifer, this has been really helpful — thanks for being open with me. Here's what I'd like to do next: give me a few days to put together a proposal based on what you've told me, then let's hop on a thirty-minute call where I walk you through it. That way you've got something concrete to react to instead of me throwing numbers at you blind. Does early next week work for you? Tuesday or Wednesday afternoon?
+  </div>
+
+  <p style="color: var(--text-dim); font-size: 13px; margin-top: 10px;"><em>Lock the follow-up date and time before you hang up. "I'll send you something next week" is how leads go cold.</em></p>
+
+  <h2>Take Notes During the Call</h2>
+
+  <div class="card checklist">
+    <label><input type="checkbox"> Actual RealGeeks monthly: <span class="blank">$_______</span></label>
+    <label><input type="checkbox"> Contract status (in-term / month-to-month): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Renewal date: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> MLS memberships (GSREIN / GCLRA / both): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Domain ownership (her vs RealGeeks-purchased): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Confirmed 16-agent count: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Lead volume per month (rough): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Top lead sources (IDX / referral / walk-in / other): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> CRM satisfaction 1–10: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Top pain point (her words): <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Aspirational want: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Decision-makers besides Jennifer: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Already talking to competitors: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Sense of urgency / timing: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Google Place ID confirmed: <span class="blank">_______</span></label>
+    <label><input type="checkbox"> Follow-up call scheduled for: <span class="blank">_______</span></label>
+  </div>
+
+  <h2>Yellow Flags — Slow Down</h2>
+
+  <div class="dq">
+    <h3>Reasons to be cautious (not deal-breakers, but reconsider)</h3>
+    <ul>
+      <li><strong>She's in months 1–6 of a 12-month RealGeeks contract.</strong> Two-month buyout doesn't make sense for her. Suggest revisiting at month 9.</li>
+      <li><strong>She wants you to also manage CRM, drip campaigns, paid ads, social media.</strong> Out of scope for you. Reset expectations or pass.</li>
+      <li><strong>Her agents are dug in / will resist migration.</strong> Migration nightmare. Make sure she has the political capital to push it through.</li>
+      <li><strong>She has a budget ceiling under $3k for the build.</strong> Won't work for a 16-agent brokerage. Politely decline.</li>
+      <li><strong>She's "just shopping around" with no specific motivation.</strong> Low close probability. Send proposal but don't over-invest.</li>
+      <li><strong>She expects you to also run Facebook/Google ads.</strong> Not your offer. Decline that piece explicitly.</li>
+      <li><strong>She wants the new site to keep using RealGeeks behind the scenes.</strong> Won't work technically. Re-explain or walk.</li>
+    </ul>
+  </div>
+
+  <h2>After the Call</h2>
+
+  <div class="card">
+    <ol>
+      <li><strong>Same day:</strong> send a short thank-you email confirming the follow-up date.</li>
+      <li><strong>Same day:</strong> update the "Per-Project Notes → Discovery findings" section in <code>wildergroup.md</code> with everything you learned.</li>
+      <li><strong>Within 2 days:</strong> draft the proposal (two-path pricing from <code>wildergroup.md</code>) tailored to her stated pain points.</li>
+      <li><strong>Day before follow-up call:</strong> send the proposal PDF 24 hours ahead so she's had time to read it.</li>
+    </ol>
+  </div>
+
+  <footer>
+    Generated for Layken Varholdt · Acadiana Web Design · For first-call use with Jennifer Wilder
+  </footer>
+
+</main>
+
+</body>
+</html>

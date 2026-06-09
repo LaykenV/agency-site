@@ -324,7 +324,7 @@
 <header class="hero">
   <div class="wrap">
     <h1>Week of May 18 — Activate the 38</h1>
-    <p class="sub">Cards arrive <strong>Mon May 25</strong> — drop-ins shift to next week. This week: <strong>17 audit emails out</strong> (Cohort A), <strong>15 warm calls</strong> (Cohort B), <strong>all 38 leads tagged storefront-vs-truck-based</strong>, 3 partnership pings. Target: <strong>2 booked conversations</strong>, 5+ audit page opens, and a clean Week 2 drop-in list ready by Friday.</p>
+    <p class="sub">Cards arrive <strong>Mon May 25</strong> — drop-ins shift to next week. This week: <strong>17 audit emails out</strong> (Cohort A), <strong>21 warm calls</strong> (Cohort B), 3 partnership pings. Target: <strong>2 booked conversations</strong>, 5+ audit page opens, and a clean Week 2 drop-in list ready by Friday (storefront-tagged automatically by the new pipeline).</p>
     <div class="tags">
       <span class="tag gold">$199/mo · 12mo · veteran-owned</span>
       <span class="tag">38 leads · 17 email + 21 call</span>
@@ -353,6 +353,11 @@
       </div>
       <div class="status-pill done">
         <span class="label">Done</span>
+        <span class="value">Location extraction shipped</span>
+        <span class="meta" style="font-size:12px;color:var(--muted);">New searches auto-tag in-person office vs. service-area</span>
+      </div>
+      <div class="status-pill done">
+        <span class="label">Done</span>
         <span class="value">Supplies + sticky-note template</span>
       </div>
       <div class="status-pill pending">
@@ -373,16 +378,16 @@
         <tr><th style="width: 80px;">Day</th><th>Block 1 (~1hr)</th><th>Block 2 (~1–2hr)</th></tr>
       </thead>
       <tbody>
-        <tr><td><strong>Mon</strong></td><td>Send 8 audit emails (Cohort A, first half)</td><td>Street-view check first 19 leads · tag storefront/truck</td></tr>
-        <tr><td><strong>Tue</strong></td><td>Send remaining 9 audit emails (Cohort A)</td><td>Warm calls — 5 from Cohort B · triage any opens</td></tr>
-        <tr><td><strong>Wed</strong></td><td>Partnerships: 3 emails + FastSigns walk-in</td><td>Warm calls — 5 more from Cohort B · street-view remaining 19</td></tr>
-        <tr><td><strong>Thu</strong></td><td>Warm calls — 5 more from Cohort B</td><td>Reply triage · call anyone with <code>demoViewedAt</code> set</td></tr>
-        <tr><td><strong>Fri</strong></td><td>Review status · nudge 2 silent review-clients · send referral ask to the one who landed</td><td>Run 3 new searches (HVAC, plumber, GC) · finalize Week 2 drop-in list</td></tr>
+        <tr><td><strong>Mon</strong></td><td>Send 8 audit emails (Cohort A, first half)</td><td>Research Cohort B leads · prep call list for Tue</td></tr>
+        <tr><td><strong>Tue</strong></td><td>Send remaining 9 audit emails (Cohort A)</td><td>Warm calls — 7 from Cohort B · triage any opens</td></tr>
+        <tr><td><strong>Wed</strong></td><td>Partnerships: 3 emails + FastSigns walk-in</td><td>Warm calls — 7 more from Cohort B</td></tr>
+        <tr><td><strong>Thu</strong></td><td>Warm calls — 7 more from Cohort B (finishes the 21)</td><td>Reply triage · call anyone with <code>demoViewedAt</code> set</td></tr>
+        <tr><td><strong>Fri</strong></td><td>Review status · nudge 2 silent review-clients · send referral ask to the one who landed</td><td>Run 3 new searches (HVAC, plumber, GC) · Week 2 drop-in list builds itself from auto-tagged storefronts</td></tr>
       </tbody>
     </table>
 
     <div class="callout blue">
-      <strong>Why this shape?</strong> Email is the fastest channel and you have 17 ready. Warm calls cover the 21 with no email. Storefront tagging this week means Week 2 drop-ins (with cards in hand) are pre-qualified — no driving to residential addresses. Partnerships are still on for Wed because they compound over weeks.
+      <strong>Why this shape?</strong> Email is the fastest channel and you have 17 ready. Warm calls cover the 21 with no email. No manual Street View tagging this week — location extraction now ships with every new search, so Friday's 3 fresh searches feed Week 2 drop-ins with storefront-vs-service-area already tagged. Partnerships stay on Wed because they compound over weeks.
     </div>
   </div>
 </section>
@@ -421,28 +426,14 @@
       </div>
     </div>
 
-    <h3>Storefront-vs-truck-based tagging (30 seconds per lead)</h3>
-    <p>For tree, towing, and landscaping specifically, most businesses are truck-based — the address Google Places returns is often the owner's house. Walking up to a house with a clipboard is creepy and a waste of fuel. Street-view check before adding to a drop-in list.</p>
-
-    <table>
-      <thead>
-        <tr><th>Signal</th><th>Means</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Street View shows a commercial building, signage, parking lot</td><td>Storefront</td><td>Drop-in candidate (Week 2)</td></tr>
-        <tr><td>Street View shows a house, driveway, residential street</td><td>Truck-based</td><td>Call only — no drop-in</td></tr>
-        <tr><td>Google lists "Service area" instead of address</td><td>Truck-based</td><td>Call only</td></tr>
-        <tr><td>Set business hours (e.g. Mon–Fri 8–5)</td><td>More likely storefront</td><td>Check Street View to confirm</td></tr>
-        <tr><td>"By appointment" / "24/7" / no hours</td><td>More likely truck-based</td><td>Call only</td></tr>
-        <tr><td>Reviews mention shop / yard / showroom</td><td>Storefront</td><td>Drop-in candidate</td></tr>
-      </tbody>
-    </table>
+    <h3>Storefront detection — now automated</h3>
+    <p>As of this week, the pipeline pulls in-person-office vs. service-area data with every new search. No more manual Street View checks. The 38 leads from last Saturday don't have the tag (pre-shipping), but you're not drop-in-targeting them anyway — they're email/call only this week. Friday's 3 new searches will land with storefront tags applied, and that's what feeds the Week 2 drop-in list.</p>
 
     <div class="callout">
-      <strong>Vertical-level reality:</strong> tree, towing, landscaping → mostly truck-based → low drop-in yield. <strong>Plumbers, HVAC, electricians, general contractors</strong> → more likely to have a shop → high drop-in yield. Friday's fresh searches should target those verticals to feed Week 2.
+      <strong>Vertical-level reality (still useful as context):</strong> tree, towing, landscaping → mostly service-area / truck-based → low drop-in yield. <strong>Plumbers, HVAC, electricians, general contractors</strong> → more likely to have a shop → high drop-in yield. That's why Friday's fresh searches target those verticals — the pipeline will confirm storefront tags for the ones that have them.
     </div>
     <div class="callout blue">
-      <strong>Pipeline enhancement (deferred):</strong> the scraper could surface this automatically — pull Places <code>business_status</code>, <code>types</code>, and whether the result has a viewport (storefront) vs. just a point. Scope as a Week 2/3 dev task, not now.
+      <strong>This week's 38:</strong> work them all by cohort (17 email, 21 call). Don't try to drop in on any of them — the storefront data isn't there for these leads, and the cards aren't in yet anyway. Week 2's drop-in list is built fresh from Friday's searches.
     </div>
   </div>
 </section>
@@ -464,7 +455,7 @@
       <label class="check" data-task="mon-testsend"><input type="checkbox"><div class="text"><strong>Send one test audit email to yourself.</strong> Use <code>triggerAuditEmail</code> on your own lead record (or temp one). Read it on your phone — subject, opener, screenshot rendering, signature. Adjust if anything looks off before bulk-sending.</div></label>
       <label class="check" data-task="mon-pick8"><input type="checkbox"><div class="text"><strong>Pick the first 8 from Cohort A</strong> — sort by fitScore descending, then by weakest current site. <span class="meta">Sending small batches means you can actually handle replies as they come in.</span></div></label>
       <label class="check" data-task="mon-bulk1"><input type="checkbox"><div class="text"><strong>Bulk-send batch 1 (8 emails)</strong> via <code>triggerBulkAuditEmail</code>. Log the send time — opens within 24hr = warmest possible call.</div></label>
-      <label class="check" data-task="mon-sv1"><input type="checkbox"><div class="text"><strong>Street-view check leads 1–19</strong> of the 38. Tag each: <span class="kbd">storefront</span> · <span class="kbd">truck</span> · <span class="kbd">unclear</span>. <span class="meta">Google Maps → search business name → "Street View" thumbnail. 30 seconds each. Aim to clear half tonight.</span></div></label>
+      <label class="check" data-task="mon-prep"><input type="checkbox"><div class="text"><strong>Prep Cohort B call list for Tuesday.</strong> Open each of the 21 in Google Maps / their Google profile. Jot: owner name if visible, service area, one note from recent reviews (tone/specialty). <span class="meta">Tomorrow's first 5 calls go way smoother if you walk in already knowing one thing about each business beyond the name. 15–20 min total.</span></div></label>
       <label class="check" data-task="mon-reviewnudge"><input type="checkbox"><div class="text"><strong>Decide:</strong> nudge the 2 silent review-clients today or Friday? Recommended: <strong>Friday</strong>, so it's one clean ping per cycle. Skip this checkbox if going Friday.</div></label>
     </div>
 
@@ -483,6 +474,8 @@
       <label class="check" data-task="tue-b3"><input type="checkbox"><div class="text"><strong>Cohort B warm call #3</strong></div></label>
       <label class="check" data-task="tue-b4"><input type="checkbox"><div class="text"><strong>Cohort B warm call #4</strong></div></label>
       <label class="check" data-task="tue-b5"><input type="checkbox"><div class="text"><strong>Cohort B warm call #5</strong></div></label>
+      <label class="check" data-task="tue-b6"><input type="checkbox"><div class="text"><strong>Cohort B warm call #6</strong></div></label>
+      <label class="check" data-task="tue-b7"><input type="checkbox"><div class="text"><strong>Cohort B warm call #7</strong></div></label>
       <label class="check" data-task="tue-log"><input type="checkbox"><div class="text"><strong>Log every call</strong> (date, business, channel, outcome, next action) in tracking sheet.</div></label>
     </div>
 
@@ -510,12 +503,13 @@
       <label class="check" data-task="wed-email2"><input type="checkbox"><div class="text"><strong>Send partnership email #2</strong></div></label>
       <label class="check" data-task="wed-email3"><input type="checkbox"><div class="text"><strong>Send partnership email #3</strong></div></label>
       <label class="check" data-task="wed-opens"><input type="checkbox"><div class="text"><strong>Check audit opens</strong> for both batches. Call anyone newly opened.</div></label>
-      <label class="check" data-task="wed-b6"><input type="checkbox"><div class="text"><strong>Cohort B warm call #6</strong></div></label>
-      <label class="check" data-task="wed-b7"><input type="checkbox"><div class="text"><strong>Cohort B warm call #7</strong></div></label>
       <label class="check" data-task="wed-b8"><input type="checkbox"><div class="text"><strong>Cohort B warm call #8</strong></div></label>
       <label class="check" data-task="wed-b9"><input type="checkbox"><div class="text"><strong>Cohort B warm call #9</strong></div></label>
       <label class="check" data-task="wed-b10"><input type="checkbox"><div class="text"><strong>Cohort B warm call #10</strong></div></label>
-      <label class="check" data-task="wed-sv2"><input type="checkbox"><div class="text"><strong>Street-view check leads 20–38</strong> · finish the tag. <span class="meta">Goal: every one of the 38 has a storefront/truck/unclear tag by end of day.</span></div></label>
+      <label class="check" data-task="wed-b11"><input type="checkbox"><div class="text"><strong>Cohort B warm call #11</strong></div></label>
+      <label class="check" data-task="wed-b12"><input type="checkbox"><div class="text"><strong>Cohort B warm call #12</strong></div></label>
+      <label class="check" data-task="wed-b13"><input type="checkbox"><div class="text"><strong>Cohort B warm call #13</strong></div></label>
+      <label class="check" data-task="wed-b14"><input type="checkbox"><div class="text"><strong>Cohort B warm call #14</strong></div></label>
     </div>
 
     <!-- THURSDAY -->
@@ -526,11 +520,13 @@
         <span class="hours">2–3 hrs</span>
       </div>
       <label class="check" data-task="thu-replies"><input type="checkbox"><div class="text"><strong>Triage all email replies</strong> from this week. Anyone who replied (any tone) gets a same-day response. Anyone with <code>demoViewedAt</code> set but no reply = call today.</div></label>
-      <label class="check" data-task="thu-b11"><input type="checkbox"><div class="text"><strong>Cohort B warm call #11</strong></div></label>
-      <label class="check" data-task="thu-b12"><input type="checkbox"><div class="text"><strong>Cohort B warm call #12</strong></div></label>
-      <label class="check" data-task="thu-b13"><input type="checkbox"><div class="text"><strong>Cohort B warm call #13</strong></div></label>
-      <label class="check" data-task="thu-b14"><input type="checkbox"><div class="text"><strong>Cohort B warm call #14</strong></div></label>
       <label class="check" data-task="thu-b15"><input type="checkbox"><div class="text"><strong>Cohort B warm call #15</strong></div></label>
+      <label class="check" data-task="thu-b16"><input type="checkbox"><div class="text"><strong>Cohort B warm call #16</strong></div></label>
+      <label class="check" data-task="thu-b17"><input type="checkbox"><div class="text"><strong>Cohort B warm call #17</strong></div></label>
+      <label class="check" data-task="thu-b18"><input type="checkbox"><div class="text"><strong>Cohort B warm call #18</strong></div></label>
+      <label class="check" data-task="thu-b19"><input type="checkbox"><div class="text"><strong>Cohort B warm call #19</strong></div></label>
+      <label class="check" data-task="thu-b20"><input type="checkbox"><div class="text"><strong>Cohort B warm call #20</strong></div></label>
+      <label class="check" data-task="thu-b21"><input type="checkbox"><div class="text"><strong>Cohort B warm call #21</strong> — last of the cohort</div></label>
       <label class="check" data-task="thu-cards"><input type="checkbox"><div class="text"><strong>Confirm card delivery</strong> for Mon May 25. Track the package. If delayed, plan for FedEx Office same-day print of a stopgap card to keep Week 2 on schedule.</div></label>
     </div>
 
@@ -547,7 +543,7 @@
       <label class="check" data-task="fri-search1"><input type="checkbox"><div class="text"><strong>Run search #4</strong> — Youngsville HVAC (or A/C repair)</div></label>
       <label class="check" data-task="fri-search2"><input type="checkbox"><div class="text"><strong>Run search #5</strong> — Youngsville plumber</div></label>
       <label class="check" data-task="fri-search3"><input type="checkbox"><div class="text"><strong>Run search #6</strong> — Youngsville general contractor (or roofer)</div></label>
-      <label class="check" data-task="fri-droplist"><input type="checkbox"><div class="text"><strong>Build the Week 2 drop-in list (target: 9).</strong> Combine: (a) storefront-tagged leads from this week, (b) storefront-tagged leads from the 3 new searches. Sort by: weakest current site + closest to home + highest review count.</div></label>
+      <label class="check" data-task="fri-droplist"><input type="checkbox"><div class="text"><strong>Build the Week 2 drop-in list (target: 9).</strong> Filter the 3 new searches for the storefront tag (auto-applied by the pipeline). Sort by: weakest current site + closest to home + highest review count. <span class="meta">If the storefront-tagged pool is thin, pick the strongest service-area leads as warm-call backups, not drop-ins.</span></div></label>
       <label class="check" data-task="fri-print"><input type="checkbox"><div class="text"><strong>Print the 9 audit packets for Monday May 25.</strong> Use <code>/audit/{token}/print</code>. <strong>FedEx Office on Ambassador Caffery</strong> for color — ~$5–10 for all 9. Skip the library (inconsistent quality).</div></label>
       <label class="check" data-task="fri-route"><input type="checkbox"><div class="text"><strong>Plan Monday's drop-in route</strong> in Google Maps. Optimize order. 30–40 min loop.</div></label>
     </div>
@@ -695,7 +691,7 @@ Is there a manager around, or should I leave my card and come back?"<span class=
 
     <p><strong>Cohorts:</strong> <span class="kbd">A</span> (email) · <span class="kbd">B</span> (call)</p>
     <p><strong>Channels:</strong> <span class="kbd">email</span> · <span class="kbd">warm call</span> · <span class="kbd">drop-in</span> · <span class="kbd">partnership</span> · <span class="kbd">referral</span> · <span class="kbd">inbound</span></p>
-    <p><strong>Tags:</strong> <span class="kbd">storefront</span> · <span class="kbd">truck</span> · <span class="kbd">unclear</span></p>
+    <p><strong>Storefront tag (auto from pipeline, Week 2+):</strong> <span class="kbd">storefront</span> · <span class="kbd">service-area</span></p>
     <p><strong>Stages:</strong> <span class="kbd">touched</span> → <span class="kbd">audit-viewed</span> → <span class="kbd">conversation</span> → <span class="kbd">booked</span> → <span class="kbd">closed</span></p>
 
     <h3>This week's targets (fill in Friday)</h3>
@@ -706,14 +702,13 @@ Is there a manager around, or should I leave my card and come back?"<span class=
       </thead>
       <tbody>
         <tr><td>Audit emails sent (Cohort A)</td><td>17</td><td>____</td></tr>
-        <tr><td>Warm calls completed (Cohort B)</td><td>15</td><td>____</td></tr>
-        <tr><td>Leads tagged storefront / truck / unclear</td><td>38</td><td>____</td></tr>
+        <tr><td>Warm calls completed (Cohort B)</td><td>21</td><td>____</td></tr>
         <tr><td>Audit pages viewed (<code>demoViewedAt</code> set)</td><td>5+</td><td>____</td></tr>
         <tr><td>Email replies (any tone)</td><td>1–2</td><td>____</td></tr>
         <tr><td>Booked 15-min calls</td><td>2</td><td>____</td></tr>
         <tr><td>Partnership replies</td><td>1–2</td><td>____</td></tr>
         <tr><td>New searches run (HVAC/plumber/GC)</td><td>3</td><td>____</td></tr>
-        <tr><td>Week 2 drop-in list ready (storefront-tagged)</td><td>9</td><td>____</td></tr>
+        <tr><td>Week 2 drop-in list ready (auto-tagged storefronts)</td><td>9</td><td>____</td></tr>
         <tr><td>Reviews landed cumulative</td><td>3</td><td>1 (so far)</td></tr>
       </tbody>
     </table>
@@ -732,7 +727,8 @@ Is there a manager around, or should I leave my card and come back?"<span class=
 
     <ul class="anti">
       <li><strong>No drop-ins this week.</strong> Cards arrive Mon May 25. Don't drop a packet without one — the card IS the leave-behind credibility.</li>
-      <li><strong>No driving to addresses without a Street View check.</strong> Tree/towing/landscaping leads are mostly truck-based — the address is often a house. Verify storefront first, every time.</li>
+      <li><strong>No manual Street View tagging on the 38.</strong> Pipeline does this automatically on new searches now. These 38 are email/call only — don't burn a Monday checking.</li>
+      <li><strong>No drop-ins on service-area leads in Week 2.</strong> The pipeline will tag them. If a Week 2 lead is service-area (no in-person office), it's a call, not a drop-in. Don't drive to residential addresses.</li>
       <li><strong>No bulk-emailing Cohort B.</strong> They don't have email captured. Don't try to scrape it or guess. Call them.</li>
       <li><strong>No mass cold dialing.</strong> Cohort B calls are warm — you researched them, you know the gap. That's the only kind of call this week.</li>
       <li><strong>No Google Ads / FB Ads.</strong> Day 30+. You don't have conversion data to optimize against.</li>
@@ -766,8 +762,9 @@ Is there a manager around, or should I leave my card and come back?"<span class=
       <li><strong>3 free clients</strong> (family / personal connections). <strong>0 paying clients.</strong></li>
       <li>Public testimonials: <strong>All About Towing</strong> (Alexandria, LA) and <strong>TB Tree Service</strong> (Central LA).</li>
       <li><strong>1 of 3</strong> Google reviews has landed from the free clients (asked 2026-05-15/16). Other 2 silent — one Friday nudge planned, then drop for 3 weeks if still silent.</li>
-      <li><strong>3 searches completed</strong> 2026-05-16 (Saturday): Youngsville tree, towing, landscaping → <strong>38 qualified leads</strong>.</li>
+      <li><strong>3 searches completed</strong> 2026-05-16 (Saturday): Youngsville tree, towing, landscaping → <strong>38 qualified leads</strong>. These pre-date the location-extraction ship, so they don't carry storefront tags — worked as email/call only this week.</li>
       <li><strong>Lead split:</strong> 17 have site + captured email (Cohort A, bulk audit email channel); 21 have only phone + address (Cohort B, warm call channel).</li>
+      <li><strong>Pipeline upgrade shipped 2026-05-18:</strong> location extraction now tags each lead as <code>storefront</code> (in-person office, drop-in candidate) vs. <code>service-area</code> (call only) at scrape time. Active for all searches from Friday's 3 new searches forward.</li>
       <li><strong>Business cards ordered</strong> 2026-05-15. Delivery confirmed Mon 2026-05-25. <strong>Drop-ins begin Week 2</strong> (week of May 25).</li>
       <li><strong>Supplies acquired:</strong> sticky notes, paperclips, sharpies, sticky-note template practiced.</li>
       <li><strong>Printer decision:</strong> FedEx Office Ambassador Caffery for client-facing packets (color, consistent). Library skipped due to quality variance.</li>
@@ -778,9 +775,8 @@ Is there a manager around, or should I leave my card and come back?"<span class=
     <h3>The two-cohort framework (week of May 18)</h3>
     <ul>
       <li><strong>Cohort A — Email (17 leads):</strong> have website + captured email. Channel: bulk audit email via <code>triggerBulkAuditEmail</code>. Wedge: "your site is failing X." Cadence: 8 Mon, 9 Tue. Hot signal: <code>demoViewedAt</code> set → call within 24hr.</li>
-      <li><strong>Cohort B — Call (21 leads):</strong> phone + address only, no site. Channel: warm call. Wedge: "noticed y'all don't have a website yet." Cadence: 5/day Tue–Thu (15 total this week).</li>
-      <li><strong>Storefront-vs-truck-based tagging:</strong> Street View check on each of the 38. Tree/towing/landscaping are mostly truck-based (residential address ≠ office). Drop-in candidacy requires storefront tag confirmed via Street View. Truck-tagged = call only, never drop-in.</li>
-      <li><strong>Pipeline enhancement (deferred):</strong> scraper could auto-surface storefront-vs-truck-based using Places <code>business_status</code>, <code>types</code>, and viewport presence. Scope as a Week 2/3 dev task.</li>
+      <li><strong>Cohort B — Call (21 leads):</strong> phone + address only, no site. Channel: warm call. Wedge: "noticed y'all don't have a website yet." Cadence: 7/day Tue–Thu (21 total this week, finishes the cohort).</li>
+      <li><strong>Storefront tagging — automated as of 2026-05-18:</strong> the pipeline now classifies each lead at scrape time as <code>storefront</code> (in-person office, drop-in candidate) or <code>service-area</code> (call only, no drop-in). All searches from Friday's 3 new searches forward carry this tag. This week's 38 don't (pre-shipping) — and don't need to, since drop-ins are paused until Week 2 anyway.</li>
     </ul>
 
     <h3>Active channel framework</h3>
@@ -797,11 +793,11 @@ Is there a manager around, or should I leave my card and come back?"<span class=
     <ul>
       <li><strong>Capacity:</strong> 2–3 focused hours/day, ~12 hours/week.</li>
       <li><strong>Geography:</strong> Youngsville first. Lafayette metro as overflow.</li>
-      <li><strong>Channels active this week:</strong> Cohort A audit emails (17), Cohort B warm calls (15 planned), partnership outreach (3 emails + 1 walk-in), tagging exercise (38 leads).</li>
-      <li><strong>Friday searches planned:</strong> HVAC, plumber, general contractor — higher storefront-yield verticals to feed Week 2 drop-in list.</li>
-      <li><strong>Week 2 (May 25 start):</strong> cards arrive, 9 drop-ins from storefront-tagged pool, follow-up calls on this week's drop-offs and Cohort A opens.</li>
+      <li><strong>Channels active this week:</strong> Cohort A audit emails (17), Cohort B warm calls (21 — finishes the cohort), partnership outreach (3 emails + 1 walk-in).</li>
+      <li><strong>Friday searches planned:</strong> HVAC, plumber, general contractor — higher storefront-yield verticals to feed Week 2 drop-in list. Pipeline auto-tags storefront vs. service-area.</li>
+      <li><strong>Week 2 (May 25 start):</strong> cards arrive, 9 drop-ins from auto-tagged storefront pool (Friday's new searches), follow-up calls on Cohort A opens and Cohort B conversations.</li>
       <li><strong>Print path:</strong> <code>/audit/{token}/print</code> (dedicated letter-sized light-theme print view, built 2026-05-15) → FedEx Office Ambassador Caffery for color print.</li>
-      <li><strong>Targets:</strong> 17 audit emails sent · 15 warm calls · all 38 tagged · 5+ audit opens · 2 booked conversations · 3 partnership pings · Week 2 drop-in list (9) ready.</li>
+      <li><strong>Targets:</strong> 17 audit emails sent · 21 warm calls (cohort cleared) · 5+ audit opens · 2 booked conversations · 3 partnership pings · Week 2 drop-in list (9) ready from auto-tagged pool.</li>
     </ul>
 
     <h3>Key documents (canonical sources of truth)</h3>
@@ -828,8 +824,8 @@ Is there a manager around, or should I leave my card and come back?"<span class=
 
 <script>
   // Persist checkboxes in localStorage, scoped to this file.
-  // Bumped to v2 because the task list was restructured 2026-05-18.
-  const KEY = 'awd-marketing-week-may18-v2';
+  // Bumped to v3 after dropping manual Street View tagging (2026-05-18, post location-extraction ship).
+  const KEY = 'awd-marketing-week-may18-v3';
   function loadState() {
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
     catch { return {}; }
