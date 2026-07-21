@@ -302,6 +302,89 @@
     color: var(--text-dim);
   }
 
+  .checklist .field {
+    flex: 1 1 140px;
+    min-width: 120px;
+    margin-left: 6px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    padding: 5px 8px;
+  }
+
+  .checklist .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(79,140,255,0.25);
+  }
+
+  .checklist label {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .checklist .ltext { flex: 0 0 auto; }
+
+  textarea.notes {
+    width: 100%;
+    min-height: 220px;
+    resize: vertical;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    line-height: 1.6;
+    padding: 12px 14px;
+  }
+
+  textarea.notes:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(79,140,255,0.25);
+  }
+
+  .notes-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin: 12px 0;
+  }
+
+  .btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 9px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .btn:hover { background: var(--accent-strong); }
+
+  .btn.ghost {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+  }
+
+  .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+
+  .save-status {
+    font-size: 12px;
+    color: var(--good);
+  }
+
   .tag {
     display: inline-block;
     font-size: 11px;
@@ -384,7 +467,7 @@
 <main>
 
   <h1>Wilder Group — Discovery Call Cheat Sheet</h1>
-  <p class="sub">First call with Jennifer Wilder · Goal: learn what she actually wants</p>
+  <p class="sub">First call with Jennifer Wilder · Warm family referral (via Chelsea) · Goal: learn what she actually wants</p>
 
   <div class="card quick-ref">
     <dl>
@@ -410,6 +493,7 @@
   <div class="card pre-call">
     <h3>5 things to remember</h3>
     <ol>
+      <li>This is <strong>warm</strong>. She's family-adjacent (you're Michael &amp; Shelby's nephew) and Chelsea already told her you'd reach out. You're not cold-calling a stranger — be yourself.</li>
       <li>You are <strong>not</strong> selling. You're interviewing her.</li>
       <li>If she asks "how much?" → defer. Say you need to understand her needs first.</li>
       <li>Don't trash-talk RealGeeks. Some brokerages should stay on it.</li>
@@ -421,19 +505,19 @@
   <h2>Opener Scripts</h2>
 
   <div class="script">
-<span class="label">If she answers live</span>Hey Jennifer, this is Layken with Acadiana Web Design out of Youngsville. Got a couple minutes? I won't keep you long — I came across your site at thewildergroup.net and wanted to introduce myself and ask a few questions about how things are going with your website. No pitch — I just want to understand your setup first and see if there's anything I can help with.
+<span class="label">If she answers live</span>Hey Jennifer, it's Layken — Michael and Shelby's nephew, good to finally talk to you! Chelsea mentioned you've been thinking about the website, so I figured I'd reach out. I won't take much of your time — honestly I just want to hear how things are going with your current setup before I say anything about what I'd do. That cool?
   </div>
 
   <div class="script">
-<span class="label">If voicemail</span>Hey Jennifer, this is Layken Varholdt with Acadiana Web Design, a Louisiana-based custom web design shop out of Youngsville. I'd love about fifteen minutes of your time to ask a few questions about your website at thewildergroup.net — no sales pitch, just want to learn a little about your setup. You can reach me back at [your number]. Appreciate it, thanks Jennifer.
+<span class="label">If voicemail</span>Hey Jennifer, it's Layken — Michael and Shelby's nephew. Chelsea mentioned you might be looking to refresh the website or move off RealGeeks, so I wanted to reach out. No sales pitch — I'd just love fifteen minutes to hear how things are going with your current setup and see if I can help. I build custom sites for local Louisiana businesses — recently did All About Towing over in Alexandria. Give me a call back when you get a chance at [your number]. Thanks Jennifer!
   </div>
 
   <h2>Three Things to Convey Early</h2>
 
   <div class="card">
     <ol>
-      <li><strong>You're local.</strong> "I'm based in Youngsville — happy to drive up to Alexandria if it gets serious." Louisiana credibility matters.</li>
-      <li><strong>You build custom sites, not templates.</strong> "I do custom-designed sites for local businesses. Not a template shop." Differentiates from RealGeeks.</li>
+      <li><strong>You're local &amp; connected.</strong> "I'm based in Youngsville — happy to drive up to Alexandria if it gets serious." Family connection + Louisiana credibility already lowers the wall — don't oversell it, just be warm.</li>
+      <li><strong>You build custom sites, not templates.</strong> "I do custom-designed sites for local businesses — I just did All About Towing's site over in Alexandria. Not a template shop." Differentiates from RealGeeks and gives her something real to look at.</li>
       <li><strong>You're curious, not selling.</strong> "I'd rather understand your situation than pitch you anything generic." Lowers her guard, gets her talking.</li>
     </ol>
   </div>
@@ -529,7 +613,7 @@
 
   <div class="qa">
     <div class="ask">"Can I see examples of your work?"</div>
-    <div class="resp">"Absolutely. I'll send you a few custom sites I've built for other Louisiana businesses after we hang up. I can put a short proposal together at the same time if you want — based on what you've told me today."</div>
+    <div class="resp">"Absolutely — you've already seen All About Towing in Alexandria, that's one of mine. I'll send you a few more custom sites I've built for Louisiana businesses after we hang up. I can put a short proposal together at the same time if you want — based on what you've told me today."</div>
   </div>
 
   <div class="qa">
@@ -568,23 +652,32 @@
 
   <h2>Take Notes During the Call</h2>
 
-  <div class="card checklist">
-    <label><input type="checkbox"> Actual RealGeeks monthly: <span class="blank">$_______</span></label>
-    <label><input type="checkbox"> Contract status (in-term / month-to-month): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Renewal date: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> MLS memberships (GSREIN / GCLRA / both): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Domain ownership (her vs RealGeeks-purchased): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Confirmed 16-agent count: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Lead volume per month (rough): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Top lead sources (IDX / referral / walk-in / other): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> CRM satisfaction 1–10: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Top pain point (her words): <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Aspirational want: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Decision-makers besides Jennifer: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Already talking to competitors: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Sense of urgency / timing: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Google Place ID confirmed: <span class="blank">_______</span></label>
-    <label><input type="checkbox"> Follow-up call scheduled for: <span class="blank">_______</span></label>
+  <div class="card checklist" id="checklist">
+    <label><input type="checkbox" data-k="cb1"> <span class="ltext">Actual RealGeeks monthly:</span> <input class="field" data-k="f1" placeholder="$ / mo"></label>
+    <label><input type="checkbox" data-k="cb2"> <span class="ltext">Contract status (in-term / month-to-month):</span> <input class="field" data-k="f2"></label>
+    <label><input type="checkbox" data-k="cb3"> <span class="ltext">Renewal date:</span> <input class="field" data-k="f3"></label>
+    <label><input type="checkbox" data-k="cb4"> <span class="ltext">MLS memberships (GSREIN / GCLRA / both):</span> <input class="field" data-k="f4"></label>
+    <label><input type="checkbox" data-k="cb5"> <span class="ltext">Domain ownership (her vs RealGeeks-purchased):</span> <input class="field" data-k="f5"></label>
+    <label><input type="checkbox" data-k="cb6"> <span class="ltext">Confirmed 16-agent count:</span> <input class="field" data-k="f6"></label>
+    <label><input type="checkbox" data-k="cb7"> <span class="ltext">Lead volume per month (rough):</span> <input class="field" data-k="f7"></label>
+    <label><input type="checkbox" data-k="cb8"> <span class="ltext">Top lead sources (IDX / referral / walk-in / other):</span> <input class="field" data-k="f8"></label>
+    <label><input type="checkbox" data-k="cb9"> <span class="ltext">CRM satisfaction 1–10:</span> <input class="field" data-k="f9"></label>
+    <label><input type="checkbox" data-k="cb10"> <span class="ltext">Top pain point (her words):</span> <input class="field" data-k="f10"></label>
+    <label><input type="checkbox" data-k="cb11"> <span class="ltext">Aspirational want:</span> <input class="field" data-k="f11"></label>
+    <label><input type="checkbox" data-k="cb12"> <span class="ltext">Decision-makers besides Jennifer:</span> <input class="field" data-k="f12"></label>
+    <label><input type="checkbox" data-k="cb13"> <span class="ltext">Already talking to competitors:</span> <input class="field" data-k="f13"></label>
+    <label><input type="checkbox" data-k="cb14"> <span class="ltext">Sense of urgency / timing:</span> <input class="field" data-k="f14"></label>
+    <label><input type="checkbox" data-k="cb15"> <span class="ltext">Google Place ID confirmed:</span> <input class="field" data-k="f15"></label>
+    <label><input type="checkbox" data-k="cb16"> <span class="ltext">Follow-up call scheduled for:</span> <input class="field" data-k="f16"></label>
+  </div>
+
+  <h3>Free-form notes (type while she talks)</h3>
+  <textarea class="notes" id="freenotes" data-k="freenotes" placeholder="Her exact words, surprises, things to follow up on… everything saves automatically."></textarea>
+
+  <div class="notes-bar">
+    <button class="btn" id="copyBtn" type="button">Copy all notes</button>
+    <button class="btn ghost" id="clearBtn" type="button">Clear all</button>
+    <span class="save-status" id="saveStatus">Auto-saving to this browser</span>
   </div>
 
   <h2>Yellow Flags — Slow Down</h2>
@@ -618,6 +711,96 @@
   </footer>
 
 </main>
+
+<script>
+(function () {
+  var STORE = "wilderCallNotes_v1";
+  var fields = Array.prototype.slice.call(
+    document.querySelectorAll("[data-k]")
+  );
+  var status = document.getElementById("saveStatus");
+  var saveTimer = null;
+
+  function load() {
+    var data;
+    try { data = JSON.parse(localStorage.getItem(STORE) || "{}"); }
+    catch (e) { data = {}; }
+    fields.forEach(function (el) {
+      var k = el.getAttribute("data-k");
+      if (!(k in data)) return;
+      if (el.type === "checkbox") el.checked = !!data[k];
+      else el.value = data[k];
+    });
+  }
+
+  function save() {
+    var data = {};
+    fields.forEach(function (el) {
+      var k = el.getAttribute("data-k");
+      data[k] = el.type === "checkbox" ? el.checked : el.value;
+    });
+    localStorage.setItem(STORE, JSON.stringify(data));
+    flash("Saved ✓");
+  }
+
+  function flash(msg) {
+    status.textContent = msg;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      status.textContent = "Auto-saving to this browser";
+    }, 1500);
+  }
+
+  fields.forEach(function (el) {
+    el.addEventListener("input", save);
+    el.addEventListener("change", save);
+  });
+
+  // Build a clean text summary for pasting into the proposal.
+  function buildText() {
+    var lines = ["WILDER GROUP — DISCOVERY CALL NOTES", "(" + new Date().toLocaleString() + ")", ""];
+    document.querySelectorAll("#checklist label").forEach(function (label) {
+      var cb = label.querySelector('input[type="checkbox"]');
+      var txt = label.querySelector(".ltext");
+      var field = label.querySelector(".field");
+      var mark = cb && cb.checked ? "[x]" : "[ ]";
+      lines.push(mark + " " + (txt ? txt.textContent.trim() : "") + " " + (field ? field.value : ""));
+    });
+    var free = document.getElementById("freenotes").value.trim();
+    if (free) { lines.push("", "FREE-FORM NOTES:", free); }
+    return lines.join("\n");
+  }
+
+  document.getElementById("copyBtn").addEventListener("click", function () {
+    var text = buildText();
+    var done = function () { flash("Copied to clipboard ✓"); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+    } else { fallbackCopy(text); done(); }
+  });
+
+  function fallbackCopy(text) {
+    var ta = document.createElement("textarea");
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (!confirm("Clear all notes and checkboxes? This cannot be undone.")) return;
+    localStorage.removeItem(STORE);
+    fields.forEach(function (el) {
+      if (el.type === "checkbox") el.checked = false;
+      else el.value = "";
+    });
+    flash("Cleared");
+  });
+
+  load();
+})();
+</script>
 
 </body>
 </html>
