@@ -11,6 +11,25 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-10-29.clover",
 });
 
+const CHELSEA_BILLING_EMAIL = "chelsea_bordelon@yahoo.com";
+
+function getCheckoutPriceId(email: string | null | undefined): string {
+  const isChelsea = email?.trim().toLowerCase() === CHELSEA_BILLING_EMAIL;
+  const priceId = isChelsea
+    ? process.env.STRIPE_CHELSEA_PRICE_ID
+    : process.env.STRIPE_PRICE_ID;
+
+  if (!priceId) {
+    throw new Error(
+      isChelsea
+        ? "STRIPE_CHELSEA_PRICE_ID is not set"
+        : "STRIPE_PRICE_ID is not set",
+    );
+  }
+
+  return priceId;
+}
+
 export const ensureCustomerForUser = internalAction({
   args: { userId: v.string(), email: v.optional(v.string()) },
   returns: v.object({ stripeCustomerId: v.string() }),
@@ -196,8 +215,7 @@ export const createCheckoutSession = action({
     }
     if (!stripeCustomerId) throw new Error("Failed to ensure Stripe customer");
     
-    const priceId = process.env.STRIPE_PRICE_ID;
-    if (!priceId) throw new Error("STRIPE_PRICE_ID is not set");
+    const priceId = getCheckoutPriceId(userEmail);
     
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL;
     if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL or SITE_URL must be set");
