@@ -163,11 +163,6 @@ function AuthenticatedProjectView() {
   const editRequests = useQuery(api.projects.listEditRequests,
     isAuthed && project?._id ? { projectId: project._id } : "skip"
   );
-  const subscription = useQuery(
-    api.stripeHelpers.getMySubscription,
-    isAuthed ? {} : "skip"
-  );
-
   useEffect(() => {
     if (!decision) return;
     if (!decision.authed) {
@@ -269,7 +264,6 @@ function AuthenticatedProjectView() {
                 projectSlug={projectId}
                 liveUrl={project.deployment?.liveUrl}
                 editRequests={editRequests ?? []}
-                subscriptionCreatedAt={subscription?._creationTime}
               />
             )}
           </>
@@ -1431,13 +1425,11 @@ function LiveSupportPanel({
   projectSlug,
   liveUrl,
   editRequests = [],
-  subscriptionCreatedAt,
 }: {
   projectId: Id<"projects">;
   projectSlug: string;
   liveUrl?: string;
   editRequests?: EditRequest[];
-  subscriptionCreatedAt?: number;
 }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "support">("overview");
@@ -1453,12 +1445,6 @@ function LiveSupportPanel({
       ? liveUrl
       : `https://${liveUrl}`
     : undefined;
-
-  // Calculate if 12 months have passed since subscription started
-  const twelveMonthsMs = 365 * 24 * 60 * 60 * 1000;
-  const isEligibleForPortal = subscriptionCreatedAt
-    ? Date.now() - subscriptionCreatedAt >= twelveMonthsMs
-    : false;
 
   const handleOpenPortal = async () => {
     setPortalLoading(true);
@@ -1602,23 +1588,21 @@ function LiveSupportPanel({
                   </a>
                 </Button>
               )}
-              {isEligibleForPortal && (
-                <Button
-                  onClick={handleOpenPortal}
-                  variant="outline"
-                  disabled={portalLoading}
-                  size="sm"
-                >
-                  {portalLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Settings className="h-4 w-4 mr-1.5" />
-                      Billing
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                onClick={handleOpenPortal}
+                variant="outline"
+                disabled={portalLoading}
+                size="sm"
+              >
+                {portalLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Settings className="h-4 w-4 mr-1.5" />
+                    Billing
+                  </>
+                )}
+              </Button>
             </div>
           </div>
 
@@ -1713,23 +1697,21 @@ function LiveSupportPanel({
                   </a>
                 </Button>
               )}
-              {isEligibleForPortal && (
-                <Button
-                  onClick={handleOpenPortal}
-                  variant="outline"
-                  disabled={portalLoading}
-                  size="sm"
-                >
-                  {portalLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Settings className="h-4 w-4 mr-1.5" />
-                      Billing
-                    </>
-                  )}
-                </Button>
-              )}
+              <Button
+                onClick={handleOpenPortal}
+                variant="outline"
+                disabled={portalLoading}
+                size="sm"
+              >
+                {portalLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Settings className="h-4 w-4 mr-1.5" />
+                    Billing
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
