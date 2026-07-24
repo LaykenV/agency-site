@@ -57,6 +57,19 @@ const REVIEWS = [
     imageWidth: 2940,
     imageHeight: 1660,
   },
+  {
+    quote:
+      "Working with Layken at Acadiana Web Design has been an incredible experience from start to finish. He took the vision I had for Chelsea Social Co. and turned it into a website that is professional, user-friendly, and truly represents my brand. His communication was excellent throughout the entire process, and he was always quick to answer questions and make adjustments. He paid attention to every detail and made sure everything functioned exactly as it should. If you’re looking for someone who genuinely cares about your business and delivers HIGH QUALITY work, I highly recommend Layken at Acadiana Web Design. He made the entire process seamless, and I couldn’t be happier with the final result!",
+    name: "Chelsea Social Co.",
+    role: "Social Media Strategy & Content",
+    location: "Alexandria, LA",
+    rating: 5,
+    siteUrl: "https://chelseasoco.com/",
+    imageSrc: "/client-chelsea-social.png",
+    imageAlt: "Chelsea Social Co. website homepage screenshot",
+    imageWidth: 1440,
+    imageHeight: 810,
+  },
 ] as const;
 
 const PROCESS_STEPS = [
