@@ -3,11 +3,9 @@ import { notFound } from "next/navigation";
 import { ACADIANA_CITIES, getCityBySlug, getAllCitySlugs } from "@/lib/seo/cities";
 import { TARGET_INDUSTRIES, getIndustryBySlug, getAllIndustrySlugs } from "@/lib/seo/industries";
 import { CityIndustryPageClient } from "./CityIndustryPageClient";
+import { faqPageSchema, getSiteBaseUrl, marketingOpenGraph } from "@/lib/seo/site";
 
-// Setup Base URL
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 interface CityIndustryPageProps {
   params: Promise<{ city: string; industry: string }>;
@@ -41,8 +39,8 @@ export async function generateMetadata({ params }: CityIndustryPageProps): Promi
     };
   }
 
-  const title = `${industry.name} Website Design in ${city.name}, LA | $0 Down, $199/mo`;
-  const description = `Professional website design for ${industry.plural.toLowerCase()} in ${city.name}, Louisiana. Get more customers with a fast, mobile-optimized site. 72-hour launch, unlimited edits included.`;
+  const title = `${city.name} ${industry.name} Websites`;
+  const description = `Websites for ${industry.plural.toLowerCase()} in ${city.name}, LA. $0 down, $199/mo, 72-hour launch, unlimited edits. Built to turn local searches into calls.`;
 
   return {
     title,
@@ -58,12 +56,11 @@ export async function generateMetadata({ params }: CityIndustryPageProps): Promi
     alternates: {
       canonical: `/${city.slug}/${industry.slug}`,
     },
-    openGraph: {
+    openGraph: marketingOpenGraph({
       title,
       description,
       url: `${baseUrl}/${city.slug}/${industry.slug}`,
-      type: "website",
-    },
+    }),
     other: {
       "geo.region": "US-LA",
       "geo.placename": city.name,
@@ -99,7 +96,7 @@ export default async function CityIndustryPage({ params }: CityIndustryPageProps
             "@type": "ProfessionalService",
             name: "Acadiana Web Design",
             description: `Professional ${industry.name.toLowerCase()} website design services in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and $199/mo.`,
-            image: `${baseUrl}/heroimg.png`,
+            image: `${baseUrl}/heroimg.jpg`,
             "@id": `${baseUrl}/${city.slug}/${industry.slug}`,
             url: `${baseUrl}/${city.slug}/${industry.slug}`,
             telephone: "+1-337-306-3705",
@@ -112,14 +109,14 @@ export default async function CityIndustryPage({ params }: CityIndustryPageProps
             },
             geo: {
               "@type": "GeoCoordinates",
-              latitude: city.lat.toString(),
-              longitude: city.lng.toString(),
+              latitude: city.lat,
+              longitude: city.lng,
             },
             areaServed: {
               "@type": "City",
               name: city.name,
             },
-            priceRange: "$199",
+            priceRange: "$$",
             serviceType: [`${industry.name} Website Design`, "Web Design", "Website Development"],
           }),
         }}
@@ -135,9 +132,7 @@ export default async function CityIndustryPage({ params }: CityIndustryPageProps
             name: `${industry.name} Website Design in ${city.name}`,
             description: `Professional website design for ${industry.plural.toLowerCase()} in ${city.name}, ${city.county}.`,
             provider: {
-              "@type": "ProfessionalService",
-              name: "Acadiana Web Design",
-              url: baseUrl,
+              "@id": `${baseUrl}/#organization`,
             },
             areaServed: {
               "@type": "City",
@@ -152,22 +147,10 @@ export default async function CityIndustryPage({ params }: CityIndustryPageProps
         }}
       />
 
-      {/* FAQPage JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: industry.faqs.map((faq) => ({
-              "@type": "Question",
-              name: faq.question,
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: faq.answer,
-              },
-            })),
-          }),
+          __html: JSON.stringify(faqPageSchema(industry.faqs)),
         }}
       />
 

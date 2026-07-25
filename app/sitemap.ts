@@ -2,10 +2,9 @@ import { MetadataRoute } from "next";
 import { ACADIANA_CITIES } from "@/lib/seo/cities";
 import { TARGET_INDUSTRIES } from "@/lib/seo/industries";
 import { BLOG_POSTS } from "@/lib/seo/blog";
+import { getSiteBaseUrl, industryPath } from "@/lib/seo/site";
 
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}` 
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 export default function sitemap(): MetadataRoute.Sitemap {
   // Static pages
@@ -58,7 +57,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Industry landing pages (programmatic SEO)
   const industryPages: MetadataRoute.Sitemap = TARGET_INDUSTRIES.map((industry) => ({
-    url: `${baseUrl}/websites-for-${industry.slug}`,
+    url: `${baseUrl}${industryPath(industry.slug)}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.8,

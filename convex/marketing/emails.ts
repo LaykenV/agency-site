@@ -131,7 +131,7 @@ function buildAuditPreviewCard(args: {
 }
 
 function buildPortfolioPreviewCard(portfolioUrl: string): string {
-  const imageUrl = `${getBaseUrl()}/client-tb-tree.png`;
+  const imageUrl = `${getBaseUrl()}/client-tb-tree.jpg`;
   return `
     <div style="margin:20px 0;border:1px solid ${EMAIL_STYLES.border};border-radius:10px;overflow:hidden;background:${EMAIL_STYLES.cardBackground};">
       <a href="${portfolioUrl}" style="display:block;text-decoration:none;">

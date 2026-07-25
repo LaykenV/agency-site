@@ -6,6 +6,12 @@ import { AppThemeProvider } from "@/components/theme-provider";
 import { GlobalHeader } from "@/components/global-header";
 import { Analytics } from "@/components/Analytics";
 import { getToken } from "@/lib/auth-server";
+import {
+  DEFAULT_OG_IMAGE,
+  getSiteBaseUrl,
+  organizationSchema,
+  websiteSchema,
+} from "@/lib/seo/site";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -37,9 +43,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 // Setup Base URL (Critical for Open Graph images)
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL 
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}` 
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -102,14 +106,7 @@ export const metadata: Metadata = {
     title: "Get More Calls in Acadiana with a 5‑Star Website",
     description: "Get more customers in Lafayette & Acadiana with a professional website. $0 down, 72-hour launch, unlimited edits. Perfect for plumbers, landscapers, and local service pros.",
     siteName: "Acadiana Web Design",
-    images: [
-      {
-        url: "/opengraph-image",
-        width: 1200,
-        height: 630,
-        alt: "Acadiana Web Design - $0 Down, $199/mo",
-      },
-    ],
+    images: [{ ...DEFAULT_OG_IMAGE }],
   },
 
   // Twitter Card (How links look on X)
@@ -117,7 +114,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Websites for Local Service Companies in Acadiana",
     description: "Professional websites for local service businesses in Lafayette & Acadiana. $0 down, $199/mo, 72-hour launch. Hand-coded Next.js for speed.",
-    images: ["/opengraph-image"],
+    images: [DEFAULT_OG_IMAGE.url],
     site: "@LLVarholdt",
     creator: "@LLVarholdt",
   },
@@ -171,8 +168,7 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* next/font self-hosts; no Google Fonts network request needed */}
         <link rel="dns-prefetch" href="https://convex.cloud" />
       </head>
       <body
@@ -181,99 +177,13 @@ export default async function RootLayout({
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "ProfessionalService",
-              "name": "Acadiana Web Design",
-              "alternateName": "AWD Web Design",
-              "description": "Fast, professional websites for local service businesses in Acadiana. $0 down, $199/mo. Custom Next.js websites with 72-hour launch.",
-              "image": `${baseUrl}/heroimg.png`,
-              "logo": `${baseUrl}/icon.svg`,
-              "@id": baseUrl,
-              "url": baseUrl,
-              "telephone": "+1-337-306-3705",
-              "email": "hello@acadianawebdesign.com",
-              "address": {
-                "@type": "PostalAddress",
-                "streetAddress": "", 
-                "addressLocality": "Lafayette",
-                "addressRegion": "LA",
-                "postalCode": "70501",
-                "addressCountry": "US"
-              },
-              "geo": {
-                "@type": "GeoCoordinates",
-                "latitude": "30.2241",
-                "longitude": "-92.0198"
-              },
-              "areaServed": [
-                {
-                  "@type": "City",
-                  "name": "Lafayette",
-                  "@id": "https://en.wikipedia.org/wiki/Lafayette,_Louisiana"
-                },
-                {
-                  "@type": "City",
-                  "name": "New Iberia"
-                },
-                {
-                  "@type": "City",
-                  "name": "Opelousas"
-                },
-                {
-                  "@type": "City",
-                  "name": "Crowley"
-                },
-                {
-                  "@type": "City",
-                  "name": "Breaux Bridge"
-                }
-              ],
-              "priceRange": "$199",
-              "paymentAccepted": "Credit Card, Debit Card",
-              "hasMap": "https://maps.google.com/?q=Lafayette,LA",
-              "serviceType": [
-                "Web Design",
-                "Website Development",
-                "Website Hosting",
-                "Local SEO",
-                "Website Maintenance"
-              ],
-              "sameAs": [
-                "https://twitter.com/LLVarholdt"
-              ],
-              "openingHoursSpecification": {
-                "@type": "OpeningHoursSpecification",
-                "dayOfWeek": [
-                  "Monday",
-                  "Tuesday",
-                  "Wednesday",
-                  "Thursday",
-                  "Friday"
-                ],
-                "opens": "09:00",
-                "closes": "17:00"
-              },
-              "offers": {
-                "@type": "Offer",
-                "name": "Website-as-a-Service All-Inclusive Plan",
-                "description": "Custom Next.js website with hosting, SSL, domain, and unlimited edits",
-                "price": "199.00",
-                "priceCurrency": "USD",
-                "availability": "https://schema.org/InStock",
-                "url": `${baseUrl}/onboarding`,
-                "eligibleRegion": {
-                  "@type": "Place",
-                  "name": "Louisiana"
-                }
-              },
-              "aggregateRating": {
-                "@type": "AggregateRating",
-                "ratingValue": "5.0",
-                "reviewCount": "3",
-                "bestRating": "5"
-              }
-            }),
+            __html: JSON.stringify(organizationSchema(baseUrl)),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(websiteSchema(baseUrl)),
           }}
         />
         <AppThemeProvider>

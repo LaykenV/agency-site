@@ -418,7 +418,7 @@ export function CityIndustryPageClient({
 
               <div className="mt-8 text-center">
                 <Link
-                  href={`/services/${industry.slug}`}
+                  href={`/websites-for-${industry.slug}`}
                   className="inline-flex items-center gap-2 text-sm font-medium text-[hsl(var(--primary))] hover:underline"
                 >
                   View all {industry.name.toLowerCase()} website services

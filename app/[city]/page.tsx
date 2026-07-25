@@ -3,11 +3,9 @@ import { notFound } from "next/navigation";
 import { ACADIANA_CITIES, getCityBySlug, getAllCitySlugs } from "@/lib/seo/cities";
 import { TARGET_INDUSTRIES } from "@/lib/seo/industries";
 import { CityPageClient } from "./CityPageClient";
+import { getSiteBaseUrl, marketingOpenGraph } from "@/lib/seo/site";
 
-// Setup Base URL
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 interface CityPageProps {
   params: Promise<{ city: string }>;
@@ -29,8 +27,8 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     };
   }
 
-  const title = `Web Design in ${city.name}, LA | $0 Down, $199/mo`;
-  const description = `Professional website design for ${city.name} businesses. Fast, mobile-optimized sites with 72-hour launch. Serving plumbers, landscapers, contractors, and local service pros in ${city.county}.`;
+  const title = `Web Design in ${city.name}, LA`;
+  const description = `Professional website design for ${city.name} businesses. $0 down, $199/mo, 72-hour launch. Built for plumbers, landscapers, and local service pros.`;
 
   return {
     title,
@@ -46,12 +44,11 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
     alternates: {
       canonical: `/${city.slug}`,
     },
-    openGraph: {
+    openGraph: marketingOpenGraph({
       title,
       description,
       url: `${baseUrl}/${city.slug}`,
-      type: "website",
-    },
+    }),
     other: {
       "geo.region": "US-LA",
       "geo.placename": city.name,
@@ -90,7 +87,7 @@ export default async function CityPage({ params }: CityPageProps) {
             "@type": "ProfessionalService",
             name: "Acadiana Web Design",
             description: `Professional website design services for local businesses in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and $199/mo.`,
-            image: `${baseUrl}/heroimg.png`,
+            image: `${baseUrl}/heroimg.jpg`,
             "@id": `${baseUrl}/${city.slug}`,
             url: `${baseUrl}/${city.slug}`,
             telephone: "+1-337-306-3705",
@@ -103,14 +100,14 @@ export default async function CityPage({ params }: CityPageProps) {
             },
             geo: {
               "@type": "GeoCoordinates",
-              latitude: city.lat.toString(),
-              longitude: city.lng.toString(),
+              latitude: city.lat,
+              longitude: city.lng,
             },
             areaServed: {
               "@type": "City",
               name: city.name,
             },
-            priceRange: "$199",
+            priceRange: "$$",
             serviceType: ["Web Design", "Website Development", "Website Hosting", "Local SEO"],
           }),
         }}

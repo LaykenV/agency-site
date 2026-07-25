@@ -3,26 +3,23 @@ import Link from "next/link";
 import { Calendar, Clock, ArrowRight } from "lucide-react";
 import { BLOG_POSTS, BLOG_CATEGORIES, type BlogCategory } from "@/lib/seo/blog";
 import { SectionHeader } from "@/components/SectionHeader";
+import { getSiteBaseUrl, marketingOpenGraph } from "@/lib/seo/site";
 
-// Setup Base URL
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 export const metadata: Metadata = {
-  title: "Blog | Web Design Tips for Local Businesses",
+  title: "Web Design Tips for Local Businesses",
   description:
     "Expert tips on web design, local SEO, and growing your service business in Acadiana. Practical advice for plumbers, landscapers, and contractors.",
   alternates: {
     canonical: "/blog",
   },
-  openGraph: {
-    title: "Blog | Acadiana Web Design",
+  openGraph: marketingOpenGraph({
+    title: "Web Design Tips for Local Businesses",
     description:
-      "Expert tips on web design, local SEO, and growing your service business in Acadiana.",
+      "Expert tips on web design, local SEO, and growing your Acadiana service business.",
     url: `${baseUrl}/blog`,
-    type: "website",
-  },
+  }),
 };
 
 function formatDate(dateString: string): string {

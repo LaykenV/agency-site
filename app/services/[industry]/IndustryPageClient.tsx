@@ -387,7 +387,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
                 {otherIndustries.map((otherIndustry) => (
                   <motion.div key={otherIndustry.slug} variants={staggerItem} className="h-full">
                     <Link
-                      href={`/services/${otherIndustry.slug}`}
+                      href={`/websites-for-${otherIndustry.slug}`}
                       className="group relative surface rounded-xl p-4 sm:p-5 hover:ring-2 hover:ring-[hsl(var(--primary))]/40 hover:bg-[hsl(var(--primary))]/[0.03] transition-all duration-200 block h-full"
                     >
                       <div className="flex items-center justify-between">

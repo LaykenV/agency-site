@@ -157,7 +157,7 @@ export default function FBCoverPage() {
           }}
         >
           <Image
-            src="/client-tb-tree.png"
+            src="/client-tb-tree.jpg"
             alt="TB Tree Service"
             fill
             style={{ objectFit: "cover", objectPosition: "top center" }}
@@ -181,7 +181,7 @@ export default function FBCoverPage() {
           }}
         >
           <Image
-            src="/client-all-about-towin.png"
+            src="/client-all-about-towin.jpg"
             alt="All About Towing"
             fill
             style={{ objectFit: "cover", objectPosition: "top center" }}

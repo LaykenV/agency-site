@@ -147,7 +147,7 @@ export default function HeroVariant3() {
 
                 {/* Client screenshot */}
                 <Image
-                  src="/client-tb-tree.png"
+                  src="/client-tb-tree.jpg"
                   alt="Client website screenshot"
                   width={1916}
                   height={992}

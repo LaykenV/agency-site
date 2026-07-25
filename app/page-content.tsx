@@ -16,6 +16,7 @@ import {
   staggerContainer,
   staggerItem,
 } from "@/components/animations";
+import { HOMEPAGE_FAQS, industryPath } from "@/lib/seo/site";
 
 const REVIEWS = [
   {
@@ -26,10 +27,10 @@ const REVIEWS = [
     location: "Alexandria, LA",
     rating: 5,
     siteUrl: "https://allabouttowingservice.com/",
-    imageSrc: "/client-all-about-towin.png",
+    imageSrc: "/client-all-about-towin.jpg",
     imageAlt: "All About Towing Service website homepage screenshot",
-    imageWidth: 2940,
-    imageHeight: 1656,
+    imageWidth: 1400,
+    imageHeight: 788,
   },
   {
     quote:
@@ -39,10 +40,10 @@ const REVIEWS = [
     location: "Central Louisiana",
     rating: 5,
     siteUrl: "https://tbtreeservice.org/",
-    imageSrc: "/client-tb-tree.png",
+    imageSrc: "/client-tb-tree.jpg",
     imageAlt: "TB Tree Service website homepage screenshot",
-    imageWidth: 1916,
-    imageHeight: 992,
+    imageWidth: 1400,
+    imageHeight: 725,
   },
   {
     quote:
@@ -52,10 +53,10 @@ const REVIEWS = [
     location: "Louisiana",
     rating: 5,
     siteUrl: "https://bordelonstreeremoval.com/",
-    imageSrc: "/client-bordelons.png",
+    imageSrc: "/client-bordelons.jpg",
     imageAlt: "Bordelon's Tree Service website homepage screenshot",
-    imageWidth: 2940,
-    imageHeight: 1660,
+    imageWidth: 1400,
+    imageHeight: 790,
   },
   {
     quote:
@@ -65,10 +66,10 @@ const REVIEWS = [
     location: "Alexandria, LA",
     rating: 5,
     siteUrl: "https://chelseasoco.com/",
-    imageSrc: "/client-chelsea-social.png",
+    imageSrc: "/client-chelsea-social.jpg",
     imageAlt: "Chelsea Social Co. website homepage screenshot",
-    imageWidth: 1440,
-    imageHeight: 810,
+    imageWidth: 1400,
+    imageHeight: 788,
   },
 ] as const;
 
@@ -104,18 +105,25 @@ const COMPARISON_ROWS = [
 ] as const;
 
 const INDUSTRIES = [
-  { name: "Plumbers", href: "/services/plumbers" },
-  { name: "Landscapers", href: "/services/landscapers" },
-  { name: "Painters", href: "/services/painters" },
-  { name: "Contractors", href: "/services/contractors" },
-  { name: "Electricians", href: "/services/electricians" },
-  { name: "HVAC", href: "/services/hvac" },
-  { name: "Roofers", href: "/services/roofers" },
-  { name: "Pressure Washing", href: "/services/pressure-washing" },
-  { name: "Cleaning", href: "/services/cleaning-services" },
-  { name: "Pest Control", href: "/services/pest-control" },
-  { name: "Tree Services", href: "/services/tree-services" },
-  { name: "Fencing", href: "/services/fencing" },
+  { name: "Plumbers", href: industryPath("plumbers") },
+  { name: "Landscapers", href: industryPath("landscapers") },
+  { name: "Painters", href: industryPath("painters") },
+  { name: "Contractors", href: industryPath("contractors") },
+  { name: "Electricians", href: industryPath("electricians") },
+  { name: "HVAC", href: industryPath("hvac") },
+  { name: "Roofers", href: industryPath("roofers") },
+  { name: "Pressure Washing", href: industryPath("pressure-washing") },
+  { name: "Cleaning", href: industryPath("cleaning-services") },
+  { name: "Pest Control", href: industryPath("pest-control") },
+  { name: "Tree Services", href: industryPath("tree-services") },
+  { name: "Fencing", href: industryPath("fencing") },
+] as const;
+
+const FOOTER_CITIES = [
+  { name: "Lafayette", href: "/lafayette" },
+  { name: "New Iberia", href: "/new-iberia" },
+  { name: "Youngsville", href: "/youngsville" },
+  { name: "Opelousas", href: "/opelousas" },
 ] as const;
 
 export function PageContent() {
@@ -158,8 +166,8 @@ export function PageContent() {
                   animate={reduce ? undefined : "visible"}
                   transition={{ delay: 0.3 }}
                 >
-                  We hand-code fast, professional websites for local service businesses.
-                  Hosting, SSL, edits, and support — all included for{" "}
+                  Custom web design for Acadiana service businesses in Lafayette and nearby
+                  towns. Hosting, SSL, edits, and support — all included for{" "}
                   <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] leading-none align-baseline">$199/mo</span>.
                 </motion.p>
 
@@ -237,11 +245,12 @@ export function PageContent() {
                   </div>
 
                   <Image
-                    src="/client-tb-tree.png"
-                    alt="Client website screenshot"
-                    width={1916}
-                    height={992}
-                    sizes="(min-width: 1024px) 52vw, 100vw"
+                    src="/client-tb-tree.jpg"
+                    alt="TB Tree Service client website screenshot"
+                    width={1400}
+                    height={725}
+                    sizes="(min-width: 1024px) 560px, 92vw"
+                    quality={75}
                     priority
                     className="w-full object-cover object-top"
                   />
@@ -318,7 +327,8 @@ export function PageContent() {
                             alt={review.imageAlt}
                             width={review.imageWidth}
                             height={review.imageHeight}
-                            sizes="(min-width: 1024px) 44vw, 100vw"
+                            sizes="(min-width: 1024px) 520px, 92vw"
+                            quality={75}
                             className="review-screenshot-img"
                           />
                         </a>
@@ -612,6 +622,28 @@ export function PageContent() {
             </div>
           </motion.section>
 
+          {/* AEO: definition block for "what is website as a service" queries */}
+          <motion.section
+            id="waas"
+            className="anchor-target"
+            initial={initial}
+            whileInView={reduce ? undefined : "visible"}
+            viewport={{ once: true, amount: 0.2 }}
+            variants={sectionReveal}
+          >
+            <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12 md:py-16">
+              <h2 className="text-center text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl font-[family-name:var(--font-display)]">
+                What is Website-as-a-Service?
+              </h2>
+              <p className="mt-5 text-sm sm:text-base leading-relaxed text-[var(--muted-foreground)]">
+                Website-as-a-Service (WaaS) is a monthly subscription for a custom website that includes
+                design, hosting, domain, SSL, and ongoing edits. Instead of paying $3k–$5k upfront to an
+                agency, local Acadiana businesses pay a flat fee—here, $199/mo with $0 down—and launch in
+                days, not months. You get a fast, mobile-first site without becoming the webmaster.
+              </p>
+            </div>
+          </motion.section>
+
           <motion.section
             id="faqs"
             className="anchor-target"
@@ -625,25 +657,13 @@ export function PageContent() {
                 Frequently Asked Questions
               </h2>
               <div className="mt-6 sm:mt-8 faq-grid max-w-3xl mx-auto">
-                <FaqItem question='What does "unlimited edits" include?'>
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Swap a photo, fix a typo, add a new service, change your hours. Submit requests through your portal anytime. If you want a full redesign, we&apos;ll give you a simple quote. No nickel-and-diming.</p>
-                </FaqItem>
-
-                <FaqItem question="How fast can we launch?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">After our kickoff call, most sites go live in 72 hours. Send us your logo and photos, and we move fast.</p>
-                </FaqItem>
-
-                <FaqItem question="Do I keep my domain?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">We register and manage it for you while you&apos;re subscribed. After 12 months, it&apos;s yours to transfer if you want. Details in the <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
-                </FaqItem>
-
-                <FaqItem question="Who owns the website?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Your content is yours — copy, photos, logo. We handle the design and code while you&apos;re subscribed. It&apos;s all spelled out in the <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.</p>
-                </FaqItem>
-
-                <FaqItem question="How do I cancel?">
-                  <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">Just email us. We ask that you stay for the first 12 months. After that, cancel anytime with a month&apos;s notice. No hoops.</p>
-                </FaqItem>
+                {HOMEPAGE_FAQS.map((faq) => (
+                  <FaqItem key={faq.question} question={faq.question}>
+                    <p className="text-sm text-[var(--muted-foreground)] leading-relaxed">
+                      {faq.answer}
+                    </p>
+                  </FaqItem>
+                ))}
               </div>
             </div>
           </motion.section>
@@ -700,7 +720,7 @@ export function PageContent() {
           </motion.section>
 
           <footer className="footer-container pb-6 sm:pb-8">
-            <div className="footer-content">
+            <div className="footer-content flex-col gap-4 sm:flex-row sm:items-center">
               <div className="footer-info">
                 <p className="footer-copyright text-xs sm:text-sm">© {new Date().getFullYear()} Acadiana Web Design</p>
                 <div className="footer-badges text-[10px] sm:text-xs">
@@ -709,10 +729,28 @@ export function PageContent() {
                   <span>Local Developer</span>
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <Link href="/legal/terms" className="footer-link text-xs sm:text-sm">Terms</Link>
-                <Link href="/legal/privacy" className="footer-link text-xs sm:text-sm">Privacy</Link>
-              </div>
+              <nav
+                aria-label="Footer"
+                className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs sm:text-sm"
+              >
+                {FOOTER_CITIES.map((city) => (
+                  <Link key={city.href} href={city.href} className="footer-link">
+                    {city.name}
+                  </Link>
+                ))}
+                <Link href="/blog" className="footer-link">
+                  Blog
+                </Link>
+                <Link href={industryPath("plumbers")} className="footer-link">
+                  Industries
+                </Link>
+                <Link href="/legal/terms" className="footer-link">
+                  Terms
+                </Link>
+                <Link href="/legal/privacy" className="footer-link">
+                  Privacy
+                </Link>
+              </nav>
             </div>
           </footer>
 

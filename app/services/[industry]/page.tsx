@@ -3,11 +3,14 @@ import { notFound } from "next/navigation";
 import { TARGET_INDUSTRIES, getIndustryBySlug, getAllIndustrySlugs } from "@/lib/seo/industries";
 import { ACADIANA_CITIES } from "@/lib/seo/cities";
 import { IndustryPageClient } from "./IndustryPageClient";
+import {
+  faqPageSchema,
+  getSiteBaseUrl,
+  industryPath,
+  marketingOpenGraph,
+} from "@/lib/seo/site";
 
-// Setup Base URL
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 interface IndustryPageProps {
   params: Promise<{ industry: string }>;
@@ -29,8 +32,9 @@ export async function generateMetadata({ params }: IndustryPageProps): Promise<M
     };
   }
 
-  const title = `Websites for ${industry.plural} | $0 Down, $199/mo | Acadiana`;
-  const description = `Professional website design for ${industry.plural.toLowerCase()} in Louisiana. Fast, mobile-optimized sites that help ${industry.name.toLowerCase()}s get more customers. 72-hour launch, unlimited edits included.`;
+  // Keep short so root template "| Acadiana Web Design" stays under ~60 chars total
+  const title = `${industry.plural} Websites — $0 Down`;
+  const description = `Professional websites for ${industry.plural.toLowerCase()} in Louisiana. $0 down, $199/mo, 72-hour launch, unlimited edits included.`;
 
   return {
     title,
@@ -43,14 +47,13 @@ export async function generateMetadata({ params }: IndustryPageProps): Promise<M
       `${industry.plural.toLowerCase()} website design`,
     ],
     alternates: {
-      canonical: `/websites-for-${industry.slug}`,
+      canonical: industryPath(industry.slug),
     },
-    openGraph: {
+    openGraph: marketingOpenGraph({
       title,
       description,
-      url: `${baseUrl}/websites-for-${industry.slug}`,
-      type: "website",
-    },
+      url: `${baseUrl}${industryPath(industry.slug)}`,
+    }),
   };
 }
 
@@ -83,9 +86,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
             name: `Website Design for ${industry.plural}`,
             description: `Professional website design services for ${industry.plural.toLowerCase()} in Acadiana, Louisiana.`,
             provider: {
-              "@type": "ProfessionalService",
-              name: "Acadiana Web Design",
-              url: baseUrl,
+              "@id": `${baseUrl}/#organization`,
             },
             areaServed: {
               "@type": "State",
@@ -96,22 +97,10 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
         }}
       />
 
-      {/* FAQPage JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
-            "@context": "https://schema.org",
-            "@type": "FAQPage",
-            mainEntity: industry.faqs.map((faq) => ({
-              "@type": "Question",
-              name: faq.question,
-              acceptedAnswer: {
-                "@type": "Answer",
-                text: faq.answer,
-              },
-            })),
-          }),
+          __html: JSON.stringify(faqPageSchema(industry.faqs)),
         }}
       />
 
@@ -133,7 +122,7 @@ export default async function IndustryPage({ params }: IndustryPageProps) {
                 "@type": "ListItem",
                 position: 2,
                 name: `Websites for ${industry.plural}`,
-                item: `${baseUrl}/websites-for-${industry.slug}`,
+                item: `${baseUrl}${industryPath(industry.slug)}`,
               },
             ],
           }),

@@ -36,9 +36,9 @@ type AuditData = {
 };
 
 const PORTFOLIO = [
-  { name: "TB Tree Service", niche: "Tree Services", imageSrc: "/client-tb-tree.png", w: 1916, h: 992 },
-  { name: "All About Towing", niche: "Towing", imageSrc: "/client-all-about-towin.png", w: 2940, h: 1656 },
-  { name: "Bordelon's Tree Service", niche: "Tree Services", imageSrc: "/client-bordelons.png", w: 2940, h: 1660 },
+  { name: "TB Tree Service", niche: "Tree Services", imageSrc: "/client-tb-tree.jpg", w: 1400, h: 725 },
+  { name: "All About Towing", niche: "Towing", imageSrc: "/client-all-about-towin.jpg", w: 1400, h: 788 },
+  { name: "Bordelon's Tree Service", niche: "Tree Services", imageSrc: "/client-bordelons.jpg", w: 1400, h: 790 },
 ];
 
 function clamp(n?: number) {

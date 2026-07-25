@@ -4,11 +4,9 @@ import { notFound } from "next/navigation";
 import { Calendar, Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { BLOG_POSTS, BLOG_CATEGORIES, getBlogPostBySlug, getAllBlogSlugs } from "@/lib/seo/blog";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { DEFAULT_OG_IMAGE, getSiteBaseUrl } from "@/lib/seo/site";
 
-// Setup Base URL
-const baseUrl = process.env.NEXT_PUBLIC_APP_URL
-  ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-  : process.env.SITE_URL ?? "http://localhost:3000";
+const baseUrl = getSiteBaseUrl();
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string }>;
@@ -47,11 +45,15 @@ export async function generateMetadata({ params }: BlogPostPageProps): Promise<M
       modifiedTime: post.updatedAt || post.publishedAt,
       authors: [post.author],
       tags: post.tags,
+      images: [{ ...DEFAULT_OG_IMAGE }],
+      siteName: "Acadiana Web Design",
+      locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.description,
+      images: [DEFAULT_OG_IMAGE.url],
     },
   };
 }
