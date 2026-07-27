@@ -34,7 +34,7 @@ export async function generateMetadata({ params }: IndustryPageProps): Promise<M
 
   // Keep short so root template "| Acadiana Web Design" stays under ~60 chars total
   const title = `${industry.plural} Websites — $0 Down`;
-  const description = `Professional websites for ${industry.plural.toLowerCase()} in Louisiana. $0 down, $199/mo, 72-hour launch, unlimited edits included.`;
+  const description = `Professional websites for ${industry.plural.toLowerCase()} in Louisiana. $0 down, from $199/mo, 72-hour launch, unlimited edits included.`;
 
   return {
     title,

@@ -80,7 +80,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
                 variants={fadeUp}
               >
                 Professional websites for local service businesses in {city.name}—{city.description}. 
-                $0 down, $199/mo, live in 72 hours.
+                $0 down, from $199/mo, live in 72 hours.
               </motion.p>
 
               {/* CTAs */}
@@ -362,7 +362,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
                       Join other local service businesses in {city.name} who trust us with their online presence.
                     </p>
                     <p className="mt-3 text-xs text-[var(--muted-foreground)]/80">
-                      $199/mo. 12-month minimum. See{" "}
+                      From $199/mo. 12-month minimum. See{" "}
                       <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">
                         Terms
                       </Link>

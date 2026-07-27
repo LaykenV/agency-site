@@ -39,12 +39,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "yearly",
       priority: 0.2,
     },
-    {
-      url: `${baseUrl}/sms-consent/screenshot`,
-      lastModified: new Date(),
-      changeFrequency: "yearly",
-      priority: 0.2,
-    },
+    // NOTE: /sms-consent/screenshot is intentionally absent — it stays live for
+    // Twilio A2P reviewers but is noindex'd, so submitting it here would conflict.
   ];
 
   // City landing pages (programmatic SEO)

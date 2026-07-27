@@ -167,7 +167,7 @@ export function PageContent() {
                   transition={{ delay: 0.3 }}
                 >
                   Custom web design for Acadiana service businesses in Lafayette and nearby
-                  towns. Hosting, SSL, edits, and support — all included for{" "}
+                  towns. Hosting, SSL, edits, and support — all included, from{" "}
                   <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] leading-none align-baseline">$199/mo</span>.
                 </motion.p>
 
@@ -399,6 +399,7 @@ export function PageContent() {
                     <div className="comparison-card__badge comparison-card__badge--recommended">Recommended</div>
                     <h3 className="comparison-card__title">Our Plan</h3>
                     <div className="comparison-card__price">
+                      <span className="comparison-card__price-prefix">from</span>
                       <span className="comparison-card__price-amount">$199</span>
                       <span className="comparison-card__price-period">/mo</span>
                     </div>
@@ -638,7 +639,7 @@ export function PageContent() {
               <p className="mt-5 text-sm sm:text-base leading-relaxed text-[var(--muted-foreground)]">
                 Website-as-a-Service (WaaS) is a monthly subscription for a custom website that includes
                 design, hosting, domain, SSL, and ongoing edits. Instead of paying $3k–$5k upfront to an
-                agency, local Acadiana businesses pay a flat fee—here, $199/mo with $0 down—and launch in
+                agency, local Acadiana businesses pay a flat fee—here, from $199/mo with $0 down—and launch in
                 days, not months. You get a fast, mobile-first site without becoming the webmaster.
               </p>
             </div>
@@ -684,11 +685,13 @@ export function PageContent() {
                     $5,000 upfront
                   </p>
                   <p className="mt-2 font-[family-name:var(--font-display)]">
+                    <span className="text-2xl font-bold text-[var(--muted-foreground)] sm:text-3xl align-top">from </span>
                     <span className="text-7xl font-extrabold tracking-tighter text-[var(--foreground)] sm:text-8xl md:text-9xl">$199</span>
                     <span className="text-2xl font-bold text-[var(--muted-foreground)] sm:text-3xl">/mo</span>
                   </p>
                   <p className="mt-3 text-sm text-[var(--muted-foreground)] sm:text-base">
-                    $0 upfront. Stay 12 months, then cancel anytime.
+                    $0 upfront. Stay 12 months, then cancel anytime. Most local sites land at $199 —
+                    bigger builds like booking, e-commerce, or AI chat are quoted on the call.
                   </p>
                 </motion.div>
 
@@ -711,7 +714,7 @@ export function PageContent() {
                     </ShinyLink>
                   </div>
                   <p className="mt-4 text-[11px] sm:text-xs text-[var(--muted-foreground)]/60">
-                    $199/mo. 12-month minimum. See{" "}
+                    From $199/mo. 12-month minimum. See{" "}
                     <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.
                   </p>
                 </motion.div>

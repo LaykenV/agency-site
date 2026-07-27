@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
   }
 
   const title = `Web Design in ${city.name}, LA`;
-  const description = `Professional website design for ${city.name} businesses. $0 down, $199/mo, 72-hour launch. Built for plumbers, landscapers, and local service pros.`;
+  const description = `Professional website design for ${city.name} businesses. $0 down, from $199/mo, 72-hour launch. Built for plumbers, landscapers, and local service pros.`;
 
   return {
     title,
@@ -86,7 +86,7 @@ export default async function CityPage({ params }: CityPageProps) {
             "@context": "https://schema.org",
             "@type": "ProfessionalService",
             name: "Acadiana Web Design",
-            description: `Professional website design services for local businesses in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and $199/mo.`,
+            description: `Professional website design services for local businesses in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and pricing from $199/mo.`,
             image: `${baseUrl}/heroimg.jpg`,
             "@id": `${baseUrl}/${city.slug}`,
             url: `${baseUrl}/${city.slug}`,

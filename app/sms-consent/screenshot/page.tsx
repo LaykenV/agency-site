@@ -5,6 +5,9 @@ export const metadata: Metadata = {
   title: "SMS Opt-In Screenshot — Acadiana Web Design",
   description:
     "Public reviewer page showing the exact SMS lead notification opt-in UI used in the Acadiana Web Design client portal.",
+  // Must stay publicly reachable for Twilio A2P reviewers, but it is a compliance
+  // artifact — not something we want competing in search results.
+  robots: { index: false, follow: false },
 };
 
 export default function SmsConsentScreenshotPage() {

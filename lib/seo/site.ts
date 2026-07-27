@@ -17,7 +17,7 @@ export const DEFAULT_OG_IMAGE = {
   url: "/opengraph-image.png",
   width: 1200,
   height: 630,
-  alt: "Acadiana Web Design - $0 Down, $199/mo",
+  alt: "Acadiana Web Design - $0 Down, from $199/mo",
 } as const;
 
 export const SITE_PHONE = "+1-337-306-3705";
@@ -57,7 +57,17 @@ export const HOMEPAGE_FAQS = [
   {
     question: "How much does a website cost for a local Acadiana business?",
     answer:
-      "Our plan is $0 down and $199/mo with a 12-month minimum. That includes a custom Next.js site, hosting, SSL, domain, unlimited edits, and support — no hourly redesign fees.",
+      "Plans start at $0 down and $199/mo with a 12-month minimum. That covers a custom Next.js site, hosting, SSL, domain, unlimited edits, and support — no hourly redesign fees. Most local service businesses land right at $199.",
+  },
+  {
+    question: "What if I only need a few pages?",
+    answer:
+      "Same price, less for you to manage. The $199/mo plan covers the site regardless of how many pages it needs — a clean three-page site gets the same hosting, security, edits, and support as a seven-page one. You are not paying extra for pages you do not want.",
+  },
+  {
+    question: "What if I need more than a website?",
+    answer:
+      "Online booking, e-commerce, customer portals, custom tools, AI chat — we build those too, quoted on top of the base plan. Bring it to the call and we will scope it honestly.",
   },
   {
     question: "Is local SEO included?",
@@ -99,7 +109,7 @@ export function organizationSchema(baseUrl: string) {
     name: SITE_NAME,
     alternateName: "AWD Web Design",
     description:
-      "Fast, professional websites for local service businesses in Acadiana. $0 down, $199/mo. Custom Next.js websites with 72-hour launch.",
+      "Fast, professional websites for local service businesses in Acadiana. $0 down, from $199/mo. Custom Next.js websites with 72-hour launch.",
     image: `${baseUrl}/heroimg.jpg`,
     logo: `${baseUrl}/logo.png`,
     url: baseUrl,
@@ -149,7 +159,12 @@ export function organizationSchema(baseUrl: string) {
       name: "Website-as-a-Service All-Inclusive Plan",
       description:
         "Custom Next.js website with hosting, SSL, domain, and unlimited edits",
-      price: "199.00",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        minPrice: "199.00",
+        priceCurrency: "USD",
+        unitText: "MONTH",
+      },
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
       url: `${baseUrl}/onboarding`,

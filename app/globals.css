@@ -2367,6 +2367,12 @@ body {
     color: hsl(var(--muted-foreground));
   }
 
+  .comparison-card__price-prefix {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+  }
+
   .comparison-card__subtitle {
     font-size: 0.8rem;
     color: hsl(var(--muted-foreground));

@@ -40,7 +40,7 @@ export async function generateMetadata({ params }: CityIndustryPageProps): Promi
   }
 
   const title = `${city.name} ${industry.name} Websites`;
-  const description = `Websites for ${industry.plural.toLowerCase()} in ${city.name}, LA. $0 down, $199/mo, 72-hour launch, unlimited edits. Built to turn local searches into calls.`;
+  const description = `Websites for ${industry.plural.toLowerCase()} in ${city.name}, LA. $0 down, from $199/mo, 72-hour launch, unlimited edits. Built to turn local searches into calls.`;
 
   return {
     title,
@@ -95,7 +95,7 @@ export default async function CityIndustryPage({ params }: CityIndustryPageProps
             "@context": "https://schema.org",
             "@type": "ProfessionalService",
             name: "Acadiana Web Design",
-            description: `Professional ${industry.name.toLowerCase()} website design services in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and $199/mo.`,
+            description: `Professional ${industry.name.toLowerCase()} website design services in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and pricing from $199/mo.`,
             image: `${baseUrl}/heroimg.jpg`,
             "@id": `${baseUrl}/${city.slug}/${industry.slug}`,
             url: `${baseUrl}/${city.slug}/${industry.slug}`,

@@ -114,7 +114,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
                   variants={staggerItem}
                 >
                   <CheckCircle2 className="h-4 w-4 text-emerald-300" />
-                  $0 Down, $199/mo
+                  $0 Down, from $199/mo
                 </motion.span>
                 <motion.span 
                   className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-sm border border-white/15 text-sm text-white/90" 
@@ -433,7 +433,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
                       Join other {industry.plural.toLowerCase()} who trust us with their online presence.
                     </p>
                     <p className="mt-3 text-xs text-[var(--muted-foreground)]/80">
-                      $199/mo. 12-month minimum. See{" "}
+                      From $199/mo. 12-month minimum. See{" "}
                       <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">
                         Terms
                       </Link>

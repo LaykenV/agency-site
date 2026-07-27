@@ -41,10 +41,11 @@ A fully managed website experience for local service businesses — sold as a mo
 
 ### Pricing
 
-- **$0 down, $199/month, 12-month minimum.**
+- **$0 down, from $199/month, 12-month minimum.**
 - After 12 months: month-to-month, cancel anytime.
-- One plan. No tiers, no upsells, no surprise invoices.
-- Year-1 LTV: ~$2,388.
+- $199 is the **floor, publicly advertised as "from $199/mo"** — not a ceiling. Small brochure sites pay the same $199 (higher margin, same ops load); builds with booking, e-commerce, custom tooling, or AI chat are scoped and quoted above it on the call.
+- No surprise invoices. Base plan covers the site, hosting, domain, edits, and support regardless of page count.
+- Year-1 LTV at the floor: ~$2,388.
 - Healthy CAC budget: **$200–$400** per closed client.
 
 ### Pricing room (post-traction)
