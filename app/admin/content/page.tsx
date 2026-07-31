@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowLeft,
@@ -18,7 +19,13 @@ import {
 } from "lucide-react";
 import { clsx } from "clsx";
 
-type ContentStatus = "Idea" | "Needs asset" | "Ready" | "Posted" | "Running as ad";
+type ContentStatus =
+  | "Idea"
+  | "Needs asset"
+  | "Ready"
+  | "Scheduled"
+  | "Posted"
+  | "Running as ad";
 
 type ContentIdea = {
   id: string;
@@ -39,18 +46,23 @@ type CampaignStats = {
   closes: number;
 };
 
-const STORAGE_KEY = "awd-content-ops-v2";
+const STORAGE_KEY = "awd-content-ops-v4";
 
 const LAUNCH_TASKS = [
   { id: "button", label: "Send message button approved", defaultDone: true },
   { id: "budget", label: "Budget changed to $7/day", defaultDone: true },
-  { id: "fresh-post", label: "Publish tomorrow's 4:5 proof post", defaultDone: false },
-  { id: "creative", label: "Replace February creative in Ads Manager", defaultDone: false },
+  {
+    id: "fresh-post",
+    label: "4:5 AI lead-filter post published Jul 31 at 8:30 AM",
+    defaultDone: true,
+  },
+  { id: "creative", label: "Select the live AI-filtering post in Ads Manager", defaultDone: true },
   { id: "template", label: "Create the one-question Messenger opener", defaultDone: true },
   { id: "terms", label: "Accept Meta Lead Generation Terms", defaultDone: true },
-  { id: "auth", label: "Complete Meta account authentication", defaultDone: false },
+  { id: "auth", label: "Complete Meta account authentication", defaultDone: true },
   { id: "billing", label: "Add and verify billing", defaultDone: false },
-  { id: "review", label: "Review placements, then publish", defaultDone: false },
+  { id: "review", label: "Review placements and creative previews", defaultDone: true },
+  { id: "publish", label: "Publish the campaign", defaultDone: false },
 ] as const;
 
 const CONTENT_IDEAS: ContentIdea[] = [
@@ -75,12 +87,22 @@ const CONTENT_IDEAS: ContentIdea[] = [
     defaultStatus: "Needs asset",
   },
   {
+    id: "ai-lead-filter",
+    title: "AI lead filtering: allowed vs. filtered",
+    pillar: "Product",
+    format: "Static",
+    need: "1080×1350 workflow graphic complete",
+    next: "Live and selected in Ads Manager. Ready for the final billing check and Publish.",
+    adEligible: true,
+    defaultStatus: "Posted",
+  },
+  {
     id: "comments-proof",
     title: "Client comment proof card",
     pillar: "Proof",
     format: "Static",
     need: "Public comments already captured",
-    next: "Use one quote, one site image, and one Send us a message CTA.",
+    next: "Keep as a future organic proof asset; do not use as the launch ad.",
     adEligible: true,
     defaultStatus: "Ready",
   },
@@ -180,6 +202,7 @@ const STATUS_OPTIONS: ContentStatus[] = [
   "Idea",
   "Needs asset",
   "Ready",
+  "Scheduled",
   "Posted",
   "Running as ad",
 ];
@@ -248,8 +271,18 @@ export default function ContentOperationsPage() {
           statuses?: Record<string, ContentStatus>;
           stats?: CampaignStats;
         };
-        if (parsed.tasks) setTasks((current) => ({ ...current, ...parsed.tasks }));
-        if (parsed.statuses) setStatuses((current) => ({ ...current, ...parsed.statuses }));
+        if (parsed.tasks) {
+          setTasks((current) => ({
+            ...current,
+            ...parsed.tasks,
+            "fresh-post": true,
+            creative: true,
+            review: true,
+          }));
+        }
+        if (parsed.statuses) {
+          setStatuses((current) => ({ ...current, ...parsed.statuses, "ai-lead-filter": "Posted" }));
+        }
         if (parsed.stats) setStats({ ...DEFAULT_STATS, ...parsed.stats });
       }
     } catch {
@@ -275,9 +308,10 @@ export default function ContentOperationsPage() {
         const order: Record<ContentStatus, number> = {
           "Running as ad": 0,
           Posted: 1,
-          Ready: 2,
-          "Needs asset": 3,
-          Idea: 4,
+          Scheduled: 2,
+          Ready: 3,
+          "Needs asset": 4,
+          Idea: 5,
         };
         return order[statuses[left.id]] - order[statuses[right.id]];
       }),
@@ -336,7 +370,7 @@ export default function ContentOperationsPage() {
                   <CalendarDays className="h-4 w-4" />
                   <span className="text-xs font-bold uppercase tracking-[0.18em]">Window</span>
                 </div>
-                <p className="mt-3 text-xl font-bold">Aug 3 → Nov 2</p>
+                <p className="mt-3 text-xl font-bold">Jul 31 → Oct 29</p>
                 <p className="mt-2 text-sm text-slate-300">Do not judge before the day-45 checkpoint.</p>
               </div>
               <div className="bg-slate-950 p-6">
@@ -360,10 +394,11 @@ export default function ContentOperationsPage() {
               <div className="flex items-start gap-3">
                 <Gauge className="mt-0.5 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="font-bold">Creative decision: replace before launch</p>
+                  <p className="font-bold">Creative selected and reviewed</p>
                   <p className="mt-1 text-sm leading-5 text-slate-800">
-                    The February All About Towing post is too wide and dense for Stories and
-                    Reels. Keep the campaign. Replace the ad with tomorrow&apos;s native 4:5 post.
+                    The native 4:5 AI lead-filtering post is selected. Automatic visual
+                    touch-ups, animation, and multi-image adaptation are off so Meta preserves
+                    the branded graphic.
                   </p>
                 </div>
               </div>
@@ -425,12 +460,13 @@ export default function ContentOperationsPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-3xl">
               <p className="font-mono text-xs font-bold uppercase tracking-[0.18em] text-amber-800">
-                Tomorrow&apos;s ad-ready post
+                Live ad creative
               </p>
-              <h2 className="mt-2 text-2xl font-bold">All About Towing customer proof</h2>
+              <h2 className="mt-2 text-2xl font-bold">AI lead filtering: allowed vs. filtered</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
-                Publish organically first, inspect it on a phone, then select that post in Ads
-                Manager. Do not rely on a link-preview image.
+                Published on Facebook Jul 31 at 8:30 AM Central and selected as the existing
+                post in Ads Manager. The campaign is ready for a final billing check and
+                Publish.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-900">
@@ -440,25 +476,37 @@ export default function ContentOperationsPage() {
           </div>
 
           <div className="mt-6 grid gap-5 lg:grid-cols-2">
-            <div className="rounded-xl border border-amber-200 bg-white p-5">
-              <h3 className="font-bold">Creative recipe</h3>
-              <ol className="mt-4 space-y-3 text-sm leading-5 text-slate-700">
-                <li><strong>1.</strong> Use a clear still of the owner speaking in the testimonial reel across the top 60%.</li>
-                <li><strong>2.</strong> Use a simple brand-color panel across the bottom 40%.</li>
-                <li><strong>3.</strong> Feature one line only: “If you don’t have a website or yours needs a new design, HE IS YOUR GUY.”</li>
-                <li><strong>4.</strong> Add “All About Towing Service” and the AWD logo as small attribution—not another sales headline.</li>
-                <li><strong>5.</strong> Export JPG or PNG at 1080×1350 and inspect it at phone size before posting.</li>
-              </ol>
+            <div className="overflow-hidden rounded-xl border border-amber-200 bg-white">
+              <Image
+                src="/social/awd-ai-lead-filtering-2026-07-31.png"
+                alt="Acadiana Web Design AI lead filter showing allowed leads delivered to email, text, and dashboard while spam is filtered"
+                width={1080}
+                height={1350}
+                className="h-auto w-full"
+                priority
+              />
             </div>
             <div className="rounded-xl border border-amber-200 bg-white p-5">
-              <h3 className="font-bold">Ready-to-post copy</h3>
+              <h3 className="font-bold">Live post copy</h3>
               <div className="mt-4 whitespace-pre-line rounded-lg bg-slate-950 p-4 text-sm leading-6 text-slate-100">
-                {`All About Towing needed a website that loaded fast, looked professional on a phone, and made it easy for customers to call.
+                {`Real customers should reach you. SEO pitches shouldn’t.
 
-We built it with $0 upfront. Hosting, updates, and support are included for $199/month.
+✅ Real inquiry → email, text + dashboard update
+🛡️ Spam → saved quietly for review
 
-If your business needs a professional website without the usual upfront cost or tech headaches, send us a message.`}
+AI filtering included. $0 upfront • $199/month.
+
+Already have a website or want one? Send me a message!`}
               </div>
+              <a
+                href="/social/awd-ai-lead-filtering-2026-07-31.png"
+                target="_blank"
+                rel="noreferrer"
+                className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-amber-900 underline decoration-amber-400 underline-offset-4"
+              >
+                Open the 1080 × 1350 asset
+                <ExternalLink className="h-4 w-4" />
+              </a>
             </div>
           </div>
         </section>

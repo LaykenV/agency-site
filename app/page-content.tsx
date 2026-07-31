@@ -60,7 +60,7 @@ const REVIEWS = [
   },
   {
     quote:
-      "He took the vision I had for Chelsea Social Co. and turned it into a website that is professional, user-friendly, and truly represents my brand.",
+      "He is very thorough and included every detail I asked for. The client portal is easy to use, I can manage all of my leads and view my analytics with ease.",
     name: "Chelsea Social Co.",
     role: "Social Media Strategy & Content",
     location: "Alexandria, LA",
