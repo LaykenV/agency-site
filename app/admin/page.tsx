@@ -74,12 +74,20 @@ export default function AdminPage() {
           <div className="max-w-7xl mx-auto">
             <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
               <SectionHeader as="h1" align="left" size="md" className="max-w-none mx-0">Admin</SectionHeader>
-              <Link
-                href="/admin/marketing"
-                className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Marketing Pipeline
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/admin/content"
+                  className="inline-flex items-center rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Content + Ads
+                </Link>
+                <Link
+                  href="/admin/marketing"
+                  className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Marketing Pipeline
+                </Link>
+              </div>
             </div>
 
             {/* Underline Tabs */}
