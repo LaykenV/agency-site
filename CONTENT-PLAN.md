@@ -33,7 +33,7 @@ The ad draft is ready for final review: authenticated, $7/day, Leads →
 Messenger, Lafayette +25 miles, minimum age 25, Advantage+ placements, the
 one-question Messenger opener, and multi-advertiser ads off. Automatic visual
 touch-ups, animation, and multi-image adaptation are off. The campaign window
-is Jul 31 at 9:00 AM Central through Oct 29 at 9:00 AM Central. Confirm billing,
-then click Publish in Ads Manager.
+is Jul 31 at 9:00 AM Central through Oct 29 at 9:00 AM Central. It was published
+July 31 and initially entered Meta's Processing status before delivery.
 
 Historical Facebook context remains in `ACADIANA-FACEBOOK-CONTEXT.md`.

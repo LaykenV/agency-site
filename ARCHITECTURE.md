@@ -45,6 +45,7 @@ Wired in `convex.config.ts`:
 | `/portal/[projectId]` | Client portal dashboard (status-driven) | Magic link |
 | `/portal/welcome` | Optional linking route | Magic link |
 | `/admin` | Admin dashboard (server-gated by `ADMIN_EMAIL` env var) | Admin |
+| `/admin/leads` | Cross-client lead inbox with triage and client filters | Admin |
 | `/admin/marketing` | Outbound pipeline control center | Admin |
 | `/legal/terms` | Versioned, hashable Terms of Service | Public |
 | `/api/stripe` | Stripe webhook | Signed |
@@ -279,6 +280,7 @@ Routes server-gated by `ADMIN_EMAIL` env var (supports comma-separated `ADMIN_EM
 
 - **Prospects** — list, create/edit, send magic links.
 - **Projects** — list sorted by recent activity, update status, manage `myNotes`, update deployment URLs (`liveUrl`, `stagingUrl`, `vercelProjectId`). Expanded view shows full Build Details: headline, domain preference, inspiration links, color scheme swatches, logo and brand image thumbnails, deployment URLs.
+- **Client Leads** (`/admin/leads`) — paginated cross-client lead stream. Defaults to AI-allowed submissions, with Spam and All views plus a client/project filter. The All view keeps review, untriaged, and pre-triage legacy records visible.
 - **Scheduled Calls** — grouped by date, with project/prospect links.
 - **Edit Requests** — attachment thumbnails (3 inline + "+N more"), filter by status, update status and priority.
 - **Marketing** (`/admin/marketing`) — Searches tab (batch status, cancellation), Leads tab (pipeline actions, notes, outreach, conversion), Follow-ups tab (time-based queue).
@@ -294,6 +296,8 @@ All mutations guarded by `requireAdmin` (see `convex/adminGuard.ts`).
 | `admin.listScheduledCalls` | Scheduled calls with optional filtering |
 | `admin.listEditRequests` | Edit requests with attachments |
 | `admin.getProjectFileUrls` | Signed URLs for project logo + brand images |
+| `adminLeads.list` | Paginated client leads filtered by triage verdict and optional project |
+| `adminLeads.listClients` | Projects with stored leads and display metadata for filtering |
 
 | Mutation | Purpose |
 |---|---|

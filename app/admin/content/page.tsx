@@ -62,7 +62,7 @@ const LAUNCH_TASKS = [
   { id: "auth", label: "Complete Meta account authentication", defaultDone: true },
   { id: "billing", label: "Add and verify billing", defaultDone: false },
   { id: "review", label: "Review placements and creative previews", defaultDone: true },
-  { id: "publish", label: "Publish the campaign", defaultDone: false },
+  { id: "publish", label: "Publish the campaign", defaultDone: true },
 ] as const;
 
 const CONTENT_IDEAS: ContentIdea[] = [
@@ -92,9 +92,9 @@ const CONTENT_IDEAS: ContentIdea[] = [
     pillar: "Product",
     format: "Static",
     need: "1080×1350 workflow graphic complete",
-    next: "Live and selected in Ads Manager. Ready for the final billing check and Publish.",
+    next: "Running as the launch ad. Record spend and funnel results weekly.",
     adEligible: true,
-    defaultStatus: "Posted",
+    defaultStatus: "Running as ad",
   },
   {
     id: "comments-proof",
@@ -278,10 +278,15 @@ export default function ContentOperationsPage() {
             "fresh-post": true,
             creative: true,
             review: true,
+            publish: true,
           }));
         }
         if (parsed.statuses) {
-          setStatuses((current) => ({ ...current, ...parsed.statuses, "ai-lead-filter": "Posted" }));
+          setStatuses((current) => ({
+            ...current,
+            ...parsed.statuses,
+            "ai-lead-filter": "Running as ad",
+          }));
         }
         if (parsed.stats) setStats({ ...DEFAULT_STATS, ...parsed.stats });
       }
@@ -465,8 +470,8 @@ export default function ContentOperationsPage() {
               <h2 className="mt-2 text-2xl font-bold">AI lead filtering: allowed vs. filtered</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
                 Published on Facebook Jul 31 at 8:30 AM Central and selected as the existing
-                post in Ads Manager. The campaign is ready for a final billing check and
-                Publish.
+                post in Ads Manager. The campaign was published July 31 and will run through
+                October 29.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-900">

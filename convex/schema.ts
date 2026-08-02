@@ -146,6 +146,7 @@ export default defineSchema({
     .index("by_projectId", ["projectId"])
     .index("by_projectId_and_status", ["projectId", "status"])
     .index("by_projectId_and_triageVerdict", ["projectId", "triageVerdict"])
+    .index("by_triageVerdict", ["triageVerdict"])
     .index("by_createdAt", ["createdAt"]),
 
   client_analytics: defineTable({

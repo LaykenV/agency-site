@@ -76,8 +76,14 @@ export default function AdminPage() {
               <SectionHeader as="h1" align="left" size="md" className="max-w-none mx-0">Admin</SectionHeader>
               <div className="flex flex-wrap gap-2">
                 <Link
-                  href="/admin/content"
+                  href="/admin/leads"
                   className="inline-flex items-center rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  Client Leads
+                </Link>
+                <Link
+                  href="/admin/content"
+                  className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
                   Content + Ads
                 </Link>
