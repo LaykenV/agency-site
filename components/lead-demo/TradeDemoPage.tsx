@@ -43,8 +43,9 @@ export function TradeDemoPage({ demo }: TradeDemoPageProps) {
             <Image
               src={demo.hero.src}
               alt={demo.hero.alt}
-              fill
-              sizes="100vw"
+              width={demo.hero.width}
+              height={demo.hero.height}
+              sizes={`(max-width: ${demo.hero.width}px) 100vw, ${demo.hero.width}px`}
               priority
             />
           </span>
@@ -198,8 +199,9 @@ function Plate({ image }: { image: LeadDemoTradeField["plates"][number] }) {
         <Image
           src={image.src}
           alt={image.alt}
-          fill
-          sizes="100vw"
+          width={image.width}
+          height={image.height}
+          sizes="(max-width: 640px) 100vw, 608px"
           loading="lazy"
         />
       </span>

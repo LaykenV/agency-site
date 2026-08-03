@@ -19,8 +19,9 @@ Notes:
   to drop the white plate onto the page's bone paper. A pre-cut transparent PNG would need
   that blend mode removed.
 - `hero.jpg` is the LCP image and is not lazy-loaded. Keep it under ~250 KB.
-- The plates crop to 21:9 on desktop and 3:2 on phones, so keep the dock roughly centred
-  vertically or it will lose the top and bottom of the frame on wide screens.
+- The work photos render at their natural portrait ratio and are capped at 608 CSS pixels
+  wide on desktop. That keeps these Facebook screenshots below their native width instead
+  of enlarging and heavily cropping them into blurry full-width banners.
 - Alt text and captions live in `lib/lead-demos.ts` under `gator-constructors`. If you swap
   in a different photo, update the `alt` and `caption` there so they stay truthful.
 - Do **not** use the Facebook ad graphic with the baked-in service list and phone number —

@@ -60,7 +60,7 @@ export type LeadDemoTradeField = LeadDemoBase & {
     heading: string;
     note: string;
   };
-  /** Full-bleed photo bands between the text bands. */
+  /** Proof photos between the text bands. */
   plates: LeadDemoImage[];
   starting: {
     heading: string;

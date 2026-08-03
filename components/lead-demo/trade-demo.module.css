@@ -156,21 +156,28 @@
 
 .heroFold {
   margin: 0;
+  background: var(--lead-color-paper-3);
 }
 
 .heroFrame {
   display: block;
-  position: relative;
-  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-width: 59.125rem;
+  margin-inline: auto;
   background: var(--lead-color-paper-3);
 }
 
 .heroFrame img {
-  object-fit: cover;
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .heroCaption {
   display: block;
+  width: 100%;
+  max-width: 59.125rem;
+  margin-inline: auto;
   padding: var(--lead-space-sm) clamp(1.25rem, 5vw, 3rem);
   border-bottom: var(--lead-rule-hair) solid var(--lead-color-rule);
   font-size: var(--lead-text-xs);
@@ -267,26 +274,32 @@
   color: var(--lead-color-ink);
 }
 
-/* ---- Full-bleed photo plates ---- */
+/* ---- Proof photo plates ---- */
 
 .plate {
   margin: 0;
+  padding-top: var(--lead-space-xl);
+  background: var(--lead-color-paper-3);
   border-top: var(--lead-rule-hair) solid var(--lead-color-rule);
 }
 
 .plateFrame {
   display: block;
-  position: relative;
-  aspect-ratio: 3 / 2;
+  width: min(100%, 38rem);
+  margin-inline: auto;
   background: var(--lead-color-paper-3);
 }
 
 .plateFrame img {
-  object-fit: cover;
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .plateCaption {
   display: block;
+  width: min(100%, 38rem);
+  margin-inline: auto;
   padding: var(--lead-space-sm) clamp(1.25rem, 5vw, 3rem);
   border-bottom: var(--lead-rule-hair) solid var(--lead-color-rule);
   font-size: var(--lead-text-xs);
@@ -606,42 +619,6 @@
   .mastheadMark {
     width: 76px;
     height: 76px;
-  }
-
-  .heroFold {
-    position: relative;
-  }
-
-  .heroFrame {
-    aspect-ratio: 16 / 9;
-  }
-
-  .heroCaption {
-    position: absolute;
-    left: clamp(1.25rem, 5vw, 3rem);
-    bottom: clamp(1.25rem, 5vw, 3rem);
-    padding: var(--lead-space-xs) var(--lead-space-sm);
-    border-bottom: 0;
-    background: var(--lead-color-ink);
-    color: var(--lead-color-paper);
-  }
-
-  .plate {
-    position: relative;
-  }
-
-  .plateFrame {
-    aspect-ratio: 21 / 9;
-  }
-
-  .plateCaption {
-    position: absolute;
-    left: clamp(1.25rem, 5vw, 3rem);
-    bottom: clamp(1.25rem, 5vw, 3rem);
-    padding: var(--lead-space-xs) var(--lead-space-sm);
-    border-bottom: 0;
-    background: var(--lead-color-ink);
-    color: var(--lead-color-paper);
   }
 
   .specRow {
