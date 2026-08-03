@@ -1,6 +1,17 @@
 [
   {
     "date": "2026-08-03",
+    "macrostructure": "Photographic",
+    "theme": "custom",
+    "theme_axes": "light / display-condensed-bold / chromatic-amber (~68°)",
+    "vibe": "brackish green, marine ply, license-plate plain",
+    "nav": "N6 newspaper masthead",
+    "footer": "Ft2 inline single line",
+    "enrichment": "real client photography (hero + 2 full-bleed plates)",
+    "brief": "Gator Constructors lead preview — marine construction, second 'trade-field' template"
+  },
+  {
+    "date": "2026-08-03",
     "macrostructure": "Stat-Led",
     "theme": "custom",
     "theme_axes": "light / italic-serif / warm (rose ~18°)",

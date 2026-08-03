@@ -1,0 +1,720 @@
+/* Hallmark · pre-emit critique: P4 H5 E4 S5 R5 V4 */
+/* Hallmark · genre: editorial · macrostructure: Photographic
+ * hero: H6 photographic fold · knobs: area=full-bleed, caption=lower-left (inline < 40em), text=below
+ * nav: N6 newspaper masthead · knobs: credential-line=below wordmark, wordmark=2xl, rule=double
+ * features: F3 tabular spec sheet · knobs: cols=2, rules=every row, fill=alternating
+ * cta: C3 typographic link + C4 sticky call bar (< 40em) · footer: Ft2 inline single line
+ * theme: custom · vibe: "brackish green, marine ply, license-plate plain"
+ * paper: oklch(96.5% 0.009 120) · accent: oklch(52% 0.135 62)
+ * display: Oswald 600 · body: Geist · axes: light / display-condensed-bold / chromatic-amber (~68°)
+ * enrichment: real client photography · studied: no · context: inferred · mobile-first 360px
+ * Tokens live in tokens.css under .lead-theme-trade — nothing inline here.
+ */
+
+.page {
+  /* next/font declares --font-* on the route wrapper, not :root, so these have to
+   * resolve here — at :root they fall through to the generic fallback. */
+  --lead-font-display:
+    var(--font-trade-display, ui-sans-serif), "Arial Narrow", sans-serif;
+  --lead-font-body:
+    var(--font-geist-sans, ui-sans-serif), system-ui, sans-serif;
+
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--lead-color-paper);
+  color: var(--lead-color-ink);
+  font-family: var(--lead-font-body);
+  font-size: var(--lead-text-base);
+  line-height: 1.6;
+  overflow-x: clip;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  /* clears the fixed call bar on phones */
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom));
+}
+
+.page,
+.page * {
+  box-sizing: border-box;
+}
+
+.page ::selection {
+  color: var(--lead-color-ink);
+  background: var(--lead-color-accent-soft);
+}
+
+/* :where() keeps this at .page specificity so the accent-colour rules below
+ * (.action, .contactPhone, .awdCta…) still win. */
+.page :where(a) {
+  color: inherit;
+}
+
+.page :focus-visible {
+  outline: 2px solid var(--lead-color-focus);
+  outline-offset: 2px;
+  border-radius: var(--lead-radius-small);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---- Concept bar (AWD scaffolding, top bookend) ---- */
+
+.conceptBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--lead-space-2xs) var(--lead-space-lg);
+  padding: var(--lead-space-sm) clamp(1.25rem, 5vw, 3rem);
+  background: var(--lead-color-ink);
+  color: var(--lead-color-paper);
+  font-size: var(--lead-text-xs);
+  letter-spacing: 0.02em;
+}
+
+.conceptBarLink {
+  color: var(--lead-color-accent-bright);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: 1px;
+  white-space: nowrap;
+  transition: text-decoration-thickness var(--lead-dur-micro)
+    var(--lead-ease-out);
+}
+
+.conceptBarLink:hover {
+  text-decoration-thickness: 2px;
+}
+
+.conceptBarLink:active {
+  opacity: 0.8;
+}
+
+.page .conceptBarLink:focus-visible {
+  outline-color: var(--lead-color-accent-bright);
+}
+
+/* ---- N6 masthead ---- */
+
+.masthead {
+  padding: var(--lead-space-lg) clamp(1.25rem, 5vw, 3rem) 0;
+  border-bottom: 3px double var(--lead-color-rule-strong);
+  text-align: center;
+}
+
+.mastheadBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--lead-space-xs);
+  text-decoration: none;
+}
+
+.mastheadMark {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  /* the supplied logo is dark green on a white plate — multiply drops the plate */
+  mix-blend-mode: multiply;
+}
+
+.wordmark {
+  display: block;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 8vw, 2.75rem);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.credential {
+  margin: var(--lead-space-md) 0 0;
+  padding-bottom: var(--lead-space-sm);
+  font-size: var(--lead-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lead-color-muted);
+  text-wrap: balance;
+}
+
+/* ---- H6 photographic fold ---- */
+
+.heroFold {
+  margin: 0;
+}
+
+.heroFrame {
+  display: block;
+  position: relative;
+  aspect-ratio: 4 / 3;
+  background: var(--lead-color-paper-3);
+}
+
+.heroFrame img {
+  object-fit: cover;
+}
+
+.heroCaption {
+  display: block;
+  padding: var(--lead-space-sm) clamp(1.25rem, 5vw, 3rem);
+  border-bottom: var(--lead-rule-hair) solid var(--lead-color-rule);
+  font-size: var(--lead-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--lead-color-muted);
+}
+
+/* ---- Narrow text band ---- */
+
+.textBand {
+  padding: var(--lead-space-2xl) clamp(1.25rem, 5vw, 3rem);
+  max-width: 62rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.ledeHeading {
+  margin: 0;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 9vw, 4rem);
+  line-height: 1.02;
+  letter-spacing: -0.005em;
+  text-transform: uppercase;
+  max-width: 16ch;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.ledeBody {
+  margin: var(--lead-space-lg) 0 0;
+  max-width: 54ch;
+  font-size: var(--lead-text-md);
+  line-height: 1.55;
+  color: var(--lead-color-ink-2);
+  text-wrap: pretty;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lead-space-md) var(--lead-space-xl);
+  margin-top: var(--lead-space-xl);
+}
+
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lead-space-xs);
+  min-height: 44px;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: var(--lead-text-md);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+  color: var(--lead-color-accent);
+  transition: transform 100ms var(--lead-ease-out);
+}
+
+/* the rule belongs under the words, not under the arrow */
+.actionLabel {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.28em;
+  transition: text-decoration-thickness var(--lead-dur-micro)
+    var(--lead-ease-out);
+}
+
+.actionArrow {
+  transition: transform var(--lead-dur-short) var(--lead-ease-out);
+}
+
+.action:hover .actionLabel,
+.contactText:hover .actionLabel,
+.awdCta:hover .actionLabel {
+  text-decoration-thickness: 3px;
+}
+
+.action:hover .actionArrow,
+.contactText:hover .actionArrow,
+.awdCta:hover .actionArrow {
+  transform: translateX(3px);
+}
+
+.action:active {
+  transform: translateY(1px);
+}
+
+.actionSecondary {
+  color: var(--lead-color-ink);
+}
+
+/* ---- Full-bleed photo plates ---- */
+
+.plate {
+  margin: 0;
+  border-top: var(--lead-rule-hair) solid var(--lead-color-rule);
+}
+
+.plateFrame {
+  display: block;
+  position: relative;
+  aspect-ratio: 3 / 2;
+  background: var(--lead-color-paper-3);
+}
+
+.plateFrame img {
+  object-fit: cover;
+}
+
+.plateCaption {
+  display: block;
+  padding: var(--lead-space-sm) clamp(1.25rem, 5vw, 3rem);
+  border-bottom: var(--lead-rule-hair) solid var(--lead-color-rule);
+  font-size: var(--lead-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--lead-color-muted);
+}
+
+/* ---- F3 spec sheet ---- */
+
+.scopeHeading {
+  margin: 0;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 7vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.scopeNote {
+  margin: var(--lead-space-sm) 0 0;
+  max-width: 46ch;
+  font-size: var(--lead-text-sm);
+  color: var(--lead-color-muted);
+}
+
+.specSheet {
+  margin: var(--lead-space-xl) 0 0;
+  border-top: 2px solid var(--lead-color-ink);
+  border-bottom: 2px solid var(--lead-color-ink);
+}
+
+.specRow {
+  padding: var(--lead-space-md) var(--lead-space-md);
+  border-top: var(--lead-rule-hair) solid var(--lead-color-rule);
+}
+
+.specRow:first-child {
+  border-top: 0;
+}
+
+.specRow:nth-child(odd) {
+  background: var(--lead-color-paper-2);
+}
+
+.specRow dt {
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: var(--lead-text-md);
+  line-height: 1.2;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.specRow dd {
+  margin: var(--lead-space-2xs) 0 0;
+  color: var(--lead-color-ink-2);
+  font-size: var(--lead-text-sm);
+  max-width: 56ch;
+}
+
+/* ---- Prose band ---- */
+
+.startingBand {
+  background: var(--lead-color-paper-2);
+  border-top: var(--lead-rule-hair) solid var(--lead-color-rule);
+  border-bottom: var(--lead-rule-hair) solid var(--lead-color-rule);
+}
+
+.startingHeading {
+  margin: 0;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 7vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.startingBody {
+  margin: var(--lead-space-lg) 0 0;
+  max-width: 58ch;
+  font-size: var(--lead-text-base);
+  color: var(--lead-color-ink-2);
+  text-wrap: pretty;
+}
+
+/* ---- Contact plate ---- */
+
+.contactPlate {
+  background: var(--lead-color-ink);
+  color: var(--lead-color-paper);
+  padding: var(--lead-space-2xl) clamp(1.25rem, 5vw, 3rem);
+}
+
+.contactInner {
+  max-width: 62rem;
+  margin-inline: auto;
+}
+
+.contactHeading {
+  margin: 0;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(1.75rem, 7vw, 2.5rem);
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  max-width: 22ch;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.contactPhone {
+  display: inline-flex;
+  align-items: center;
+  margin-top: var(--lead-space-lg);
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 11vw, 4.5rem);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  text-decoration: none;
+  color: var(--lead-color-accent-bright);
+  overflow-wrap: anywhere;
+  min-width: 0;
+  transition: transform 100ms var(--lead-ease-out);
+}
+
+.contactPhone:active {
+  transform: translateY(1px);
+}
+
+.contactNote {
+  margin: var(--lead-space-md) 0 0;
+  font-size: var(--lead-text-sm);
+  color: var(--lead-color-paper-muted);
+}
+
+.contactActions {
+  margin-top: var(--lead-space-md);
+}
+
+.contactText {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--lead-space-xs);
+  min-height: 44px;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: var(--lead-text-base);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: transform 100ms var(--lead-ease-out);
+}
+
+.contactText:active {
+  transform: translateY(1px);
+}
+
+/* ---- AWD offer band ---- */
+
+.awdBand {
+  background: var(--lead-color-paper-3);
+  border-top: 3px double var(--lead-color-rule-strong);
+  padding: var(--lead-space-xl) clamp(1.25rem, 5vw, 3rem);
+}
+
+.awdInner {
+  max-width: 62rem;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--lead-space-sm);
+  align-items: flex-start;
+}
+
+.awdKicker {
+  margin: 0;
+  font-size: var(--lead-text-xs);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lead-color-accent-deep);
+}
+
+.awdOffer {
+  margin: 0;
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(1.4rem, 5.5vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  max-width: 24ch;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.awdDetail {
+  margin: 0;
+  font-size: var(--lead-text-sm);
+  color: var(--lead-color-ink-2);
+  max-width: 52ch;
+}
+
+.awdCta {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--lead-space-2xs);
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: var(--lead-text-base);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--lead-color-accent-deep);
+  text-decoration: none;
+  transition: transform 100ms var(--lead-ease-out);
+}
+
+.awdCta:active {
+  transform: translateY(1px);
+}
+
+/* ---- Ft2 footer ---- */
+
+.footer {
+  padding: var(--lead-space-lg) clamp(1.25rem, 5vw, 3rem) var(--lead-space-xl);
+  border-top: var(--lead-rule-hair) solid var(--lead-color-rule);
+  max-width: 62rem;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.colophon {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--lead-space-2xs) var(--lead-space-sm);
+  font-size: var(--lead-text-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--lead-color-muted);
+}
+
+.colophon span:not(:last-child)::after {
+  content: " ·";
+}
+
+.previewNote {
+  margin: var(--lead-space-lg) 0 0;
+  font-size: var(--lead-text-xs);
+  line-height: 1.5;
+  color: var(--lead-color-muted);
+  max-width: 64ch;
+}
+
+/* ---- C4 sticky call bar (phones only) ---- */
+
+.callBar {
+  position: fixed;
+  inset: auto 0 0 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--lead-space-xs);
+  min-height: 3.5rem;
+  padding: var(--lead-space-xs) var(--lead-space-md);
+  padding-bottom: calc(var(--lead-space-xs) + env(safe-area-inset-bottom));
+  background: var(--lead-color-ink);
+  color: var(--lead-color-accent-bright);
+  border-top: var(--lead-rule-hair) solid var(--lead-color-rule-strong);
+  font-family: var(--lead-font-display);
+  font-weight: 600;
+  font-size: clamp(0.95rem, 4.6vw, var(--lead-text-md));
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--lead-dur-short) var(--lead-ease-out);
+}
+
+.callBar:active {
+  background: var(--lead-color-ink-2);
+}
+
+.page .callBar:focus-visible {
+  outline-color: var(--lead-color-accent-bright);
+  outline-offset: -4px;
+}
+
+/* ---- ≥ 640px ---- */
+
+@media (min-width: 40em) {
+  .page {
+    padding-bottom: 0;
+  }
+
+  .callBar {
+    display: none;
+  }
+
+  .mastheadMark {
+    width: 76px;
+    height: 76px;
+  }
+
+  .heroFold {
+    position: relative;
+  }
+
+  .heroFrame {
+    aspect-ratio: 16 / 9;
+  }
+
+  .heroCaption {
+    position: absolute;
+    left: clamp(1.25rem, 5vw, 3rem);
+    bottom: clamp(1.25rem, 5vw, 3rem);
+    padding: var(--lead-space-xs) var(--lead-space-sm);
+    border-bottom: 0;
+    background: var(--lead-color-ink);
+    color: var(--lead-color-paper);
+  }
+
+  .plate {
+    position: relative;
+  }
+
+  .plateFrame {
+    aspect-ratio: 21 / 9;
+  }
+
+  .plateCaption {
+    position: absolute;
+    left: clamp(1.25rem, 5vw, 3rem);
+    bottom: clamp(1.25rem, 5vw, 3rem);
+    padding: var(--lead-space-xs) var(--lead-space-sm);
+    border-bottom: 0;
+    background: var(--lead-color-ink);
+    color: var(--lead-color-paper);
+  }
+
+  .specRow {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 5fr);
+    gap: var(--lead-space-lg);
+    align-items: baseline;
+    padding-inline: var(--lead-space-lg);
+  }
+
+  .specRow dd {
+    margin: 0;
+  }
+
+  .awdInner {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) auto;
+    align-items: center;
+    column-gap: var(--lead-space-xl);
+  }
+
+  .awdKicker {
+    grid-column: 1 / -1;
+  }
+
+  .awdCta {
+    grid-row: 2 / span 2;
+    grid-column: 2;
+  }
+}
+
+/* ---- ≥ 960px ---- */
+
+@media (min-width: 60em) {
+  .textBand {
+    padding-block: var(--lead-space-3xl);
+  }
+
+  .ledeGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+    column-gap: var(--lead-space-2xl);
+    align-items: start;
+  }
+
+  .ledeGrid .ledeBody {
+    margin-top: 0.6rem;
+  }
+
+  .startingGrid {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 7fr);
+    column-gap: var(--lead-space-2xl);
+    align-items: start;
+  }
+
+  .startingGrid .startingBody {
+    margin-top: 0.4rem;
+  }
+
+  .startingGrid .startingBody + .startingBody {
+    grid-column: 2;
+    margin-top: var(--lead-space-md);
+  }
+}
+
+/* ---- Reduced motion ---- */
+
+@media (prefers-reduced-motion: reduce) {
+  .page *,
+  .page *::before,
+  .page *::after {
+    transition-duration: 1ms !important;
+    animation-duration: 1ms !important;
+  }
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Cormorant_Garamond } from "next/font/google";
+import { Cormorant_Garamond, Oswald } from "next/font/google";
 import { notFound } from "next/navigation";
 import { LeadDemoPage } from "@/components/lead-demo/LeadDemoPage";
 import { getLeadDemo, getLeadDemoSlugs } from "@/lib/lead-demos";
@@ -9,6 +9,13 @@ const leadDisplay = Cormorant_Garamond({
   weight: ["500", "600", "700"],
   style: ["normal", "italic"],
   variable: "--font-lead-display",
+  display: "swap",
+});
+
+const tradeDisplay = Oswald({
+  subsets: ["latin"],
+  weight: ["500", "600"],
+  variable: "--font-trade-display",
   display: "swap",
 });
 
@@ -22,7 +29,9 @@ export function generateStaticParams() {
   return getLeadDemoSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PreviewPageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PreviewPageProps): Promise<Metadata> {
   const { slug } = await params;
   const demo = getLeadDemo(slug);
 
@@ -49,8 +58,11 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
     notFound();
   }
 
+  const displayFont =
+    demo.template === "trade-field" ? tradeDisplay : leadDisplay;
+
   return (
-    <div className={leadDisplay.variable}>
+    <div className={displayFont.variable}>
       <LeadDemoPage demo={demo} />
     </div>
   );

@@ -14,7 +14,8 @@
   --lead-color-focus: oklch(50% 0.17 18);
 
   --lead-font-display: var(--font-lead-display, ui-serif), Georgia, serif;
-  --lead-font-body: var(--font-geist-sans, ui-sans-serif), system-ui, sans-serif;
+  --lead-font-body:
+    var(--font-geist-sans, ui-sans-serif), system-ui, sans-serif;
 
   --lead-space-3xs: 0.125rem;
   --lead-space-2xs: 0.25rem;
@@ -47,4 +48,35 @@
   --lead-radius-small: 0.375rem;
   --lead-radius-medium: 0.75rem;
   --lead-radius-large: 1.25rem;
+}
+
+/* Lead-preview theme · trade-field
+ * vibe: "brackish green, marine ply, license-plate plain"
+ * axes: light / display-condensed-bold / chromatic-amber (~68°)
+ * Scoped, not :root — the blush soft-service theme above stays the base.
+ */
+.lead-theme-trade {
+  --lead-color-paper: oklch(96.5% 0.009 120);
+  --lead-color-paper-2: oklch(93.5% 0.012 122);
+  --lead-color-paper-3: oklch(89% 0.015 124);
+  --lead-color-paper-muted: oklch(78% 0.014 140);
+  --lead-color-rule: oklch(85% 0.014 130);
+  --lead-color-rule-strong: oklch(68% 0.022 142);
+  --lead-color-muted: oklch(48% 0.022 150);
+  --lead-color-ink-2: oklch(36% 0.032 152);
+  --lead-color-ink: oklch(26% 0.042 155);
+  --lead-color-accent: oklch(52% 0.135 62);
+  /* small accent text on the raised paper-3 band — accent alone is 4.12:1 there */
+  --lead-color-accent-deep: oklch(43% 0.13 58);
+  --lead-color-accent-bright: oklch(76% 0.14 76);
+  --lead-color-accent-soft: oklch(90% 0.05 76);
+  --lead-color-accent-ink: oklch(22% 0.03 90);
+  --lead-color-focus: oklch(58% 0.19 66);
+
+  --lead-font-display:
+    var(--font-trade-display, ui-sans-serif), "Arial Narrow", sans-serif;
+
+  --lead-radius-small: 0.125rem;
+  --lead-radius-medium: 0.1875rem;
+  --lead-radius-large: 0.25rem;
 }

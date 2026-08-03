@@ -41,18 +41,18 @@ message while the post is still current.
 
 The first test used three selected commenters rather than the entire thread.
 
-| Prospect | Response | Classification | Next action |
-|---|---|---|---|
-| Shay's Cleaning Services | “Hey, yeah sure” to a homepage concept | Positive interest | Full unlisted preview built and sent |
-| Charlie Gallusser | “I'm in need of a website. What were you thinking?” | Qualified, active need | Explain the concept, disclose pricing, collect services and assets |
-| Gerald Bouquet Golf | “I definitely will let you know” | Polite not-now | React politely and stop |
+| Prospect                               | Response                                            | Classification         | Next action                                                                                      |
+| -------------------------------------- | --------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
+| Shay's Cleaning Services               | “Hey, yeah sure” to a homepage concept              | Positive interest      | Full unlisted preview built and sent                                                             |
+| Charlie Gallusser (Gator Constructors) | “I'm in need of a website. What were you thinking?” | Qualified, active need | Pricing disclosed; real Messenger photos added to `/preview/gator-constructors`; deploy and send |
+| Gerald Bouquet Golf                    | “I definitely will let you know”                    | Polite not-now         | React politely and stop                                                                          |
 
 Current channel totals:
 
 - 3 targeted messages
 - 3 replies
 - 2 positive or qualified replies
-- 1 preview built
+- 2 previews built (1 sent; Gator awaiting deployment)
 - 0 calls booked
 - 0 market-rate clients closed
 
@@ -118,13 +118,13 @@ control, general contracting, and similar local services.
 
 Score each category from 0–2. Message businesses scoring 7 or higher first.
 
-| Signal | 0 | 1 | 2 |
-|---|---|---|---|
-| Website gap | Strong current site | Weak or unclear site | No, broken, or coming-soon site |
-| Service fit | Poor fit | Possible fit | Core local-service fit |
-| Business proof | Little evidence | Some activity | Reviews plus recent real work |
-| Contact value | Low-value or unclear action | General contact need | Calls, texts, quotes, or bookings matter |
-| Preview readiness | No usable material | Logo or photos | Logo, services, and multiple work photos |
+| Signal            | 0                           | 1                    | 2                                        |
+| ----------------- | --------------------------- | -------------------- | ---------------------------------------- |
+| Website gap       | Strong current site         | Weak or unclear site | No, broken, or coming-soon site          |
+| Service fit       | Poor fit                    | Possible fit         | Core local-service fit                   |
+| Business proof    | Little evidence             | Some activity        | Reviews plus recent real work            |
+| Contact value     | Low-value or unclear action | General contact need | Calls, texts, quotes, or bookings matter |
+| Preview readiness | No usable material          | Logo or photos       | Logo, services, and multiple work photos |
 
 ## Outreach messages
 
@@ -135,7 +135,7 @@ paste the exact same paragraph to everyone.
 
 > Hey [first name]! I saw [business] in the Acadiana Business Hub promotion post.
 > You've already built some good proof with [specific recommendation, work, or
-> service], but I couldn't find a website where people can see your services and
+> > service], but I couldn't find a website where people can see your services and
 > request a quote. I build fully managed websites for Acadiana service businesses.
 > Would you like me to send you a quick homepage idea? No pressure.
 
@@ -235,16 +235,35 @@ Lead previews use one shared system rather than a new route implementation for
 every prospect:
 
 - Public route: `/preview/[slug]`
-- Prospect data registry: `lib/lead-demos.ts`
-- Shared renderer: `components/lead-demo/LeadDemoPage.tsx`
-- Shared styles: `components/lead-demo/lead-demo.module.css`
+- Prospect data registry: `lib/lead-demos.ts` (a discriminated union — each entry
+  picks a `template`)
+- Shared entry point: `components/lead-demo/LeadDemoPage.tsx`, which dispatches on
+  `template`
 - Prospect assets: `public/demos/[slug]/`
-- Example: `/preview/shays-cleaning-services`
+
+Two templates exist. Pick the one that matches how the business actually earns
+trust; do not force a prospect into the wrong one.
+
+| Template       | Fits                                                                                                          | Renderer / styles                                  | Look                                                                                                          | Example                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `soft-service` | Consumer services sold on care and reviews — cleaning, care, hospitality                                      | `SoftServiceDemoPage.tsx` · `lead-demo.module.css` | Blush paper, Cormorant Garamond italic, review-percentage hero                                                | `/preview/shays-cleaning-services` |
+| `trade-field`  | Licensed trades whose proof is the finished work — marine construction, fencing, concrete, roofing, site work | `TradeDemoPage.tsx` · `trade-demo.module.css`      | Bone paper, deep green ink, Oswald condensed caps, full-bleed photo bands, spec sheet, sticky mobile call bar | `/preview/gator-constructors`      |
+
+Theme colours live in `tokens.css` — `:root` carries the `soft-service` palette and
+`.lead-theme-trade` scopes the `trade-field` one. Add a third template as another
+scoped class rather than editing `:root`.
 
 Each preview must:
 
 - State clearly that it is an unlisted website concept.
 - Use `noindex`, `nofollow`, and `noarchive` metadata.
+- **Show a real visual asset in the hero, above the fold.** Never ship a
+  text-only hero. The owner decides in the first two seconds whether the page
+  looks like _their_ business; type alone does not do that. Use the strongest
+  available asset — a work photo or cover image first, the logo as the minimum
+  fallback. If the only usable asset is a white-background logo JPEG, place it
+  on the tinted paper with `mix-blend-mode: multiply` rather than shipping a
+  hard white box.
 - Use the prospect's real phone, text, or email CTA.
 - Avoid live forms, analytics, tracking pixels, or third-party integrations before
   the prospect agrees to proceed.
@@ -260,15 +279,22 @@ it even though search engines are instructed not to index it.
 
 1. Confirm the prospect accepted the concept.
 2. Capture the Page facts and inspect the actual images.
-3. Add an entry to `lib/lead-demos.ts`.
-4. Add optimized assets under `public/demos/[slug]/`.
-5. Render the full page through the shared preview component.
-6. Verify calls, texts, email links, copy, recommendation counts, and disclosure.
-7. Run typecheck, diff checks, and the production build.
-8. Inspect desktop and required mobile widths.
-9. Commit only the prospect preview and its required assets.
-10. Deploy and verify the live route, robots metadata, and asset responses.
-11. Send the preview manually and record the response.
+3. Pick the template that fits the business (see the table above).
+4. Add an entry to `lib/lead-demos.ts`.
+5. Add optimized assets under `public/demos/[slug]/`. Never deploy a preview whose
+   images are still placeholders — check the folder's `README.md` for the exact
+   filenames each prospect needs.
+6. Render the full page through the shared preview component.
+7. Verify calls, texts, email links, copy, recommendation counts, and disclosure.
+8. Run typecheck, diff checks, and the production build.
+9. Inspect desktop and required mobile widths. Look at every image with your own
+   eyes, including the hero asset — do not infer from the text layer that images
+   rendered. A wrapper that computes `display: inline` silently collapses
+   `aspect-ratio` and paints `fill` images at zero width, so the page reads as
+   complete while showing nothing. Confirm each image has non-zero measured size.
+10. Commit only the prospect preview and its required assets.
+11. Deploy and verify the live route, robots metadata, and asset responses.
+12. Send the preview manually and record the response.
 
 ## Finding additional Facebook sources
 
@@ -307,9 +333,9 @@ their current rules and recurring threads still need to be verified.
 Update this table every Monday after outreach and again when replies, calls, or
 closes occur.
 
-| Week | Source group/thread | Comments screened | Qualified | Messages sent | Replies | Positive replies | Previews | Calls | Closes | New MRR | Notes |
-|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---|
-| 2026-08-03 | Acadiana Business Hub | — | 3 | 3 | 3 | 2 | 1 | 0 | 0 | $0 | First test; Shay preview live, Charlie active need, Gerald not now |
+| Week       | Source group/thread   | Comments screened | Qualified | Messages sent | Replies | Positive replies | Previews | Calls | Closes | New MRR | Notes                                                              |
+| ---------- | --------------------- | ----------------: | --------: | ------------: | ------: | ---------------: | -------: | ----: | -----: | ------: | ------------------------------------------------------------------ |
+| 2026-08-03 | Acadiana Business Hub |                 — |         3 |             3 |       3 |                2 |        1 |     0 |      0 |      $0 | First test; Shay preview live, Charlie active need, Gerald not now |
 
 Definitions:
 
