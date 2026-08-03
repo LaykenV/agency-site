@@ -19,6 +19,7 @@ export function GlobalHeader() {
   // intake page at /audit is a marketing page and keeps the header.
   const isAuditReport =
     pathname.startsWith("/audit/") && pathname !== "/audit/request";
+  const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
@@ -102,7 +103,7 @@ export function GlobalHeader() {
   }, []);
 
   // Hide header on tokenized audit report pages - they have their own chrome
-  if (isAuditReport) return null;
+  if (isAuditReport || isLeadPreview) return null;
 
   return (
     <header

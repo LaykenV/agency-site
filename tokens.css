@@ -1,0 +1,50 @@
+:root {
+  --lead-color-paper: oklch(97% 0.018 110);
+  --lead-color-paper-2: oklch(94% 0.024 115);
+  --lead-color-paper-3: oklch(90% 0.03 120);
+  --lead-color-rule: oklch(78% 0.032 125);
+  --lead-color-rule-strong: oklch(63% 0.045 135);
+  --lead-color-muted: oklch(44% 0.045 150);
+  --lead-color-ink-2: oklch(28% 0.055 155);
+  --lead-color-ink: oklch(17% 0.06 158);
+  --lead-color-accent: oklch(55% 0.14 18);
+  --lead-color-accent-soft: oklch(88% 0.055 18);
+  --lead-color-accent-ink: oklch(98% 0.012 105);
+  --lead-color-focus-inner: var(--lead-color-paper);
+  --lead-color-focus: var(--lead-color-ink);
+
+  --lead-font-display: "Instrument Serif", "Instrument Serif Fallback", ui-serif, serif;
+  --lead-font-body: "Geist", "Geist Fallback", ui-sans-serif, sans-serif;
+
+  --lead-space-3xs: 0.125rem;
+  --lead-space-2xs: 0.25rem;
+  --lead-space-xs: 0.5rem;
+  --lead-space-sm: 0.75rem;
+  --lead-space-md: 1rem;
+  --lead-space-lg: 1.5rem;
+  --lead-space-xl: 2.5rem;
+  --lead-space-2xl: 4rem;
+  --lead-space-3xl: 6rem;
+  --lead-space-4xl: 9rem;
+
+  --lead-text-xs: 0.75rem;
+  --lead-text-sm: 0.875rem;
+  --lead-text-base: 1rem;
+  --lead-text-md: 1.25rem;
+  --lead-text-lg: 1.5625rem;
+  --lead-text-xl: 1.953rem;
+  --lead-text-2xl: 2.441rem;
+  --lead-text-display: clamp(3.25rem, 5vw + 1rem, 5.5rem);
+
+  --lead-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --lead-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --lead-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --lead-dur-micro: 120ms;
+  --lead-dur-short: 220ms;
+  --lead-dur-long: 420ms;
+
+  --lead-rule-hair: 1px;
+  --lead-radius-small: 0.375rem;
+  --lead-radius-medium: 0.75rem;
+  --lead-radius-large: 1.25rem;
+}
