@@ -1,6 +1,15 @@
 [
   {
     "date": "2026-08-03",
+    "macrostructure": "Stat-Led",
+    "theme": "custom",
+    "theme_axes": "light / italic-serif / warm (rose ~18°)",
+    "vibe": "blush watercolor, rose-gold, chic clean",
+    "enrichment": "real client photography (work gallery)",
+    "brief": "Shay’s Cleaning Services lead preview — rebuild + AWD offer band"
+  },
+  {
+    "date": "2026-08-03",
     "macrostructure": "Split Studio",
     "theme": "Garden",
     "enrichment": "real client photography",

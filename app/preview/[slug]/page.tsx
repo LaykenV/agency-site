@@ -1,7 +1,16 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond } from "next/font/google";
 import { notFound } from "next/navigation";
 import { LeadDemoPage } from "@/components/lead-demo/LeadDemoPage";
 import { getLeadDemo, getLeadDemoSlugs } from "@/lib/lead-demos";
+
+const leadDisplay = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  style: ["normal", "italic"],
+  variable: "--font-lead-display",
+  display: "swap",
+});
 
 type PreviewPageProps = {
   params: Promise<{ slug: string }>;
@@ -40,5 +49,9 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
     notFound();
   }
 
-  return <LeadDemoPage demo={demo} />;
+  return (
+    <div className={leadDisplay.variable}>
+      <LeadDemoPage demo={demo} />
+    </div>
+  );
 }

@@ -1,20 +1,20 @@
 :root {
-  --lead-color-paper: oklch(97% 0.018 110);
-  --lead-color-paper-2: oklch(94% 0.024 115);
-  --lead-color-paper-3: oklch(90% 0.03 120);
-  --lead-color-rule: oklch(78% 0.032 125);
-  --lead-color-rule-strong: oklch(63% 0.045 135);
-  --lead-color-muted: oklch(44% 0.045 150);
-  --lead-color-ink-2: oklch(28% 0.055 155);
-  --lead-color-ink: oklch(17% 0.06 158);
-  --lead-color-accent: oklch(55% 0.14 18);
-  --lead-color-accent-soft: oklch(88% 0.055 18);
-  --lead-color-accent-ink: oklch(98% 0.012 105);
-  --lead-color-focus-inner: var(--lead-color-paper);
-  --lead-color-focus: var(--lead-color-ink);
+  --lead-color-paper: oklch(97.5% 0.012 20);
+  --lead-color-paper-2: oklch(95% 0.018 20);
+  --lead-color-paper-3: oklch(91.5% 0.026 20);
+  --lead-color-paper-muted: oklch(80% 0.02 20);
+  --lead-color-rule: oklch(86% 0.028 20);
+  --lead-color-rule-strong: oklch(70% 0.05 18);
+  --lead-color-muted: oklch(45% 0.04 15);
+  --lead-color-ink-2: oklch(34% 0.035 15);
+  --lead-color-ink: oklch(23% 0.03 15);
+  --lead-color-accent: oklch(52% 0.12 18);
+  --lead-color-accent-soft: oklch(90% 0.045 20);
+  --lead-color-accent-ink: oklch(97.5% 0.012 20);
+  --lead-color-focus: oklch(50% 0.17 18);
 
-  --lead-font-display: "Instrument Serif", "Instrument Serif Fallback", ui-serif, serif;
-  --lead-font-body: "Geist", "Geist Fallback", ui-sans-serif, sans-serif;
+  --lead-font-display: var(--font-lead-display, ui-serif), Georgia, serif;
+  --lead-font-body: var(--font-geist-sans, ui-sans-serif), system-ui, sans-serif;
 
   --lead-space-3xs: 0.125rem;
   --lead-space-2xs: 0.25rem;

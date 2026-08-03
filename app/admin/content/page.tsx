@@ -92,7 +92,7 @@ const CONTENT_IDEAS: ContentIdea[] = [
     pillar: "Product",
     format: "Static",
     need: "1080×1350 workflow graphic complete",
-    next: "Running as the launch ad. Record spend and funnel results weekly.",
+    next: "Running as the launch ad until the $50 gate. Log spend and funnel results weekly.",
     adEligible: true,
     defaultStatus: "Running as ad",
   },
@@ -128,13 +128,23 @@ const CONTENT_IDEAS: ContentIdea[] = [
   },
   {
     id: "includes",
-    title: "What $199/month includes",
+    title: "$0 down / $199 per month",
     pillar: "Receipts",
-    format: "Reel or static",
-    need: "Simple checklist graphic",
-    next: "Site, hosting, domain, SSL, edits, support, and portal.",
+    format: "Static",
+    need: "1080×1350 price graphic complete",
+    next: "Posts Aug 3 at 8:30 AM Central. Becomes a challenger ad at the $50 gate.",
     adEligible: true,
-    defaultStatus: "Ready",
+    defaultStatus: "Scheduled",
+  },
+  {
+    id: "text-new-leads",
+    title: "Your website should text you new leads",
+    pillar: "Product",
+    format: "Static",
+    need: "1080×1350 SMS conversation graphic complete",
+    next: "Posts Aug 5 at 8:30 AM Central. Becomes a challenger ad at the $50 gate.",
+    adEligible: true,
+    defaultStatus: "Scheduled",
   },
   {
     id: "lead-notification",
@@ -343,8 +353,8 @@ export default function ContentOperationsPage() {
                 Content + ad operations
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-                One place to run the 90-day Messenger pilot, prepare two weekly posts,
-                and separate an ad problem from a sales problem.
+                One place to run the spend-gated Messenger pilot, prepare two weekly
+                posts, and separate an ad problem from a sales problem.
               </p>
             </div>
             <a
@@ -367,16 +377,16 @@ export default function ContentOperationsPage() {
                   <CircleDollarSign className="h-4 w-4" />
                   <span className="text-xs font-bold uppercase tracking-[0.18em]">Budget</span>
                 </div>
-                <p className="mt-3 text-4xl font-bold">$7/day</p>
-                <p className="mt-2 text-sm text-slate-300">About $210/month · about $630 total</p>
+                <p className="mt-3 text-4xl font-bold">$7 → $12/day</p>
+                <p className="mt-2 text-sm text-slate-300">$12/day after the $50 gate · $500 total</p>
               </div>
               <div className="bg-slate-950 p-6">
                 <div className="flex items-center gap-2 text-amber-300">
                   <CalendarDays className="h-4 w-4" />
                   <span className="text-xs font-bold uppercase tracking-[0.18em]">Window</span>
                 </div>
-                <p className="mt-3 text-xl font-bold">Jul 31 → Oct 29</p>
-                <p className="mt-2 text-sm text-slate-300">Do not judge before the day-45 checkpoint.</p>
+                <p className="mt-3 text-xl font-bold">Jul 31 → $500 spent</p>
+                <p className="mt-2 text-sm text-slate-300">About 6 weeks at $12/day. Judge at spend gates, not dates.</p>
               </div>
               <div className="bg-slate-950 p-6">
                 <div className="flex items-center gap-2 text-amber-300">
@@ -399,11 +409,12 @@ export default function ContentOperationsPage() {
               <div className="flex items-start gap-3">
                 <Gauge className="mt-0.5 h-5 w-5 shrink-0" />
                 <div>
-                  <p className="font-bold">Creative selected and reviewed</p>
+                  <p className="font-bold">Hands off until the $50 gate</p>
                   <p className="mt-1 text-sm leading-5 text-slate-800">
-                    The native 4:5 AI lead-filtering post is selected. Automatic visual
-                    touch-ups, animation, and multi-image adaptation are off so Meta preserves
-                    the branded graphic.
+                    The AI lead-filtering ad runs untouched until $50 of spend with both new
+                    posts live. Zero leads at the gate: pause it, add the Aug 3 and Aug 5
+                    posts as existing-post ads, raise the budget to $12/day, and let Meta
+                    pick the winner over about $80.
                   </p>
                 </div>
               </div>
@@ -470,8 +481,8 @@ export default function ContentOperationsPage() {
               <h2 className="mt-2 text-2xl font-bold">AI lead filtering: allowed vs. filtered</h2>
               <p className="mt-2 text-sm leading-6 text-slate-700">
                 Published on Facebook Jul 31 at 8:30 AM Central and selected as the existing
-                post in Ads Manager. The campaign was published July 31 and will run through
-                October 29.
+                post in Ads Manager. Runs untouched until the $50 gate; if it has zero
+                Messenger leads there, the Aug 3 and Aug 5 posts take over as ads.
               </p>
             </div>
             <span className="inline-flex items-center gap-2 rounded-full border border-amber-400 bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-amber-900">
@@ -574,11 +585,12 @@ Already have a website or want one? Send me a message!`}
               </p>
             </div>
           </div>
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              ["Day 45", "No conversations means change the creative first, then reassess targeting."],
-              ["10+ conversations, 0 closes", "The ads work. Fix qualification, response speed, and the close."],
-              ["Close in month one", "Raise the budget to $12/day and keep the winning creative."],
+              ["$50 spent", "Both posts live and zero leads: pause the AI-filtering ad, run the two new posts as ads, raise to $12/day."],
+              ["$150 spent", "Fewer than 3 conversations means a creative problem. Rotate in the next creative — testimonial reel first."],
+              ["$300 spent", "Conversations but no calls booked means the ads work. Fix qualification and the Messenger close, not the campaign."],
+              ["$500 spent", "Full verdict — but give the final conversations 2–3 weeks to close before writing off the channel."],
             ].map(([title, body]) => (
               <div key={title} className="rounded-xl bg-slate-200/70 p-4">
                 <p className="text-sm font-bold">{title}</p>
@@ -683,7 +695,8 @@ Already have a website or want one? Send me a message!`}
               {[
                 "Greeting: Hi [first name], do you already have a website?",
                 "Quick replies: Yes, I do · No, not yet",
-                "No automated response or next-day nudge",
+                "No automated response or automated nudge",
+                "No reply by next morning: send the manual follow-up below",
               ].map((step, index) => (
                 <div key={step} className="flex items-center gap-3 rounded-lg bg-slate-100 p-3">
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-slate-950 text-xs font-bold text-white">
@@ -692,6 +705,16 @@ Already have a website or want one? Send me a message!`}
                   <p className="text-sm font-semibold">{step}</p>
                 </div>
               ))}
+            </div>
+            <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Manual follow-up · verbatim
+              </p>
+              <p className="mt-1 text-sm leading-5 text-slate-700">
+                Morning [name] — didn&rsquo;t want this to get buried. If you tell me the
+                name of your business I&rsquo;ll take a quick look and tell you honestly
+                whether a new site would even help. No pitch if it wouldn&rsquo;t.
+              </p>
             </div>
             <p className="mt-4 text-xs leading-5 text-slate-500">
               Reply target: under 15 minutes during waking hours. Both phones should receive
