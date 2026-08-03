@@ -41,18 +41,18 @@ message while the post is still current.
 
 The first test used three selected commenters rather than the entire thread.
 
-| Prospect                               | Response                                            | Classification         | Next action                                                                                      |
-| -------------------------------------- | --------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------ |
-| Shay's Cleaning Services               | “Hey, yeah sure” to a homepage concept              | Positive interest      | Full unlisted preview built and sent                                                             |
-| Charlie Gallusser (Gator Constructors) | “I'm in need of a website. What were you thinking?” | Qualified, active need | Pricing disclosed; real Messenger photos added to `/preview/gator-constructors`; deploy and send |
-| Gerald Bouquet Golf                    | “I definitely will let you know”                    | Polite not-now         | React politely and stop                                                                          |
+| Prospect                               | Response                                            | Classification         | Next action                                                                                                      |
+| -------------------------------------- | --------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Shay's Cleaning Services               | “Hey, yeah sure” to a homepage concept              | Positive interest      | Full unlisted preview built and sent                                                                             |
+| Charlie Gallusser (Gator Constructors) | “I'm in need of a website. What were you thinking?” | Qualified, active need | Pricing disclosed; `/preview/gator-constructors` is production-verified with real Messenger photos; send preview |
+| Gerald Bouquet Golf                    | “I definitely will let you know”                    | Polite not-now         | React politely and stop                                                                                          |
 
 Current channel totals:
 
 - 3 targeted messages
 - 3 replies
 - 2 positive or qualified replies
-- 2 previews built (1 sent; Gator awaiting deployment)
+- 2 previews built (1 sent; Gator production-verified and ready to send)
 - 0 calls booked
 - 0 market-rate clients closed
 
@@ -135,9 +135,10 @@ paste the exact same paragraph to everyone.
 
 > Hey [first name]! I saw [business] in the Acadiana Business Hub promotion post.
 > You've already built some good proof with [specific recommendation, work, or
+>
 > > service], but I couldn't find a website where people can see your services and
-> request a quote. I build fully managed websites for Acadiana service businesses.
-> Would you like me to send you a quick homepage idea? No pressure.
+> > request a quote. I build fully managed websites for Acadiana service businesses.
+> > Would you like me to send you a quick homepage idea? No pressure.
 
 ### Website is coming soon or unclear
 
@@ -333,9 +334,9 @@ their current rules and recurring threads still need to be verified.
 Update this table every Monday after outreach and again when replies, calls, or
 closes occur.
 
-| Week       | Source group/thread   | Comments screened | Qualified | Messages sent | Replies | Positive replies | Previews | Calls | Closes | New MRR | Notes                                                              |
-| ---------- | --------------------- | ----------------: | --------: | ------------: | ------: | ---------------: | -------: | ----: | -----: | ------: | ------------------------------------------------------------------ |
-| 2026-08-03 | Acadiana Business Hub |                 — |         3 |             3 |       3 |                2 |        1 |     0 |      0 |      $0 | First test; Shay preview live, Charlie active need, Gerald not now |
+| Week       | Source group/thread   | Comments screened | Qualified | Messages sent | Replies | Positive replies | Previews | Calls | Closes | New MRR | Notes                                                                               |
+| ---------- | --------------------- | ----------------: | --------: | ------------: | ------: | ---------------: | -------: | ----: | -----: | ------: | ----------------------------------------------------------------------------------- |
+| 2026-08-03 | Acadiana Business Hub |                 — |         3 |             3 |       3 |                2 |        1 |     0 |      0 |      $0 | First test; Shay preview sent, Gator preview live and ready to send, Gerald not now |
 
 Definitions:
 
