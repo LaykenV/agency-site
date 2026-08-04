@@ -60,7 +60,11 @@ const LAUNCH_TASKS = [
   { id: "template", label: "Create the one-question Messenger opener", defaultDone: true },
   { id: "terms", label: "Accept Meta Lead Generation Terms", defaultDone: true },
   { id: "auth", label: "Complete Meta account authentication", defaultDone: true },
-  { id: "billing", label: "Add and verify billing", defaultDone: false },
+  {
+    id: "billing",
+    label: "Billing active and campaign delivering spend",
+    defaultDone: true,
+  },
   { id: "review", label: "Review placements and creative previews", defaultDone: true },
   { id: "publish", label: "Publish the campaign", defaultDone: true },
 ] as const;
@@ -132,9 +136,9 @@ const CONTENT_IDEAS: ContentIdea[] = [
     pillar: "Receipts",
     format: "Static",
     need: "1080×1350 price graphic complete",
-    next: "Posts Aug 3 at 8:30 AM Central. Becomes a challenger ad at the $50 gate.",
+    next: "Published Aug 3 at 8:30 AM Central. Becomes a challenger ad at the $50 gate.",
     adEligible: true,
-    defaultStatus: "Scheduled",
+    defaultStatus: "Posted",
   },
   {
     id: "text-new-leads",
@@ -218,7 +222,7 @@ const STATUS_OPTIONS: ContentStatus[] = [
 ];
 
 const DEFAULT_STATS: CampaignStats = {
-  spend: 0,
+  spend: 30.72,
   conversations: 0,
   qualified: 0,
   calls: 0,
@@ -287,6 +291,7 @@ export default function ContentOperationsPage() {
             ...parsed.tasks,
             "fresh-post": true,
             creative: true,
+            billing: true,
             review: true,
             publish: true,
           }));
@@ -296,9 +301,16 @@ export default function ContentOperationsPage() {
             ...current,
             ...parsed.statuses,
             "ai-lead-filter": "Running as ad",
+            includes: "Posted",
           }));
         }
-        if (parsed.stats) setStats({ ...DEFAULT_STATS, ...parsed.stats });
+        if (parsed.stats) {
+          setStats({
+            ...DEFAULT_STATS,
+            ...parsed.stats,
+            spend: Math.max(DEFAULT_STATS.spend, parsed.stats.spend ?? 0),
+          });
+        }
       }
     } catch {
       // A broken local value should never block the admin page.
