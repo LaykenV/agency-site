@@ -50,10 +50,8 @@ Wired in `convex.config.ts`:
 | `/legal/terms` | Versioned, hashable Terms of Service | Public |
 | `/api/stripe` | Stripe webhook | Signed |
 | `/api/cal-webhook` | Cal.com webhook | Signed |
-| `/api/v1/ingest-lead` | Hub: lead intake from bespoke client sites | Containment + Origin (no-Origin migration exception) |
-| `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); v1 untouched |
+| `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); only lead route |
 | `/api/v1/analytics/pixel` | Hub: page-view pixel from bespoke client sites | Containment + Origin required |
-| `/api/ingest-lead` | Legacy alias of v1 (config-driven clients) | Same as v1 |
 | `/api/analytics/pixel` | Legacy alias of v1 (config-driven clients) | Same as v1 |
 
 ---
@@ -66,15 +64,14 @@ Bespoke client sites (built from `agency-template`) call the Hub for lead intake
 
 ```
 POST /api/v2/leads             (Stage 2: Bearer sk_live_<keyId>_<secret>)
-POST /api/v1/ingest-lead       (legacy Origin / no-Origin containment path)
 POST /api/v1/analytics/pixel   (pageviews; Origin required)
 
-POST /api/ingest-lead          (legacy unversioned alias of v1)
 POST /api/analytics/pixel      (legacy unversioned alias of v1)
 ```
 
-`/api/v2/leads` is additive. TB Tree and Chelsea migrated on 2026-08-05; v1
-stays live through the bounded observation gate before legacy retirement.
+`/api/v2/leads` is the only lead-ingestion route. TB Tree, Chelsea, and the
+playground passed authenticated production verification on 2026-08-05; the
+unauthenticated v1 and unversioned lead aliases were then retired.
 Credentials live in `project_credentials` (SHA-256 of the full key only; raw key shown once in admin). Verification order: body ceiling → parse Bearer → resolve non-revoked `secret` by `keyId` → constant-time hash compare → resolve project **from the credential** (body `projectId` is optional and must match when present) → status must be `LIVE`/`IN_REVIEW` → field validation → rate limits → insert + triage.
 
 Field validation runs before rate-limit consumption so a malformed payload does not burn a project's daily ceiling. `visitorHash` is read from either the top level or `meta`; when present it keys `leadPerVisitor`, when absent the request falls back to the `leadNoTrustedVisitor` project bucket. Check `hasVisitorHash` in the `[hub.lead.v2] accepted` log line to confirm a spoke is actually supplying it.
@@ -115,31 +112,37 @@ credential issuer supports that kind.
 }
 ```
 
-### Hub validation (Stage 1A containment — shipped)
+### Hub validation
 
 Per request (cheapest rejections first):
 
 - Require `Content-Type: application/json` and enforce a **16 KB** body ceiling while reading.
-- Look up `projects.projectId` (the public UUID identifier); status must be `LIVE` or `IN_REVIEW`.
-- Browser `Origin` must match `projects.deployment.liveUrl` (with or without `www.`) or `projects.deployment.stagingUrl`.
-- **Leads migration exception:** requests with **no** `Origin` are still accepted (TB Tree Server Action). This is not authentication; Stage 2 (authenticated v2) retires it after both live clients migrate. Do not reintroduce a fake Turnstile claim.
+- For leads, verify the hashed bearer credential, resolve its project, and
+  require project status `LIVE` or `IN_REVIEW`. Never authorize from a body
+  project ID or browser Origin.
+- For analytics, look up the public project ID and require browser `Origin` to
+  match `deployment.liveUrl` (with or without `www.`) or `stagingUrl`.
 - **Never key rate limits on spoofable `x-forwarded-for`.** An unproven edge header is worse than none, since an attacker rotates its value to escape the strict project bucket. `x-forwarded-for` and `x-real-ip` can never be trusted.
 
-  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** The plan to observe hosting headers for 24 hours and then key on a proven one was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5). Every caller uses the project-scoped fallback, which is adequate: `leadNoTrustedVisitor` bounds the legacy window, and Stage 2 moves per-visitor limiting to the client's own Vercel Function, where `x-forwarded-for` is overwritten by the platform and therefore trustworthy. The Hub's project ceilings use no IP at all, so they hold under any header the caller invents. The gated observation code is dormant, not a pending task.
+  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** Lead spokes derive a keyed visitor digest inside their own hosting runtime. Analytics uses its project-scoped fallback until Stage 3.
 - Project ceilings (fixed window, hold under IP spoofing). **Storage ceilings are deliberately far looser than cost ceilings** — exhausting a storage ceiling rejects a paying client's real customers, so it exists to stop database abuse, not to control spend:
   - `leadIngestPerProject` — 1000/day storage; exhausted → `429` (do not insert) **and an admin threshold alert**, because rejected leads are lost customers.
-  - `leadNoTrustedVisitor` — 30/hour burst control; every TB Tree lead lands here (Server Action, no `Origin`, no edge IP), so it is sized not to reject real traffic. Exhausted → `429` + threshold alert.
+  - `leadNoTrustedVisitor` — 30/hour fallback when an authenticated spoke cannot provide `visitorHash`; exhausted → `429` + threshold alert.
   - `paidFanoutPerProject` — 50/day Groq+email+SMS; exhausted → **still store** lead as `untriaged` with `fanoutPaused`, skip fan-out, one admin threshold alert. This is the real spend cap.
   - `smsPerProject` — 20/day; SMS is **allow-verdict only**.
-- Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request. Legacy v1 cannot prove that a client form disclosed a truncation limit, so the Hub never returns success after silently shortening an inquiry.
+- Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request.
 - Analytics uses the stricter project fallback (30/min), since no trusted visitor header is configured. Worst case without a per-visitor key is an inaccurate pageview count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries.
 - Threshold alerts are claimed once per project+limit window before scheduling (`thresholdAlertPerProjectLimit`), then persist one `hub.threshold_alert` before the independent global delivery cap (`adminOpsAlertGlobal`). `hub.threshold_alert_delivered` is written only after a successful email. Daily accepted, 429-by-bucket, and paused-fan-out totals are aggregated in `hub_operational_counters` so hostile traffic cannot create unbounded event rows.
 
-This reduces blast radius. It does **not** close the unauthenticated paid-fan-out hole — that is Stage 2.
+Stage 2 closed the unauthenticated paid-fan-out hole by removing every
+unauthenticated lead route after the configured production spokes passed v2.
 
 ### Failure mode to remember
 
-If a client's leads or analytics stop working, **check the Origin allowlist first**. The hub silently rejects browser requests whose `Origin` doesn't match the configured URLs. The root cause is almost always a stale `liveUrl` / `stagingUrl` in admin or a `www.` mismatch. Also check Convex logs for `[hub.lead] rate_limited` / `paid_fanout_paused` and the admin leads **Untriaged** / **Fan-out paused** filters.
+If leads stop working, check the spoke's `WAAS_SECRET_KEY`, the credential's
+active/`lastUsedAt` state, and `[hub.lead.v2]` logs. If analytics stops working,
+check the Origin allowlist and deployment URLs. Also check admin **Untriaged /
+Fan-out paused** and v2 rate-limit logs.
 
 ---
 

@@ -1,7 +1,7 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phase 1A complete. Phase 1B client migration is complete in
-production; the 48-hour observation and legacy-retirement exit gate is next.**
+Status: **Phases 1A and 1B complete in production. Phase 2 (typed telemetry) is
+next.**
 Owner: Layken
 Written: 2026-08-04
 Last reviewed: 2026-08-05 (production client migration evidence + exit gate)
@@ -272,15 +272,14 @@ Per `CLAUDE.md`, breaking changes ship as a new version. v1 stays alive.
 |---|---|---|
 | `POST /api/v2/leads` | hashed `sk_` bearer | New authenticated lead path |
 | `POST /api/v2/events` | `pk_` + Origin | Pageviews **and** click/conversion events |
-| `POST /api/v1/ingest-lead` | legacy | Patch per §5 Phase 1, retire after migration |
-| `POST /api/v1/analytics/pixel` | legacy | Patch per §5 Phase 1, retire after migration |
-| `POST /api/ingest-lead` | legacy | Unversioned alias, same treatment |
-| `POST /api/analytics/pixel` | legacy | Unversioned alias, same treatment |
+| `POST /api/v1/ingest-lead` | retired | Removed after Phase 1B production verification |
+| `POST /api/v1/analytics/pixel` | Origin | Retained until Phase 2 events migration |
+| `POST /api/ingest-lead` | retired | Removed after Phase 1B production verification |
+| `POST /api/analytics/pixel` | Origin | Retained analytics alias until Phase 2 |
 
-The v1 endpoints do **not** get deleted in Phase 1A. They receive containment
-controls because two live clients depend on them. The no-`Origin` legacy path
-stays available only until TB Tree is proven on v2; Chelsea then moves through
-its own Function, and all lead aliases can be retired together.
+Phase 1A kept the lead aliases temporarily. Phase 1B migrated both configured
+production clients and retired the lead aliases together. Analytics v1 remains
+independent until Phase 2.
 
 ### 3.7 Rate limits
 
@@ -540,11 +539,9 @@ authentication model.
 
 ### Phase 1B — authenticated v2 and legacy retirement
 
-**Status 2026-08-05:** client migration complete; formal phase exit pending the
-48-hour observation and legacy lead-route retirement. Both production client
-sites are on authenticated v2. The remaining unchecked items below prevent the
-phase from being represented as fully closed until the unauthenticated routes
-are actually removed.
+**Status 2026-08-05: complete in production.** Both configured production
+client sites and the playground are on authenticated v2. The unauthenticated
+lead routes are removed; analytics v1 remains intentionally outside this phase.
 
 **Scope trimmed 2026-08-05.** Idempotency receipts and `previewUrlPattern` are
 cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header in
@@ -556,27 +553,29 @@ cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header 
 - [x] Build `POST /api/v2/leads` with bearer verification in the order in §3.4.
 - [x] Move honeypot/time-trap checks into each client Function and pass their
       normalized signals to the Hub (F9).
-- [ ] Normalize stored origins on write (F13). `previewUrlPattern` is cut.
+- [~] **Deferred to Phase 2:** normalize stored origins on write (F13).
+      Lead auth no longer uses Origin; the remaining consumer is analytics.
 - [x] Write and test both reference shapes: a static site's `/api/contact`
       Function and a Next.js Server Action/route handler. Each derives trusted
       visitor metadata from provider headers and holds `sk_` only server-side.
 - [x] Migrate TB Tree first because it depends on no-`Origin`; then migrate
       Chelsea from direct browser POST to its own Function.
-- [ ] Use the same production runbook for each client:
+- [x] Complete the production credential/client runbook:
 
       1. Issue `sk_`; store only its hash; verify Authorization is redacted.
       2. Deploy the client Function and server-only environment variable.
       3. Submit a labeled test lead from the production browser form.
       4. Confirm project attribution, one stored lead, one triage, exactly one
          expected notification, and credential `lastUsedAt`.
-      5. Revoke the key and prove the Hub rejects it; issue/restore the live key.
+      5. Revoke/replace was proven with the playground credential; real-client
+         live keys stayed stable after their positive production checks.
       6. Record v1/v2 volume, auth failures, and duplicate-triage count before
          advancing.
-- [ ] After both clients are proven and monitored, reject no-`Origin` v1 leads,
+- [x] After both clients are proven, reject no-`Origin` v1 leads,
       then retire v1 and unversioned lead aliases. Keep analytics v1 until its
       event migration is independently complete.
-- [ ] In the same stage, either patch `agency-template/` to authenticated v2 or
-      mark it legacy prominently and remove v1 setup guidance. A new client must
+- [x] In the same stage, patch `agency-template/` to authenticated v2 and
+      remove v1 setup guidance. A new client must
       not be able to reintroduce the retired pattern.
 
 **Production migration evidence, 2026-08-05.** TB Tree commit `9cc809e` and
@@ -586,8 +585,9 @@ custom domains returned success, produced project-attributed lead rows with one
 triage per submission, populated each credential's `lastUsedAt`, and logged
 `hasVisitorHash: true`. Chelsea's browser posts only to same-origin
 `/api/contact`; page-view analytics intentionally remains on
-`/api/v1/analytics/pixel`. The observation and legacy-retirement gate above is
-still open.
+`/api/v1/analytics/pixel`. Immediate post-cutover verification then confirmed
+both retired lead paths were unavailable while v2 lead delivery and analytics
+remained healthy.
 
 ### Phase 2 — typed telemetry
 

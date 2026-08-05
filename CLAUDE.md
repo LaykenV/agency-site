@@ -11,7 +11,7 @@ Acadiana Web Design's Hub: Website-as-a-Service operations stack. Next.js 16 + C
 - Client portal driven by `projectStatus` state machine (AWAITING_AGREEMENT → AWAITING_PAYMENT → AWAITING_ASSETS → IN_PROGRESS → IN_REVIEW → LIVE).
 - Admin dashboard at `/admin`.
 - Agreement clickwrap + Stripe subscription billing + webhook automation.
-- Public Hub APIs (`/api/v2/leads` bearer auth, `/api/v1/ingest-lead`, `/api/v1/analytics/pixel`) that bespoke client sites POST to.
+- Public Hub APIs (`/api/v2/leads` bearer auth and `/api/v1/analytics/pixel`) that bespoke client sites POST to.
 - Remotion-based promo video generation.
 
 The bespoke client-site starter (the Spoke side) lives in `../agency-template/`.
@@ -62,7 +62,7 @@ bun run video:render:all
 
 - `convex/schema.ts` — all tables: `prospects`, `projects`, `agreements`, `activity_log`, `scheduled_calls`, `edit_requests`, `client_leads`, `client_analytics`, `marketing_searches`, `scraped_leads`, plus Stripe KV tables.
 - `convex/validators.ts` — shared validators.
-- `convex/http.ts` — webhooks (Stripe, Cal.com) and Hub APIs (lead ingestion + analytics pixel, both v1 and legacy unversioned aliases).
+- `convex/http.ts` — webhooks (Stripe, Cal.com), authenticated v2 lead ingestion, and v1/unversioned analytics aliases.
 - `convex/auth.ts` — Better Auth integration (magic link).
 - `convex/adminGuard.ts` — RBAC enforcement for admin queries/mutations.
 - `convex/files.ts` — file storage helpers (logos, brand images, edit request attachments).
@@ -124,16 +124,22 @@ export const myQuery = query({
 Bespoke client sites built from `../agency-template/` POST to:
 
 - `POST /api/v2/leads` — authenticated lead intake (`Authorization: Bearer sk_live_<keyId>_<secret>`). Keys issued in admin (Projects → expand → API Credentials); raw key shown once; only SHA-256 stored.
-- `POST /api/v1/ingest-lead` — legacy contact form submissions (Origin / no-Origin containment; retire after both clients migrate)
 - `POST /api/v1/analytics/pixel` — page views
 
-v1 also has unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kept alive for old config-driven clients.
+Analytics also has the unversioned `/api/analytics/pixel` alias until Stage 3.
+The unauthenticated v1 and unversioned **lead** routes are retired.
 
-**Stage 1A containment (current):** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moves per-visitor limiting to the client's Vercel Function where the IP is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
+**Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moved per-visitor limiting to each client's Function where the provider header is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
 
-**Origin:** browser requests must match `deployment.liveUrl` / `stagingUrl`. **Leads still accept no-`Origin`** (TB Tree Server Action migration exception) until Stage 2 authenticated v2. Analytics still require Origin. This is containment, not authentication — see `waas_upgrade.md` / `UPGRADE_PLAN.md`.
+**Origin:** analytics browser requests must match `deployment.liveUrl` /
+`stagingUrl`. Leads are server-to-server and authenticate with a secret bearer;
+the credential resolves the project, so leads do not use Origin as an auth
+boundary.
 
-**Failure mode to remember:** if a client's leads or analytics stop working, **check the Origin allowlist first** in admin deployment URLs — stale URLs silently reject browser requests. Also check admin **Untriaged / Fan-out paused** and Convex logs for `[hub.lead]`.
+**Failure mode to remember:** for leads, check the spoke's server-only credential,
+credential `lastUsedAt`, and `[hub.lead.v2]` logs. For analytics, check the
+Origin allowlist in admin deployment URLs. Also check admin **Untriaged /
+Fan-out paused**.
 
 ## Things to be careful about
 
@@ -141,4 +147,5 @@ v1 also has unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kep
 - **Never** store raw payment details — Stripe handles all card data.
 - **Always** verify Stripe webhook signatures and use event IDs for idempotency.
 - **Always** hash terms content (SHA-256) on agreement acceptance; record `termsVersion` + `termsHash` + `userAgent`.
-- The Hub APIs must remain backward compatible — old config-driven clients still call the unversioned endpoints. Add breaking changes as `/api/v2/*`.
+- Keep analytics backward compatible through Stage 3. Lead ingestion is v2-only;
+  never reintroduce an unauthenticated lead alias.

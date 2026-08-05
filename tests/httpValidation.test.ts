@@ -7,7 +7,7 @@ import {
 } from "../convex/httpValidation";
 
 function jsonRequest(body: string, headers: Record<string, string> = {}) {
-  return new Request("https://hub.test/api/v1/ingest-lead", {
+  return new Request("https://hub.test/api/v2/leads", {
     method: "POST",
     headers: { "Content-Type": "application/json", ...headers },
     body,

@@ -1,7 +1,7 @@
 /**
  * Shared validation + visitor observation for Hub HTTP endpoints.
- * Stage 1A (WAAS containment): bound cost and payload size without retiring
- * the legacy no-Origin lead path.
+ * Shared payload ceilings and analytics visitor observation for Hub HTTP
+ * endpoints. Lead ingestion is authenticated at `/api/v2/leads`.
  */
 
 export const MAX_BODY_BYTES = 16 * 1024;
