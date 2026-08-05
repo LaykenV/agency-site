@@ -1,11 +1,12 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
 Status: **Stages 0, 1A, 2, and 3 complete in production. Stage 3 is verified end
-to end on the playground spoke; rollout to the remaining live client sites is
-outstanding.**
+to end on the playground spoke; spoke client code is ready on All About Towing,
+TB Tree, and Chelsea. TB Tree + Chelsea need only operator credential + deploy;
+All About Towing is blocked on Hub project creation.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Stage 3 production verification)
+Last reviewed: 2026-08-05 (Stage 3 spoke code reviewed; towing projectId placeholder found)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -238,13 +239,36 @@ scans, SMS links, in-app browsers, and no-referrer policies, and a bare
 listing. A client reads "direct 40" as "40 people typed my URL." Revisit when
 Stage 8's UTM work can attribute a call to a specific listing or campaign.
 
-**Rollout to the remaining spokes is what closes this stage.** Each live site
-needs a publishable credential, its deployment URL stored as a bare host, the
-`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` env var, and a rebuild. Until a given site is
-migrated it stays on the v1 pixel and reports pageviews only — no click data,
-which is the whole point of the stage. Priority order: All About Towing (no
-contact form, so tap-to-call is its only conversion signal and the reason the
-project is billable), then TB Tree and Chelsea.
+**Spoke code is ready (2026-08-05); operator deploy closes the stage.** Each
+live site now has the Stage 3 client (v2 events + click tracking, v1 pixel
+fallback). What remains is per-site operator work: issue a publishable
+credential, store the deployment URL as a bare host, set the key (Vercel
+`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` for Next sites; `waas-config.js` for Chelsea
+static), and rebuild/redeploy. Until a given site is deployed with its key it
+stays on the v1 pixel and reports pageviews only — no click data, which is the
+whole point of the stage.
+
+Client repos are **siblings of `agency-site`**, not subdirectories:
+
+| Site | Repo | Runbook | State |
+|---|---|---|---|
+| All About Towing | `../clients/all-about-towing-web/` | `WAAS_V2_RUNBOOK.md` | blocked — no Hub project yet |
+| TB Tree | `../clients/tb-tree/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | ready to deploy |
+| Chelsea Social Co. | `../clients/chelsea-social/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | ready to deploy |
+
+**All About Towing has no Hub project (2026-08-05), so it cannot go first**
+despite being the most valuable target (phone-only, so tap-to-call is its only
+conversion signal and the reason the project is billable). Its config had a
+placeholder `projectId` — `proj_all-about-towing` — that was never real: the Hub
+mints project IDs with `crypto.randomUUID()`, and `/api/v2/events` returns 401
+when the body `projectId` doesn't match the credential's project. It now carries
+the `PROJECT_ID_FROM_ADMIN` sentinel that `scripts/validate-plumbing.ts` already
+recognises, and `app/layout.tsx` gates the pixel off entirely, so the site sends
+nothing rather than 401ing every request. Create the project, paste the UUID,
+then follow the runbook.
+
+Deploy order: TB Tree and Chelsea now; All About Towing as soon as multi-project
+setup lands and its project exists.
 
 **Declined 2026-08-05 — operational counters for `/api/v2/events`.** Stage 1A
 built `hub_operational_counters` because unauthenticated leads could burn Groq,

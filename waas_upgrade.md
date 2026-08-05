@@ -596,10 +596,20 @@ Referrer classes are collected but **not shown to clients**; the class rollup
 cannot yet separate a Business Profile tap from a search result, and `direct` is
 an unknown bucket rather than a source. Revisit with Stage 8's UTM work.
 
-Remaining work is spoke rollout, not Hub work: each live site needs a publishable
-credential, a bare-host deployment URL, `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY`, and a
-rebuild. Sites still on v1 report pageviews only. Keep the v1 pixel until the
-last one migrates.
+**Spoke client code is ready (2026-08-05)** on All About Towing
+(`../clients/all-about-towing-web/`), TB Tree (`../clients/tb-tree/`), and
+Chelsea (`../clients/chelsea-social/`) — sibling repos, not subdirectories —
+running the same Stage 3 client as playground, with per-site runbooks. Remaining
+work is operator deploy, not more Hub or client code: each live site needs a
+publishable credential, a bare-host deployment URL, the key (Vercel
+`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` for Next sites; `waas-config.js` for
+Chelsea), and a rebuild. Sites still on v1 report pageviews only. Keep the v1
+pixel until the last one migrates.
+
+**All About Towing is blocked on Hub project creation.** It has no project yet,
+so its config holds the `PROJECT_ID_FROM_ADMIN` sentinel and its layout gates
+the pixel off — it sends nothing instead of 401ing. TB Tree and Chelsea are
+unblocked.
 
 - [x] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
       publishable key; make `pageview` one type.
