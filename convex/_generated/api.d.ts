@@ -10,6 +10,7 @@
 
 import type * as activityLog from "../activityLog.js";
 import type * as admin from "../admin.js";
+import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminGuard from "../adminGuard.js";
 import type * as adminLeads from "../adminLeads.js";
 import type * as agreement from "../agreement.js";
@@ -27,6 +28,7 @@ import type * as http from "../http.js";
 import type * as httpValidation from "../httpValidation.js";
 import type * as hubOperations from "../hubOperations.js";
 import type * as leadTriage from "../leadTriage.js";
+import type * as lib_adminAnalyticsDates from "../lib/adminAnalyticsDates.js";
 import type * as lib_pagespeed from "../lib/pagespeed.js";
 import type * as lib_referrerClass from "../lib/referrerClass.js";
 import type * as marketing_emails from "../marketing/emails.js";
@@ -58,6 +60,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activityLog: typeof activityLog;
   admin: typeof admin;
+  adminAnalytics: typeof adminAnalytics;
   adminGuard: typeof adminGuard;
   adminLeads: typeof adminLeads;
   agreement: typeof agreement;
@@ -75,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   httpValidation: typeof httpValidation;
   hubOperations: typeof hubOperations;
   leadTriage: typeof leadTriage;
+  "lib/adminAnalyticsDates": typeof lib_adminAnalyticsDates;
   "lib/pagespeed": typeof lib_pagespeed;
   "lib/referrerClass": typeof lib_referrerClass;
   "marketing/emails": typeof marketing_emails;
