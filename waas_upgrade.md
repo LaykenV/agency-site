@@ -1,9 +1,10 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phase 1A complete in production (closed 2026-08-05). Phase 1B is next.**
+Status: **Phase 1A complete. Phase 1B client migration is complete in
+production; the 48-hour observation and legacy-retirement exit gate is next.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (scope trim — see `UPGRADE_PLAN.md` § 7)
+Last reviewed: 2026-08-05 (production client migration evidence + exit gate)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -538,6 +539,12 @@ authentication model.
       measurement. Verified by code read instead.
 
 ### Phase 1B — authenticated v2 and legacy retirement
+
+**Status 2026-08-05:** client migration complete; formal phase exit pending the
+48-hour observation and legacy lead-route retirement. Both production client
+sites are on authenticated v2. The remaining unchecked items below prevent the
+phase from being represented as fully closed until the unauthenticated routes
+are actually removed.
 
 **Scope trimmed 2026-08-05.** Idempotency receipts and `previewUrlPattern` are
 cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header in

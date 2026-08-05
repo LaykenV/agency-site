@@ -1,9 +1,10 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stages 0 and 1A complete in production. Stage 2 (WAAS authenticated v2) is next.**
+Status: **Stages 0 and 1A complete. Stage 2 client migration is complete in
+production; the 48-hour observation and legacy-retirement exit gate is next.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (scope trim + resequence; see § 7)
+Last reviewed: 2026-08-05 (production client migration evidence + exit gate)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -34,7 +35,7 @@ is disabled, but the Hub must support both paths during the overlap.
 ```text
 Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
 Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
-Stage 2   WAAS authenticated v2 ....... migrate both clients, retire v1   [closes hole]
+Stage 2   WAAS authenticated v2 ....... clients migrated; retire v1 next  [exit pending]
 Stage 3   Typed events + click tracking  tel:/mailto:/directions          [was Stage 8]
 Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
 Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
@@ -159,13 +160,19 @@ actually closes the unauthenticated paid-fan-out hole.
 **Trimmed 2026-08-05.** Per-submission idempotency receipts and
 `previewUrlPattern` are cut — see § 7.
 
-**Production migration shipped 2026-08-05; observation gate active.** TB Tree
+**Client migration complete in production 2026-08-05; Stage 2 exit pending.** TB Tree
 and Chelsea now send leads through authenticated v2 using separate server-only
 credentials. Both live custom-domain browser paths produced attributed leads,
 completed triage, populated credential `lastUsedAt`, and logged
 `hasVisitorHash: true`. Keep v1 and the no-`Origin` compatibility path live
 until the bounded observation gate passes; analytics remains on v1 until Stage
 3 implements `/api/v2/events` and begins consuming publishable keys.
+
+**Next gate:** after a clean 48-hour production window ending no earlier than
+2026-08-07, confirm real v2 traffic, zero unexplained auth failures, zero
+duplicate triage, and zero required v1 lead traffic. Then retire the v1 and
+unversioned **lead** routes, remove the no-`Origin` exception, and close Stage 2.
+Do not retire v1 analytics; Stage 3 replaces it separately.
 
 ### Stage 3 — typed events and click tracking
 
