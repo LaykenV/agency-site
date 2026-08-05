@@ -181,20 +181,22 @@ notifications (review email sent where applicable; SMS blocked).
 
 `waas_upgrade.md` § Phase 2, reduced to the parts that sell. Add `client_events`
 and `POST /api/v2/events` authenticated by the Stage 2 publishable key, make
-`pageview` one type among several, and ship `tel:` / `mailto:` / directions click
-tracking, referrer classification, UTM capture, and the one-time PageSpeed
-snapshot.
+`pageview` one type among several, and ship `tel:` / `mailto:` click tracking,
+directions clicks only where a site exposes a real directions link, coarse
+referrer classification, and the one-time PageSpeed snapshot.
 
 This is ahead of the portal work because All About Towing has no contact form.
 Pageviews alone do not justify an invoice for that project; tap-to-call counts
 do. It depends only on the Stage 2 credential model, not on the module registry —
-render the new metrics into the existing portal widgets and let Stage 5 convert
-them to modules.
+render a thin, self-contained metrics section in the existing portal. Do not
+build the module registry early; Stage 5 should register and reuse this
+component rather than rewrite it.
 
-Visitor hashes, session identifiers, Web Vitals, and the JS error beacon are
-deferred to Stage 8. Label what is measured honestly: `tel:` events are
-tap-to-call clicks, not completed calls, and GBP attribution requires explicit
-UTMs because a bare Google referrer is not proof.
+UTM capture, device type, country, visitor hashes, session identifiers, Web
+Vitals, and the JS error beacon are deferred to Stage 8. Label what is measured
+honestly: `tel:` events are tap-to-call clicks, not completed calls. Coarse
+referrer classes are not campaign or GBP attribution; that requires the deferred
+UTM work because a bare Google referrer is not proof.
 
 ### Stage 4 — offering registry
 

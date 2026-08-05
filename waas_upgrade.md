@@ -363,41 +363,18 @@ client_events: defineTable({
   type: v.union(
     v.literal("pageview"),
     v.literal("click"),
-    v.literal("form_start"),
-    v.literal("form_submit"),
-    v.literal("web_vital"),
-    v.literal("js_error"),
   ),
   path: v.string(),
-  visitorHash: v.optional(v.string()),
-  sessionId: v.optional(v.string()),
-  referrer: v.optional(v.string()),
-  utm: v.optional(v.object({
-    source: v.optional(v.string()),
-    medium: v.optional(v.string()),
-    campaign: v.optional(v.string()),
+  referrerClass: v.optional(v.union(
+    v.literal("organic"),
+    v.literal("social"),
+    v.literal("direct"),
+    v.literal("other"),
+  )),
+  payload: v.optional(v.object({
+    kind: v.literal("link"),
+    target: v.union(v.literal("tel"), v.literal("email"), v.literal("directions")),
   })),
-  device: v.optional(v.union(
-    v.literal("mobile"),
-    v.literal("tablet"),
-    v.literal("desktop"),
-    v.literal("unknown"),
-  )),
-  country: v.optional(v.string()),
-  payload: v.optional(v.union(
-    v.object({
-      kind: v.literal("link"),
-      target: v.union(v.literal("tel"), v.literal("email"), v.literal("directions")),
-    }),
-    v.object({ kind: v.literal("form"), formId: v.string() }),
-    v.object({
-      kind: v.literal("web_vital"),
-      metric: v.union(v.literal("CLS"), v.literal("INP"), v.literal("LCP")),
-      value: v.number(),
-      rating: v.union(v.literal("good"), v.literal("needs-improvement"), v.literal("poor")),
-    }),
-    v.object({ kind: v.literal("js_error"), messageHash: v.string() }),
-  )),
   createdAt: v.number(),
 })
   .index("by_projectId_and_createdAt", ["projectId", "createdAt"])
@@ -412,26 +389,29 @@ the portal should not scan raw events. Roll up on write, or on a cron.
 
 ### 4.2 What to add, ranked
 
-**Highest value: click tracking on `tel:`, `mailto:`, and directions links.**
-For a local service business these are stronger intent signals than pageviews.
-Report them honestly as **tap-to-call clicks**, email clicks, and directions
-clicks. A `tel:` click does not prove a connected phone call; reporting actual
-calls requires a call-tracking number/provider and is outside this phase.
+**Highest value: click tracking on `tel:` and `mailto:`, plus directions where
+the site exposes a real directions link.** For a local service business these
+are stronger intent signals than pageviews. Report them honestly as
+**tap-to-call clicks**, email clicks, and directions clicks. A `tel:` click does
+not prove a connected phone call; reporting actual calls requires a
+call-tracking number/provider and is outside this phase.
 
 Then, in rough order:
 
-1. **`referrer`** — already being sent and thrown away (F10). Classify into
-   organic / social / direct. Attribute GBP only when the listing links use
-   explicit UTM parameters; a bare Google referrer is not reliable GBP proof.
-2. **UTM parameters** — needed before any paid campaign is worth running.
-3. **Approximate unique visitors** via a keyed, daily-rotating visitor hash
+1. **`referrer`** — already being sent and thrown away (F10). Classify only into
+   organic / social / direct / other. Do not present this as campaign or GBP
+   attribution.
+2. **Approximate unique visitors** via a keyed, daily-rotating visitor hash
    derived at a trusted server boundary. Never store raw IP. Treat the hash as
    personal/pseudonymous data for privacy review; do not promise that its use
    automatically removes consent obligations.
-4. **Sessions** via a short-lived first-party `sessionStorage` id → bounce rate
+3. **Sessions** via a short-lived first-party `sessionStorage` id → bounce rate
    and pages per session. Include it in the same privacy inventory and review.
-5. **Form start vs. submit** → abandonment rate, which is directly actionable.
-6. **Device type and coarse country** — derive country only from a
+4. **Form start vs. submit** → abandonment rate, which is directly actionable.
+5. **UTM parameters** — useful when paid campaigns or explicit GBP attribution
+   justify the additional reporting work.
+6. **Device type and coarse country** — low-value for the current local-client
+   reporting. If added later, derive country only from a
    provider-controlled header in the client Function or a verified Hub edge
    header, never a caller-provided body field.
 7. **Core Web Vitals** from real users via the `web-vitals` package. Feeds the
@@ -461,12 +441,17 @@ Add to the `projects` table:
 
 ```ts
 pageSpeedSnapshot: v.optional(pageSpeedDataValidator),
+pageSpeedSnapshotUrl: v.optional(v.string()),
 ```
 
-Populate via an admin-triggered internal action — a button on
-`/admin/projects/{id}`, plus an automatic run once when a project first
-transitions to `LIVE`. `fetchedAt` is already in the validator, so the portal
-can honestly label it "measured on {date}" rather than implying it is live.
+When a project first transitions to `LIVE`, schedule a non-blocking internal
+action against its canonical `deployment.liveUrl` only when no snapshot exists.
+The status transition must succeed even if PageSpeed fails. Also provide an
+admin-only **Refresh PageSpeed** button on `/admin/projects/{id}` for a redesign,
+major release, or URL change; a manual run may replace the existing snapshot.
+Store the measured URL alongside the snapshot. `fetchedAt` is already in the
+validator, so the portal can honestly label it "measured on {date}" rather than
+implying it is live.
 
 If a trend line is ever wanted later, promoting this to a history table is a
 small change. Not now.
@@ -601,21 +586,23 @@ form, so tap-to-call is its only conversion signal.
 
 - [ ] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
       publishable key; make `pageview` one type.
-- [ ] Add `tel:` / `mailto:` / directions click tracking — highest value here.
-- [ ] Classify `referrer` into organic / social / direct; capture UTM.
-- [ ] Add device type and coarse country, derived only from a provider-controlled
-      header at a trusted boundary, never a body field.
+- [ ] Add `tel:` / `mailto:` click tracking, plus directions clicks only on
+      sites that expose a real directions link — highest value here.
+- [ ] Classify `referrer` coarsely into organic / social / direct / other. Do
+      not present this as campaign attribution.
 - [ ] Extract `runPageSpeed()` to a shared module; add `pageSpeedSnapshot` to
-      `projects` with an admin button and an on-first-LIVE run.
-- [ ] Render the new metrics into the existing portal widgets. Converting them to
-      registry modules belongs to the portal refactor, and this phase must not
-      wait on it.
+      `projects`; schedule a non-blocking run against `liveUrl` on the first
+      transition to `LIVE` only when missing, and add an admin refresh button.
+- [ ] Render the new metrics through one thin, self-contained portal component.
+      Do not build the module registry in this phase; Stage 5 should register
+      and reuse this component rather than rewrite it.
 
-Deferred out of this phase (`UPGRADE_PLAN.md` Stage 8): visitor hashes, session
-identifiers, bounce rate, pages per session, form start vs. submit, Core Web
-Vitals, and the JS error beacon. Every one of those requires the privacy
-inventory, retention policy, and client privacy-page updates in § 4.2 first, and
-none of them is what a local service client is buying.
+Deferred out of this phase (`UPGRADE_PLAN.md` Stage 8): UTM capture, device type,
+country, visitor hashes, session identifiers, bounce rate, pages per session,
+form start vs. submit, Core Web Vitals, and the JS error beacon. The identity and
+session items require the privacy inventory, retention policy, and client
+privacy-page updates in § 4.2 first; none of these deferred items is needed to
+prove the current local-service conversion value.
 
 ### Phase 3 — external data, only after consent and pricing review
 
