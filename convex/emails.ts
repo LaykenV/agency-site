@@ -67,13 +67,15 @@ function getEmailLogo(): string {
   `;
 }
 
-// Email header with gradient background and logo
+// Email header with gradient background and logo.
+// Logo stays OUTSIDE the Gmail blend wrappers so dark mode does not recolor
+// the PNG (blue leaves → pink). Only white text stays inside the blend stack.
 export function getEmailHeader(title: string, subtitle?: string): string {
   return `
     <div style="background: linear-gradient(135deg, ${EMAIL_STYLES.primaryColor} 0%, ${EMAIL_STYLES.primaryDark} 100%); padding: 32px 24px; text-align: center;">
+      ${getEmailLogo()}
       <div class="gmail-blend-screen">
         <div class="gmail-blend-difference">
-          ${getEmailLogo()}
           <h1 style="margin: 0; color: #ffffff !important; -webkit-text-fill-color: #ffffff !important; font-size: 24px; font-weight: 600;">
             ${title}
           </h1>
@@ -559,8 +561,6 @@ export const sendLeadNotification = internalAction({
         <div style="text-align: center; margin: 32px 0 24px 0;">
           ${getCtaButton('View All Leads in Portal', `${getBaseUrl()}/portal`, 'dark')}
         </div>
-        
-        ${getWarningBox('<strong>Pro tip:</strong> Responding within 5 minutes increases your chances of converting this lead by 9x. The sooner you reach out, the better!')}
       </div>
       
       ${getEmailFooter(new Date().getFullYear(), 'This lead was submitted via your website\'s contact form.')}
@@ -574,7 +574,7 @@ export const sendLeadNotification = internalAction({
       to: clientEmail,
       subject: `New Lead: ${args.leadData.name} - ${companyName}`,
       html: htmlContent,
-      text: `New Lead from Your Website!\n\nHi ${prospect.details.contactName || 'there'},\n\nGreat news! Someone just submitted a contact form on your ${companyName} website.\n\nLead Details:\nName: ${args.leadData.name}\nEmail: ${args.leadData.email}\n${phoneLine}${messageLine}\nReply to ${args.leadData.name.split(' ')[0]}: mailto:${args.leadData.email}\n\nView all leads in your portal: ${getBaseUrl()}/portal\n\nPro tip: Responding within 5 minutes increases your chances of converting this lead by 9x.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+      text: `New Lead from Your Website!\n\nHi ${prospect.details.contactName || 'there'},\n\nGreat news! Someone just submitted a contact form on your ${companyName} website.\n\nLead Details:\nName: ${args.leadData.name}\nEmail: ${args.leadData.email}\n${phoneLine}${messageLine}\nReply to ${args.leadData.name.split(' ')[0]}: mailto:${args.leadData.email}\n\nView all leads in your portal: ${getBaseUrl()}/portal\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
       replyTo: [SUPPORT_EMAIL],
       headers: getListUnsubscribeHeaders(),
     });
