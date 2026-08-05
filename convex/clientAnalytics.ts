@@ -2,14 +2,41 @@ import { v } from "convex/values";
 import { internalMutation, query } from "./_generated/server";
 import { authComponent } from "./auth";
 
+function bumpTopList(
+  items: Array<{ key: string; views: number }>,
+  key: string,
+  limit = 10,
+): Array<{ key: string; views: number }> {
+  const next = [...items];
+  const idx = next.findIndex((item) => item.key === key);
+  if (idx >= 0) {
+    next[idx] = { key, views: next[idx].views + 1 };
+  } else {
+    next.push({ key, views: 1 });
+  }
+  next.sort((a, b) => b.views - a.views);
+  return next.slice(0, limit);
+}
+
+/** Normalize referrer for rollup storage (host when parseable, else truncated). */
+function referrerBucket(referrer: string): string {
+  try {
+    const url = new URL(referrer);
+    return url.host.slice(0, 200) || referrer.slice(0, 200);
+  } catch {
+    return referrer.slice(0, 200);
+  }
+}
+
 // Internal: Record a page view (called from HTTP action)
 export const recordPageView = internalMutation({
   args: {
     projectId: v.string(),
     path: v.string(),
+    referrer: v.optional(v.string()),
   },
   returns: v.null(),
-  handler: async (ctx, { projectId, path }) => {
+  handler: async (ctx, { projectId, path, referrer }) => {
     const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
     // Find or create today's record
@@ -20,32 +47,39 @@ export const recordPageView = internalMutation({
       )
       .first();
 
+    const referrerKey = referrer ? referrerBucket(referrer) : null;
+
     if (existing) {
-      // Update existing record
-      const topPages = [...existing.topPages];
-      const pageIndex = topPages.findIndex((p) => p.path === path);
+      const topPages = bumpTopList(
+        existing.topPages.map((p) => ({ key: p.path, views: p.views })),
+        path,
+      ).map((p) => ({ path: p.key, views: p.views }));
 
-      if (pageIndex >= 0) {
-        topPages[pageIndex].views++;
-      } else {
-        topPages.push({ path, views: 1 });
-      }
-
-      // Sort by views and keep top 10
-      topPages.sort((a, b) => b.views - a.views);
-      const trimmedTopPages = topPages.slice(0, 10);
+      const existingReferrers = (existing.topReferrers ?? []).map((r) => ({
+        key: r.referrer,
+        views: r.views,
+      }));
+      const topReferrers = referrerKey
+        ? bumpTopList(existingReferrers, referrerKey).map((r) => ({
+            referrer: r.key,
+            views: r.views,
+          }))
+        : existing.topReferrers;
 
       await ctx.db.patch(existing._id, {
         pageViews: existing.pageViews + 1,
-        topPages: trimmedTopPages,
+        topPages,
+        ...(topReferrers ? { topReferrers } : {}),
       });
     } else {
-      // Create new record for today
       await ctx.db.insert("client_analytics", {
         projectId,
         date: today,
         pageViews: 1,
         topPages: [{ path, views: 1 }],
+        ...(referrerKey
+          ? { topReferrers: [{ referrer: referrerKey, views: 1 }] }
+          : {}),
       });
     }
 

@@ -29,6 +29,8 @@ export const create = internalMutation({
     projectId: v.string(),
     source: v.string(),
     data: leadDataValidator,
+    fanoutPaused: v.optional(v.boolean()),
+    fanoutPausedReason: v.optional(v.string()),
   },
   returns: v.id("client_leads"),
   handler: async (ctx, args) => {
@@ -39,6 +41,12 @@ export const create = internalMutation({
       data: args.data,
       createdAt: Date.now(),
       triageVerdict: "untriaged" as const,
+      ...(args.fanoutPaused
+        ? {
+            fanoutPaused: true,
+            fanoutPausedReason: args.fanoutPausedReason ?? "paid_fanout_ceiling",
+          }
+        : {}),
     });
     return leadId;
   },
@@ -58,6 +66,8 @@ export const getLeadById = internalQuery({
       createdAt: v.number(),
       triageVerdict: v.optional(triageVerdictValidator),
       triage: v.optional(triageObjectValidator),
+      fanoutPaused: v.optional(v.boolean()),
+      fanoutPausedReason: v.optional(v.string()),
     }),
     v.null()
   ),
@@ -162,6 +172,8 @@ export const listByProject = query({
       createdAt: v.number(),
       triageVerdict: v.optional(triageVerdictValidator),
       triage: v.optional(triageObjectValidator),
+      fanoutPaused: v.optional(v.boolean()),
+      fanoutPausedReason: v.optional(v.string()),
     })
   ),
   handler: async (ctx, { projectId, limit, status, triageVerdict }) => {

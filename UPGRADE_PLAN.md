@@ -1,6 +1,6 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stage 0 in progress (local matrix pinned + verified); production smoke pending**
+Status: **Stage 0 done in prod; Stage 1 containment implemented — production smoke + 24h header observation pending**
 Owner: Layken
 Written: 2026-08-04
 Last reviewed: 2026-08-04
@@ -48,7 +48,7 @@ Stage 8  Telemetry + external data .... measured, privacy-reviewed        [later
 The problem this stage fixes: the manifest declared `convex@^1.28.0` while
 `bun.lock` resolved 1.31.4, and the root workpool was a transitive `0.2.19`,
 which did not satisfy `@convex-dev/workflow@0.3.4`'s `workpool ^0.3.0` peer. The
-minimal coherent matrix is now decided and applied locally (see § 5 for resolved
+minimal coherent matrix is now decided and applied (see § 5 for resolved
 evidence):
 
 ```text
@@ -225,7 +225,19 @@ signals honestly:
 
 ## 5. Current known state
 
-### Stage 0 — local evidence (2026-08-04)
+### Stage 1 — containment implementation (2026-08-04)
+
+Shipped in code (pending production smoke of both client forms and the bounded
+24-hour header observation):
+
+- 16 KB body ceiling + field validation (`convex/httpValidation.ts`)
+- Fixed-window ceilings: ingest 1000/day, no-trusted visitor 30/hour, paid fan-out 50/day, SMS 20/day
+- Fan-out pause stores untriaged lead + admin threshold alert path
+- No XFF trust; time-bounded/redacted visitor-header observation; no-trusted-visitor project bucket
+- Analytics trusted-visitor or stricter project fallback; bounded referrer rollup
+- SMS allow-only (`leadTriage.ts`); durable daily accepted/429/paused counters and admin visibility
+
+### Stage 0 — resolved evidence (2026-08-04)
 
 Pinned exact versions in `package.json` and regenerated `bun.lock`. Verified:
 
@@ -279,9 +291,7 @@ expand direction only, so existing rows still validate. There is no `crons.ts`
 and `marketingSearchWorkflow` is admin-triggered, so deploy while no marketing
 search is in flight.
 
-**Still required before Stage 0 exit / Stage 1 start:** production deploy of this
-matrix, then smoke-test mobile magic-link auth, Resend, workflow execution, and
-current Stripe Checkout/webhook behavior.
+Stage 0's production deploy and smoke gate completed before Stage 1A began.
 
 ### Unchanged product state
 

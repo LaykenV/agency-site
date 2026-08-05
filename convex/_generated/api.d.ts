@@ -22,6 +22,8 @@ import type * as clientLeads from "../clientLeads.js";
 import type * as emails from "../emails.js";
 import type * as files from "../files.js";
 import type * as http from "../http.js";
+import type * as httpValidation from "../httpValidation.js";
+import type * as hubOperations from "../hubOperations.js";
 import type * as leadTriage from "../leadTriage.js";
 import type * as marketing_emails from "../marketing/emails.js";
 import type * as marketing_pipeline from "../marketing/pipeline.js";
@@ -62,6 +64,8 @@ declare const fullApi: ApiFromModules<{
   emails: typeof emails;
   files: typeof files;
   http: typeof http;
+  httpValidation: typeof httpValidation;
+  hubOperations: typeof hubOperations;
   leadTriage: typeof leadTriage;
   "marketing/emails": typeof marketing_emails;
   "marketing/pipeline": typeof marketing_pipeline;

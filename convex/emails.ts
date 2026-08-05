@@ -5,6 +5,7 @@ import { Resend } from "@convex-dev/resend";
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { TERMS_SUMMARY_POINTS, TERMS_VERSION } from "../lib/legal/terms";
+import { rateLimiter } from "./rateLimiter";
 
 export const resend: Resend = new Resend(components.resend, {
   testMode: false,
@@ -596,6 +597,117 @@ export const sendLeadNotification = internalAction({
       projectId: args.projectId,
       clientEmail,
     });
+
+    return null;
+  },
+});
+
+/**
+ * Stage 1A admin-operations threshold alert.
+ *
+ * Separate from the exhausted project's Groq/Resend/Twilio fan-out path:
+ * - queueThresholdAlert already claimed one project+limit window
+ * - Always persist the single activity_log alert (even if delivery is capped)
+ * - Globally cap delivery via adminOpsAlertGlobal
+ */
+export const sendAdminThresholdAlert = internalAction({
+  args: {
+    projectId: v.string(),
+    limitName: v.string(),
+    leadId: v.optional(v.id("client_leads")),
+    detail: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
+      projectId: args.projectId,
+    });
+
+    // Always persist the alarm first so exhausting fan-out cannot hide it.
+    await ctx.runMutation(internal.activityLog.logActivity, {
+      projectId: project?._id,
+      prospectId: project?.prospectId,
+      actor: "system",
+      kind: "hub.threshold_alert",
+      payload: {
+        projectSlug: args.projectId,
+        limitName: args.limitName,
+        leadId: args.leadId,
+        detail: args.detail,
+      },
+    });
+
+    // Global delivery cap — alert still lives in activity_log above
+    const globalCap = await rateLimiter.limit(ctx, "adminOpsAlertGlobal");
+    if (!globalCap.ok) {
+      console.log("[emails] threshold alert delivery suppressed by global cap", {
+        projectId: args.projectId,
+        limitName: args.limitName,
+        retryAfter: globalCap.retryAfter,
+      });
+      return null;
+    }
+
+    const adminEmail =
+      process.env.ADMIN_EMAIL?.trim() || FOUNDER_EMAIL;
+
+    const adminUrl = `${getBaseUrl()}/admin/leads`;
+    const subject = `[Hub] ${args.limitName} threshold — ${args.projectId}`;
+    const text = [
+      `Threshold alert: ${args.limitName}`,
+      `Project: ${args.projectId}`,
+      args.leadId ? `Lead: ${args.leadId}` : null,
+      "",
+      args.detail,
+      "",
+      `Review untriaged leads: ${adminUrl}`,
+    ]
+      .filter((line) => line !== null)
+      .join("\n");
+
+    try {
+      await resend.sendEmail(ctx, {
+        from: "Acadiana Web Design Ops <ops@acadianawebdesign.com>",
+        to: adminEmail,
+        subject,
+        html: getEmailWrapper(`
+          ${getEmailHeader("Hub threshold alert", args.limitName)}
+          <div style="padding: 32px 24px;">
+            <p style="margin: 0 0 12px; color: ${EMAIL_STYLES.textDark}; font-size: 15px;">
+              Project <strong>${escapeHtml(args.projectId)}</strong> hit
+              <code style="background:${EMAIL_STYLES.background};padding:2px 6px;border-radius:4px;">${escapeHtml(args.limitName)}</code>.
+            </p>
+            <p style="margin: 0 0 20px; color: ${EMAIL_STYLES.textMuted}; font-size: 14px; line-height: 1.6;">
+              ${escapeHtml(args.detail)}
+            </p>
+            ${getCtaButton("Open admin leads", adminUrl, "primary")}
+          </div>
+          ${getEmailFooter(new Date().getFullYear(), "Admin operations path — not client fan-out.")}
+        `),
+        text,
+        replyTo: [SUPPORT_EMAIL],
+      });
+      // Distinct row so counters can report alerts actually *delivered*, not
+      // the per-occurrence `hub.threshold_alert` audit rows above.
+      await ctx.runMutation(internal.activityLog.logActivity, {
+        projectId: project?._id,
+        prospectId: project?.prospectId,
+        actor: "system",
+        kind: "hub.threshold_alert_delivered",
+        payload: {
+          projectSlug: args.projectId,
+          limitName: args.limitName,
+          to: adminEmail,
+        },
+      });
+      console.log("[emails] admin threshold alert delivered", {
+        projectId: args.projectId,
+        limitName: args.limitName,
+        to: adminEmail,
+      });
+    } catch (err) {
+      console.error("[emails] admin threshold alert delivery failed", err);
+    }
 
     return null;
   },

@@ -113,6 +113,14 @@ export const activityLogValidator = v.object({
   createdAt: v.number(),
 });
 
+export const hubOperationalCounterKindValidator = v.union(
+  v.literal("lead_accepted"),
+  v.literal("lead_fanout_paused"),
+  v.literal("lead_rate_limited_ingest"),
+  v.literal("lead_rate_limited_visitor"),
+  v.literal("lead_rate_limited_no_trusted"),
+);
+
 export const scheduledCallValidator = v.object({
   projectId: v.optional(v.id("projects")),
   prospectId: v.optional(v.id("prospects")),

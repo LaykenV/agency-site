@@ -22,7 +22,7 @@ import {
 import { api } from "@/convex/_generated/api";
 import { StickyAuth } from "@/components/StickyAuth";
 
-type LeadFilter = "allowed" | "spam" | "all";
+type LeadFilter = "allowed" | "spam" | "untriaged" | "fanout_paused" | "all";
 
 const ALL_CLIENTS = "__all_clients__";
 const PAGE_SIZE = 25;
@@ -38,6 +38,18 @@ const FILTERS: Array<{
     label: "Allowed",
     description: "Approved by lead filtering",
     icon: ShieldCheck,
+  },
+  {
+    id: "untriaged",
+    label: "Untriaged",
+    description: "Awaiting triage or fan-out paused",
+    icon: Clock3,
+  },
+  {
+    id: "fanout_paused",
+    label: "Fan-out paused",
+    description: "Stored without paid notifications",
+    icon: ShieldAlert,
   },
   {
     id: "spam",
@@ -99,6 +111,7 @@ function LeadsDashboard() {
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
 
   const clients = useQuery(api.adminLeads.listClients);
+  const containment = useQuery(api.adminLeads.containmentStats);
   const queryArgs =
     selectedClient === ALL_CLIENTS
       ? { filter }
@@ -196,6 +209,37 @@ function LeadsDashboard() {
           </div>
         </header>
 
+        {containment && (
+          <section
+            aria-label="Containment stats"
+            className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+          >
+            <StatChip
+              label="Accepted / 429 (UTC today)"
+              value={`${containment.acceptedTodayUtc} / ${containment.rateLimitedTodayUtc}`}
+              hint={`${containment.rateLimitedIngestTodayUtc} ingest · ${containment.rateLimitedVisitorTodayUtc} visitor · ${containment.rateLimitedNoTrustedTodayUtc} fallback`}
+            />
+            <StatChip
+              label="Fan-out paused (today / total)"
+              value={`${containment.fanoutPausedTodayUtc} / ${formatCapped(
+                containment.fanoutPaused,
+                containment.fanoutPausedCapped,
+              )}`}
+              hint={`Untriaged total: ${formatCapped(containment.untriaged, containment.untriagedCapped)}`}
+            />
+            <StatChip
+              label="Allow / review (24h)"
+              value={`${formatCapped(containment.allowLast24h, containment.leadScanCapped)} / ${containment.reviewLast24h}`}
+              hint={`Spam 24h: ${containment.spamLast24h}`}
+            />
+            <StatChip
+              label="SMS sent / blocked (24h)"
+              value={`${formatCapped(containment.smsSentLast24h, containment.activityScanCapped)} / ${containment.smsBlockedVerdictLast24h + containment.smsBlockedCeilingLast24h}`}
+              hint={`${containment.smsBlockedVerdictLast24h} verdict · ${containment.smsBlockedCeilingLast24h} ceiling · ${containment.thresholdAlertsDeliveredLast24h} alerts`}
+            />
+          </section>
+        )}
+
         <section
           aria-label="Lead filters"
           className="mb-6 grid gap-4 xl:grid-cols-[1fr_auto] xl:items-end"
@@ -205,7 +249,7 @@ function LeadsDashboard() {
               <SlidersHorizontal className="h-3.5 w-3.5" />
               Triage
             </div>
-            <div className="grid gap-2 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.45)] p-1.5 sm:grid-cols-3">
+            <div className="grid gap-2 rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--muted)/0.45)] p-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
               {FILTERS.map((item) => {
                 const Icon = item.icon;
                 const isActive = filter === item.id;
@@ -347,6 +391,8 @@ type LeadRowProps = {
     source: string;
     createdAt: number;
     triageVerdict?: string;
+    fanoutPaused?: boolean;
+    fanoutPausedReason?: string;
     triage?: {
       reasons: Array<string>;
       summary?: string;
@@ -410,6 +456,11 @@ function LeadRow({ lead, clientLabel, expanded, onToggle }: LeadRowProps) {
         <div className="flex items-center justify-between gap-3 lg:justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <VerdictBadge verdict={lead.triageVerdict} />
+            {lead.fanoutPaused && (
+              <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-orange-900 dark:bg-orange-950/60 dark:text-orange-300">
+                Fan-out paused
+              </span>
+            )}
             <span
               className="inline-flex items-center gap-1 text-xs tabular-nums text-[var(--muted-foreground)]"
               title={received.full}
@@ -488,12 +539,42 @@ function LeadRow({ lead, clientLabel, expanded, onToggle }: LeadRowProps) {
               <p className="mt-3 text-xs leading-5 text-[var(--muted-foreground)]">
                 Received {received.full} via{" "}
                 {sourceLabels[lead.source] || lead.source}.
+                {lead.fanoutPaused
+                  ? ` Paid fan-out paused${lead.fanoutPausedReason ? ` (${lead.fanoutPausedReason})` : ""}.`
+                  : ""}
               </p>
             </div>
           </div>
         </div>
       )}
     </article>
+  );
+}
+
+/** Render a bounded scan honestly: "500+" rather than a truncated count. */
+function formatCapped(value: number, capped: boolean): string {
+  return capped ? `${value}+` : String(value);
+}
+
+function StatChip({
+  label,
+  value,
+  hint,
+}: {
+  label: string;
+  value: string | number;
+  hint: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card)/0.85)] px-4 py-3 shadow-sm">
+      <p className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--muted-foreground)]">
+        {label}
+      </p>
+      <p className="mt-1 text-2xl font-extrabold tabular-nums text-[var(--foreground)]">
+        {value}
+      </p>
+      <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">{hint}</p>
+    </div>
   );
 }
 
@@ -519,7 +600,7 @@ function VerdictBadge({ verdict }: { verdict?: string }) {
             }
           : verdict === "untriaged"
             ? {
-                label: "Checking",
+                label: "Untriaged",
                 classes:
                   "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300",
               }

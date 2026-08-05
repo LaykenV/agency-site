@@ -7,6 +7,7 @@ import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { components, internal } from "./_generated/api";
+import { rateLimiter } from "./rateLimiter";
 
 // ---------------------------------------------------------------------------
 // Lead triage agent (Groq via Convex Agent component)
@@ -66,6 +67,15 @@ export const triageLead = internalAction({
       console.log("[leadTriage] Already triaged, skipping", {
         leadId: args.leadId,
         verdict: lead.triageVerdict,
+      });
+      return null;
+    }
+
+    // Stage 1A: paid fan-out was paused at ingest — leave untriaged for admin
+    if (lead.fanoutPaused) {
+      console.log("[leadTriage] Fan-out paused at ingest, skipping triage", {
+        leadId: args.leadId,
+        reason: lead.fanoutPausedReason,
       });
       return null;
     }
@@ -153,8 +163,7 @@ export const triageLead = internalAction({
     });
 
     // 7. Schedule notifications if not spam (based on persisted verdict).
-    // This prevents a rare race where multiple triage runs disagree: we only notify
-    // if the lead is actually stored as allow/review.
+    // Email still fires for allow + review. SMS is allow-only (F14).
     const persistedLead = await ctx.runQuery(internal.clientLeads.getLeadById, {
       leadId: args.leadId,
     });
@@ -166,6 +175,8 @@ export const triageLead = internalAction({
       // Safety fallback (shouldn't happen): if verdict is missing, use the current result.
       ((!persistedVerdict || persistedVerdict === "untriaged") &&
         (result.verdict === "allow" || result.verdict === "review"));
+    // Stage 1A F14: SMS only on allow — review/borderline must not text the client.
+    const shouldSms = persistedVerdict === "allow";
     const leadData = {
       name: (persistedLead ?? lead).data.name,
       email: (persistedLead ?? lead).data.email,
@@ -179,8 +190,48 @@ export const triageLead = internalAction({
         leadId: args.leadId,
         leadData,
       });
+    } else {
+      console.log("[leadTriage] Suppressing email for spam lead", {
+        leadId: args.leadId,
+        persistedVerdict,
+        confidence: result.confidence,
+      });
+    }
 
-      if (notificationPhone && smsConsentRecorded && projectDbId) {
+    if (
+      shouldSms &&
+      notificationPhone &&
+      smsConsentRecorded &&
+      projectDbId
+    ) {
+      const smsLimit = await rateLimiter.limit(ctx, "smsPerProject", {
+        key: projectId,
+      });
+      if (!smsLimit.ok) {
+        console.log("[leadTriage] SMS blocked by project ceiling", {
+          leadId: args.leadId,
+          projectId,
+          retryAfter: smsLimit.retryAfter,
+        });
+        await ctx.runMutation(internal.activityLog.logActivity, {
+          projectId: projectDbId,
+          prospectId,
+          actor: "system",
+          kind: "lead.sms_blocked_ceiling",
+          payload: {
+            leadId: args.leadId,
+            limitName: "smsPerProject",
+            retryAfter: smsLimit.retryAfter,
+          },
+        });
+        await ctx.runMutation(internal.hubOperations.queueThresholdAlert, {
+          projectId,
+          limitName: "smsPerProject",
+          leadId: args.leadId,
+          detail:
+            "Daily SMS ceiling reached. Lead was allowed; email may still have been sent.",
+        });
+      } else {
         await ctx.scheduler.runAfter(0, internal.notifications.sendLeadNotificationSms, {
           projectDbId,
           prospectId,
@@ -193,11 +244,25 @@ export const triageLead = internalAction({
           projectLiveUrl,
         });
       }
-    } else {
-      console.log("[leadTriage] Suppressing email for spam lead", {
+    } else if (
+      notificationPhone &&
+      smsConsentRecorded &&
+      projectDbId &&
+      !shouldSms
+    ) {
+      console.log("[leadTriage] SMS blocked by verdict (allow-only)", {
         leadId: args.leadId,
         persistedVerdict,
-        confidence: result.confidence,
+      });
+      await ctx.runMutation(internal.activityLog.logActivity, {
+        projectId: projectDbId,
+        prospectId,
+        actor: "system",
+        kind: "lead.sms_blocked_verdict",
+        payload: {
+          leadId: args.leadId,
+          verdict: persistedVerdict ?? result.verdict,
+        },
       });
     }
 

@@ -1,6 +1,6 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **planned, revised after review; not implemented**
+Status: **Phase 1A implemented in code; production smoke + 24h header observation pending. Phase 1B+ not started.**
 Owner: Layken
 Written: 2026-08-04
 
@@ -284,9 +284,9 @@ its own Function, and all lead aliases can be retired together.
 ```ts
 // convex/rateLimiter.ts
 leadPerVisitor:       { kind: "token bucket", rate: 5,   period: MINUTE, capacity: 5 },
-leadIngestPerProject: { kind: "fixed window", rate: 200, period: DAY },
+leadIngestPerProject: { kind: "fixed window", rate: 1000, period: DAY },
 paidFanoutPerProject: { kind: "fixed window", rate: 50,  period: DAY },
-leadNoTrustedVisitor: { kind: "fixed window", rate: 10,  period: HOUR },
+leadNoTrustedVisitor: { kind: "fixed window", rate: 30,  period: HOUR },
 eventsPerVisitor:     { kind: "token bucket", rate: 60,  period: MINUTE, capacity: 60 },
 smsPerProject:        { kind: "fixed window", rate: 20,  period: DAY },
 adminOpsAlertGlobal:  { kind: "fixed window", rate: 20,  period: HOUR },
@@ -327,11 +327,10 @@ allocated an oversized payload.
 | `message` | ≤ 4000 chars |
 | all | strip C0/C1 control characters except `\n` and `\t` |
 
-Expose the same limits in the client form and reject over-limit identity fields.
-Do not silently alter an email address or phone number. A message may be
-truncated only if the stored row carries `messageTruncated: true` and the client
-UI already disclosed the character limit; otherwise reject with a retryable
-validation response. Return generic public errors and never echo raw input.
+Expose the same limits in the client form and reject every over-limit field.
+Legacy v1 cannot prove that a client UI disclosed a message limit, so the Hub
+must not return success after truncating an inquiry. Return generic public
+errors and never echo raw input.
 
 ### 3.9 Origin matching (F13)
 
@@ -498,29 +497,32 @@ sitemap indexation checks, local keyword rank tracking against competitors.
 Ship before new capabilities. This is a bounded safety patch, not the final
 authentication model.
 
-- [ ] Keep the no-`Origin` compatibility path temporarily: TB Tree's live Next.js
+- [x] Keep the no-`Origin` compatibility path temporarily: TB Tree's live Next.js
       Server Action depends on it. Delete the false Turnstile claim and mark the
       bypass as a migration exception with a removal gate.
-- [ ] Enforce the 16 KB body ceiling while streaming, then validate field lengths
+- [x] Enforce the 16 KB body ceiling while streaming, then validate field lengths
       and email format **before** insert or `scheduler.runAfter` (F6, F7).
-- [ ] Add `leadIngestPerProject`, `paidFanoutPerProject`, and `smsPerProject`
+- [x] Add `leadIngestPerProject`, `paidFanoutPerProject`, and `smsPerProject`
       fixed-window ceilings (F5), with one threshold alert and visible untriaged
       leads when paid fan-out is paused.
-- [ ] Route the threshold alert through the separately deduplicated and globally
+- [x] Route the threshold alert through the separately deduplicated and globally
       capped admin-operations path. Prove exhausting a project fan-out bucket
       cannot suppress its own persisted admin alarm.
-- [ ] Log the actual hosting headers for 24 hours, identify a provider-controlled
+- [ ] Log hosting-header presence/shape for 24 hours, identify a provider-controlled
       visitor signal if Convex supplies one, and stop trusting caller-controlled
       XFF. Use `leadNoTrustedVisitor` when none exists (F4).
-- [ ] Re-key analytics to the trusted signal or a stricter project fallback (F8).
-- [ ] Restrict SMS to `verdict === "allow"` (F14).
-- [ ] Persist bounded `referrer` data (F10).
+      *(Set `HUB_VISITOR_OBSERVATION_UNTIL` to a timestamp no more than 24 hours
+      ahead. `[hub.visitor]` redacts raw values and stops automatically.)*
+- [x] Re-key analytics to the trusted signal or a stricter project fallback (F8).
+- [x] Restrict SMS to `verdict === "allow"` (F14).
+- [x] Persist bounded `referrer` data (F10).
 - [ ] Live smoke test both client forms and confirm one stored lead, one triage,
       one expected notification, and no duplicates for each.
-- [ ] Add counters/dashboard visibility for accepted leads, `429`s, paid fan-out
-      paused, SMS sent, and SMS blocked by verdict. Prove fixed project ceilings
-      still hold while XFF values are spoofed/rotated; any IP bucket is
-      best-effort only.
+- [x] Add counters/dashboard visibility for accepted leads, `429`s, paid fan-out
+      paused, SMS sent, and SMS blocked by verdict.
+- [ ] Prove fixed project ceilings still hold while XFF values are
+      spoofed/rotated; any IP bucket is best-effort only. This is a staging smoke
+      exercise; do not exhaust a live client's production buckets.
 
 ### Phase 1B — authenticated v2 and legacy retirement
 

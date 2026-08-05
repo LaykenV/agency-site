@@ -126,9 +126,13 @@ Bespoke client sites built from `../agency-template/` POST to:
 - `POST /api/v1/ingest-lead` — contact form submissions
 - `POST /api/v1/analytics/pixel` — page views
 
-Both have unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kept alive for old config-driven clients. Hub validates `projectId` exists, project status is `LIVE` or `IN_REVIEW`, browser `Origin` matches the configured `deployment.liveUrl` / `stagingUrl`, and rate limits per project (+ per IP for leads).
+Both have unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kept alive for old config-driven clients.
 
-**Failure mode to remember:** if a client's leads or analytics stop working, **check the Origin allowlist first** in `/admin/projects/{id}` — stale URLs there silently reject every request.
+**Stage 1A containment (current):** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. Header observation is off unless `HUB_VISITOR_OBSERVATION_UNTIL` is a future timestamp; logs contain presence/shape, not raw IPs. Set `HUB_TRUSTED_IP_HEADER` only after that bounded observation proves an injected header; its value is SHA-256 digested before use as a rate-limit key. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
+
+**Origin:** browser requests must match `deployment.liveUrl` / `stagingUrl`. **Leads still accept no-`Origin`** (TB Tree Server Action migration exception) until Stage 2 authenticated v2. Analytics still require Origin. This is containment, not authentication — see `waas_upgrade.md` / `UPGRADE_PLAN.md`.
+
+**Failure mode to remember:** if a client's leads or analytics stop working, **check the Origin allowlist first** in admin deployment URLs — stale URLs silently reject browser requests. Also check admin **Untriaged / Fan-out paused** and Convex logs for `[hub.lead]`.
 
 ## Things to be careful about
 

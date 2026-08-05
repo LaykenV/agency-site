@@ -20,6 +20,7 @@ import {
   aiLeadAnalysisValidator,
   physicalPresenceValidator,
   publicAuditStatusValidator,
+  hubOperationalCounterKindValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -66,6 +67,20 @@ export default defineSchema({
     .index("by_projectId", ["projectId"])
     .index("by_prospectId", ["prospectId"])
     .index("by_createdAt", ["createdAt"]),
+
+  hub_operational_counters: defineTable({
+    bucketDate: v.string(), // UTC YYYY-MM-DD; bounded operational evidence
+    projectId: v.string(),
+    kind: hubOperationalCounterKindValidator,
+    count: v.number(),
+    updatedAt: v.number(),
+  })
+    .index("by_bucketDate", ["bucketDate"])
+    .index("by_projectId_and_bucketDate_and_kind", [
+      "projectId",
+      "bucketDate",
+      "kind",
+    ]),
 
   scheduled_calls: defineTable(scheduledCallValidator)
     .index("by_projectId", ["projectId"])
@@ -142,18 +157,26 @@ export default defineSchema({
     // AI triage fields (optional for backward compat with existing leads)
     triageVerdict: v.optional(triageVerdictValidator),
     triage: v.optional(triageObjectValidator),
+    // Stage 1A: paid fan-out paused (Groq/Resend/Twilio) — lead still stored
+    fanoutPaused: v.optional(v.boolean()),
+    fanoutPausedReason: v.optional(v.string()),
   })
     .index("by_projectId", ["projectId"])
     .index("by_projectId_and_status", ["projectId", "status"])
     .index("by_projectId_and_triageVerdict", ["projectId", "triageVerdict"])
     .index("by_triageVerdict", ["triageVerdict"])
-    .index("by_createdAt", ["createdAt"]),
+    .index("by_createdAt", ["createdAt"])
+    .index("by_fanoutPaused_and_createdAt", ["fanoutPaused", "createdAt"]),
 
   client_analytics: defineTable({
     projectId: v.string(), // Human-readable slug
     date: v.string(), // YYYY-MM-DD
     pageViews: v.number(),
     topPages: v.array(v.object({ path: v.string(), views: v.number() })),
+    // Stage 1A: bounded referrer rollup (host or truncated URL)
+    topReferrers: v.optional(
+      v.array(v.object({ referrer: v.string(), views: v.number() })),
+    ),
   }).index("by_projectId_and_date", ["projectId", "date"]),
 
   marketing_searches: defineTable({

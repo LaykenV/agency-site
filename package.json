@@ -9,6 +9,7 @@
     "predev": "convex dev --until-success && convex dashboard",
     "build": "next build",
     "start": "next start",
+    "test": "bun test",
     "lint": "next lint",
     "video:preview": "remotion studio video/src/index.ts",
     "video:render": "remotion render video/src/index.ts Promo-Main out/promo-main.mp4",

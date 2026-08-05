@@ -1,11 +1,69 @@
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+import { httpAction, type ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { authComponent, createAuth } from "./auth";
 import { api, internal } from "./_generated/api";
 import Stripe from "stripe";
 import { rateLimiter } from "./rateLimiter";
+import {
+  jsonResponse,
+  logVisitorObservation,
+  normalizeAnalyticsPath,
+  normalizeReferrer,
+  observeTrustedVisitor,
+  readJsonBodyWithLimit,
+  validateLeadPayload,
+  LEAD_FIELD_LIMITS,
+} from "./httpValidation";
 
 const http = httpRouter();
+
+type HubCounterKind =
+  | "lead_accepted"
+  | "lead_fanout_paused"
+  | "lead_rate_limited_ingest"
+  | "lead_rate_limited_visitor"
+  | "lead_rate_limited_no_trusted";
+
+/** Telemetry must never turn an accepted/rejected request into a 500. */
+async function bumpHubCounter(
+  ctx: ActionCtx,
+  projectId: string,
+  kind: HubCounterKind,
+): Promise<void> {
+  try {
+    await ctx.runMutation(internal.hubOperations.bumpCounter, {
+      projectId,
+      kind,
+    });
+  } catch (error) {
+    console.error("[hub.counter] increment_failed", {
+      projectId,
+      kind,
+      error,
+    });
+  }
+}
+
+async function queueThresholdAlert(
+  ctx: ActionCtx,
+  args: {
+    projectId: string;
+    limitName: string;
+    leadId?: Id<"client_leads">;
+    detail: string;
+  },
+): Promise<void> {
+  try {
+    await ctx.runMutation(internal.hubOperations.queueThresholdAlert, args);
+  } catch (error) {
+    console.error("[hub.threshold_alert] queue_failed", {
+      projectId: args.projectId,
+      limitName: args.limitName,
+      error,
+    });
+  }
+}
 
 authComponent.registerRoutes(http, createAuth, {
   cors: true,
@@ -137,49 +195,46 @@ function getCorsHeaders(
 }
 
 // ============================================================================
-// LEAD INGESTION ENDPOINT
+// LEAD INGESTION ENDPOINT (v1 + unversioned — Stage 1A containment)
+// ============================================================================
+// Stage 1A deliberately keeps the no-Origin compatibility path: TB Tree's live
+// Next.js Server Action posts server-to-server without a browser Origin. That
+// hole is closed in Stage 2 (authenticated v2), not here. Turnstile was never
+// implemented; do not claim it as a control.
 // ============================================================================
 
 const ingestLeadHandler = httpAction(async (ctx, request) => {
     const origin = request.headers.get("origin");
 
-    let body: { projectId?: string; source?: string; data?: unknown };
-    try {
-      body = await request.json();
-    } catch {
-      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
+    // 1. Body ceiling + JSON parse (reject before allocating huge work)
+    const parsed = await readJsonBodyWithLimit(request);
+    if (!parsed.ok) {
+      console.log("[hub.lead] body_rejected", {
+        status: parsed.status,
+        error: parsed.error,
       });
+      return jsonResponse({ error: parsed.error }, parsed.status);
     }
 
-    const projectId = body.projectId as string;
-    if (!projectId) {
-      return new Response(JSON.stringify({ error: "Missing projectId" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+    const body = parsed.value as Record<string, unknown>;
+    const projectIdRaw = body.projectId;
+    if (typeof projectIdRaw !== "string" || !projectIdRaw.trim()) {
+      return jsonResponse({ error: "Missing projectId" }, 400);
     }
+    const projectId = projectIdRaw.trim().slice(0, LEAD_FIELD_LIMITS.projectId);
 
-    // 1. Validate projectId exists and is LIVE or IN_REVIEW
+    // 2. Validate projectId exists and is LIVE or IN_REVIEW
     const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
       projectId,
     });
 
     if (!project) {
-      return new Response(JSON.stringify({ error: "Invalid project" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Invalid project" }, 400);
     }
 
-    // Allow LIVE and IN_REVIEW for testing
     const allowedStatuses = ["LIVE", "IN_REVIEW"];
     if (!allowedStatuses.includes(project.projectStatus ?? "")) {
-      return new Response(JSON.stringify({ error: "Project not accepting leads" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Project not accepting leads" }, 400);
     }
 
     const corsHeaders = getCorsHeaders(
@@ -188,72 +243,147 @@ const ingestLeadHandler = httpAction(async (ctx, request) => {
       origin
     );
 
-    // 2. Validate origin for browser requests only
-    // Server-to-server calls (no origin) are allowed through - they're protected by:
-    // - Rate limiting below (5/min/project/IP) prevents spam regardless of source
-    // - Turnstile validation at client template level (for legitimate Server Action path)
-    // Note: CORS was never a security boundary for server-side attackers anyway -
-    // anyone who knew the liveUrl could fake the origin header
+    // 3. Origin: browser requests must match configured live/staging URL.
+    // Migration exception (Stage 1A): missing Origin is allowed for TB Tree's
+    // Server Action. Removal gate = both clients proven on authenticated v2.
     if (origin && !corsHeaders["Access-Control-Allow-Origin"]) {
-      return new Response(JSON.stringify({ error: "Forbidden" }), {
-        status: 403,
-        headers: { "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "Forbidden" }, 403);
     }
 
-    // 3. Rate limit by IP (5 leads per minute per project per IP)
-    const ip =
-      request.headers.get("cf-connecting-ip") ||
-      request.headers.get("x-forwarded-for")?.split(",")[0] ||
-      "unknown";
+    // 4. Field validation before rate-limit consumption / insert / schedule
+    const validated = validateLeadPayload(body);
+    if (!validated.ok) {
+      return jsonResponse({ error: validated.error }, 400, corsHeaders);
+    }
 
-    const { ok, retryAfter } = await rateLimiter.limit(ctx, "leadSubmission", {
-      key: `${projectId}:${ip}`,
+    // 5. Observe visitor headers (never key security on spoofable XFF)
+    const visitor = await observeTrustedVisitor(request);
+    logVisitorObservation("lead", projectId, visitor);
+
+    // 6. Visitor / no-trusted-visitor bucket. This must run before the daily
+    // ingest counter so rejected burst traffic cannot burn the full-day quota.
+    if (visitor.key) {
+      const visitorLimit = await rateLimiter.limit(ctx, "leadPerVisitor", {
+        key: `${projectId}:${visitor.key}`,
+      });
+      if (!visitorLimit.ok) {
+        await bumpHubCounter(ctx, projectId, "lead_rate_limited_visitor");
+        console.log("[hub.lead] rate_limited", {
+          kind: "leadPerVisitor",
+          projectId,
+          retryAfter: visitorLimit.retryAfter,
+        });
+        return jsonResponse(
+          { error: "Rate limited", retryAfter: visitorLimit.retryAfter },
+          429,
+          corsHeaders,
+        );
+      }
+    } else {
+      const noTrusted = await rateLimiter.limit(ctx, "leadNoTrustedVisitor", {
+        key: projectId,
+      });
+      if (!noTrusted.ok) {
+        await bumpHubCounter(ctx, projectId, "lead_rate_limited_no_trusted");
+        console.log("[hub.lead] rate_limited", {
+          kind: "leadNoTrustedVisitor",
+          projectId,
+          retryAfter: noTrusted.retryAfter,
+        });
+        // Also a rejected customer submission — alert for the same reason.
+        await queueThresholdAlert(ctx, {
+          projectId,
+          limitName: "leadNoTrustedVisitor",
+          detail:
+            "Hourly no-trusted-visitor ceiling reached. Further submissions are being REJECTED with 429 — real customer leads are being lost until the window resets.",
+        });
+        return jsonResponse(
+          { error: "Rate limited", retryAfter: noTrusted.retryAfter },
+          429,
+          corsHeaders,
+        );
+      }
+    }
+
+    // 7. Project storage ceiling (holds under rotated XFF). Consume it only for
+    // a request that survived the burst limiter and is about to be inserted.
+    const ingestLimit = await rateLimiter.limit(ctx, "leadIngestPerProject", {
+      key: projectId,
     });
-
-    if (!ok) {
-      return new Response(JSON.stringify({ error: "Rate limited", retryAfter }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+    if (!ingestLimit.ok) {
+      await bumpHubCounter(ctx, projectId, "lead_rate_limited_ingest");
+      console.log("[hub.lead] rate_limited", {
+        kind: "leadIngestPerProject",
+        projectId,
+        retryAfter: ingestLimit.retryAfter,
       });
+      await queueThresholdAlert(ctx, {
+        projectId,
+        limitName: "leadIngestPerProject",
+        detail:
+          "Daily lead ingest ceiling reached. Further submissions are being REJECTED with 429 — real customer leads are being lost until the window resets.",
+      });
+      return jsonResponse(
+        { error: "Rate limited", retryAfter: ingestLimit.retryAfter },
+        429,
+        corsHeaders,
+      );
     }
 
-    // 4. Validate lead data structure
-    const leadData = body.data as {
-      name?: string;
-      email?: string;
-      phone?: string;
-      message?: string;
-    };
+    // 8. Paid fan-out ceiling — store lead either way; never drop silently
+    const fanout = await rateLimiter.limit(ctx, "paidFanoutPerProject", {
+      key: projectId,
+    });
+    const fanoutPaused = !fanout.ok;
 
-    if (!leadData?.name || !leadData?.email) {
-      return new Response(JSON.stringify({ error: "Missing required fields: name, email" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    // 5. Insert lead
     const leadId = await ctx.runMutation(internal.clientLeads.create, {
       projectId,
-      source: (body.source as string) || "contact-form",
-      data: {
-        name: leadData.name,
-        email: leadData.email,
-        phone: leadData.phone,
-        message: leadData.message,
-      },
+      source: validated.source,
+      data: validated.data,
+      ...(fanoutPaused
+        ? {
+            fanoutPaused: true,
+            fanoutPausedReason: "paid_fanout_ceiling",
+          }
+        : {}),
     });
 
-    // 6. Schedule AI triage (triage handles all non-spam notifications)
-    await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
+    await bumpHubCounter(ctx, projectId, "lead_accepted");
+
+    if (fanoutPaused) {
+      await bumpHubCounter(ctx, projectId, "lead_fanout_paused");
+      console.log("[hub.lead] paid_fanout_paused", {
+        projectId,
+        leadId,
+        retryAfter: fanout.retryAfter,
+      });
+      // Persist + optionally deliver one threshold alert (separate admin path)
+      await queueThresholdAlert(ctx, {
+        projectId,
+        limitName: "paidFanoutPerProject",
+        leadId,
+        detail:
+          "Daily paid fan-out ceiling reached. Lead stored as untriaged; Groq/email/SMS skipped.",
+      });
+    } else {
+      await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
+        leadId,
+      });
+    }
+
+    console.log("[hub.lead] accepted", {
+      projectId,
       leadId,
+      fanoutPaused,
+      hasOrigin: Boolean(origin),
+      hasTrustedVisitor: Boolean(visitor.key),
     });
 
-    return new Response(JSON.stringify({ success: true, leadId }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse(
+      { success: true, leadId, fanoutPaused },
+      200,
+      corsHeaders,
+    );
   });
 
 http.route({
@@ -275,19 +405,18 @@ http.route({
 const analyticsPixelHandler = httpAction(async (ctx, request) => {
     const origin = request.headers.get("origin");
 
-    let body: { projectId?: string; path?: string };
-    try {
-      body = await request.json();
-    } catch {
-      return new Response(null, { status: 400 });
+    const parsed = await readJsonBodyWithLimit(request);
+    if (!parsed.ok) {
+      return new Response(null, { status: parsed.status === 413 ? 413 : 400 });
     }
 
-    const projectId = body.projectId as string;
-    if (!projectId) {
+    const body = parsed.value as Record<string, unknown>;
+    const projectIdRaw = body.projectId;
+    if (typeof projectIdRaw !== "string" || !projectIdRaw.trim()) {
       return new Response(null, { status: 400 });
     }
+    const projectId = projectIdRaw.trim().slice(0, LEAD_FIELD_LIMITS.projectId);
 
-    // Validate projectId exists
     const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
       projectId,
     });
@@ -302,24 +431,47 @@ const analyticsPixelHandler = httpAction(async (ctx, request) => {
       origin
     );
 
-    // Validate origin
+    // Analytics requires Origin match (mandatory)
     if (!corsHeaders["Access-Control-Allow-Origin"]) {
       return new Response(null, { status: 403 });
     }
 
-    // Rate limit analytics (higher limit, per project)
-    const { ok } = await rateLimiter.limit(ctx, "analyticsPixel", {
-      key: projectId,
-    });
+    const visitor = await observeTrustedVisitor(request);
+    logVisitorObservation("analytics", projectId, visitor);
 
-    if (!ok) {
-      return new Response(null, { status: 429, headers: corsHeaders });
+    // Trusted visitor key when available; stricter project fallback otherwise.
+    // Never key on spoofable XFF.
+    if (visitor.key) {
+      const { ok } = await rateLimiter.limit(ctx, "eventsPerVisitor", {
+        key: `${projectId}:${visitor.key}`,
+      });
+      if (!ok) {
+        console.log("[hub.analytics] rate_limited", {
+          kind: "eventsPerVisitor",
+          projectId,
+        });
+        return new Response(null, { status: 429, headers: corsHeaders });
+      }
+    } else {
+      const { ok } = await rateLimiter.limit(ctx, "analyticsProjectFallback", {
+        key: projectId,
+      });
+      if (!ok) {
+        console.log("[hub.analytics] rate_limited", {
+          kind: "analyticsProjectFallback",
+          projectId,
+        });
+        return new Response(null, { status: 429, headers: corsHeaders });
+      }
     }
 
-    // Record page view
+    const path = normalizeAnalyticsPath(body.path);
+    const referrer = normalizeReferrer(body.referrer);
+
     await ctx.runMutation(internal.clientAnalytics.recordPageView, {
       projectId,
-      path: body.path || "/",
+      path,
+      ...(referrer ? { referrer } : {}),
     });
 
     return new Response(null, { status: 204, headers: corsHeaders });
