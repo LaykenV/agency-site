@@ -634,14 +634,11 @@ No date. Revisit per item when a client pays for the outcome.
 
 - The `.agents/skills/cloudflare-turnstile/` skill is currently deleted in the
   working tree. Given the decision not to use Turnstile, that deletion can stand.
-- `CLAUDE.md` needs updating once Phase 1B ships: the Hub ↔ Spoke contract
-  section still describes `Origin` as the security boundary, and the
-  "check the Origin allowlist first" troubleshooting note will only apply to
-  analytics after leads move to authenticated bearer credentials.
+- `CLAUDE.md`, `ARCHITECTURE.md`, and the reusable template now describe the
+  v2-only lead contract. Origin remains an analytics control, not lead auth.
 - Research references: [Vercel request headers](https://vercel.com/docs/headers/request-headers),
   [Places API field pricing](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing),
   [Business Profile API prerequisites](https://developers.google.com/my-business/content/prereqs),
   and [Search Console authorization](https://developers.google.com/webmaster-tools/v1/how-tos/authorizing).
-- `agency-template/` is no longer the path new client sites take, but Phase 1B
-  still owns its patch-or-mark-legacy decision so it cannot remain an accidental
-  source of v1 code.
+- `agency-template/` is no longer the path new client sites take, but it is
+  patched to v2 and its validator rejects retired lead-endpoint references.
