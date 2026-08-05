@@ -16,7 +16,10 @@ Acadiana Web Design's Hub: Website-as-a-Service operations stack. Next.js 16 + C
   sites POST to.
 - Remotion-based promo video generation.
 
-The bespoke client-site starter (the Spoke side) lives in `../agency-template/`.
+**`../agency-template/` is fully retired (2026-08-05).** Do not read it, patch it,
+or clone from it. Client sites are built bespoke against the contract below.
+`../agency-playground/` is the reference Spoke and the first site to run each new
+Hub contract in production.
 
 ## Where to find things
 
@@ -123,7 +126,7 @@ export const myQuery = query({
 
 ## Hub ↔ Spoke contract
 
-Bespoke client sites built from `../agency-template/` POST to:
+Bespoke client sites POST to:
 
 - `POST /api/v2/leads` — authenticated lead intake (`Authorization: Bearer sk_live_<keyId>_<secret>`). Keys issued in admin (Projects → expand → API Credentials); raw key shown once; only SHA-256 stored.
 - `POST /api/v2/events` — typed browser events (`pageview` | `click`) with body
@@ -136,12 +139,35 @@ Analytics also has the unversioned `/api/analytics/pixel` alias until Stage 3
 cutover is complete for live spokes. The unauthenticated v1 and unversioned
 **lead** routes are retired.
 
+Stage 3 is complete in the Hub and verified on the playground spoke. Rollout to
+the remaining live sites is outstanding: each needs a publishable credential, a
+bare-host deployment URL, `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY`, and a rebuild.
+A site still on v1 reports pageviews only — no click data.
+
 **Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moved per-visitor limiting to each client's Function where the provider header is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
 
 **Origin:** analytics browser requests must match `deployment.liveUrl` /
-`stagingUrl`. Leads are server-to-server and authenticate with a secret bearer;
-the credential resolves the project, so leads do not use Origin as an auth
-boundary.
+`stagingUrl`. Store these as a **bare host** (`example.com`) — the Hub builds
+`https://<host>` itself, so a stored scheme makes every event `403`. Leads are
+server-to-server and authenticate with a secret bearer; the credential resolves
+the project, so leads do not use Origin as an auth boundary.
+
+**Stage 3 telemetry rules (verified in production 2026-08-05, do not "fix"):**
+
+- Only pageviews roll into `client_analytics.referrerClasses`. Clicks carry the
+  same `document.referrer` as the pageview before them, so counting both
+  double-counts every source.
+- A referrer matching the request Origin's host is internal navigation and gets
+  **no** class — not `direct`, which would overwrite the real origin for a
+  visitor who arrived from search and loaded a second page.
+- Referrer classes are collected but **deliberately not shown to clients**
+  (`components/portal/SiteMetrics.tsx`). `direct` is an unknown bucket (QR scans,
+  SMS links, in-app browsers, no-referrer policies) and a bare `google.com`
+  referrer cannot separate search from the Business Profile listing. The missing
+  UI is a decision, not an omission — see `UPGRADE_PLAN.md` § Stage 3.
+- `projectCredentials.touchLastUsed` takes `minIntervalMs`; events pass 5 minutes
+  because one credential row serves every browser event for a project. Leads pass
+  nothing and still stamp on every submission.
 
 **Failure mode to remember:** for leads, check the spoke's server-only credential,
 credential `lastUsedAt`, and `[hub.lead.v2]` logs. For events/analytics, check

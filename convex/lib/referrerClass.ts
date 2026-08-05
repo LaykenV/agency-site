@@ -18,9 +18,18 @@ const SOCIAL_HOST_RE =
  * Classify a raw referrer string (URL, host, or the literal "direct").
  * Empty / missing / "direct" → direct.
  */
+function stripWww(host: string): string {
+  return host.replace(/^www\./, "");
+}
+
 export function classifyReferrer(
   referrer: string | undefined | null,
-): ReferrerClass {
+  /**
+   * The site's own host, from the already-validated request Origin. A referrer
+   * from this host is internal navigation, not a traffic source.
+   */
+  selfHost?: string | null,
+): ReferrerClass | undefined {
   if (referrer === undefined || referrer === null) return "direct";
   const trimmed = referrer.trim();
   if (!trimmed || trimmed.toLowerCase() === "direct") return "direct";
@@ -41,6 +50,15 @@ export function classifyReferrer(
   }
 
   if (!host) return "direct";
+
+  // Internal navigation — a full page load between our own pages sets
+  // `document.referrer` to our own host. Attributing that to any source is
+  // wrong: `other` implies an unrecognized external site, and `direct` would
+  // overwrite the visit's real origin. Without sessions (deferred to Stage 8)
+  // the honest answer is to record no source at all.
+  if (selfHost && stripWww(host) === stripWww(selfHost.toLowerCase())) {
+    return undefined;
+  }
 
   // Normalize for regex: ensure trailing dot so `(^|\.)foo\.` matches
   const hostForMatch = host.endsWith(".") ? host : `${host}.`;

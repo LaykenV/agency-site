@@ -28,4 +28,28 @@ describe("classifyReferrer", () => {
     expect(classifyReferrer("https://example.com/blog")).toBe("other");
     expect(classifyReferrer("newsletter.client.com")).toBe("other");
   });
+
+  test("records no source for self-referrals", () => {
+    // A full page load between our own pages is internal navigation, not a
+    // traffic source. Without it, every one of these lands in `other`.
+    expect(
+      classifyReferrer("https://bayoutreepros.com/services", "bayoutreepros.com"),
+    ).toBeUndefined();
+    // www vs bare host is the same site
+    expect(
+      classifyReferrer("https://www.bayoutreepros.com/", "bayoutreepros.com"),
+    ).toBeUndefined();
+    expect(
+      classifyReferrer("https://bayoutreepros.com/", "www.bayoutreepros.com"),
+    ).toBeUndefined();
+    // A real external referrer still classifies normally
+    expect(
+      classifyReferrer("https://www.google.com/search?q=x", "bayoutreepros.com"),
+    ).toBe("organic");
+    expect(
+      classifyReferrer("https://example.com/", "bayoutreepros.com"),
+    ).toBe("other");
+    // Without a selfHost the old behavior is unchanged
+    expect(classifyReferrer("https://bayoutreepros.com/services")).toBe("other");
+  });
 });

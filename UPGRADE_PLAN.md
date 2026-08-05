@@ -1,10 +1,11 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stages 0, 1A, and 2 complete in production. Stage 3 (typed events and
-click tracking) implemented in code — production smoke still required.**
+Status: **Stages 0, 1A, 2, and 3 complete in production. Stage 3 is verified end
+to end on the playground spoke; rollout to the remaining live client sites is
+outstanding.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Stage 3 Hub implementation)
+Last reviewed: 2026-08-05 (Stage 3 production verification)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -36,7 +37,7 @@ is disabled, but the Hub must support both paths during the overlap.
 Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
 Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
 Stage 2   WAAS authenticated v2 ....... clients migrated; v1 leads retired [done]
-Stage 3   Typed events + click tracking  tel:/mailto:/directions          [code done; prod smoke next]
+Stage 3   Typed events + click tracking  tel:/mailto:/directions          [done; spoke rollout pending]
 Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
 Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
 Stage 6   Stripe component ............ spike, then cutover               [spike-gated]
@@ -198,7 +199,7 @@ honestly: `tel:` events are tap-to-call clicks, not completed calls. Coarse
 referrer classes are not campaign or GBP attribution; that requires the deferred
 UTM work because a bare Google referrer is not proof.
 
-**Implemented in code 2026-08-05; production smoke outstanding.** Hub ships
+**Complete in production 2026-08-05; spoke rollout outstanding.** Hub ships
 `client_events`, `POST /api/v2/events` (publishable key in body + Origin), daily
 click/referrer-class rollups on `client_analytics`, the shared
 `convex/lib/pagespeed.ts` with a first-`LIVE` snapshot and an admin **Refresh
@@ -211,8 +212,39 @@ write-contention hotspot under browser event volume.
 
 **Spoke side is `../agency-playground/`, not `agency-template`.** Playground
 carries the v2 client, the corrected directions-link matcher, and a Stage 3
-section in its `WAAS_V2_RUNBOOK.md`. It deploys first; All About Towing follows
-once its proof passes.
+section in its `WAAS_V2_RUNBOOK.md`.
+
+**Production proof (playground, 2026-08-05).** Pageviews and all three click
+targets — `tel`, `email`, `directions` — were accepted, attributed to the
+project, and rendered in the portal's **Site activity** panel. PageSpeed refresh
+verified. Two defects were found and fixed during that smoke:
+
+- Self-referrals were classified as `other`. A full page load between the site's
+  own pages sets `document.referrer` to the site itself, which is internal
+  navigation, not a traffic source. The Hub now compares the referrer host to
+  the already-validated request Origin and records no source at all. Not
+  `direct` — that would overwrite the visit's real origin for anyone who arrived
+  from search and then loaded a second page.
+- Referrer classes were labeled as visit counts. Client-side routing preserves
+  the original `document.referrer`, so one visitor browsing five pages counted
+  their source five times.
+
+**Referrer classes are collected but hidden from clients (decided 2026-08-05).**
+The rollup keeps accruing and `clientAnalytics.getSummary` still returns it, so
+re-enabling is a display change. It is not shown because it cannot yet say
+anything both specific and true: `direct` is an unknown bucket that absorbs QR
+scans, SMS links, in-app browsers, and no-referrer policies, and a bare
+`google.com` referrer cannot separate search results from the Business Profile
+listing. A client reads "direct 40" as "40 people typed my URL." Revisit when
+Stage 8's UTM work can attribute a call to a specific listing or campaign.
+
+**Rollout to the remaining spokes is what closes this stage.** Each live site
+needs a publishable credential, its deployment URL stored as a bare host, the
+`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` env var, and a rebuild. Until a given site is
+migrated it stays on the v1 pixel and reports pageviews only — no click data,
+which is the whole point of the stage. Priority order: All About Towing (no
+contact form, so tap-to-call is its only conversion signal and the reason the
+project is billable), then TB Tree and Chelsea.
 
 **Declined 2026-08-05 — operational counters for `/api/v2/events`.** Stage 1A
 built `hub_operational_counters` because unauthenticated leads could burn Groq,
@@ -565,7 +597,7 @@ Required operational signals and exit evidence:
 | 0 | Exact resolved full component matrix, clean frozen install, codegen/type/build, production mobile magic link, Resend, workflow, current Checkout/webhook smoke tests |
 | 1A | Leads accepted, `429`s, paid fan-out paused, SMS sent, SMS blocked by verdict; one labeled post-deploy submission through each live spoke |
 | 2 | v1/v2 lead volume, credential `lastUsedAt`, auth failures (from `[hub.lead.v2] auth_failed` logs — deliberately not a counter), `hasVisitorHash: true` on live spoke traffic, duplicate triage count (must be zero) |
-| 3 | Click events by type for a live project; referrer classification spot-checked against known traffic |
+| 3 | Click events by type for a live project (met on playground 2026-08-05); per-spoke: one `tel` click reaching the portal after that site's key is issued. Referrer classification is collected but hidden, so it is no longer an exit signal |
 | 4 | Backfill report with zero unresolved rows; both price paths resolve from project data in Stripe test mode; MSA + order-form hashes recorded on a test agreement |
 | 6 | Sandbox spike outputs and Stripe object IDs; hand reconciliation of every live subscription; visible reader/writer/side-effect flag state; completed rollback drill |
 

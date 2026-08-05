@@ -45,20 +45,14 @@ export function SiteMetrics({
     );
   }
 
-  const { telClicks, emailClicks, directionsClicks, referrerClasses } =
+  const { telClicks, emailClicks, directionsClicks } =
     analyticsSummary.thisMonth;
 
   const hasAnyClick = telClicks > 0 || emailClicks > 0 || directionsClicks > 0;
-  const hasReferrerData =
-    referrerClasses.organic +
-      referrerClasses.social +
-      referrerClasses.direct +
-      referrerClasses.other >
-    0;
   const hasPageSpeed = Boolean(pageSpeedSnapshot);
 
   // Hide entirely when nothing Stage-3-specific is present yet
-  if (!hasAnyClick && !hasPageSpeed && !hasReferrerData) {
+  if (!hasAnyClick && !hasPageSpeed) {
     return null;
   }
 
@@ -76,7 +70,7 @@ export function SiteMetrics({
         <h3 className="font-semibold text-base">Site activity</h3>
         <p className="text-xs text-[var(--muted-foreground)] mt-1">
           Tap-to-call and email clicks count taps, not completed calls or
-          conversations. Referrer classes are coarse, not campaign attribution.
+          conversations.
         </p>
       </div>
 
@@ -129,35 +123,18 @@ export function SiteMetrics({
         </div>
       )}
 
-      {hasReferrerData && (
-        <div>
-          <p className="text-xs font-medium text-[var(--muted-foreground)] mb-2 uppercase tracking-wide">
-            Traffic sources (this month)
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {(
-              [
-                ["organic", referrerClasses.organic],
-                ["social", referrerClasses.social],
-                ["direct", referrerClasses.direct],
-                ["other", referrerClasses.other],
-              ] as const
-            )
-              .filter(([, count]) => count > 0)
-              .map(([label, count]) => (
-                <span
-                  key={label}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-[hsl(var(--muted)/0.7)] px-2.5 py-1 text-xs"
-                >
-                  <span className="capitalize text-[var(--muted-foreground)]">
-                    {label}
-                  </span>
-                  <span className="font-semibold tabular-nums">{count}</span>
-                </span>
-              ))}
-          </div>
-        </div>
-      )}
+      {/*
+        Referrer classes are deliberately NOT shown to clients (decided
+        2026-08-05). The Hub still collects them and `getSummary` still returns
+        them, so re-enabling is a display change only.
+
+        Why hidden: `direct` is an unknown bucket, not a source — it absorbs QR
+        scans, SMS links, in-app browsers, and any no-referrer policy — and a
+        bare google.com referrer cannot separate search from the Business
+        Profile listing. Clients read "direct 40" as "40 people typed my URL",
+        which is false. Show sources again when Stage 8's UTM work can say
+        something specific and true. See UPGRADE_PLAN.md § Stage 3.
+      */}
     </div>
   );
 }

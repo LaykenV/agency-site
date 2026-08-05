@@ -727,7 +727,16 @@ const eventsV2Handler = httpAction(async (ctx, request) => {
     }
   }
 
-  const referrerClass = classifyReferrer(validated.referrer);
+  // `origin` is already proven to match the project's deployment URL above, so
+  // its host is a trustworthy "this is us" check for self-referrals.
+  let selfHost: string | null = null;
+  try {
+    selfHost = origin ? new URL(origin).hostname : null;
+  } catch {
+    selfHost = null;
+  }
+
+  const referrerClass = classifyReferrer(validated.referrer, selfHost);
 
   await ctx.runMutation(internal.clientEvents.recordEvent, {
     projectDocId: project._id,

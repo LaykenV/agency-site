@@ -1,10 +1,11 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phases 1A and 1B complete in production. Phase 2 (typed telemetry) is
-next.**
+Status: **Phases 1A, 1B, and 2 complete in production. Phase 2 is verified end to
+end on the playground spoke; migrating the remaining live client sites off the
+v1 pixel is outstanding.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (v2-only production cutover verified)
+Last reviewed: 2026-08-05 (Phase 2 production verification)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -584,9 +585,21 @@ Promoted ahead of the portal work on 2026-08-05 (`UPGRADE_PLAN.md` Stage 3) and
 reduced to the signals that justify an invoice. All About Towing has no contact
 form, so tap-to-call is its only conversion signal.
 
-**Implementation landed 2026-08-05** (Hub + template + docs). Production exit
-still requires live click events on a project with a publishable key and a
-referrer-class spot-check (`UPGRADE_PLAN.md` § 6).
+**Complete in production 2026-08-05.** Verified on the playground spoke:
+pageviews plus all three click targets (`tel`, `email`, `directions`) accepted,
+attributed, and rendered in the portal, with PageSpeed refresh confirmed. Two
+defects were found and fixed during the smoke — self-referrals classified as
+`other`, and referrer classes labeled as visit counts when they are per-page-view
+counts. See `UPGRADE_PLAN.md` § Stage 3.
+
+Referrer classes are collected but **not shown to clients**; the class rollup
+cannot yet separate a Business Profile tap from a search result, and `direct` is
+an unknown bucket rather than a source. Revisit with Stage 8's UTM work.
+
+Remaining work is spoke rollout, not Hub work: each live site needs a publishable
+credential, a bare-host deployment URL, `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY`, and a
+rebuild. Sites still on v1 report pageviews only. Keep the v1 pixel until the
+last one migrates.
 
 - [x] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
       publishable key; make `pageview` one type.
