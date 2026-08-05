@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StickyAuth } from "@/components/StickyAuth";
+import { ProjectCredentialsPanel } from "@/components/admin/ProjectCredentialsPanel";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -979,6 +980,9 @@ function ProjectsTab() {
                           </button>
                         </div>
                       </div>
+                      <div className="pt-2 border-t border-[hsl(var(--border))]">
+                        <ProjectCredentialsPanel projectId={project._id} />
+                      </div>
                     </div>
                   );
                 })()}
@@ -1293,6 +1297,9 @@ function ProjectsTab() {
                                     {saving[`deploy-${project._id}`] ? "Saving..." : "Save Deployment"}
                                   </button>
                                 </div>
+                              </div>
+                              <div className="pt-2 border-t border-[hsl(var(--border))]">
+                                <ProjectCredentialsPanel projectId={project._id} />
                               </div>
                             </div>
                           </td>

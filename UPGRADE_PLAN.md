@@ -1,9 +1,9 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stage 0 done in prod; Stage 1 containment implemented — production smoke + 24h header observation pending**
+Status: **Stages 0 and 1A complete in production. Stage 2 (WAAS authenticated v2) is next.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-04
+Last reviewed: 2026-08-05 (scope trim + resequence; see § 7)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -32,16 +32,42 @@ is disabled, but the Hub must support both paths during the overlap.
 ## 2. The revised order
 
 ```text
-Stage 0  Dependency baseline .......... reconcile Bun lock + peers       [gate]
-Stage 1  WAAS containment ............. cap cost without breaking v1     [ship first]
-Stage 2  WAAS authenticated v2 ........ migrate both clients, retire v1  [closes hole]
-Stage 3  Portal foundation ............ offerings + stage capabilities   [data-safe]
-Stage 4  Stripe component ............. spike + parallel shadow reads    [spike-gated]
-Stage 5  Portal refactor .............. modules + explicit creation      [no multi-project]
-Stage 6  Stripe cutover ............... reads, then checkout writes       [observed]
-Stage 7  Multi-project ................ picker + independent billing      [needs Stage 6]
-Stage 8  Telemetry + external data .... measured, privacy-reviewed        [later]
+Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
+Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
+Stage 2   WAAS authenticated v2 ....... migrate both clients, retire v1   [closes hole]
+Stage 3   Typed events + click tracking  tel:/mailto:/directions          [was Stage 8]
+Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
+Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
+Stage 6   Stripe component ............ spike, then cutover               [spike-gated]
+Stage 7   Multi-project ............... picker + independent billing      [needs Stage 6]
+Stage 8   Deferred backlog ............ external data, visitor identity   [no date]
+
+Contingency (not a stage):
+  Stripe metadata bridge ............. only if a client signs before Stage 6
 ```
+
+Execution order changed on 2026-08-05 against the original 0-8 listing. Two
+stages moved and one was added:
+
+- **Click tracking moved from Stage 8 to Stage 3.** All About Towing has no
+  contact form, so `tel:` taps are its only conversion signal and the whole
+  reason the project is billable. It is also small and depends only on the
+  Stage 2 publishable credential.
+- **Stripe moved after the portal work.** With no deadline on multi-project,
+  the component migration no longer gates anything urgent.
+- **The Stripe metadata bridge is a contingency, not a stage.** It was briefly
+  planned as Stage 1B. Its only value is attributing subscriptions created
+  *between now and Stage 6*, and no client will be signed in that window. See
+  § 4 for the trigger that reinstates it.
+
+Confirmed business inputs driving this order (2026-08-05):
+
+| Input | Consequence |
+|---|---|
+| Mobile app + IDX clients expected | Offering registry and portal modules are required, not speculative |
+| Both billed as deposit/setup fee + monthly | Stays inside Checkout `mode: "subscription"`; no Stripe Invoices path |
+| All About Towing already live, happy, no contact form | Needs click tracking and a `leads`-off module override; not lead ingestion |
+| No deadline to put towing under Chelsea's login | Multi-project can stay last; no bridge account needed |
 
 ### Stage 0 — dependency baseline
 
@@ -79,7 +105,7 @@ A latest-versions modernization remains a separate future program. Agent
 parallelism may accelerate its research and regression work, but it does not
 combine that program with this dependency baseline or its production deploy.
 
-### Stage 1 — WAAS containment
+### Stage 1A — WAAS containment
 
 `waas_upgrade.md` § Phase 1A. Add bounded body and field validation, a hard
 fixed-window per-project cost ceiling, an SMS ceiling, `allow`-only SMS, and
@@ -97,18 +123,62 @@ posts server-to-server and therefore sends no browser `Origin`; rejecting that
 traffic would break a real form. Stage 1A reduces blast radius but does not claim
 to close the authentication hole.
 
+### Contingency — Stripe metadata bridge
+
+**Not scheduled (decided 2026-08-05).** `checkout.sessions.create`
+(`stripeActions.ts:227`) writes no project reference, so subscriptions are born
+unattributed. The fix is a few lines with no dependency or schema change:
+
+```ts
+subscription_data: {
+  metadata: { orgId: `project:${projectId}`, userId: project.authUserId },
+}
+```
+
+It was briefly planned as its own stage. It is not one, because its only value is
+attributing subscriptions created *between now and Stage 6* — and no client will
+be signed in that window. Stage 6's Checkout writer sets this metadata anyway,
+and the existing live subscriptions need a hand-backfill either way.
+
+**Trigger that reinstates it:** a client signs before Stage 6 lands. Ship this
+before their checkout. The failure mode is silent — an unattributed subscription
+looks completely normal until Stage 6 reconciliation — so do not rely on noticing
+it later.
+
 ### Stage 2 — WAAS authenticated v2
 
-`waas_upgrade.md` § Phase 1B. Add hashed bearer credentials and per-submission
-idempotency receipts, migrate TB Tree's server path first, then migrate Chelsea's
-browser POST through a Vercel Function, and smoke-test both live sites through
-stored lead, triage, email, and SMS behavior.
+`waas_upgrade.md` § Phase 1B. Add hashed bearer credentials, migrate TB Tree's
+server path first, then migrate Chelsea's browser POST through a Vercel Function,
+and smoke-test both live sites through stored lead, triage, email, and SMS
+behavior.
 
 Only after both production paths pass may the Hub reject legacy no-`Origin`
 traffic and retire the v1/unversioned lead endpoints. This is the stage that
 actually closes the unauthenticated paid-fan-out hole.
 
-### Stage 3 — portal foundation
+**Trimmed 2026-08-05.** Per-submission idempotency receipts and
+`previewUrlPattern` are cut — see § 7.
+
+### Stage 3 — typed events and click tracking
+
+`waas_upgrade.md` § Phase 2, reduced to the parts that sell. Add `client_events`
+and `POST /api/v2/events` authenticated by the Stage 2 publishable key, make
+`pageview` one type among several, and ship `tel:` / `mailto:` / directions click
+tracking, referrer classification, UTM capture, and the one-time PageSpeed
+snapshot.
+
+This is ahead of the portal work because All About Towing has no contact form.
+Pageviews alone do not justify an invoice for that project; tap-to-call counts
+do. It depends only on the Stage 2 credential model, not on the module registry —
+render the new metrics into the existing portal widgets and let Stage 5 convert
+them to modules.
+
+Visitor hashes, session identifiers, Web Vitals, and the JS error beacon are
+deferred to Stage 8. Label what is measured honestly: `tel:` events are
+tap-to-call clicks, not completed calls, and GBP attribution requires explicit
+UTMs because a bare Google referrer is not proof.
+
+### Stage 4 — offering registry
 
 `portal_architecture.md` § Phases 1-2. Introduce offerings using an
 expand → backfill → verify → contract migration, then add stage metadata and
@@ -118,21 +188,18 @@ explicit capabilities such as `acceptsLeads`.
 capabilities; replacing today's `IN_REVIEW`/`LIVE` lead rule with
 `phase === "DELIVERED"` would reject review-site leads.
 
-### Stage 4 — Stripe component spike and shadowing
+`mobile_app` and `idx_website` are no longer hypothetical — both have expected
+clients — so the registry must express an offering with no `leads` module and a
+completely different fulfillment stage list from day one.
 
-`billing_migration.md` § Phases B-C. The source-level questions are resolved,
-but the integration still gets a sandbox spike, Stripe simulations/test clocks,
-and a second webhook reader. Keep the legacy path authoritative while a shadow
-comparison reports discrepancies.
-
-Install `@convex-dev/stripe@0.1.6` and move the app's direct Stripe SDK to an
-exact `22.4.0` in this stage, before cutover. Compile and regression-test the
-legacy integration against v22 so two Stripe majors do not coexist through the
-observation window.
-
-Each Stripe webhook endpoint has its own signing secret. The component endpoint
-uses a separate `STRIPE_WEBHOOK_SECRET_V2`, and custom event side effects are
-guarded by an application event-ID ledger.
+This stage also owns the **MSA / order-form split** (`portal_architecture.md`
+§ 5.4). Today's terms are one global `TERMS_VERSION` with `$199` written into the
+prose, an IP clause granting only a license during an active subscription, and a
+liability cap of three months of fees. None of that survives a five-figure build
+engagement. Universal terms become a versioned MSA; price, term, scope,
+deliverables, and acceptance criteria move to a per-project order form generated
+from the offering for `waas_local` and admin-authored for bespoke work. Both
+hashes are recorded on the agreement.
 
 ### Stage 5 — portal refactor and onboarding retirement
 
@@ -140,26 +207,35 @@ guarded by an application event-ID ledger.
 registry, create projects explicitly, and retire public `/onboarding` plus its
 website-only AI plan generator.
 
-This may run during Stripe's observation window because it does not create a
-second real project or change the authoritative billing reader. The offering
-registry's price resolver must remain compatible with the legacy checkout writer
-until Stage 6. A second-project UI may exist only behind an admin feature flag;
-creating a second real client project is forbidden until Stage 6 exits.
+Keep per-project `moduleOverrides` and build the admin toggle. All About Towing
+is a live `waas_local` project with no contact form, so it needs `leads` off and
+metrics on — the override case is real on day one, not a future convenience.
 
-### Stage 6 — Stripe cutover
+A second-project UI may exist only behind an admin feature flag; creating a
+second real client project is forbidden until Stage 6 exits.
 
-`billing_migration.md` § Phases D-E. Backfill the **Stripe subscription
-metadata** with a namespaced project reference and let webhooks populate the
-component cache. Flip reads behind a reversible switch, then move checkout
-writes after parity is proven.
+### Stage 6 — Stripe component
 
-Stage 6 exits when project-scoped reads and the single Checkout writer pass the
-test-clock lifecycle, live reconciliation, and rollback drills. It does not wait
-a calendar month. `billing_migration.md` Phase F remains a later cleanup: observe
-at least one complete live billing cycle, export the legacy Convex billing
-tables, and reconcile every live Stripe subscription, invoice, and project
-reference before decommissioning. That cleanup does not block Stage 7 while the
-legacy data and rollback path remain intact.
+`billing_migration.md` § Phases B-E. Sandbox spike first: two subscriptions on
+one customer with distinct `project:*` org IDs, duplicate and out-of-order
+webhook delivery, cancel/resubscribe selection, and test-clock lifecycle. Then
+install `@convex-dev/stripe@0.1.6`, move the app's direct Stripe SDK to an exact
+`22.4.0` in the same PR, register `/stripe/webhook/v2` with its own
+`STRIPE_WEBHOOK_SECRET_V2`, and add the application event-ID ledger before
+enabling any event hook.
+
+Checkout must support **deposit/setup fee + monthly**: a one-time price line item
+alongside the recurring price in `mode: "subscription"`, billed on the first
+invoice. Today `stripeActions.ts:229` hardcodes a single recurring line item.
+Milestone invoicing is explicitly out of scope; if a later deal needs it, that is
+Stripe Invoices and a new portal billing surface, not an extension of Checkout.
+
+Flip reads behind a reversible switch, then move checkout writes after parity is
+proven. Stage 6 exits when project-scoped reads and the single Checkout writer
+pass the test-clock lifecycle, live reconciliation, and a rollback drill.
+
+**Trimmed 2026-08-05.** The automated shadow-mismatch counting infrastructure and
+Phase F decommissioning are cut/deferred — see § 7.
 
 ### Stage 7 — multi-project
 
@@ -167,19 +243,24 @@ legacy data and rollback path remain intact.
 per-project reads. Add the project list/switcher and the admin second-project
 flow. Do not create a second real project before this lands.
 
-### Stage 8 — telemetry and external data
+The first real case is Chelsea holding both her own project and All About Towing.
+That site is already live and its owner is happy, and there is no deadline to
+move it under her login, so nothing here needs to be rushed or bridged through a
+temporary second account.
 
-`waas_upgrade.md` § Phases 2-3. Add typed events and client modules only after
-the module registry exists. Ship click events, PageSpeed snapshots, and
-availability checks before paid Places data, GBP OAuth, or Search Console.
-Those external integrations wait for a paying reporting need. Label measured
-signals honestly:
+### Stage 8 — deferred backlog
 
-- `tel:` events are tap-to-call clicks, not completed calls.
-- Five-minute probes are successful monitoring checks, not an SLA.
-- GBP attribution requires explicit UTMs; referrer alone is insufficient.
-- IP-derived hashes and `sessionStorage` need a documented privacy basis and
-  must not be described categorically as requiring no consent.
+No date. Revisit each item only when a client is paying for the outcome:
+
+- Visitor hashes, session identifiers, bounce rate, Web Vitals, JS error beacon.
+  These require a completed privacy inventory, a retention policy, and updates to
+  every client privacy page before collection begins. Do not describe IP-derived
+  hashes as anonymous or as categorically consent-free.
+- Availability-check cron. Five-minute probes are successful monitoring checks,
+  not an SLA.
+- Paid Places review snapshots, GBP OAuth, Search Console. All require pricing
+  review, and the latter two require explicit client authorization.
+- `billing_migration.md` Phase F — legacy billing table decommissioning.
 
 ---
 
@@ -187,16 +268,25 @@ signals honestly:
 
 1. **Stage 0 before adding another component.** The dependency baseline must be
    reproducible before billing work changes it.
-2. **Stage 1B before rejecting no-`Origin` legacy leads.** Otherwise TB Tree's
+2. **The Stripe metadata bridge before any client signs.** If a deal closes
+   before Stage 6, ship the contingency above before their checkout runs.
+3. **Stage 2 before rejecting no-`Origin` legacy leads.** Otherwise TB Tree's
    live form breaks.
-3. **Stage 3 before the portal decomposition.** Capabilities and data shape are
+4. **Stage 2 before any new spoke goes live on the Hub.** Three new sites are
+   expected (towing, mobile app, IDX). Onboarding them onto the unauthenticated
+   v1 contract means migrating five clients later instead of two.
+5. **Stage 4 before the portal decomposition.** Capabilities and data shape are
    the seams the refactor depends on.
-4. **Stage 6 before Stage 7.** Per-project subscription attribution must exist
+6. **Stage 4 before quoting a bespoke build.** The MSA/order-form split must
+   exist before an agreement is signed for a mobile app or IDX engagement; the
+   current terms grant only a license during an active subscription and cap
+   liability at three months of fees.
+7. **Stage 6 before Stage 7.** Per-project subscription attribution must exist
    before a client can own two live projects.
-5. **No schema contraction before verified backfill.** New fields begin optional,
+8. **No schema contraction before verified backfill.** New fields begin optional,
    dual reads/writes cover the migration window, and required validation lands
    only after production counts prove completeness.
-6. **Snapshot the system that owns the data before mutation.** Convex backfills
+9. **Snapshot the system that owns the data before mutation.** Convex backfills
    require a dated production export. Stripe metadata backfills require a
    reversible Stripe manifest; a Convex export cannot restore Stripe objects.
 
@@ -204,9 +294,18 @@ signals honestly:
 
 ## 4. Ordering and behavior rules
 
-- Do not add `mobile_app`, `idx_website`, or another engagement type before the
-  portal module refactor is complete. `waas_local_family` is safe earlier because
-  it changes price/terms data, not workflow shape.
+- Do not add `mobile_app` or `idx_website` before the Stage 5 portal module
+  refactor is complete. Both are expected, which makes this rule load-bearing
+  rather than theoretical: adding a second engagement type to the current
+  2,191-line portal page is what guarantees the refactor never happens.
+  `waas_local_family` is safe earlier because it changes price/terms data, not
+  workflow shape.
+- An `idx_website` engagement has a non-code prerequisite: MLS/board data license
+  and vendor approval. Split it three ways — the onboarding step collects what
+  the client knows, the order form states the obligation, and a fulfillment stage
+  tracks whether approval actually arrived. Do not make it a blocking onboarding
+  field; approval can take weeks and is outside the client's control. See
+  `portal_architecture.md` § 2.3.
 - Do not run a Stripe spike against production keys. Prefer a Stripe sandbox and
   simulations/test clocks.
 - Do not start legacy billing-table removal inside an observation cycle.
@@ -225,10 +324,9 @@ signals honestly:
 
 ## 5. Current known state
 
-### Stage 1 — containment implementation (2026-08-04)
+### Stage 1 — containment implementation and production evidence (2026-08-04)
 
-Shipped in code (pending production smoke of both client forms and the bounded
-24-hour header observation):
+Shipped to production:
 
 - 16 KB body ceiling + field validation (`convex/httpValidation.ts`)
 - Fixed-window ceilings: ingest 1000/day, no-trusted visitor 30/hour, paid fan-out 50/day, SMS 20/day
@@ -236,6 +334,54 @@ Shipped in code (pending production smoke of both client forms and the bounded
 - No XFF trust; time-bounded/redacted visitor-header observation; no-trusted-visitor project bucket
 - Analytics trusted-visitor or stricter project fallback; bounded referrer rollup
 - SMS allow-only (`leadTriage.ts`); durable daily accepted/429/paused counters and admin visibility
+
+Core production smoke passed on the `acadianaweb.xyz` test project:
+
+- Two post-deploy no-`Origin` submissions were accepted and stored; neither was
+  rate-limited or fan-out paused.
+- Both were triaged `allow` and sent SMS. The first email attempt correctly
+  surfaced a dangling test-data reference (`Prospect not found`) rather than a
+  Resend or containment failure.
+- The single test project was safely relinked to its existing Acadiana Web
+  Design prospect (`laykenv@gmail.com`). A second labeled submission then
+  completed stored lead → triage → SMS → Resend → received email end to end.
+- Admin evidence after the retest showed accepted/429 `2/0`, fan-out paused
+  `0/0`, untriaged `0`, allow/review `3/0`, and SMS sent/blocked `3/0`.
+- Production ceilings were intentionally not exhausted; a smoke test is not a
+  destructive load test.
+
+**Stage 1A closed 2026-08-05.** A real, good-quality lead arrived through TB
+Tree's production Server Action after the containment deploy, exercising the
+no-`Origin` path end to end — accepted, stored, triaged, and notified — on live
+traffic rather than a synthetic test.
+
+Accepted residual: **Chelsea's browser POST was not separately smoke-tested.**
+That path is not the same code — it goes through the `Origin`/CORS branch that
+TB Tree skips entirely — so the TB Tree lead does not cover it. Closing anyway
+because Stage 2 migrates her off that path within days and rate-limit/validation
+regressions would surface as `429`s or rejections in the admin counters. If her
+project shows any accepted lead dated after the 2026-08-04 deploy, the residual
+is already closed; otherwise one form submission settles it in two minutes.
+
+**Declined 2026-08-05 — the 24-hour visitor-header observation.** Do not set
+`HUB_VISITOR_OBSERVATION_UNTIL`. The observation existed to discover whether
+Convex injects a client-IP header a caller cannot forge, so legacy requests could
+get a real per-visitor rate-limit key. Two reasons it is not worth running:
+
+- The `leadNoTrustedVisitor` fallback (30/hour per project) is already live and
+  adequate for the legacy window.
+- After Stage 2, leads arrive from the client's own Vercel Function, which
+  overwrites `x-forwarded-for` with the true client IP. Per-visitor limiting
+  belongs there, where it is trustworthy. The Hub then needs only its per-project
+  ceilings, which use no IP at all.
+
+The observation code is gated off by default and Stage 2 rewrites that handler.
+Leave it dormant; do not treat it as an outstanding task.
+
+**Declined 2026-08-05 — the spoofed-XFF ceiling proof.** Every project ceiling is
+keyed on `projectId` alone (`http.ts:284`, `http.ts:311`, `leadTriage.ts:207`).
+There is no IP component for a rotated header to influence, so the property holds
+by construction. A code read replaces the staging load test.
 
 ### Stage 0 — resolved evidence (2026-08-04)
 
@@ -303,6 +449,25 @@ Stage 0's production deploy and smoke gate completed before Stage 1A began.
 - Chelsea's price selection is a hardcoded email branch.
 - One project per user is enforced by the fallback guard in `projects.ts`.
 - Public `/onboarding` is live in code but retired by product decision.
+- `checkout.sessions.create` is `mode: "subscription"` with one recurring line
+  item and no subscription metadata (`stripeActions.ts:227-238`).
+- Terms are a single global `TERMS_VERSION` with `$199` in the prose
+  (`lib/legal/terms.ts:22,40,118`); `agreementValidator.method` is
+  `v.literal("clickwrap")`.
+
+### Pipeline (recorded 2026-08-05)
+
+- **All About Towing** — site already live and the client is happy. Not in the
+  Hub at all; it has no contact form, so it has never needed lead ingestion.
+  Chelsea manages it and will eventually hold it as a second project under her
+  login. No deadline.
+- **Mobile app client** — expected. Deposit/setup fee + monthly.
+- **IDX website client** — expected. Deposit/setup fee + monthly.
+
+Neither expected client is signed. The registry and portal work is justified by
+them, but do not build `mobile_app` or `idx_website` registry entries, terms, or
+modules until a contract exists — build the mechanism that makes each one a
+small addition.
 
 ---
 
@@ -331,16 +496,51 @@ Required operational signals and exit evidence:
 | Stage | Counters/evidence required before exit |
 |---|---|
 | 0 | Exact resolved full component matrix, clean frozen install, codegen/type/build, production mobile magic link, Resend, workflow, current Checkout/webhook smoke tests |
-| 1 | Leads accepted, `429`s, paid fan-out paused, SMS sent, SMS blocked by verdict; project ceilings proven under spoofed XFF |
-| 2 | v1/v2 lead volume, credential `lastUsedAt`, auth failures, idempotent replays, duplicate triage count (must be zero) |
-| 4-6 | Shadow mismatches by customer/subscription/invoice/status/price/`orgId`; duplicate side-effect attempts blocked by the ledger |
-| 6 | Visible reader/writer/side-effect feature-flag state, zero unresolved mismatches, completed rollback drill |
+| 1A | Leads accepted, `429`s, paid fan-out paused, SMS sent, SMS blocked by verdict; one labeled post-deploy submission through each live spoke |
+| 2 | v1/v2 lead volume, credential `lastUsedAt`, auth failures (from `[hub.lead.v2] auth_failed` logs — deliberately not a counter), `hasVisitorHash: true` on live spoke traffic, duplicate triage count (must be zero) |
+| 3 | Click events by type for a live project; referrer classification spot-checked against known traffic |
+| 4 | Backfill report with zero unresolved rows; both price paths resolve from project data in Stripe test mode; MSA + order-form hashes recorded on a test agreement |
+| 6 | Sandbox spike outputs and Stripe object IDs; hand reconciliation of every live subscription; visible reader/writer/side-effect flag state; completed rollback drill |
 
 Specific documentation checkpoints:
 
 - After Stage 2: Hub ↔ Spoke auth, endpoint versions, trusted visitor metadata,
   and troubleshooting.
-- After Stage 3: offering registry, capabilities, and archival model.
+- After Stage 4: offering registry, capabilities, archival model, and the
+  MSA/order-form agreement structure.
 - After Stage 5: `/onboarding` retirement and explicit project creation.
-- After Stage 6: component billing source, webhook secrets/idempotency, and the
-  exact successful-payment status transition.
+- After Stage 6: component billing source, webhook secrets/idempotency, the
+  deposit + monthly Checkout shape, and the exact successful-payment status
+  transition.
+
+---
+
+## 7. Scope trim log (2026-08-05)
+
+Recorded so a future reader does not reintroduce these as oversights. Each was
+considered and cut deliberately.
+
+| Cut | Original home | Reason |
+|---|---|---|
+| Per-submission idempotency receipts + `lead_ingest_receipts` table | `waas_upgrade.md` Phase 1B | Bearer auth removes the forging attacker. The remaining duplicate risk is our own retry logic, and neither spoke retries. Revisit if duplicates are observed. |
+| `previewUrlPattern` per project | `waas_upgrade.md` Phase 1B | After v2, `Origin` gates analytics only. Worst case is an inaccurate pageview count. |
+| Automated shadow-mismatch counting by customer/subscription/invoice/status/price/`orgId` | `billing_migration.md` Phase C | Built for hundreds of subscriptions; there will be three. A thorough sandbox spike plus hand reconciliation is stronger evidence at this size. |
+| Full per-offering terms documents | `portal_architecture.md` § 5.4 | Replaced by MSA + per-project order form. Duplicating boilerplate per offering guarantees drift between versions. |
+| Visitor hashes, session ids, bounce rate, Web Vitals, JS error beacon | `waas_upgrade.md` Phase 2 | Requires a privacy inventory, retention policy, and privacy-page updates on every client site, to produce metrics that do not sell. Moved to Stage 8. |
+| Legacy billing table decommissioning | `billing_migration.md` Phase F | Dead tables cost nothing and are the rollback evidence. Deferred with no date. |
+| 24-hour trusted-visitor header observation | `waas_upgrade.md` Phase 1A | The `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moves per-visitor limiting to the client's Vercel Function where the IP is trustworthy. Answers a question that stops mattering. |
+| Spoofed-XFF ceiling load test | `waas_upgrade.md` Phase 1A | Project ceilings are keyed on `projectId` only. True by construction; a code read is better evidence than a staging load test. |
+| Stripe metadata bridge as a scheduled stage | `UPGRADE_PLAN.md` Stage 1B | No client signs before Stage 6, so there are no new subscriptions to attribute. Kept as a triggered contingency. |
+
+Downgraded rather than cut:
+
+- **Origin normalization (F13)** — still worth doing as a normalize-on-write
+  helper, since stale URLs are the documented support footgun, but it does not
+  need a schema migration.
+
+Reinstated after review:
+
+- **Per-project `moduleOverrides` and the admin toggle UI.** Briefly considered
+  premature. All About Towing is a live `waas_local` site with no contact form,
+  so a project-level module override is required on the first day the registry
+  exists, not later.

@@ -51,6 +51,7 @@ Wired in `convex.config.ts`:
 | `/api/stripe` | Stripe webhook | Signed |
 | `/api/cal-webhook` | Cal.com webhook | Signed |
 | `/api/v1/ingest-lead` | Hub: lead intake from bespoke client sites | Containment + Origin (no-Origin migration exception) |
+| `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); v1 untouched |
 | `/api/v1/analytics/pixel` | Hub: page-view pixel from bespoke client sites | Containment + Origin required |
 | `/api/ingest-lead` | Legacy alias of v1 (config-driven clients) | Same as v1 |
 | `/api/analytics/pixel` | Legacy alias of v1 (config-driven clients) | Same as v1 |
@@ -64,14 +65,20 @@ Bespoke client sites (built from `agency-template`) call the Hub for lead intake
 ### Endpoints
 
 ```
-POST /api/v1/ingest-lead       (new bespoke clients)
-POST /api/v1/analytics/pixel   (new bespoke clients)
+POST /api/v2/leads             (Stage 2: Bearer sk_live_<keyId>_<secret>)
+POST /api/v1/ingest-lead       (legacy Origin / no-Origin containment path)
+POST /api/v1/analytics/pixel   (pageviews; Origin required)
 
-POST /api/ingest-lead          (legacy config-driven clients, kept for backward compat)
-POST /api/analytics/pixel      (legacy config-driven clients, kept for backward compat)
+POST /api/ingest-lead          (legacy unversioned alias of v1)
+POST /api/analytics/pixel      (legacy unversioned alias of v1)
 ```
 
-Both versions point to the same handlers today. The `v1` namespace exists to make future breaking changes safe (TCPA consent flags, multi-form support, UTM attribution, etc. → ship as `/api/v2/*` while `v1` keeps working).
+`/api/v2/leads` is additive — v1 stays live until both production clients migrate.
+Credentials live in `project_credentials` (SHA-256 of the full key only; raw key shown once in admin). Verification order: body ceiling → parse Bearer → resolve non-revoked `secret` by `keyId` → constant-time hash compare → resolve project **from the credential** (body `projectId` is optional and must match when present) → status must be `LIVE`/`IN_REVIEW` → field validation → rate limits → insert + triage.
+
+Field validation runs before rate-limit consumption so a malformed payload does not burn a project's daily ceiling. `visitorHash` is read from either the top level or `meta`; when present it keys `leadPerVisitor`, when absent the request falls back to the `leadNoTrustedVisitor` project bucket. Check `hasVisitorHash` in the `[hub.lead.v2] accepted` log line to confirm a spoke is actually supplying it.
+
+**Pre-auth failures write no counters** — only `[hub.lead.v2] auth_failed` log lines. A counter bump is a mutation, so incrementing one before authentication would let unauthenticated callers drive unbounded contended writes. Count auth failures from logs, not from `hub_operational_counters`.
 
 ### Lead payload
 
@@ -106,14 +113,16 @@ Per request (cheapest rejections first):
 - Look up `projects.projectId` (the public UUID identifier); status must be `LIVE` or `IN_REVIEW`.
 - Browser `Origin` must match `projects.deployment.liveUrl` (with or without `www.`) or `projects.deployment.stagingUrl`.
 - **Leads migration exception:** requests with **no** `Origin` are still accepted (TB Tree Server Action). This is not authentication; Stage 2 (authenticated v2) retires it after both live clients migrate. Do not reintroduce a fake Turnstile claim.
-- **Never key rate limits on spoofable `x-forwarded-for`.** Edge headers (`cf-connecting-ip`, `true-client-ip`, …) are **observation-only by default** — an unproven header is worse than none, since an attacker rotates its value to escape the strict project bucket. A bounded observation requires `HUB_VISITOR_OBSERVATION_UNTIL=<ISO timestamp no more than 24h ahead>`; `[hub.visitor]` logs presence/shape without raw IP values and stops automatically. To key on one after observation proves the edge injects it, set `HUB_TRUSTED_IP_HEADER`; its value is SHA-256 digested before reaching the rate-limiter component. Unset means every caller uses the project-scoped fallback. `x-forwarded-for` and `x-real-ip` can never be trusted values.
+- **Never key rate limits on spoofable `x-forwarded-for`.** An unproven edge header is worse than none, since an attacker rotates its value to escape the strict project bucket. `x-forwarded-for` and `x-real-ip` can never be trusted.
+
+  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** The plan to observe hosting headers for 24 hours and then key on a proven one was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5). Every caller uses the project-scoped fallback, which is adequate: `leadNoTrustedVisitor` bounds the legacy window, and Stage 2 moves per-visitor limiting to the client's own Vercel Function, where `x-forwarded-for` is overwritten by the platform and therefore trustworthy. The Hub's project ceilings use no IP at all, so they hold under any header the caller invents. The gated observation code is dormant, not a pending task.
 - Project ceilings (fixed window, hold under IP spoofing). **Storage ceilings are deliberately far looser than cost ceilings** — exhausting a storage ceiling rejects a paying client's real customers, so it exists to stop database abuse, not to control spend:
   - `leadIngestPerProject` — 1000/day storage; exhausted → `429` (do not insert) **and an admin threshold alert**, because rejected leads are lost customers.
   - `leadNoTrustedVisitor` — 30/hour burst control; every TB Tree lead lands here (Server Action, no `Origin`, no edge IP), so it is sized not to reject real traffic. Exhausted → `429` + threshold alert.
   - `paidFanoutPerProject` — 50/day Groq+email+SMS; exhausted → **still store** lead as `untriaged` with `fanoutPaused`, skip fan-out, one admin threshold alert. This is the real spend cap.
   - `smsPerProject` — 20/day; SMS is **allow-verdict only**.
 - Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request. Legacy v1 cannot prove that a client form disclosed a truncation limit, so the Hub never returns success after silently shortening an inquiry.
-- Analytics keys on trusted visitor when one is configured (see `HUB_TRUSTED_IP_HEADER`), else a stricter project fallback (30/min). Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries.
+- Analytics uses the stricter project fallback (30/min), since no trusted visitor header is configured. Worst case without a per-visitor key is an inaccurate pageview count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries.
 - Threshold alerts are claimed once per project+limit window before scheduling (`thresholdAlertPerProjectLimit`), then persist one `hub.threshold_alert` before the independent global delivery cap (`adminOpsAlertGlobal`). `hub.threshold_alert_delivered` is written only after a successful email. Daily accepted, 429-by-bucket, and paused-fan-out totals are aggregated in `hub_operational_counters` so hostile traffic cannot create unbounded event rows.
 
 This reduces blast radius. It does **not** close the unauthenticated paid-fan-out hole — that is Stage 2.

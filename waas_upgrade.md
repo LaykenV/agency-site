@@ -1,8 +1,9 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phase 1A implemented in code; production smoke + 24h header observation pending. Phase 1B+ not started.**
+Status: **Phase 1A complete in production (closed 2026-08-05). Phase 1B is next.**
 Owner: Layken
 Written: 2026-08-04
+Last reviewed: 2026-08-05 (scope trim — see `UPGRADE_PLAN.md` § 7)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -153,10 +154,11 @@ function and one environment variable without adopting React or Next.js.
 Pageviews must fire from the browser. Proxying them through the client's own
 function would double the request count for no security gain, because the harm
 from forged analytics is bounded: inflated numbers, no cost fan-out, no
-notification. Analytics keeps `pk_live_…` + `Origin` checking and uses the
-trusted Hub edge-IP signal established during Phase 1A for per-visitor limiting.
-If Convex does not expose a documented trustworthy client-IP header, analytics
-falls back to a stricter project bucket instead of trusting caller-supplied XFF.
+notification. Analytics keeps `pk_live_…` + `Origin` checking and the stricter project bucket
+it already falls back to, rather than trusting caller-supplied XFF. No trusted
+Hub edge-IP signal was established — that investigation was declined; see § 5
+Phase 1A. The worst case for analytics without a per-visitor key is an inaccurate
+pageview count, not a lost lead.
 
 This remains a **soft integrity boundary**, not authentication. Do not proxy or
 secret-sign browser analytics to make it equivalent to lead auth; that would add
@@ -201,7 +203,6 @@ The client function sends:
 |---|---|
 | `Authorization` | `Bearer sk_live_<keyId>_<secret>` |
 | `Content-Type` | `application/json` |
-| `Idempotency-Key` | Stable random UUID for this form submission |
 
 Hub verification order — cheapest rejections first:
 
@@ -211,14 +212,15 @@ Hub verification order — cheapest rejections first:
    credential.
 3. Hash the full presented credential and compare its fixed-length digest to
    `credentialHash` with a constant-time primitive available in the runtime.
-4. Validate `Idempotency-Key`, hash it, and return the original successful
-   result if that project/key pair already has a receipt. This prevents retries
-   or an exact replay from creating duplicate paid fan-out; it does not turn a
-   public form into proof of human intent.
+4. Validate and normalize every field.
 5. Apply project and trusted-visitor rate limits.
-6. Validate and normalize every field.
-7. Atomically insert the lead and a 24-hour deduplication receipt, then schedule
-   triage exactly once.
+6. Insert the lead and schedule triage exactly once.
+
+Submission-level idempotency (`Idempotency-Key` plus a receipts table) was cut on
+2026-08-05 — `UPGRADE_PLAN.md` § 7. Bearer verification removes the forging
+attacker, and neither spoke retries a failed submission, so the remaining
+duplicate risk is a client Function we control. Reintroduce it if duplicates are
+actually observed; the header name is reserved for that.
 
 The authenticated client function may include `visitorHash`, `country`, and
 `userAgentClass` in the payload. For Vercel clients, derive these from platform
@@ -303,10 +305,10 @@ adminOpsAlertGlobal:  { kind: "fixed window", rate: 20,  period: HOUR },
   SMS buckets, but remain globally capped by `adminOpsAlertGlobal`. Persist the
   alert in admin even if the global delivery cap suppresses its email/SMS.
 - `leadIngestPerProject` is a higher storage-abuse ceiling.
-- Drop the `x-forwarded-for` fallback (F4). Log for one day to confirm which
-  header Convex actually populates, then key on that alone. When no trusted IP
-  is available on legacy requests, use `leadNoTrustedVisitor` instead of trusting
-  a spoofable value.
+- Drop the `x-forwarded-for` fallback (F4). When no trusted IP is available on
+  legacy requests, use `leadNoTrustedVisitor` instead of trusting a spoofable
+  value. The originally planned one-day header logging was declined on
+  2026-08-05 — see § 5 Phase 1A.
 - Authenticated v2 leads key on `projectId:visitorHash`, where `visitorHash` is
   derived inside the client Function from provider-controlled request headers.
 - Analytics keys on `projectId:trustedEdgeHash` when available, with a stricter
@@ -336,8 +338,11 @@ errors and never echo raw input.
 
 Normalise on storage, not at comparison time. Store `liveUrl` and `stagingUrl`
 as full origins (`https://chelseasoco.com`), and derive the `www` variant at
-match time. Add an optional `previewUrlPattern` per project so Vercel preview
-deploys can be allowed during a build without hand-editing on every push.
+match time.
+
+`previewUrlPattern` was cut on 2026-08-05 (`UPGRADE_PLAN.md` § 7). Once leads
+move to bearer auth, `Origin` gates analytics only, where the worst outcome of a
+stale URL is an inaccurate pageview count rather than a lost lead.
 
 ---
 
@@ -508,38 +513,46 @@ authentication model.
 - [x] Route the threshold alert through the separately deduplicated and globally
       capped admin-operations path. Prove exhausting a project fan-out bucket
       cannot suppress its own persisted admin alarm.
-- [ ] Log hosting-header presence/shape for 24 hours, identify a provider-controlled
-      visitor signal if Convex supplies one, and stop trusting caller-controlled
-      XFF. Use `leadNoTrustedVisitor` when none exists (F4).
-      *(Set `HUB_VISITOR_OBSERVATION_UNTIL` to a timestamp no more than 24 hours
-      ahead. `[hub.visitor]` redacts raw values and stops automatically.)*
+- [x] Stop trusting caller-controlled XFF; use `leadNoTrustedVisitor` when no
+      trustworthy visitor signal exists (F4).
+- [~] **Declined 2026-08-05:** the bounded 24-hour header observation. Do not set
+      `HUB_VISITOR_OBSERVATION_UNTIL`. The `leadNoTrustedVisitor` fallback is
+      adequate for the legacy window, and after Phase 1B leads arrive from the
+      client's Vercel Function, which overwrites `x-forwarded-for` with the true
+      client IP — that is where per-visitor limiting belongs. The Hub then needs
+      only per-project ceilings, which use no IP. The observation code is gated
+      off by default; leave it dormant and let Phase 1B remove it with the
+      handler rewrite.
 - [x] Re-key analytics to the trusted signal or a stricter project fallback (F8).
 - [x] Restrict SMS to `verdict === "allow"` (F14).
 - [x] Persist bounded `referrer` data (F10).
-- [ ] Live smoke test both client forms and confirm one stored lead, one triage,
-      one expected notification, and no duplicates for each.
+- [x] Live production evidence: a real lead through TB Tree's no-`Origin` Server
+      Action was accepted, stored, triaged, and notified after the deploy.
+      Chelsea's browser POST is an accepted residual — see `UPGRADE_PLAN.md` § 5.
 - [x] Add counters/dashboard visibility for accepted leads, `429`s, paid fan-out
       paused, SMS sent, and SMS blocked by verdict.
-- [ ] Prove fixed project ceilings still hold while XFF values are
-      spoofed/rotated; any IP bucket is best-effort only. This is a staging smoke
-      exercise; do not exhaust a live client's production buckets.
+- [~] **Declined 2026-08-05:** the spoofed-XFF ceiling load test. Every project
+      ceiling is keyed on `projectId` alone (`http.ts:284`, `http.ts:311`,
+      `leadTriage.ts:207`) — there is no IP component for a rotated header to
+      influence, so the property holds by construction rather than by
+      measurement. Verified by code read instead.
 
 ### Phase 1B — authenticated v2 and legacy retirement
 
-- [ ] Add `project_credentials` with typed validators and indexes.
-- [ ] Add a 24-hour `lead_ingest_receipts` deduplication table keyed by project
-      plus hashed `Idempotency-Key`; retries return the original lead result and
-      never schedule a second triage/notification.
-- [ ] Build key issue / rotate / revoke in admin, showing the raw key once and
+**Scope trimmed 2026-08-05.** Idempotency receipts and `previewUrlPattern` are
+cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header in
+§ 3.4 is not sent and not verified in this phase.
+
+- [x] Add `project_credentials` with typed validators and indexes.
+- [x] Build key issue / rotate / revoke in admin, showing the raw key once and
       redacting all request logs.
-- [ ] Build `POST /api/v2/leads` with bearer verification in the order in §3.4.
+- [x] Build `POST /api/v2/leads` with bearer verification in the order in §3.4.
 - [ ] Move honeypot/time-trap checks into each client Function and pass their
       normalized signals to the Hub (F9).
-- [ ] Normalize stored origins; add a narrowly matched `previewUrlPattern` (F13).
+- [ ] Normalize stored origins on write (F13). `previewUrlPattern` is cut.
 - [ ] Write and test both reference shapes: a static site's `/api/contact`
       Function and a Next.js Server Action/route handler. Each derives trusted
-      visitor metadata from provider headers, holds `sk_` only server-side, and
-      forwards one browser-generated submission UUID across safe retries.
+      visitor metadata from provider headers and holds `sk_` only server-side.
 - [ ] Migrate TB Tree first because it depends on no-`Origin`; then migrate
       Chelsea from direct browser POST to its own Function.
 - [ ] Use the same production runbook for each client:
@@ -549,10 +562,9 @@ authentication model.
       3. Submit a labeled test lead from the production browser form.
       4. Confirm project attribution, one stored lead, one triage, exactly one
          expected notification, and credential `lastUsedAt`.
-      5. Replay the same `Idempotency-Key`; require zero second fan-out.
-      6. Revoke the key and prove the Hub rejects it; issue/restore the live key.
-      7. Record v1/v2 volume, auth failures, replay count, and duplicate-triage
-         count before advancing.
+      5. Revoke the key and prove the Hub rejects it; issue/restore the live key.
+      6. Record v1/v2 volume, auth failures, and duplicate-triage count before
+         advancing.
 - [ ] After both clients are proven and monitored, reject no-`Origin` v1 leads,
       then retire v1 and unversioned lead aliases. Keep analytics v1 until its
       event migration is independently complete.
@@ -562,17 +574,31 @@ authentication model.
 
 ### Phase 2 — typed telemetry
 
-- [ ] Add `client_events` and `POST /api/v2/events`; make `pageview` one type.
+Promoted ahead of the portal work on 2026-08-05 (`UPGRADE_PLAN.md` Stage 3) and
+reduced to the signals that justify an invoice. All About Towing has no contact
+form, so tap-to-call is its only conversion signal.
+
+- [ ] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
+      publishable key; make `pageview` one type.
 - [ ] Add `tel:` / `mailto:` / directions click tracking — highest value here.
-- [ ] Add visitor hash, session id, UTM, device, and country only after the
-      privacy inventory/review and retention policy are complete.
-- [ ] Add form start vs. submit.
+- [ ] Classify `referrer` into organic / social / direct; capture UTM.
+- [ ] Add device type and coarse country, derived only from a provider-controlled
+      header at a trusted boundary, never a body field.
 - [ ] Extract `runPageSpeed()` to a shared module; add `pageSpeedSnapshot` to
       `projects` with an admin button and an on-first-LIVE run.
-- [ ] Update client privacy pages before enabling IP-derived fields.
-- [ ] Portal UI for the new metrics.
+- [ ] Render the new metrics into the existing portal widgets. Converting them to
+      registry modules belongs to the portal refactor, and this phase must not
+      wait on it.
+
+Deferred out of this phase (`UPGRADE_PLAN.md` Stage 8): visitor hashes, session
+identifiers, bounce rate, pages per session, form start vs. submit, Core Web
+Vitals, and the JS error beacon. Every one of those requires the privacy
+inventory, retention policy, and client privacy-page updates in § 4.2 first, and
+none of them is what a local service client is buying.
 
 ### Phase 3 — external data, only after consent and pricing review
+
+No date. Revisit per item when a client pays for the outcome.
 
 - [ ] Availability-check cron with retry/incident semantics.
 - [ ] Defer paid Places review snapshots, GBP OAuth, and Search Console until a

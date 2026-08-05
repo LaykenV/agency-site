@@ -217,7 +217,7 @@ function LeadsDashboard() {
             <StatChip
               label="Accepted / 429 (UTC today)"
               value={`${containment.acceptedTodayUtc} / ${containment.rateLimitedTodayUtc}`}
-              hint={`${containment.rateLimitedIngestTodayUtc} ingest · ${containment.rateLimitedVisitorTodayUtc} visitor · ${containment.rateLimitedNoTrustedTodayUtc} fallback`}
+              hint={`${containment.rateLimitedIngestTodayUtc} ingest · ${containment.rateLimitedVisitorTodayUtc} visitor · ${containment.rateLimitedNoTrustedTodayUtc} fallback · ${containment.projectMismatchTodayUtc} project mismatch`}
             />
             <StatChip
               label="Fan-out paused (today / total)"

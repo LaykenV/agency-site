@@ -15,6 +15,11 @@ import {
   validateLeadPayload,
   LEAD_FIELD_LIMITS,
 } from "./httpValidation";
+import {
+  extractBearerToken,
+  parseCredential,
+  verifyPresentedCredential,
+} from "./credentialCrypto";
 
 const http = httpRouter();
 
@@ -23,7 +28,8 @@ type HubCounterKind =
   | "lead_fanout_paused"
   | "lead_rate_limited_ingest"
   | "lead_rate_limited_visitor"
-  | "lead_rate_limited_no_trusted";
+  | "lead_rate_limited_no_trusted"
+  | "lead_project_mismatch";
 
 /** Telemetry must never turn an accepted/rejected request into a 500. */
 async function bumpHubCounter(
@@ -396,6 +402,290 @@ http.route({
   path: "/api/v1/ingest-lead",
   method: "POST",
   handler: ingestLeadHandler,
+});
+
+// ============================================================================
+// LEAD INGESTION v2 — authenticated bearer (Stage 2 / Phase 1B)
+// ============================================================================
+// Purely additive: v1 / unversioned routes above are untouched.
+// Auth order per waas_upgrade.md §3.4 — cheapest rejections first.
+// Authorization is never logged (only keyId on success/failure).
+//
+// Pre-authentication failures (missing/malformed bearer, unknown or revoked
+// keyId, hash mismatch) deliberately do NOT write a counter. A counter bump is a
+// Convex mutation, so incrementing one before the caller is authenticated would
+// let anyone POSTing garbage tokens drive an unbounded number of writes against a
+// single shared document — billable, and contended enough to cause OCC retries
+// under load. That is the same cost-amplification class Stage 1A closed on v1.
+// These failures are observable via `[hub.lead.v2] auth_failed` log lines
+// instead. Counters resume once a request is authenticated and a project is
+// resolved, where the caller holds a real credential and volume is bounded.
+// ============================================================================
+
+const ingestLeadV2Handler = httpAction(async (ctx, request) => {
+  // 1. Content-Type + streaming body ceiling (reuses Stage 1A validation)
+  const parsed = await readJsonBodyWithLimit(request);
+  if (!parsed.ok) {
+    console.log("[hub.lead.v2] body_rejected", {
+      status: parsed.status,
+      error: parsed.error,
+    });
+    return jsonResponse({ error: parsed.error }, parsed.status);
+  }
+
+  // 2–3. Bearer credential: parse keyId → non-revoked secret → constant-time hash
+  // Never log the Authorization header or raw token.
+  const rawToken = extractBearerToken(request.headers.get("authorization"));
+  if (!rawToken) {
+    console.log("[hub.lead.v2] auth_failed", { reason: "missing_bearer" });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const parsedCred = parseCredential(rawToken);
+  if (!parsedCred || parsedCred.kind !== "secret") {
+    console.log("[hub.lead.v2] auth_failed", { reason: "malformed_credential" });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const credential = await ctx.runQuery(
+    internal.projectCredentials.getActiveSecretByKeyId,
+    { keyId: parsedCred.keyId },
+  );
+
+  if (!credential) {
+    // keyId is public-ish; safe to log for ops. Never log the secret portion.
+    console.log("[hub.lead.v2] auth_failed", {
+      reason: "unknown_or_revoked",
+      keyId: parsedCred.keyId,
+    });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  // Hex is case-insensitive; we store hashes of the lowercase canonical form.
+  const hashOk = await verifyPresentedCredential(
+    rawToken.toLowerCase(),
+    credential.credentialHash,
+  );
+  if (!hashOk) {
+    console.log("[hub.lead.v2] auth_failed", {
+      reason: "hash_mismatch",
+      keyId: parsedCred.keyId,
+    });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  // Resolve project from credential (do not trust body projectId alone)
+  const projectDoc = await ctx.runQuery(internal.projects.internalGetProjectById, {
+    projectId: credential.projectId,
+  });
+  if (!projectDoc) {
+    console.log("[hub.lead.v2] auth_failed", {
+      reason: "project_missing",
+      keyId: parsedCred.keyId,
+    });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const projectId = projectDoc.projectId; // public slug used by client_leads
+
+  const allowedStatuses = ["LIVE", "IN_REVIEW"];
+  if (!allowedStatuses.includes(projectDoc.projectStatus ?? "")) {
+    console.log("[hub.lead.v2] project_not_accepting", {
+      projectId,
+      keyId: parsedCred.keyId,
+      status: projectDoc.projectStatus,
+    });
+    return jsonResponse({ error: "Project not accepting leads" }, 400);
+  }
+
+  // Optional body projectId must match credential's project when present
+  const body = parsed.value as Record<string, unknown>;
+  if (body.projectId !== undefined && body.projectId !== null && body.projectId !== "") {
+    if (typeof body.projectId !== "string") {
+      return jsonResponse({ error: "Invalid projectId" }, 400);
+    }
+    const bodyProjectId = body.projectId.trim().slice(0, LEAD_FIELD_LIMITS.projectId);
+    if (bodyProjectId !== projectId) {
+      await bumpHubCounter(ctx, projectId, "lead_project_mismatch");
+      console.log("[hub.lead.v2] auth_failed", {
+        reason: "project_mismatch",
+        keyId: parsedCred.keyId,
+        projectId,
+      });
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+  }
+
+  // 4–5. Field validation before rate-limit consumption / insert
+  const validated = validateLeadPayload(body);
+  if (!validated.ok) {
+    return jsonResponse({ error: validated.error }, 400);
+  }
+
+  // Optional visitorHash from the client Function (Stage 2 spoke path).
+  // Accept it at the top level OR nested under `meta`: both reference spokes send
+  // it inside `meta` alongside hp/renderedAt. Reading only the top level made
+  // per-visitor limiting a silent no-op — every lead fell through to the project
+  // bucket and `hasVisitorHash` logged false.
+  // When absent, fall back to the project no-trusted-visitor bucket.
+  const metaObject =
+    body.meta && typeof body.meta === "object" && !Array.isArray(body.meta)
+      ? (body.meta as Record<string, unknown>)
+      : undefined;
+  const rawVisitorHash = body.visitorHash ?? metaObject?.visitorHash;
+
+  let visitorKey: string | null = null;
+  if (
+    rawVisitorHash !== undefined &&
+    rawVisitorHash !== null &&
+    rawVisitorHash !== ""
+  ) {
+    if (typeof rawVisitorHash !== "string") {
+      return jsonResponse({ error: "Invalid request" }, 400);
+    }
+    const vh = rawVisitorHash.trim();
+    // Accept a bounded hex/base64url digest only — reject free-form strings
+    if (vh.length < 16 || vh.length > 128 || !/^[A-Za-z0-9+/=_-]+$/.test(vh)) {
+      return jsonResponse({ error: "Invalid request" }, 400);
+    }
+    visitorKey = vh;
+  }
+
+  // 4. Rate limits (project ceilings always; per-visitor when spoke supplies hash)
+  if (visitorKey) {
+    const visitorLimit = await rateLimiter.limit(ctx, "leadPerVisitor", {
+      key: `${projectId}:${visitorKey}`,
+    });
+    if (!visitorLimit.ok) {
+      await bumpHubCounter(ctx, projectId, "lead_rate_limited_visitor");
+      console.log("[hub.lead.v2] rate_limited", {
+        kind: "leadPerVisitor",
+        projectId,
+        keyId: parsedCred.keyId,
+        retryAfter: visitorLimit.retryAfter,
+      });
+      return jsonResponse(
+        { error: "Rate limited", retryAfter: visitorLimit.retryAfter },
+        429,
+      );
+    }
+  } else {
+    const noTrusted = await rateLimiter.limit(ctx, "leadNoTrustedVisitor", {
+      key: projectId,
+    });
+    if (!noTrusted.ok) {
+      await bumpHubCounter(ctx, projectId, "lead_rate_limited_no_trusted");
+      console.log("[hub.lead.v2] rate_limited", {
+        kind: "leadNoTrustedVisitor",
+        projectId,
+        keyId: parsedCred.keyId,
+        retryAfter: noTrusted.retryAfter,
+      });
+      await queueThresholdAlert(ctx, {
+        projectId,
+        limitName: "leadNoTrustedVisitor",
+        detail:
+          "Hourly no-trusted-visitor ceiling reached on v2. Further submissions are being REJECTED with 429.",
+      });
+      return jsonResponse(
+        { error: "Rate limited", retryAfter: noTrusted.retryAfter },
+        429,
+      );
+    }
+  }
+
+  const ingestLimit = await rateLimiter.limit(ctx, "leadIngestPerProject", {
+    key: projectId,
+  });
+  if (!ingestLimit.ok) {
+    await bumpHubCounter(ctx, projectId, "lead_rate_limited_ingest");
+    console.log("[hub.lead.v2] rate_limited", {
+      kind: "leadIngestPerProject",
+      projectId,
+      keyId: parsedCred.keyId,
+      retryAfter: ingestLimit.retryAfter,
+    });
+    await queueThresholdAlert(ctx, {
+      projectId,
+      limitName: "leadIngestPerProject",
+      detail:
+        "Daily lead ingest ceiling reached on v2. Further submissions are being REJECTED with 429.",
+    });
+    return jsonResponse(
+      { error: "Rate limited", retryAfter: ingestLimit.retryAfter },
+      429,
+    );
+  }
+
+  // 6. Insert lead + schedule triage (same fan-out pause semantics as v1)
+  const fanout = await rateLimiter.limit(ctx, "paidFanoutPerProject", {
+    key: projectId,
+  });
+  const fanoutPaused = !fanout.ok;
+
+  const leadId = await ctx.runMutation(internal.clientLeads.create, {
+    projectId,
+    source: validated.source,
+    data: validated.data,
+    ...(fanoutPaused
+      ? {
+          fanoutPaused: true,
+          fanoutPausedReason: "paid_fanout_ceiling",
+        }
+      : {}),
+  });
+
+  await bumpHubCounter(ctx, projectId, "lead_accepted");
+
+  // Best-effort lastUsedAt — never fail the request if this patches late
+  try {
+    await ctx.runMutation(internal.projectCredentials.touchLastUsed, {
+      credentialId: credential._id,
+    });
+  } catch (error) {
+    console.error("[hub.lead.v2] touch_last_used_failed", {
+      projectId,
+      keyId: parsedCred.keyId,
+      error,
+    });
+  }
+
+  if (fanoutPaused) {
+    await bumpHubCounter(ctx, projectId, "lead_fanout_paused");
+    console.log("[hub.lead.v2] paid_fanout_paused", {
+      projectId,
+      leadId,
+      keyId: parsedCred.keyId,
+      retryAfter: fanout.retryAfter,
+    });
+    await queueThresholdAlert(ctx, {
+      projectId,
+      limitName: "paidFanoutPerProject",
+      leadId,
+      detail:
+        "Daily paid fan-out ceiling reached on v2. Lead stored as untriaged; Groq/email/SMS skipped.",
+    });
+  } else {
+    await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
+      leadId,
+    });
+  }
+
+  console.log("[hub.lead.v2] accepted", {
+    projectId,
+    leadId,
+    keyId: parsedCred.keyId,
+    fanoutPaused,
+    hasVisitorHash: Boolean(visitorKey),
+  });
+
+  return jsonResponse({ success: true, leadId, fanoutPaused }, 200);
+});
+
+http.route({
+  path: "/api/v2/leads",
+  method: "POST",
+  handler: ingestLeadV2Handler,
 });
 
 // ============================================================================

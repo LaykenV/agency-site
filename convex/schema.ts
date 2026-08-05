@@ -21,6 +21,7 @@ import {
   physicalPresenceValidator,
   publicAuditStatusValidator,
   hubOperationalCounterKindValidator,
+  projectCredentialKindValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -81,6 +82,25 @@ export default defineSchema({
       "bucketDate",
       "kind",
     ]),
+
+  /**
+   * Stage 2 (WAAS authenticated v2): hashed bearer credentials.
+   * Raw keys are never stored — only SHA-256(full key) as credentialHash.
+   * Format: sk_live_<keyId>_<secret> | pk_live_<keyId>_<secret>
+   */
+  project_credentials: defineTable({
+    projectId: v.id("projects"),
+    keyId: v.string(), // public lookup prefix, not the secret
+    kind: projectCredentialKindValidator,
+    credentialHash: v.string(), // SHA-256 hex of full high-entropy key
+    createdAt: v.number(),
+    lastUsedAt: v.optional(v.number()),
+    revokedAt: v.optional(v.number()),
+    label: v.optional(v.string()), // e.g. "chelsea prod", "tb-tree preview"
+  })
+    .index("by_keyId", ["keyId"])
+    .index("by_projectId", ["projectId"])
+    .index("by_projectId_and_kind", ["projectId", "kind"]),
 
   scheduled_calls: defineTable(scheduledCallValidator)
     .index("by_projectId", ["projectId"])

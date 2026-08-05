@@ -119,7 +119,30 @@ export const hubOperationalCounterKindValidator = v.union(
   v.literal("lead_rate_limited_ingest"),
   v.literal("lead_rate_limited_visitor"),
   v.literal("lead_rate_limited_no_trusted"),
+  /** Stage 2: authenticated credential supplied a mismatched body projectId. */
+  v.literal("lead_project_mismatch"),
 );
+
+/** Hub API credential kinds (pk_ browser analytics vs sk_ server lead auth). */
+export const projectCredentialKindValidator = v.union(
+  v.literal("publishable"),
+  v.literal("secret"),
+);
+
+/**
+ * Public-safe credential row for admin UI — never includes credentialHash or raw key.
+ */
+export const projectCredentialPublicValidator = v.object({
+  _id: v.id("project_credentials"),
+  _creationTime: v.number(),
+  projectId: v.id("projects"),
+  keyId: v.string(),
+  kind: projectCredentialKindValidator,
+  createdAt: v.number(),
+  lastUsedAt: v.optional(v.number()),
+  revokedAt: v.optional(v.number()),
+  label: v.optional(v.string()),
+});
 
 export const scheduledCallValidator = v.object({
   projectId: v.optional(v.id("projects")),

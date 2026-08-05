@@ -161,6 +161,8 @@ export const containmentStats = query({
     rateLimitedIngestTodayUtc: v.number(),
     rateLimitedVisitorTodayUtc: v.number(),
     rateLimitedNoTrustedTodayUtc: v.number(),
+    /** Stage 2: authenticated requests with a mismatched body projectId. */
+    projectMismatchTodayUtc: v.number(),
     allowLast24h: v.number(),
     spamLast24h: v.number(),
     reviewLast24h: v.number(),
@@ -197,6 +199,7 @@ export const containmentStats = query({
     const rateLimitedNoTrustedTodayUtc = counterTotal(
       "lead_rate_limited_no_trusted",
     );
+    const projectMismatchTodayUtc = counterTotal("lead_project_mismatch");
     const rateLimitedTodayUtc =
       rateLimitedIngestTodayUtc +
       rateLimitedVisitorTodayUtc +
@@ -272,6 +275,7 @@ export const containmentStats = query({
       rateLimitedIngestTodayUtc,
       rateLimitedVisitorTodayUtc,
       rateLimitedNoTrustedTodayUtc,
+      projectMismatchTodayUtc,
       allowLast24h,
       spamLast24h,
       reviewLast24h,

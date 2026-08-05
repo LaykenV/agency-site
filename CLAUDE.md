@@ -11,7 +11,7 @@ Acadiana Web Design's Hub: Website-as-a-Service operations stack. Next.js 16 + C
 - Client portal driven by `projectStatus` state machine (AWAITING_AGREEMENT → AWAITING_PAYMENT → AWAITING_ASSETS → IN_PROGRESS → IN_REVIEW → LIVE).
 - Admin dashboard at `/admin`.
 - Agreement clickwrap + Stripe subscription billing + webhook automation.
-- Public Hub APIs (`/api/v1/ingest-lead`, `/api/v1/analytics/pixel`) that bespoke client sites POST to.
+- Public Hub APIs (`/api/v2/leads` bearer auth, `/api/v1/ingest-lead`, `/api/v1/analytics/pixel`) that bespoke client sites POST to.
 - Remotion-based promo video generation.
 
 The bespoke client-site starter (the Spoke side) lives in `../agency-template/`.
@@ -123,12 +123,13 @@ export const myQuery = query({
 
 Bespoke client sites built from `../agency-template/` POST to:
 
-- `POST /api/v1/ingest-lead` — contact form submissions
+- `POST /api/v2/leads` — authenticated lead intake (`Authorization: Bearer sk_live_<keyId>_<secret>`). Keys issued in admin (Projects → expand → API Credentials); raw key shown once; only SHA-256 stored.
+- `POST /api/v1/ingest-lead` — legacy contact form submissions (Origin / no-Origin containment; retire after both clients migrate)
 - `POST /api/v1/analytics/pixel` — page views
 
-Both have unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kept alive for old config-driven clients.
+v1 also has unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) kept alive for old config-driven clients.
 
-**Stage 1A containment (current):** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. Header observation is off unless `HUB_VISITOR_OBSERVATION_UNTIL` is a future timestamp; logs contain presence/shape, not raw IPs. Set `HUB_TRUSTED_IP_HEADER` only after that bounded observation proves an injected header; its value is SHA-256 digested before use as a rate-limit key. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
+**Stage 1A containment (current):** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moves per-visitor limiting to the client's Vercel Function where the IP is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
 
 **Origin:** browser requests must match `deployment.liveUrl` / `stagingUrl`. **Leads still accept no-`Origin`** (TB Tree Server Action migration exception) until Stage 2 authenticated v2. Analytics still require Origin. This is containment, not authentication — see `waas_upgrade.md` / `UPGRADE_PLAN.md`.
 

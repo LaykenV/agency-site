@@ -3,6 +3,7 @@
 Status: **planned, revised after architecture review; not implemented**
 Owner: Layken
 Written: 2026-08-04
+Last reviewed: 2026-08-05 (MSA/order-form split; expected offerings confirmed — see `UPGRADE_PLAN.md` § 7)
 
 Plan to decouple the client portal from the single $199 website product so it
 can serve different kinds of engagements — different onboarding, different
@@ -124,10 +125,12 @@ export const OFFERINGS: Record<OfferingKey, Offering> = {
 };
 ```
 
-### 2.3 Future offerings (examples only — do not build yet)
+### 2.3 Expected offerings (design against these; do not build yet)
 
-Kept here so the shape stays honest as the registry is designed. Neither is on
-the roadmap until a contract is signed.
+**Updated 2026-08-05.** Both of these now have expected clients, which is what
+justifies building the registry at all. They are still not built until a contract
+is signed — but the registry, capability model, and module system must be able to
+express them without further structural change.
 
 ```ts
 // mobile_app: {
@@ -143,9 +146,39 @@ the roadmap until a contract is signed.
 // }
 ```
 
-Note what these examples prove: `mobile_app` has **no** `leads` module and a
-completely different stage list. Any design that cannot express that is not
-done.
+Note what these prove: `mobile_app` has **no** `leads` module and a completely
+different stage list. Any design that cannot express that is not done.
+
+Both are priced as **deposit/setup fee + monthly**, not flat subscription, so an
+offering needs an optional one-time price alongside its recurring one. See
+`billing_migration.md` § 5.
+
+#### The IDX authorization gate
+
+IDX display is governed by the client's MLS/board data license and display rules,
+and the board typically must approve the vendor before a feed is issued. This is
+**not a terms problem** and must not be folded into the agreement. Three separate
+mechanisms, each doing one job:
+
+| Concern | Mechanism |
+|---|---|
+| What the client knows up front — board/MLS name, broker ID, whether they have signed their board's IDX data license, which feed vendor | The `idx_credentials` onboarding step |
+| The client's *obligation* to obtain and maintain authorization, and that timelines depend on it | A clause in the `idx_website` order form |
+| Whether authorization has actually arrived | A fulfillment stage |
+
+The third is the one that is easy to get wrong. Board approval can take days to
+weeks and is outside the client's control, so it cannot be a required onboarding
+form field — onboarding would stall on a question the client cannot answer yet.
+Model the waiting as a stage instead:
+
+```text
+AWAITING_ASSETS → IDX_AUTHORIZATION → IDX_INTEGRATION → IN_PROGRESS → IN_REVIEW → LIVE
+```
+
+The onboarding screen collects; the stage waits. This is exactly the variation
+the per-offering `fulfillmentStages` list exists to express, and it is a useful
+test of the design: a stage list that cannot represent an external-dependency
+wait state is not finished.
 
 ### 2.4 Pricing
 
@@ -254,7 +287,12 @@ archiveReason: v.optional(v.string()),
 ```
 
 Effective modules = offering `defaultModules`, overridden per project. The row
-stores only deviations. Do not accept `v.any()` module configuration. When a
+stores only deviations.
+
+Per-project overrides are needed on day one, not eventually. **All About Towing**
+is a live `waas_local` site with no contact form: it needs `leads` off and
+`web_analytics` on, while remaining the same offering as every other local
+website. Build the admin toggle (§ 4.3) in the same stage as the registry. Do not accept `v.any()` module configuration. When a
 module later needs configuration, add a discriminated, module-specific validator
 and matching TypeScript type. After backfill is verified, the contract deploy
 makes `serviceType` required; application reads must not permanently default a
@@ -369,15 +407,93 @@ Validated unions over `v.any()` — worth the ceremony to keep Convex validation
 meaningful. Note that `waas_local` and `waas_local_family` share one variant;
 the union discriminates on engagement *type*, not on price tier.
 
-### 5.4 Terms
+### 5.4 Terms — MSA plus per-project order form
 
-`lib/legal/terms.ts` hardcodes $199 in the agreement body (lines 22, 40, 118).
-Terms become per-offering templates selected by `offering.termsTemplate`.
+**Revised 2026-08-05.** The original plan was one full terms document per
+offering. That duplicates a dozen boilerplate sections per offering and
+guarantees they drift. Split by what actually varies instead.
 
-Structurally this is safe: `agreements` already records `termsVersion` and
-`termsHash` (`validators.ts:91-100`), so previously signed agreements remain
-valid and verifiable. `waas_local_family` needs its own template with the $49
-figure before Chelsea's next signature event.
+#### The clickwrap mechanism is fine; the content is not
+
+Enforceability of clickwrap turns on reasonable notice and unambiguous assent,
+not on contract value, and the current implementation produces a strong record:
+SHA-256 of canonically rendered HTML, an explicit version, and `acceptedAt` plus
+`ip` and `userAgent` (`validators.ts:93-105`). Keep it.
+
+What does not survive a five-figure build engagement is the text in
+`lib/legal/terms.ts`, which is a $199 subscription agreement throughout:
+
+| Gap | Where | Why it matters for a build |
+|---|---|---|
+| IP is a license, not ownership | line 104 — "non-exclusive, non-transferable license … during an active subscription" | A client paying five figures for an app expects to own it; app store accounts must be in their legal name |
+| No scope or acceptance criteria | § Scope of Service is website-shaped | Nothing defines "done", so nothing defines when a milestone is payable |
+| No change-order mechanism | line 62 says out-of-scope work "may require a separate agreement" | That is a statement, not a process |
+| Liability capped at 3 months of fees | line 221 | Fine at $199/mo; the first clause opposing counsel circles on a large build |
+| Price written into prose | lines 22, 40, 118 | Every offering would need the whole document rewritten |
+| One global `TERMS_VERSION` | line 1 | Two offerings signed the same day need two versions and two hashes |
+
+#### The split
+
+1. **MSA — universal, versioned once.** Governing law and venue, limitation of
+   liability, disclaimers, confidentiality, the IP *framework*, termination,
+   notices, changes-to-terms, and SMS consent. Rarely changes. Roughly today's
+   document minus everything commercial.
+
+2. **Order form — per project.** Price, billing shape (including any deposit or
+   setup fee), term and minimum commitment, scope and deliverables, acceptance
+   criteria, IP disposition for this engagement, and change-order handling.
+   Generated from the offering registry for `waas_local` and
+   `waas_local_family`, so the client experience is unchanged from today.
+   Admin-authored for a bespoke mobile app or IDX engagement.
+
+#### What the client actually sees
+
+**One page, two documents, one checkbox.** Unchanged interaction from today.
+
+Both documents use the same `TermsContentBlock` structure and the same
+`buildCanonicalHtml()` renderer that already exists (`lib/legal/terms.ts:283-330`),
+so each is hashed exactly the way terms are hashed now. The order form renders
+above the MSA; the client scrolls, checks one box, and both hashes are recorded.
+
+**The order form is not a PDF.** For `waas_local` and `waas_local_family` it is
+generated from the offering registry. For a bespoke `mobile_app` or `idx_website`
+engagement it is admin-authored blocks in the same format. Avoid PDFs on the
+normal path: they need an embed viewer, they weaken the assent record (harder to
+show what was displayed), and they would add a second rendering and storage path
+next to one that already does the job. `method: "countersigned_pdf"` below stays
+reserved for the genuinely exceptional redline case.
+
+Record both hashes on the agreement row:
+
+```ts
+msaVersion: v.string(),
+msaHash: v.string(),
+orderFormVersion: v.string(),
+orderFormHash: v.string(),
+```
+
+Keep the existing `termsVersion` / `termsHash` fields during migration so signed
+agreements stay verifiable, and contract them only after backfill. Previously
+signed agreements are unaffected — their hash still verifies against the document
+that was current when they signed it.
+
+#### The escape hatch
+
+`agreementValidator.method` is `v.literal("clickwrap")` (`validators.ts:97`).
+Widen it to a union:
+
+```ts
+method: v.union(v.literal("clickwrap"), v.literal("countersigned_pdf")),
+```
+
+with an optional stored file reference. This is an expand-direction change, so
+it is cheap. It exists for the first client whose attorney wants redlines, where
+no clickwrap flow is appropriate and the deliverable is a countersigned PDF whose
+reference the portal records. Do not build an e-signature integration for that
+case until it happens more than once.
+
+`waas_local_family` needs its order form with the $49 figure before Chelsea's
+next signature event.
 
 ### 5.5 Retiring `/onboarding`
 
@@ -512,7 +628,12 @@ location plus restore owner in the migration log.
 - [ ] Add `waas_local_family`; rename `STRIPE_CHELSEA_PRICE_ID` to
       `STRIPE_PRICE_ID_FAMILY`; set Chelsea's project to that offering.
 - [ ] Delete `getCheckoutPriceId`'s `isChelsea` branch and `CHELSEA_BILLING_EMAIL`.
-- [ ] Add the `waas_family_v1` terms template with the correct $49 figure.
+- [ ] Split terms into the versioned MSA plus per-project order forms (§ 5.4);
+      expand `agreements` with the order-form version/hash and widen `method` to
+      include `countersigned_pdf`. Keep `termsVersion`/`termsHash` until backfill
+      is verified.
+- [ ] Generate the `waas_local` and `waas_local_family` order forms from the
+      registry; confirm the family form carries the correct $49 figure.
 - [ ] Verify in Stripe test mode: Chelsea resolves the family price and a normal
       project resolves $199, both from project data only. This is resolution
       proof, not authorization to create a live charge.
@@ -599,6 +720,12 @@ it changes only data, never structure.
   earns it.
 - **Operational routing:** broad `phase` is for presentation; explicit stage
   capabilities control lead intake, edit requests, and metrics visibility.
+- **Agreements:** clickwrap stays, split into a versioned MSA plus a per-project
+  order form, with a `countersigned_pdf` method reserved for the first
+  redline-driven deal. No e-signature vendor.
+- **Bespoke build pricing:** deposit/setup fee plus monthly, expressed as a
+  one-time line item inside subscription Checkout. Milestone invoicing is out of
+  scope until a signed deal requires it.
 
 These decisions should be reopened only with buyer evidence or an implementation
 finding that invalidates an assumption, not simply because a future offering is

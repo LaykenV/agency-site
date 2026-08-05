@@ -3,6 +3,7 @@
 Status: **planned, revised after source review; not implemented**
 Owner: Layken
 Written: 2026-08-04
+Last reviewed: 2026-08-05 (metadata bridge added; scope trim — see `UPGRADE_PLAN.md` § 7)
 Decision: **adopt conditionally after the dependency baseline and sandbox spike**
 
 Replace the hand-rolled Stripe integration (modelled on
@@ -33,6 +34,34 @@ buyer feedback later outweighs the operational clarity.
 
 Stripe remains the source of truth. Convex component tables are a cache and
 query layer, not an authority that may invent billing state.
+
+### 1.1 Write the attribution now, migrate later (`UPGRADE_PLAN.md` Stage 1B)
+
+Adopting the component is a large stage. Attributing a subscription to a project
+is not, and the two are separable. `checkout.sessions.create`
+(`stripeActions.ts:227`) currently sets no `subscription_data.metadata` at all,
+so every subscription created between now and Stage 6 is another row that Phase D
+has to backfill against live Stripe objects.
+
+Ship this first, on its own, with no new dependency and no schema change:
+
+```ts
+subscription_data: {
+  metadata: {
+    orgId: `project:${projectId}`,
+    userId: project.authUserId,
+  },
+}
+```
+
+This is the exact shape § 5 specifies for the component, so it is forward
+compatible — the component reads the metadata Stripe already holds. Every
+subscription created after it ships is born attributed, which reduces Phase D
+from a scripted backfill with a reconciliation manifest and an idempotent
+reversal procedure to a hand-verified edit of the few pre-existing rows.
+
+Do it before onboarding any new client. This is the cheapest risk reduction
+available in the whole migration.
 
 ---
 
@@ -68,10 +97,14 @@ versions. This is the smallest coherent peer set: workpool `0.3.2` requires
 Convex `^1.31.7`, while Better Auth component 0.10.13 supports the current core
 1.4.12 and avoids an authentication downgrade.
 
-Keep app Stripe at `19.3.1` in Stage 0. When the component is installed in Stage
-4/Phase C, move the direct dependency to exact `22.4.0` in the same PR and prove
-the legacy route against it. Do not carry SDK v19 and v22 side-by-side through
-shadowing, and do not turn Stage 0 into a latest-workflow/latest-auth migration.
+Keep app Stripe at `19.3.1` until the component is installed in Stage 6/Phase C.
+Move the direct dependency to exact `22.4.0` in that same PR and prove the legacy
+route against it. Do not carry SDK v19 and v22 side-by-side through the
+observation window, and do not turn Stage 0 into a latest-workflow/latest-auth
+migration.
+
+Note that Stage 1B (§ 1.1) ships on the current v19 SDK — it only adds a metadata
+object to an existing Checkout call and needs no dependency change.
 
 ---
 
@@ -132,6 +165,19 @@ adapter. Do not fork or patch the component as part of this project.
   both `orgId: project:<projectId>` and `userId: project.authUserId` in
   `subscriptionMetadata`. It never chooses price by client email.
 
+- Checkout supports **deposit/setup fee + monthly**, which is how the expected
+  mobile app and IDX engagements are priced. Stripe Checkout accepts a one-time
+  price in `line_items` alongside the recurring price while still in
+  `mode: "subscription"`; the one-time amount lands on the first invoice. Today
+  `stripeActions.ts:229` hardcodes a single recurring line item, so the offering
+  needs an optional one-time price alongside its recurring one.
+
+  Milestone invoicing — for example 30% on design approval, 30% on beta, 40% on
+  launch — is **out of scope**. That is Stripe Invoices rather than Checkout:
+  different objects, different webhook events, and a new portal billing surface.
+  Do not design for it speculatively. If a signed deal requires it, scope it as
+  its own stage.
+
   ```ts
   subscriptionMetadata: {
     orgId: `project:${project._id}`,
@@ -173,6 +219,17 @@ Billing status rules:
       regression, webhook signature/replay tests, and notification smoke tests.
 - [ ] Deploy this baseline separately and verify production before proceeding.
 
+### Phase A2 — metadata bridge (`UPGRADE_PLAN.md` Stage 1B)
+
+Independent of everything below. Ship it before onboarding any new client.
+
+- [ ] Add `subscription_data.metadata` with `orgId: project:<projectId>` and
+      `userId` to `checkout.sessions.create` (§ 1.1). No new dependency, no
+      schema change, current Stripe SDK.
+- [ ] Verify in Stripe test mode that a new subscription carries both keys.
+- [ ] Record how many live subscriptions predate the bridge — that count is the
+      entire remaining scope of the Phase D backfill.
+
 ### Phase B — sandbox spike
 
 - [ ] Complete every proof in §4 and record the outputs/Stripe object IDs.
@@ -185,15 +242,27 @@ Billing status rules:
       the API version, and compile/test the legacy integration against v22.
 - [ ] Register the component and v2 endpoint with the explicit secret override.
 - [ ] Add the processed-event ledger before enabling event hooks.
-- [ ] Keep the old webhook authoritative. The v2 path syncs component tables and
-      writes shadow comparison data only; it sends no email/SMS and changes no
-      project status.
-- [ ] Compare customer, subscription, invoice, and payment state after every
-      relevant test/live event. Count and alert on mismatches by customer,
-      subscription, invoice, status, price, and `orgId`, plus duplicate side-effect
-      attempts blocked by the ledger.
+- [ ] Keep the old webhook authoritative. The v2 path syncs component tables
+      only; it sends no email/SMS and changes no project status.
+- [ ] Reconcile customer, subscription, invoice, and payment state by hand
+      against the Stripe dashboard, and record the comparison.
+
+      **Trimmed 2026-08-05.** The original plan built automated mismatch counting
+      by customer, subscription, invoice, status, price, and `orgId`. That is
+      sized for hundreds of subscriptions; there will be roughly three. A
+      thorough § 4 sandbox spike plus an explicit hand reconciliation is stronger
+      evidence at this size than a dashboard nobody reads. Revisit if the live
+      subscription count outgrows what can be checked by eye.
+
+      Keep the ledger's own counter: duplicate side-effect attempts blocked must
+      still be visible, because that is the control preventing double charges and
+      double notifications.
 
 ### Phase D — backfill and shadow reads
+
+Scope here depends on when Stage 1B shipped. Subscriptions created after the
+metadata bridge already carry `orgId`/`userId` and need no backfill — confirm
+rather than rewrite them. Only pre-bridge subscriptions need the procedure below.
 
 - [ ] Create a reconciliation manifest mapping each live Stripe subscription to
       exactly one Convex project and expected offering/price. For every Stripe
@@ -227,6 +296,11 @@ Billing status rules:
       mismatches before Stage 6 exits.
 
 ### Phase F — decommission after one reconciled billing cycle
+
+**Deferred indefinitely (2026-08-05).** The legacy tables cost nothing to keep
+and are the rollback evidence for everything above. Nothing downstream is blocked
+by their existence, so this phase has no date and should not be scheduled simply
+because it is the last unchecked box in the document.
 
 - [ ] Export legacy `billingCustomers` and `subscriptions`, plus the mapping and
       reconciliation report, to durable private storage.
