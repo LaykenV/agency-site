@@ -23,12 +23,6 @@ const INDUSTRY_SLUGS = [
 ] as const;
 
 const nextConfig: NextConfig = {
-  // Isolate webpack in a worker so the main Next process does not share the
-  // full compile heap. Mitigates Vercel WasmHash crashes that surface as
-  // "Cannot read properties of undefined (reading 'length')" under memory pressure.
-  experimental: {
-    webpackBuildWorker: true,
-  },
   // Remotion lives under video/ and must not be traced into serverless functions.
   outputFileTracingExcludes: {
     "*": [
@@ -37,6 +31,26 @@ const nextConfig: NextConfig = {
       "./node_modules/remotion/**/*",
       "./node_modules/@remotion/**/*",
     ],
+  },
+  /**
+   * Vercel builds crash inside webpack's WebAssembly xxhash64 implementation:
+   *   TypeError: Cannot read properties of undefined (reading 'length')
+   *   at WasmHash._updateWithBuffer
+   *
+   * Not memory pressure — raising the heap to 8 GB and isolating the webpack
+   * build worker was deployed first and failed identically, and the whole repo
+   * carries under 10 MB of static assets. Next sets `hashFunction: "xxhash64"`
+   * by default; this swaps in Node's crypto hasher so the WASM module is never
+   * instantiated. Slightly slower hashing, no behavior change in output.
+   */
+  webpack: (config, { dev }) => {
+    if (!dev) {
+      config.output = {
+        ...config.output,
+        hashFunction: "sha256",
+      };
+    }
+    return config;
   },
   async redirects() {
     return [

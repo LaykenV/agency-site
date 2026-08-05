@@ -7,7 +7,7 @@
     "dev:frontend": "next dev",
     "dev:backend": "convex dev",
     "predev": "convex dev --until-success && convex dashboard",
-    "build": "NODE_OPTIONS='--max-old-space-size=8192' next build",
+    "build": "next build",
     "start": "next start",
     "test": "bun test",
     "lint": "next lint",
