@@ -4,7 +4,7 @@ Status: **Phases 1A and 1B complete in production. Phase 2 (typed telemetry) is
 next.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (production client migration evidence + exit gate)
+Last reviewed: 2026-08-05 (v2-only production cutover verified)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -586,8 +586,12 @@ triage per submission, populated each credential's `lastUsedAt`, and logged
 `hasVisitorHash: true`. Chelsea's browser posts only to same-origin
 `/api/contact`; page-view analytics intentionally remains on
 `/api/v1/analytics/pixel`. Immediate post-cutover verification then confirmed
-both retired lead paths were unavailable while v2 lead delivery and analytics
-remained healthy.
+both retired lead paths return `404` for POST and OPTIONS, unauthenticated v2
+returns `401`, and v1 analytics returns `204` for both configured production
+Origins. Fresh browser submissions on both custom domains each created exactly
+one attributed, triaged row, updated credential `lastUsedAt`, logged
+`hasVisitorHash: true`, and followed the verdict notification policy (review
+email where applicable, no SMS).
 
 ### Phase 2 — typed telemetry
 

@@ -4,7 +4,7 @@ Status: **Stages 0, 1A, and 2 complete in production. Stage 3 (typed events and
 click tracking) is next.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (production client migration evidence + exit gate)
+Last reviewed: 2026-08-05 (v2-only production cutover verified)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -169,6 +169,13 @@ drill. After an operator-approved immediate cutover, the Hub's unauthenticated
 v1 and unversioned lead routes and their OPTIONS aliases were removed, and the
 reusable template was moved to v2. Analytics remains on v1 until Stage 3
 implements `/api/v2/events` and begins consuming publishable keys.
+
+**Post-retirement proof:** both retired lead paths return `404` for POST and
+OPTIONS; unauthenticated v2 still returns `401`; v1 analytics returns `204` for
+both configured production Origins. Fresh browser submissions on both custom
+domains each produced exactly one stored, triaged lead with
+`hasVisitorHash: true`, updated credential `lastUsedAt`, and verdict-gated
+notifications (review email sent where applicable; SMS blocked).
 
 ### Stage 3 — typed events and click tracking
 
