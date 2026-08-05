@@ -1,12 +1,11 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stages 0, 1A, 2, and 3 complete in production. Stage 3 is verified end
-to end on the playground spoke; spoke client code is ready on All About Towing,
-TB Tree, and Chelsea. TB Tree + Chelsea need only operator credential + deploy;
-All About Towing is blocked on Hub project creation.**
+Status: **Stages 0, 1A, 2, and 3 complete in production.** Stage 3 is verified
+end to end on the playground and all three live client spokes (All About Towing,
+TB Tree, Chelsea Social Co.). Next up: Stage 4 (offering registry).
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Stage 3 spoke code reviewed; towing projectId placeholder found)
+Last reviewed: 2026-08-05 (Stage 3 live on all spokes; smoke tests passed)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -38,7 +37,7 @@ is disabled, but the Hub must support both paths during the overlap.
 Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
 Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
 Stage 2   WAAS authenticated v2 ....... clients migrated; v1 leads retired [done]
-Stage 3   Typed events + click tracking  tel:/mailto:/directions          [done; spoke rollout pending]
+Stage 3   Typed events + click tracking  tel:/mailto:/directions          [done]
 Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
 Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
 Stage 6   Stripe component ............ spike, then cutover               [spike-gated]
@@ -200,25 +199,27 @@ honestly: `tel:` events are tap-to-call clicks, not completed calls. Coarse
 referrer classes are not campaign or GBP attribution; that requires the deferred
 UTM work because a bare Google referrer is not proof.
 
-**Complete in production 2026-08-05; spoke rollout outstanding.** Hub ships
+**Complete in production 2026-08-05 on Hub + all live spokes.** Hub ships
 `client_events`, `POST /api/v2/events` (publishable key in body + Origin), daily
 click/referrer-class rollups on `client_analytics`, the shared
 `convex/lib/pagespeed.ts` with a first-`LIVE` snapshot and an admin **Refresh
-PageSpeed** control, and the portal `SiteMetrics` panel. The v1 pixel stays live
-for unmigrated spokes. Two defects found in review were fixed before smoke:
-clicks no longer inflate the daily referrer-class counts (they carry the same
-`document.referrer` as the pageview before them), and credential `lastUsedAt` is
-throttled to one write per five minutes so a single credential row is not a
-write-contention hotspot under browser event volume.
+PageSpeed** control, and the portal `SiteMetrics` panel. Two defects found in
+review were fixed before smoke: clicks no longer inflate the daily
+referrer-class counts (they carry the same `document.referrer` as the pageview
+before them), and credential `lastUsedAt` is throttled to one write per five
+minutes so a single credential row is not a write-contention hotspot under
+browser event volume.
 
-**Spoke side is `../agency-playground/`, not `agency-template`.** Playground
-carries the v2 client, the corrected directions-link matcher, and a Stage 3
-section in its `WAAS_V2_RUNBOOK.md`.
+**Spoke side is `../agency-playground/`, not `agency-template`.** Playground is
+the reference Spoke. Live client repos are siblings under `../clients/`.
 
-**Production proof (playground, 2026-08-05).** Pageviews and all three click
-targets — `tel`, `email`, `directions` — were accepted, attributed to the
-project, and rendered in the portal's **Site activity** panel. PageSpeed refresh
-verified. Two defects were found and fixed during that smoke:
+**Production proof (playground + all three live spokes, 2026-08-05).** Pageviews
+and conversion clicks were accepted, attributed, and rendered in each project's
+portal **Site activity** panel. Playground verified all three click targets
+(`tel`, `email`, `directions`) plus PageSpeed refresh. Live sites (All About
+Towing, TB Tree, Chelsea Social Co.) each passed their Stage 3 smoke after
+publishable credentials, bare-host deployment URLs, and rebuilds. Two defects
+were found and fixed during the playground smoke:
 
 - Self-referrals were classified as `other`. A full page load between the site's
   own pages sets `document.referrer` to the site itself, which is internal
@@ -239,36 +240,15 @@ scans, SMS links, in-app browsers, and no-referrer policies, and a bare
 listing. A client reads "direct 40" as "40 people typed my URL." Revisit when
 Stage 8's UTM work can attribute a call to a specific listing or campaign.
 
-**Spoke code is ready (2026-08-05); operator deploy closes the stage.** Each
-live site now has the Stage 3 client (v2 events + click tracking, v1 pixel
-fallback). What remains is per-site operator work: issue a publishable
-credential, store the deployment URL as a bare host, set the key (Vercel
-`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` for Next sites; `waas-config.js` for Chelsea
-static), and rebuild/redeploy. Until a given site is deployed with its key it
-stays on the v1 pixel and reports pageviews only — no click data, which is the
-whole point of the stage.
-
-Client repos are **siblings of `agency-site`**, not subdirectories:
-
 | Site | Repo | Runbook | State |
 |---|---|---|---|
-| All About Towing | `../clients/all-about-towing-web/` | `WAAS_V2_RUNBOOK.md` | blocked — no Hub project yet |
-| TB Tree | `../clients/tb-tree/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | ready to deploy |
-| Chelsea Social Co. | `../clients/chelsea-social/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | ready to deploy |
+| Agency Playground | `../agency-playground/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
+| All About Towing | `../clients/all-about-towing-web/` | `WAAS_V2_RUNBOOK.md` | live ✓ |
+| TB Tree | `../clients/tb-tree/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
+| Chelsea Social Co. | `../clients/chelsea-social/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
 
-**All About Towing has no Hub project (2026-08-05), so it cannot go first**
-despite being the most valuable target (phone-only, so tap-to-call is its only
-conversion signal and the reason the project is billable). Its config had a
-placeholder `projectId` — `proj_all-about-towing` — that was never real: the Hub
-mints project IDs with `crypto.randomUUID()`, and `/api/v2/events` returns 401
-when the body `projectId` doesn't match the credential's project. It now carries
-the `PROJECT_ID_FROM_ADMIN` sentinel that `scripts/validate-plumbing.ts` already
-recognises, and `app/layout.tsx` gates the pixel off entirely, so the site sends
-nothing rather than 401ing every request. Create the project, paste the UUID,
-then follow the runbook.
-
-Deploy order: TB Tree and Chelsea now; All About Towing as soon as multi-project
-setup lands and its project exists.
+The v1 pixel remains on the Hub as a harmless fallback for any future spoke that
+has not yet set a publishable key. All current production spokes use v2 events.
 
 **Declined 2026-08-05 — operational counters for `/api/v2/events`.** Stage 1A
 built `hub_operational_counters` because unauthenticated leads could burn Groq,

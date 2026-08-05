@@ -132,28 +132,19 @@ Bespoke client sites POST to:
 - `POST /api/v2/events` — typed browser events (`pageview` | `click`) with body
   `publishableKey` (`pk_live_…`) + Origin. Click targets: `tel` | `email` |
   `directions` (honestly labeled as taps/clicks, not completed calls).
-- `POST /api/v1/analytics/pixel` — legacy page views (Origin + projectId); kept
-  until each spoke migrates to v2 events.
+- `POST /api/v1/analytics/pixel` — legacy page views (Origin + projectId);
+  retained as a fallback for spokes without a publishable key. All current live
+  spokes use v2 events.
 
-Analytics also has the unversioned `/api/analytics/pixel` alias until Stage 3
-cutover is complete for live spokes. The unauthenticated v1 and unversioned
-**lead** routes are retired.
+Analytics also keeps the unversioned `/api/analytics/pixel` alias as the same
+legacy fallback. The unauthenticated v1 and unversioned **lead** routes are
+retired.
 
-Stage 3 is complete in the Hub and verified on the playground spoke. Spoke
-client code is ready on All About Towing (`../clients/all-about-towing-web/`),
-TB Tree (`../clients/tb-tree/`), and Chelsea (`../clients/chelsea-social/`) —
-note these repos are **siblings of this one**, not subdirectories. Operator
-deploy remains: issue a publishable credential, store a bare-host deployment
-URL, set the key (Vercel `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` or Chelsea's
-`waas-config.js`), and rebuild. A site still on v1 reports pageviews only —
-no click data.
-
-**All About Towing has no Hub project yet (2026-08-05).** Its config carries the
-`PROJECT_ID_FROM_ADMIN` sentinel and `app/layout.tsx` gates the pixel off
-entirely, so it sends nothing until a project exists. Hub `projectId` values are
-`crypto.randomUUID()` — a readable slug is never valid, and a mismatched body
-`projectId` makes `/api/v2/events` return 401. Creating the project and pasting
-its UUID is step one for that site; TB Tree and Chelsea are unblocked.
+Stage 3 is complete in production on the Hub and all live spokes (playground,
+All About Towing, TB Tree, Chelsea Social Co.) as of 2026-08-05. Client repos
+are **siblings of this one** under `../clients/`. Each site posts pageviews and
+conversion clicks (`tel` / `email` / `directions`) via `/api/v2/events` with a
+publishable key + Origin allowlist.
 
 **Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moved per-visitor limiting to each client's Function where the provider header is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
 
@@ -191,5 +182,6 @@ the Origin allowlist, publishable credential `lastUsedAt`, and
 - **Never** store raw payment details — Stripe handles all card data.
 - **Always** verify Stripe webhook signatures and use event IDs for idempotency.
 - **Always** hash terms content (SHA-256) on agreement acceptance; record `termsVersion` + `termsHash` + `userAgent`.
-- Keep legacy analytics pixel until every live spoke uses `/api/v2/events`. Lead
-  ingestion is v2-only; never reintroduce an unauthenticated lead alias.
+- Keep the legacy analytics pixel as a harmless fallback; all live spokes already
+  use `/api/v2/events`. Lead ingestion is v2-only; never reintroduce an
+  unauthenticated lead alias.

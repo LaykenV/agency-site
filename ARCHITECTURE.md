@@ -52,7 +52,7 @@ Wired in `convex.config.ts`:
 | `/api/cal-webhook` | Cal.com webhook | Signed |
 | `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); only lead route |
 | `/api/v2/events` | Hub: typed pageviews + conversion clicks (Stage 3) | Body `pk_live_…` + Origin |
-| `/api/v1/analytics/pixel` | Hub: legacy page-view pixel | Origin required; retained until spokes migrate to v2 events |
+| `/api/v1/analytics/pixel` | Hub: legacy page-view pixel | Origin required; fallback only — all live spokes use v2 events |
 | `/api/analytics/pixel` | Legacy alias of v1 (config-driven clients) | Same as v1 |
 
 ---
@@ -99,8 +99,10 @@ daily aggregates (including click counts and coarse `referrerClass`) roll into
 tap-to-call **clicks**, not completed calls. Coarse referrer classes are not
 campaign/GBP attribution.
 
-v1 analytics remains for spokes not yet on a publishable key. The reusable
-template prefers v2 when `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` (or config) is set.
+v1 analytics remains as a fallback for any spoke without a publishable key. All
+current live spokes (playground, All About Towing, TB Tree, Chelsea) use v2
+events. New sites prefer v2 when `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` (or config)
+is set.
 
 ### Lead payload
 

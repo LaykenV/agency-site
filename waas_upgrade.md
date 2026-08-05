@@ -1,11 +1,11 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phases 1A, 1B, and 2 complete in production. Phase 2 is verified end to
-end on the playground spoke; migrating the remaining live client sites off the
-v1 pixel is outstanding.**
+Status: **Phases 1A, 1B, and 2 complete in production.** Phase 2 (typed events +
+click tracking) is verified on the playground and all three live client spokes
+(All About Towing, TB Tree, Chelsea Social Co.).
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Phase 2 production verification)
+Last reviewed: 2026-08-05 (Phase 2 live on all spokes; smoke tests passed)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -585,31 +585,23 @@ Promoted ahead of the portal work on 2026-08-05 (`UPGRADE_PLAN.md` Stage 3) and
 reduced to the signals that justify an invoice. All About Towing has no contact
 form, so tap-to-call is its only conversion signal.
 
-**Complete in production 2026-08-05.** Verified on the playground spoke:
-pageviews plus all three click targets (`tel`, `email`, `directions`) accepted,
-attributed, and rendered in the portal, with PageSpeed refresh confirmed. Two
-defects were found and fixed during the smoke — self-referrals classified as
-`other`, and referrer classes labeled as visit counts when they are per-page-view
-counts. See `UPGRADE_PLAN.md` § Stage 3.
+**Complete in production 2026-08-05 on Hub + all live spokes.** Verified on the
+playground and All About Towing, TB Tree, and Chelsea Social Co.: pageviews and
+conversion clicks accepted, attributed, and rendered in each project's portal
+**Site activity** panel; playground also confirmed all three click targets
+(`tel`, `email`, `directions`) and PageSpeed refresh. Two defects were found and
+fixed during the playground smoke — self-referrals classified as `other`, and
+referrer classes labeled as visit counts when they are per-page-view counts.
+See `UPGRADE_PLAN.md` § Stage 3.
 
 Referrer classes are collected but **not shown to clients**; the class rollup
 cannot yet separate a Business Profile tap from a search result, and `direct` is
 an unknown bucket rather than a source. Revisit with Stage 8's UTM work.
 
-**Spoke client code is ready (2026-08-05)** on All About Towing
-(`../clients/all-about-towing-web/`), TB Tree (`../clients/tb-tree/`), and
-Chelsea (`../clients/chelsea-social/`) — sibling repos, not subdirectories —
-running the same Stage 3 client as playground, with per-site runbooks. Remaining
-work is operator deploy, not more Hub or client code: each live site needs a
-publishable credential, a bare-host deployment URL, the key (Vercel
-`NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` for Next sites; `waas-config.js` for
-Chelsea), and a rebuild. Sites still on v1 report pageviews only. Keep the v1
-pixel until the last one migrates.
-
-**All About Towing is blocked on Hub project creation.** It has no project yet,
-so its config holds the `PROJECT_ID_FROM_ADMIN` sentinel and its layout gates
-the pixel off — it sends nothing instead of 401ing. TB Tree and Chelsea are
-unblocked.
+Live spokes (sibling repos under `../clients/`, plus `../agency-playground/`)
+run the Stage 3 client with publishable keys and bare-host deployment URLs. The
+v1 pixel remains on the Hub only as a fallback for any future spoke without a
+key; all current production traffic uses `/api/v2/events`.
 
 - [x] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
       publishable key; make `pageview` one type.
