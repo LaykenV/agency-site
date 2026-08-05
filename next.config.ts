@@ -23,6 +23,21 @@ const INDUSTRY_SLUGS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  // Isolate webpack in a worker so the main Next process does not share the
+  // full compile heap. Mitigates Vercel WasmHash crashes that surface as
+  // "Cannot read properties of undefined (reading 'length')" under memory pressure.
+  experimental: {
+    webpackBuildWorker: true,
+  },
+  // Remotion lives under video/ and must not be traced into serverless functions.
+  outputFileTracingExcludes: {
+    "*": [
+      "./video/**/*",
+      "./out/**/*",
+      "./node_modules/remotion/**/*",
+      "./node_modules/@remotion/**/*",
+    ],
+  },
   async redirects() {
     return [
       {
