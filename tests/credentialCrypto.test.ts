@@ -90,5 +90,6 @@ describe("extractBearerToken", () => {
     expect(extractBearerToken(null)).toBeNull();
     expect(extractBearerToken("Basic abc")).toBeNull();
     expect(extractBearerToken("Bearer short")).toBeNull();
+    expect(extractBearerToken("Bearer garbage")).toBeNull();
   });
 });

@@ -435,9 +435,15 @@ const ingestLeadV2Handler = httpAction(async (ctx, request) => {
 
   // 2–3. Bearer credential: parse keyId → non-revoked secret → constant-time hash
   // Never log the Authorization header or raw token.
-  const rawToken = extractBearerToken(request.headers.get("authorization"));
-  if (!rawToken) {
+  const authorization = request.headers.get("authorization");
+  if (!authorization) {
     console.log("[hub.lead.v2] auth_failed", { reason: "missing_bearer" });
+    return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+
+  const rawToken = extractBearerToken(authorization);
+  if (!rawToken) {
+    console.log("[hub.lead.v2] auth_failed", { reason: "malformed_credential" });
     return jsonResponse({ error: "Unauthorized" }, 401);
   }
 
