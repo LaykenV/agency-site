@@ -547,13 +547,13 @@ cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header 
 - [x] Build key issue / rotate / revoke in admin, showing the raw key once and
       redacting all request logs.
 - [x] Build `POST /api/v2/leads` with bearer verification in the order in §3.4.
-- [ ] Move honeypot/time-trap checks into each client Function and pass their
+- [x] Move honeypot/time-trap checks into each client Function and pass their
       normalized signals to the Hub (F9).
 - [ ] Normalize stored origins on write (F13). `previewUrlPattern` is cut.
-- [ ] Write and test both reference shapes: a static site's `/api/contact`
+- [x] Write and test both reference shapes: a static site's `/api/contact`
       Function and a Next.js Server Action/route handler. Each derives trusted
       visitor metadata from provider headers and holds `sk_` only server-side.
-- [ ] Migrate TB Tree first because it depends on no-`Origin`; then migrate
+- [x] Migrate TB Tree first because it depends on no-`Origin`; then migrate
       Chelsea from direct browser POST to its own Function.
 - [ ] Use the same production runbook for each client:
 
@@ -571,6 +571,16 @@ cut; see `UPGRADE_PLAN.md` § 7 for the reasoning. The `Idempotency-Key` header 
 - [ ] In the same stage, either patch `agency-template/` to authenticated v2 or
       mark it legacy prominently and remove v1 setup guidance. A new client must
       not be able to reintroduce the retired pattern.
+
+**Production migration evidence, 2026-08-05.** TB Tree commit `9cc809e` and
+Chelsea commit `2dbf569` are deployed with separate sensitive
+`WAAS_SECRET_KEY` values. Labeled production browser submissions through both
+custom domains returned success, produced project-attributed lead rows with one
+triage per submission, populated each credential's `lastUsedAt`, and logged
+`hasVisitorHash: true`. Chelsea's browser posts only to same-origin
+`/api/contact`; page-view analytics intentionally remains on
+`/api/v1/analytics/pixel`. The observation and legacy-retirement gate above is
+still open.
 
 ### Phase 2 — typed telemetry
 

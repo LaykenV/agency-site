@@ -73,12 +73,22 @@ POST /api/ingest-lead          (legacy unversioned alias of v1)
 POST /api/analytics/pixel      (legacy unversioned alias of v1)
 ```
 
-`/api/v2/leads` is additive — v1 stays live until both production clients migrate.
+`/api/v2/leads` is additive. TB Tree and Chelsea migrated on 2026-08-05; v1
+stays live through the bounded observation gate before legacy retirement.
 Credentials live in `project_credentials` (SHA-256 of the full key only; raw key shown once in admin). Verification order: body ceiling → parse Bearer → resolve non-revoked `secret` by `keyId` → constant-time hash compare → resolve project **from the credential** (body `projectId` is optional and must match when present) → status must be `LIVE`/`IN_REVIEW` → field validation → rate limits → insert + triage.
 
 Field validation runs before rate-limit consumption so a malformed payload does not burn a project's daily ceiling. `visitorHash` is read from either the top level or `meta`; when present it keys `leadPerVisitor`, when absent the request falls back to the `leadNoTrustedVisitor` project bucket. Check `hasVisitorHash` in the `[hub.lead.v2] accepted` log line to confirm a spoke is actually supplying it.
 
 **Pre-auth failures write no counters** — only `[hub.lead.v2] auth_failed` log lines. A counter bump is a mutation, so incrementing one before authentication would let unauthenticated callers drive unbounded contended writes. Count auth failures from logs, not from `hub_operational_counters`.
+
+TB Tree holds its `sk_live_…` credential in the Next.js Server Action runtime.
+Chelsea's static browser posts to same-origin `/api/contact`; that Vercel
+Function holds the credential and forwards to the Hub. Neither browser receives
+an `sk_live_…` value. Page-view analytics still calls
+`/api/v1/analytics/pixel` with the public project ID and an Origin check. A
+`pk_live_…` publishable credential has no production consumer until Stage 3
+ships `/api/v2/events`; do not add one to current client code merely because the
+credential issuer supports that kind.
 
 ### Lead payload
 

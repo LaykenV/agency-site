@@ -159,6 +159,14 @@ actually closes the unauthenticated paid-fan-out hole.
 **Trimmed 2026-08-05.** Per-submission idempotency receipts and
 `previewUrlPattern` are cut — see § 7.
 
+**Production migration shipped 2026-08-05; observation gate active.** TB Tree
+and Chelsea now send leads through authenticated v2 using separate server-only
+credentials. Both live custom-domain browser paths produced attributed leads,
+completed triage, populated credential `lastUsedAt`, and logged
+`hasVisitorHash: true`. Keep v1 and the no-`Origin` compatibility path live
+until the bounded observation gate passes; analytics remains on v1 until Stage
+3 implements `/api/v2/events` and begins consuming publishable keys.
+
 ### Stage 3 — typed events and click tracking
 
 `waas_upgrade.md` § Phase 2, reduced to the parts that sell. Add `client_events`
