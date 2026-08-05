@@ -1,6 +1,6 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **planned, revised after review; not started**
+Status: **Stage 0 in progress (local matrix pinned + verified); production smoke pending**
 Owner: Layken
 Written: 2026-08-04
 Last reviewed: 2026-08-04
@@ -45,10 +45,11 @@ Stage 8  Telemetry + external data .... measured, privacy-reviewed        [later
 
 ### Stage 0 — dependency baseline
 
-The manifest says `convex@^1.28.0`, but `bun.lock` resolves 1.31.4. The current
-root workpool is a transitive `0.2.19`, which does not satisfy
-`@convex-dev/workflow@0.3.4`'s `workpool ^0.3.0` peer. The minimal coherent
-matrix is now decided:
+The problem this stage fixes: the manifest declared `convex@^1.28.0` while
+`bun.lock` resolved 1.31.4, and the root workpool was a transitive `0.2.19`,
+which did not satisfy `@convex-dev/workflow@0.3.4`'s `workpool ^0.3.0` peer. The
+minimal coherent matrix is now decided and applied locally (see § 5 for resolved
+evidence):
 
 ```text
 convex                    1.31.7   # small patch; required by workpool 0.3.2
@@ -224,13 +225,67 @@ signals honestly:
 
 ## 5. Current known state
 
-- `package.json` declares `convex@^1.28.0`; `bun.lock` resolves 1.31.4.
-- `@convex-dev/workpool` is not a direct dependency; the lock's root resolution
-  is 0.2.19 while workflow 0.3.4 requires workpool `^0.3.0`.
-- `@convex-dev/better-auth` resolves 0.10.10 and declares an exact Better Auth
-  1.4.9 peer, while the app resolves Better Auth 1.4.12. Stage 0 upgrades the
-  component to 0.10.13 so core Better Auth remains at 1.4.12 without peer skew.
-- `stripe@^19.1.0` is declared; `@convex-dev/stripe` is not installed.
+### Stage 0 — local evidence (2026-08-04)
+
+Pinned exact versions in `package.json` and regenerated `bun.lock`. Verified:
+
+| Package | Resolved |
+|---|---|
+| `convex` | 1.31.7 |
+| `@convex-dev/workpool` | 0.3.2 (now a direct dependency) |
+| `@convex-dev/workflow` | 0.3.4 |
+| `@convex-dev/better-auth` | 0.10.13 (peer `>=1.4.9 <1.5.0`) |
+| `better-auth` | 1.4.12 |
+| `@convex-dev/agent` | 0.2.12 |
+| `@convex-dev/rate-limiter` | 0.3.2 |
+| `@convex-dev/twilio` | 0.2.1 |
+| `@convex-dev/resend` | 0.1.13 (nested workpool may remain 0.2.x) |
+| `@convex-dev/polar` | 0.6.4 |
+| `stripe` | 19.3.1 |
+
+Local exit checks passed, exactly as run:
+
+```bash
+bun install --frozen-lockfile     # "no changes"
+npx tsc --noEmit
+npx convex codegen --typecheck enable   # no generated-file drift
+bun run build
+bun run lint
+```
+
+Note: `--typecheck-components` is not a valid flag on convex 1.31.7; the
+component-typechecking codegen invocation is `--typecheck enable`.
+
+**Residual peer skew (accepted, not blocking).** A full peer audit across
+`node_modules` returns exactly one unmet peer:
+
+```text
+@better-auth/passkey@1.4.9 needs better-auth "1.4.9" -> got 1.4.12
+```
+
+Passkey is an exact-pinned hard dependency of `@convex-dev/better-auth@0.10.13`
+and is not dead code — `dist/auth-options.js` calls `passkey()` at module load
+and the component schema defines a `passkey` table, so it loads on every deploy.
+Accepted because the component itself declares `better-auth >=1.4.9 <1.5.0`,
+codegen and build exercise that path cleanly, and this app uses magic link only.
+Re-check this if Better Auth moves off the 1.4.x line.
+
+**Component schema change on deploy.** `@convex-dev/workflow` embeds workpool via
+`component.use(workpool)`, so the root bump 0.2.19 → 0.3.2 changes the pushed
+workflow component schema: `pendingStart.fnArgs` loosens from `v.any()` to
+`v.optional(v.any())`, optional `payloadId`/`payloadSize` are added, and a new
+`payload` table stores large args out-of-line. All additive or loosening —
+expand direction only, so existing rows still validate. There is no `crons.ts`
+and `marketingSearchWorkflow` is admin-triggered, so deploy while no marketing
+search is in flight.
+
+**Still required before Stage 0 exit / Stage 1 start:** production deploy of this
+matrix, then smoke-test mobile magic-link auth, Resend, workflow execution, and
+current Stripe Checkout/webhook behavior.
+
+### Unchanged product state
+
+- `@convex-dev/stripe` is not installed.
 - Chelsea and TB Tree are the two live client sites using unauthenticated legacy
   lead endpoints. Chelsea posts from the browser; TB Tree posts from a Server
   Action without `Origin`.
