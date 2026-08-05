@@ -339,6 +339,82 @@ export function normalizeReferrer(referrer: unknown): string | undefined {
   return cleaned.slice(0, LEAD_FIELD_LIMITS.referrer);
 }
 
+/** Stage 3 typed event validation — no free-form type names or v.any() meta. */
+export type ValidatedClientEvent =
+  | {
+      ok: true;
+      type: "pageview";
+      path: string;
+      referrer?: string;
+    }
+  | {
+      ok: true;
+      type: "click";
+      path: string;
+      referrer?: string;
+      payload: {
+        kind: "link";
+        target: "tel" | "email" | "directions";
+      };
+    }
+  | { ok: false; error: string };
+
+const CLICK_TARGETS = new Set(["tel", "email", "directions"]);
+
+/**
+ * Validate `/api/v2/events` body fields (after publishable key auth).
+ * Enforces type/payload pairings and path/referrer bounds.
+ */
+export function validateClientEventPayload(
+  body: Record<string, unknown>,
+): ValidatedClientEvent {
+  const typeRaw = body.type;
+  if (typeRaw !== "pageview" && typeRaw !== "click") {
+    return { ok: false, error: "Invalid event type" };
+  }
+
+  const path = normalizeAnalyticsPath(body.path);
+  const referrer = normalizeReferrer(body.referrer);
+
+  if (typeRaw === "pageview") {
+    return {
+      ok: true,
+      type: "pageview",
+      path,
+      ...(referrer ? { referrer } : {}),
+    };
+  }
+
+  // click — require meta.target (or payload.target) as one of the allowed values
+  const meta =
+    body.meta && typeof body.meta === "object" && !Array.isArray(body.meta)
+      ? (body.meta as Record<string, unknown>)
+      : undefined;
+  const payloadObj =
+    body.payload && typeof body.payload === "object" && !Array.isArray(body.payload)
+      ? (body.payload as Record<string, unknown>)
+      : undefined;
+
+  const targetRaw =
+    (typeof meta?.target === "string" ? meta.target : undefined) ??
+    (typeof payloadObj?.target === "string" ? payloadObj.target : undefined);
+
+  if (!targetRaw || !CLICK_TARGETS.has(targetRaw)) {
+    return { ok: false, error: "Invalid click target" };
+  }
+
+  return {
+    ok: true,
+    type: "click",
+    path,
+    ...(referrer ? { referrer } : {}),
+    payload: {
+      kind: "link",
+      target: targetRaw as "tel" | "email" | "directions",
+    },
+  };
+}
+
 export function jsonResponse(
   body: unknown,
   status: number,

@@ -129,6 +129,34 @@ export const projectCredentialKindValidator = v.union(
   v.literal("secret"),
 );
 
+/** Stage 3 typed client events (pageviews + conversion clicks). */
+export const clientEventTypeValidator = v.union(
+  v.literal("pageview"),
+  v.literal("click"),
+);
+
+export const clientEventClickTargetValidator = v.union(
+  v.literal("tel"),
+  v.literal("email"),
+  v.literal("directions"),
+);
+
+export const clientEventPayloadValidator = v.object({
+  kind: v.literal("link"),
+  target: clientEventClickTargetValidator,
+});
+
+/**
+ * Coarse referrer class — not campaign/GBP attribution.
+ * organic / social / direct / other only.
+ */
+export const referrerClassValidator = v.union(
+  v.literal("organic"),
+  v.literal("social"),
+  v.literal("direct"),
+  v.literal("other"),
+);
+
 /**
  * Public-safe credential row for admin UI — never includes credentialHash or raw key.
  */

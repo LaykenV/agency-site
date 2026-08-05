@@ -94,13 +94,35 @@ export const getSummary = query({
     thisMonth: v.object({
       pageViews: v.number(),
       topPages: v.array(v.object({ path: v.string(), views: v.number() })),
+      // Stage 3 conversion clicks — honest labels: tap-to-call / email / directions clicks
+      telClicks: v.number(),
+      emailClicks: v.number(),
+      directionsClicks: v.number(),
+      referrerClasses: v.object({
+        organic: v.number(),
+        social: v.number(),
+        direct: v.number(),
+        other: v.number(),
+      }),
     }),
     trend: v.number(),
   }),
   handler: async (ctx, { projectId }) => {
+    const empty = {
+      thisMonth: {
+        pageViews: 0,
+        topPages: [] as Array<{ path: string; views: number }>,
+        telClicks: 0,
+        emailClicks: 0,
+        directionsClicks: 0,
+        referrerClasses: { organic: 0, social: 0, direct: 0, other: 0 },
+      },
+      trend: 0,
+    };
+
     const user = await authComponent.getAuthUser(ctx);
     if (!user?._id) {
-      return { thisMonth: { pageViews: 0, topPages: [] }, trend: 0 };
+      return empty;
     }
 
     const project = await ctx.db
@@ -109,7 +131,7 @@ export const getSummary = query({
       .first();
 
     if (!project || project.authUserId !== user._id) {
-      return { thisMonth: { pageViews: 0, topPages: [] }, trend: 0 };
+      return empty;
     }
 
     const now = new Date();
@@ -141,9 +163,23 @@ export const getSummary = query({
 
     // Aggregate top pages across all days this month
     const pageViewMap = new Map<string, number>();
+    let telClicks = 0;
+    let emailClicks = 0;
+    let directionsClicks = 0;
+    const referrerClasses = { organic: 0, social: 0, direct: 0, other: 0 };
+
     for (const day of thisMonthData) {
       for (const page of day.topPages) {
         pageViewMap.set(page.path, (pageViewMap.get(page.path) || 0) + page.views);
+      }
+      telClicks += day.telClicks ?? 0;
+      emailClicks += day.emailClicks ?? 0;
+      directionsClicks += day.directionsClicks ?? 0;
+      if (day.referrerClasses) {
+        referrerClasses.organic += day.referrerClasses.organic;
+        referrerClasses.social += day.referrerClasses.social;
+        referrerClasses.direct += day.referrerClasses.direct;
+        referrerClasses.other += day.referrerClasses.other;
       }
     }
     const topPages = Array.from(pageViewMap.entries())
@@ -157,7 +193,14 @@ export const getSummary = query({
         : 0;
 
     return {
-      thisMonth: { pageViews: thisMonthViews, topPages },
+      thisMonth: {
+        pageViews: thisMonthViews,
+        topPages,
+        telClicks,
+        emailClicks,
+        directionsClicks,
+        referrerClasses,
+      },
       trend,
     };
   },

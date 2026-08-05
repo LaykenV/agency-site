@@ -1,10 +1,10 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
 Status: **Stages 0, 1A, and 2 complete in production. Stage 3 (typed events and
-click tracking) is next.**
+click tracking) implemented in code — production smoke still required.**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (v2-only production cutover verified)
+Last reviewed: 2026-08-05 (Stage 3 Hub implementation)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -36,7 +36,7 @@ is disabled, but the Hub must support both paths during the overlap.
 Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
 Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
 Stage 2   WAAS authenticated v2 ....... clients migrated; v1 leads retired [done]
-Stage 3   Typed events + click tracking  tel:/mailto:/directions          [was Stage 8]
+Stage 3   Typed events + click tracking  tel:/mailto:/directions          [code done; prod smoke next]
 Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
 Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
 Stage 6   Stripe component ............ spike, then cutover               [spike-gated]
@@ -197,6 +197,35 @@ Vitals, and the JS error beacon are deferred to Stage 8. Label what is measured
 honestly: `tel:` events are tap-to-call clicks, not completed calls. Coarse
 referrer classes are not campaign or GBP attribution; that requires the deferred
 UTM work because a bare Google referrer is not proof.
+
+**Implemented in code 2026-08-05; production smoke outstanding.** Hub ships
+`client_events`, `POST /api/v2/events` (publishable key in body + Origin), daily
+click/referrer-class rollups on `client_analytics`, the shared
+`convex/lib/pagespeed.ts` with a first-`LIVE` snapshot and an admin **Refresh
+PageSpeed** control, and the portal `SiteMetrics` panel. The v1 pixel stays live
+for unmigrated spokes. Two defects found in review were fixed before smoke:
+clicks no longer inflate the daily referrer-class counts (they carry the same
+`document.referrer` as the pageview before them), and credential `lastUsedAt` is
+throttled to one write per five minutes so a single credential row is not a
+write-contention hotspot under browser event volume.
+
+**Spoke side is `../agency-playground/`, not `agency-template`.** Playground
+carries the v2 client, the corrected directions-link matcher, and a Stage 3
+section in its `WAAS_V2_RUNBOOK.md`. It deploys first; All About Towing follows
+once its proof passes.
+
+**Declined 2026-08-05 — operational counters for `/api/v2/events`.** Stage 1A
+built `hub_operational_counters` because unauthenticated leads could burn Groq,
+Resend, and Twilio spend. Events spend nothing: a rejected event costs one
+database read and returns. The portal rollups are themselves the accepted-event
+evidence, and `429`s show in Convex logs. Do not extend the counter tables to
+telemetry.
+
+**Accepted 2026-08-05 — `client_events` has no retention policy.** Raw rows grow
+one per pageview and click, and nothing reads them; the portal reads only the
+`client_analytics` rollups. Fine at current volume. Revisit only when a project's
+row count is large enough to matter, at which point the fix is a cron deleting
+rows past a fixed age, not a schema change.
 
 ### Stage 4 — offering registry
 
@@ -458,6 +487,24 @@ and `marketingSearchWorkflow` is admin-triggered, so deploy while no marketing
 search is in flight.
 
 Stage 0's production deploy and smoke gate completed before Stage 1A began.
+
+### `agency-template` is retired (2026-08-05)
+
+`../agency-template/` is **fully retired**. It is not cloned for new clients, not
+patched when the Hub contract changes, and not merged into existing client repos.
+It was already "no longer the path new client sites take" during Stage 2; this
+closes it completely so no future stage spends effort keeping a dead starter in
+sync.
+
+Consequences:
+
+- New client sites are built bespoke against the Hub contract in
+  `ARCHITECTURE.md` § Hub ↔ Spoke.
+- `../agency-playground/` is the reference Spoke and the first site to run each
+  new Hub contract in production.
+- `CLIENT_LIFECYCLE.md` Stage 9 (`gh repo create --template`) and Stage 18
+  (`git merge upstream/main`) describe the retired template workflow and are
+  stale. Rewriting them for the bespoke flow is not yet done.
 
 ### Unchanged product state
 

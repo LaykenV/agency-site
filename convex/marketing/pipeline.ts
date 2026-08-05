@@ -6,6 +6,7 @@ import { internalAction } from "../_generated/server";
 import type { Id } from "../_generated/dataModel";
 import { v } from "convex/values";
 import { components, internal } from "../_generated/api";
+import { runPageSpeed } from "../lib/pagespeed";
 
 type PlaceApiReview = {
   authorAttribution?: { displayName?: string };
@@ -61,7 +62,6 @@ type PhysicalPresence = {
 
 const FIRECRAWL_ENDPOINT = "https://api.firecrawl.dev/v2/scrape";
 const PLACES_SEARCH_ENDPOINT = "https://places.googleapis.com/v1/places:searchText";
-const PAGESPEED_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 const GROQ_MODEL = "openai/gpt-oss-120b";
 
 const leadScoringAgent = new Agent(components.agent, {
@@ -567,61 +567,6 @@ async function runFirecrawlScreenshot(url: string): Promise<string | undefined> 
   }
 
   return undefined;
-}
-
-async function runPageSpeed(url: string) {
-  const params = new URLSearchParams({
-    url,
-    strategy: "mobile",
-    category: "performance",
-  });
-
-  const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY ?? process.env.GOOGLE_PLACES_API_KEY;
-  if (apiKey) {
-    params.set("key", apiKey);
-  }
-
-  const response = await fetch(`${PAGESPEED_ENDPOINT}?${params.toString()}`, {
-    method: "GET",
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`PageSpeed failed: ${response.status} ${details}`);
-  }
-
-  const json = (await response.json()) as {
-    lighthouseResult?: {
-      categories?: {
-        performance?: {
-          score?: number;
-        };
-      };
-      audits?: {
-        "first-contentful-paint"?: { numericValue?: number };
-        "largest-contentful-paint"?: { numericValue?: number };
-        "cumulative-layout-shift"?: { numericValue?: number };
-      };
-    };
-  };
-
-  const perfScore = json.lighthouseResult?.categories?.performance?.score;
-  const normalizedScore =
-    typeof perfScore === "number"
-      ? Math.round(
-          perfScore <= 1
-            ? Math.max(0, Math.min(1, perfScore)) * 100
-            : Math.max(0, Math.min(100, perfScore))
-        )
-      : 0;
-
-  return {
-    performanceScore: normalizedScore,
-    fcp: json.lighthouseResult?.audits?.["first-contentful-paint"]?.numericValue,
-    lcp: json.lighthouseResult?.audits?.["largest-contentful-paint"]?.numericValue,
-    cls: json.lighthouseResult?.audits?.["cumulative-layout-shift"]?.numericValue,
-    fetchedAt: Date.now(),
-  };
 }
 
 function buildAnalysisPrompt(lead: {

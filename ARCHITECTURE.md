@@ -3,7 +3,7 @@
 Technical blueprint for `agency-site`. The Hub side of the Hub ↔ Spoke architecture — runs the marketing pipeline, admin portal, client portal, agreement clickwrap, Stripe billing, Cal.com integration, and the public APIs that bespoke client sites POST to.
 
 For the lifecycle flow (lead → live), see `CLIENT_LIFECYCLE.md`.
-For the bespoke client-site repo, see `../agency-template/`.
+Client sites are built bespoke. `../agency-template/` is **fully retired as of 2026-08-05**; `../agency-playground/` is the current reference Spoke.
 
 ---
 
@@ -51,20 +51,22 @@ Wired in `convex.config.ts`:
 | `/api/stripe` | Stripe webhook | Signed |
 | `/api/cal-webhook` | Cal.com webhook | Signed |
 | `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); only lead route |
-| `/api/v1/analytics/pixel` | Hub: page-view pixel from bespoke client sites | Containment + Origin required |
+| `/api/v2/events` | Hub: typed pageviews + conversion clicks (Stage 3) | Body `pk_live_…` + Origin |
+| `/api/v1/analytics/pixel` | Hub: legacy page-view pixel | Origin required; retained until spokes migrate to v2 events |
 | `/api/analytics/pixel` | Legacy alias of v1 (config-driven clients) | Same as v1 |
 
 ---
 
 ## Hub ↔ Spoke contract
 
-Bespoke client sites (built from `agency-template`) call the Hub for lead intake and page-view analytics. The contract is versioned so the payload shape can evolve without breaking already-deployed client sites.
+Bespoke client sites call the Hub for lead intake and browser telemetry. The contract is versioned so the payload shape can evolve without breaking already-deployed client sites. Each site implements the contract directly — there is no shared template repo to inherit it from.
 
 ### Endpoints
 
 ```
 POST /api/v2/leads             (Stage 2: Bearer sk_live_<keyId>_<secret>)
-POST /api/v1/analytics/pixel   (pageviews; Origin required)
+POST /api/v2/events            (Stage 3: body publishableKey pk_live_… + Origin)
+POST /api/v1/analytics/pixel   (legacy pageviews; Origin required)
 
 POST /api/analytics/pixel      (legacy unversioned alias of v1)
 ```
@@ -76,16 +78,29 @@ Credentials live in `project_credentials` (SHA-256 of the full key only; raw key
 
 Field validation runs before rate-limit consumption so a malformed payload does not burn a project's daily ceiling. `visitorHash` is read from either the top level or `meta`; when present it keys `leadPerVisitor`, when absent the request falls back to the `leadNoTrustedVisitor` project bucket. Check `hasVisitorHash` in the `[hub.lead.v2] accepted` log line to confirm a spoke is actually supplying it.
 
-**Pre-auth failures write no counters** — only `[hub.lead.v2] auth_failed` log lines. A counter bump is a mutation, so incrementing one before authentication would let unauthenticated callers drive unbounded contended writes. Count auth failures from logs, not from `hub_operational_counters`.
+**Pre-auth failures write no counters** — only `[hub.lead.v2] auth_failed` (or
+`[hub.events.v2] auth_failed`) log lines. A counter bump is a mutation, so
+incrementing one before authentication would let unauthenticated callers drive
+unbounded contended writes. Count auth failures from logs, not from
+`hub_operational_counters`.
 
 TB Tree holds its `sk_live_…` credential in the Next.js Server Action runtime.
 Chelsea's static browser posts to same-origin `/api/contact`; that Vercel
 Function holds the credential and forwards to the Hub. Neither browser receives
-an `sk_live_…` value. Page-view analytics still calls
-`/api/v1/analytics/pixel` with the public project ID and an Origin check. A
-`pk_live_…` publishable credential has no production consumer until Stage 3
-ships `/api/v2/events`; do not add one to current client code merely because the
-credential issuer supports that kind.
+an `sk_live_…` value.
+
+**Stage 3 events:** browser JS may hold a `pk_live_…` publishable key and POST
+to `/api/v2/events` with `{publishableKey, type, path, referrer?, meta?}`. Types
+are only `pageview` and `click` (with `meta.target` ∈ `tel` | `email` |
+`directions`). Auth is publishable key hash + Origin allowlist — a soft
+integrity boundary, not secret lead auth. Raw events land in `client_events`;
+daily aggregates (including click counts and coarse `referrerClass`) roll into
+`client_analytics`. Portal reads aggregates only. Labels are honest:
+tap-to-call **clicks**, not completed calls. Coarse referrer classes are not
+campaign/GBP attribution.
+
+v1 analytics remains for spokes not yet on a publishable key. The reusable
+template prefers v2 when `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY` (or config) is set.
 
 ### Lead payload
 
@@ -102,7 +117,27 @@ credential issuer supports that kind.
 }
 ```
 
-### Analytics payload
+### Events payload (Stage 3)
+
+```json
+{
+  "publishableKey": "pk_live_<keyId>_<secret>",
+  "type": "pageview",
+  "path": "/services",
+  "referrer": "https://www.google.com/"
+}
+```
+
+```json
+{
+  "publishableKey": "pk_live_<keyId>_<secret>",
+  "type": "click",
+  "path": "/",
+  "meta": { "target": "tel" }
+}
+```
+
+### Analytics payload (legacy v1)
 
 ```json
 {
@@ -120,28 +155,39 @@ Per request (cheapest rejections first):
 - For leads, verify the hashed bearer credential, resolve its project, and
   require project status `LIVE` or `IN_REVIEW`. Never authorize from a body
   project ID or browser Origin.
-- For analytics, look up the public project ID and require browser `Origin` to
-  match `deployment.liveUrl` (with or without `www.`) or `stagingUrl`.
+- For v2 events, verify the hashed publishable key from the body, resolve its
+  project, require browser `Origin` to match `deployment.liveUrl` /
+  `stagingUrl`, and enforce typed `type`/`payload` pairings (no free-form
+  event names or `v.any()` meta on the wire).
+- For legacy v1 analytics, look up the public project ID and require browser
+  `Origin` to match `deployment.liveUrl` (with or without `www.`) or
+  `stagingUrl`.
 - **Never key rate limits on spoofable `x-forwarded-for`.** An unproven edge header is worse than none, since an attacker rotates its value to escape the strict project bucket. `x-forwarded-for` and `x-real-ip` can never be trusted.
 
-  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** Lead spokes derive a keyed visitor digest inside their own hosting runtime. Analytics uses its project-scoped fallback until Stage 3.
+  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** Lead spokes derive a keyed visitor digest inside their own hosting runtime. Analytics/events use the project-scoped fallback when no trusted visitor key exists.
 - Project ceilings (fixed window, hold under IP spoofing). **Storage ceilings are deliberately far looser than cost ceilings** — exhausting a storage ceiling rejects a paying client's real customers, so it exists to stop database abuse, not to control spend:
   - `leadIngestPerProject` — 1000/day storage; exhausted → `429` (do not insert) **and an admin threshold alert**, because rejected leads are lost customers.
   - `leadNoTrustedVisitor` — 30/hour fallback when an authenticated spoke cannot provide `visitorHash`; exhausted → `429` + threshold alert.
   - `paidFanoutPerProject` — 50/day Groq+email+SMS; exhausted → **still store** lead as `untriaged` with `fanoutPaused`, skip fan-out, one admin threshold alert. This is the real spend cap.
   - `smsPerProject` — 20/day; SMS is **allow-verdict only**.
 - Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request.
-- Analytics uses the stricter project fallback (30/min), since no trusted visitor header is configured. Worst case without a per-visitor key is an inaccurate pageview count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries.
+- Analytics/events use the stricter project fallback (30/min), since no trusted visitor header is configured. Worst case without a per-visitor key is an inaccurate pageview/click count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries; Stage 3 also stores coarse `referrerClass` (organic/social/direct/other).
 - Threshold alerts are claimed once per project+limit window before scheduling (`thresholdAlertPerProjectLimit`), then persist one `hub.threshold_alert` before the independent global delivery cap (`adminOpsAlertGlobal`). `hub.threshold_alert_delivered` is written only after a successful email. Daily accepted, 429-by-bucket, and paused-fan-out totals are aggregated in `hub_operational_counters` so hostile traffic cannot create unbounded event rows.
 
 Stage 2 closed the unauthenticated paid-fan-out hole by removing every
 unauthenticated lead route after the configured production spokes passed v2.
 
+**PageSpeed snapshots (Stage 3):** first transition to `LIVE` schedules a
+non-blocking mobile PageSpeed run against `deployment.liveUrl` when no snapshot
+exists. Admin can refresh from Projects. Stored on the project as
+`pageSpeedSnapshot` + `pageSpeedSnapshotUrl`; portal labels "measured on {date}".
+
 ### Failure mode to remember
 
 If leads stop working, check the spoke's `WAAS_SECRET_KEY`, the credential's
-active/`lastUsedAt` state, and `[hub.lead.v2]` logs. If analytics stops working,
-check the Origin allowlist and deployment URLs. Also check admin **Untriaged /
+active/`lastUsedAt` state, and `[hub.lead.v2]` logs. If analytics/events stop
+working, check the Origin allowlist, deployment URLs, and publishable
+credential `lastUsedAt` / `[hub.events.v2]` logs. Also check admin **Untriaged /
 Fan-out paused** and v2 rate-limit logs.
 
 ---

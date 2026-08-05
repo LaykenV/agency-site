@@ -8,9 +8,9 @@ import {
   publicAuditDocValidator,
   websiteDataValidator,
 } from "./validators";
+import { runPageSpeed } from "./lib/pagespeed";
 
 const FIRECRAWL_ENDPOINT = "https://api.firecrawl.dev/v2/scrape";
-const PAGESPEED_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
 
 const publicAuditSourceValidator = v.union(
   v.literal("business_card_qr"),
@@ -175,44 +175,6 @@ async function runFirecrawlScrape(url: string) {
     screenshotUrl,
     hasHttps: url.startsWith("https://"),
     scrapedAt: Date.now(),
-  };
-}
-
-async function runPageSpeed(url: string) {
-  const params = new URLSearchParams({
-    url,
-    strategy: "mobile",
-    category: "performance",
-  });
-  const apiKey = process.env.GOOGLE_PAGESPEED_API_KEY ?? process.env.GOOGLE_PLACES_API_KEY;
-  if (apiKey) params.set("key", apiKey);
-
-  const response = await fetch(`${PAGESPEED_ENDPOINT}?${params.toString()}`);
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(`PageSpeed failed: ${response.status} ${details}`);
-  }
-
-  const json = (await response.json()) as {
-    lighthouseResult?: {
-      categories?: { performance?: { score?: number } };
-      audits?: {
-        "first-contentful-paint"?: { numericValue?: number };
-        "largest-contentful-paint"?: { numericValue?: number };
-        "cumulative-layout-shift"?: { numericValue?: number };
-      };
-    };
-  };
-  const rawScore = json.lighthouseResult?.categories?.performance?.score;
-  return {
-    performanceScore:
-      typeof rawScore === "number"
-        ? Math.round(rawScore <= 1 ? rawScore * 100 : Math.max(0, Math.min(100, rawScore)))
-        : 0,
-    fcp: json.lighthouseResult?.audits?.["first-contentful-paint"]?.numericValue,
-    lcp: json.lighthouseResult?.audits?.["largest-contentful-paint"]?.numericValue,
-    cls: json.lighthouseResult?.audits?.["cumulative-layout-shift"]?.numericValue,
-    fetchedAt: Date.now(),
   };
 }
 

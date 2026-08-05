@@ -2,7 +2,7 @@
 
 The Hub side of the Acadiana Web Design Website-as-a-Service business. Runs the marketing site, marketing pipeline, admin portal, client portal, agreement clickwrap, Stripe billing, Cal.com integration, and the public APIs that bespoke client sites POST leads and analytics to.
 
-The Spoke side — the bespoke client-site starter — lives in `../agency-template/`.
+The Spoke side is built bespoke per client. `../agency-template/` is **fully retired as of 2026-08-05** and is not cloned, patched, or merged from. `../agency-playground/` is the current reference Spoke and the first site to exercise each new Hub contract.
 
 ---
 
@@ -104,9 +104,10 @@ video/                  Remotion compositions
 
 ## Hub ↔ Spoke
 
-This repo serves the Hub. Bespoke client sites (built from `../agency-template/`) POST to:
+This repo serves the Hub. Bespoke client sites POST to:
 
-- `POST /api/v1/ingest-lead` — contact form submissions
-- `POST /api/v1/analytics/pixel` — page view tracking
+- `POST /api/v2/leads` — contact form submissions (`Authorization: Bearer sk_live_…`)
+- `POST /api/v2/events` — pageviews + conversion clicks (body `pk_live_…` + Origin)
+- `POST /api/v1/analytics/pixel` — legacy pageviews until each spoke migrates to v2 events
 
-Legacy unversioned aliases (`/api/ingest-lead`, `/api/analytics/pixel`) are kept for config-driven clients launched before the bespoke migration. See `ARCHITECTURE.md` § Hub ↔ Spoke contract for the full payload spec and validation rules.
+Legacy unversioned analytics (`/api/analytics/pixel`) remains during the events migration. Lead aliases are retired. See `ARCHITECTURE.md` § Hub ↔ Spoke contract for the full payload spec and validation rules.

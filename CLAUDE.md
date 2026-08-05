@@ -11,7 +11,9 @@ Acadiana Web Design's Hub: Website-as-a-Service operations stack. Next.js 16 + C
 - Client portal driven by `projectStatus` state machine (AWAITING_AGREEMENT → AWAITING_PAYMENT → AWAITING_ASSETS → IN_PROGRESS → IN_REVIEW → LIVE).
 - Admin dashboard at `/admin`.
 - Agreement clickwrap + Stripe subscription billing + webhook automation.
-- Public Hub APIs (`/api/v2/leads` bearer auth and `/api/v1/analytics/pixel`) that bespoke client sites POST to.
+- Public Hub APIs (`/api/v2/leads` bearer auth, `/api/v2/events` publishable-key
+  pageviews/clicks, and legacy `/api/v1/analytics/pixel`) that bespoke client
+  sites POST to.
 - Remotion-based promo video generation.
 
 The bespoke client-site starter (the Spoke side) lives in `../agency-template/`.
@@ -124,10 +126,15 @@ export const myQuery = query({
 Bespoke client sites built from `../agency-template/` POST to:
 
 - `POST /api/v2/leads` — authenticated lead intake (`Authorization: Bearer sk_live_<keyId>_<secret>`). Keys issued in admin (Projects → expand → API Credentials); raw key shown once; only SHA-256 stored.
-- `POST /api/v1/analytics/pixel` — page views
+- `POST /api/v2/events` — typed browser events (`pageview` | `click`) with body
+  `publishableKey` (`pk_live_…`) + Origin. Click targets: `tel` | `email` |
+  `directions` (honestly labeled as taps/clicks, not completed calls).
+- `POST /api/v1/analytics/pixel` — legacy page views (Origin + projectId); kept
+  until each spoke migrates to v2 events.
 
-Analytics also has the unversioned `/api/analytics/pixel` alias until Stage 3.
-The unauthenticated v1 and unversioned **lead** routes are retired.
+Analytics also has the unversioned `/api/analytics/pixel` alias until Stage 3
+cutover is complete for live spokes. The unauthenticated v1 and unversioned
+**lead** routes are retired.
 
 **Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moved per-visitor limiting to each client's Function where the provider header is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
 
@@ -137,9 +144,9 @@ the credential resolves the project, so leads do not use Origin as an auth
 boundary.
 
 **Failure mode to remember:** for leads, check the spoke's server-only credential,
-credential `lastUsedAt`, and `[hub.lead.v2]` logs. For analytics, check the
-Origin allowlist in admin deployment URLs. Also check admin **Untriaged /
-Fan-out paused**.
+credential `lastUsedAt`, and `[hub.lead.v2]` logs. For events/analytics, check
+the Origin allowlist, publishable credential `lastUsedAt`, and
+`[hub.events.v2]` logs. Also check admin **Untriaged / Fan-out paused**.
 
 ## Things to be careful about
 
@@ -147,5 +154,5 @@ Fan-out paused**.
 - **Never** store raw payment details — Stripe handles all card data.
 - **Always** verify Stripe webhook signatures and use event IDs for idempotency.
 - **Always** hash terms content (SHA-256) on agreement acceptance; record `termsVersion` + `termsHash` + `userAgent`.
-- Keep analytics backward compatible through Stage 3. Lead ingestion is v2-only;
-  never reintroduce an unauthenticated lead alias.
+- Keep legacy analytics pixel until every live spoke uses `/api/v2/events`. Lead
+  ingestion is v2-only; never reintroduce an unauthenticated lead alias.

@@ -46,6 +46,7 @@ import {
 import { PageViewsChart } from "@/components/portal/PageViewsChart";
 import { TopPages } from "@/components/portal/TopPages";
 import { RecentLeads } from "@/components/portal/RecentLeads";
+import { SiteMetrics } from "@/components/portal/SiteMetrics";
 import { ProgressTimeline } from "@/components/portal";
 import { StickyAuth } from "@/components/StickyAuth";
 
@@ -264,6 +265,8 @@ function AuthenticatedProjectView() {
                 projectSlug={projectId}
                 liveUrl={project.deployment?.liveUrl}
                 editRequests={editRequests ?? []}
+                pageSpeedSnapshot={project.pageSpeedSnapshot}
+                pageSpeedSnapshotUrl={project.pageSpeedSnapshotUrl}
               />
             )}
           </>
@@ -1425,11 +1428,21 @@ function LiveSupportPanel({
   projectSlug,
   liveUrl,
   editRequests = [],
+  pageSpeedSnapshot,
+  pageSpeedSnapshotUrl,
 }: {
   projectId: Id<"projects">;
   projectSlug: string;
   liveUrl?: string;
   editRequests?: EditRequest[];
+  pageSpeedSnapshot?: {
+    performanceScore: number;
+    fcp?: number;
+    lcp?: number;
+    cls?: number;
+    fetchedAt: number;
+  };
+  pageSpeedSnapshotUrl?: string;
 }) {
   const [portalLoading, setPortalLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "support">("overview");
@@ -1755,6 +1768,13 @@ function LiveSupportPanel({
       {/* Tab content */}
       {activeTab === "overview" ? (
         <div className="space-y-6">
+          {/* Stage 3: conversion clicks + PageSpeed (self-contained for Stage 5 reuse) */}
+          <SiteMetrics
+            projectId={projectSlug}
+            pageSpeedSnapshot={pageSpeedSnapshot}
+            pageSpeedSnapshotUrl={pageSpeedSnapshotUrl}
+          />
+
           {/* Recent Leads + Top Pages side by side */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <RecentLeads projectId={projectSlug} limit={10} />

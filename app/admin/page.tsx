@@ -651,6 +651,7 @@ function ProjectsTab() {
   const updateProjectStatus = useMutation(api.admin.updateProjectStatus);
   const updateProjectMyNotes = useMutation(api.admin.updateProjectMyNotes);
   const updateDeployment = useMutation(api.admin.updateDeployment);
+  const requestPageSpeedRefresh = useMutation(api.projectPageSpeed.requestRefresh);
 
   const [expandedProjectId, setExpandedProjectId] = useState<Id<"projects"> | null>(null);
   const [editingNotes, setEditingNotes] = useState<Record<string, string>>({});
@@ -705,6 +706,19 @@ function ProjectsTab() {
       alert("Failed to update project status. Please try again.");
     } finally {
       setSaving(prev => ({ ...prev, [projectId]: false }));
+    }
+  };
+
+  const handlePageSpeedRefresh = async (projectId: Id<"projects">) => {
+    setSaving(prev => ({ ...prev, [`pagespeed-${projectId}`]: true }));
+    try {
+      await requestPageSpeedRefresh({ projectId });
+      alert("PageSpeed refresh queued. Snapshot will update shortly.");
+    } catch (error) {
+      console.error("Failed to refresh PageSpeed:", error);
+      alert(error instanceof Error ? error.message : "Failed to refresh PageSpeed.");
+    } finally {
+      setSaving(prev => ({ ...prev, [`pagespeed-${projectId}`]: false }));
     }
   };
 
@@ -982,6 +996,35 @@ function ProjectsTab() {
                       </div>
                       <div className="pt-2 border-t border-[hsl(var(--border))]">
                         <ProjectCredentialsPanel projectId={project._id} />
+                      </div>
+                      <div className="pt-2 border-t border-[hsl(var(--border))] space-y-2">
+                        <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
+                          PageSpeed snapshot
+                        </p>
+                        {project.pageSpeedSnapshot ? (
+                          <p className="text-sm">
+                            Score{" "}
+                            <span className="font-semibold tabular-nums">
+                              {project.pageSpeedSnapshot.performanceScore}
+                            </span>
+                            {" · measured "}
+                            {new Date(project.pageSpeedSnapshot.fetchedAt).toLocaleDateString()}
+                          </p>
+                        ) : (
+                          <p className="text-sm text-[var(--muted-foreground)]">No snapshot yet</p>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handlePageSpeedRefresh(project._id)}
+                          disabled={
+                            saving[`pagespeed-${project._id}`] || !project.deployment?.liveUrl
+                          }
+                          className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
+                        >
+                          {saving[`pagespeed-${project._id}`]
+                            ? "Queueing…"
+                            : "Refresh PageSpeed"}
+                        </button>
                       </div>
                     </div>
                   );
@@ -1300,6 +1343,40 @@ function ProjectsTab() {
                               </div>
                               <div className="pt-2 border-t border-[hsl(var(--border))]">
                                 <ProjectCredentialsPanel projectId={project._id} />
+                              </div>
+                              <div className="pt-2 border-t border-[hsl(var(--border))] space-y-2">
+                                <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
+                                  PageSpeed snapshot
+                                </p>
+                                {project.pageSpeedSnapshot ? (
+                                  <p className="text-sm">
+                                    Score{" "}
+                                    <span className="font-semibold tabular-nums">
+                                      {project.pageSpeedSnapshot.performanceScore}
+                                    </span>
+                                    {" · measured "}
+                                    {new Date(
+                                      project.pageSpeedSnapshot.fetchedAt,
+                                    ).toLocaleDateString()}
+                                  </p>
+                                ) : (
+                                  <p className="text-sm text-[var(--muted-foreground)]">
+                                    No snapshot yet
+                                  </p>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => handlePageSpeedRefresh(project._id)}
+                                  disabled={
+                                    saving[`pagespeed-${project._id}`] ||
+                                    !project.deployment?.liveUrl
+                                  }
+                                  className="btn-cta px-4 py-2 text-sm disabled:opacity-50"
+                                >
+                                  {saving[`pagespeed-${project._id}`]
+                                    ? "Queueing…"
+                                    : "Refresh PageSpeed"}
+                                </button>
                               </div>
                             </div>
                           </td>

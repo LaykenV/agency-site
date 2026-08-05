@@ -22,6 +22,9 @@ import {
   publicAuditStatusValidator,
   hubOperationalCounterKindValidator,
   projectCredentialKindValidator,
+  clientEventTypeValidator,
+  clientEventPayloadValidator,
+  referrerClassValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -50,6 +53,9 @@ export default defineSchema({
     deployment: v.optional(deploymentValidator),
     calKickoffBooking: v.optional(calBookingValidator),
     calReviewBooking: v.optional(calBookingValidator),
+    /** Stage 3: one-time (or admin-refreshed) PageSpeed snapshot for portal metrics. */
+    pageSpeedSnapshot: v.optional(pageSpeedDataValidator),
+    pageSpeedSnapshotUrl: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
   })
@@ -197,7 +203,40 @@ export default defineSchema({
     topReferrers: v.optional(
       v.array(v.object({ referrer: v.string(), views: v.number() })),
     ),
+    // Stage 3: conversion click rollups (portal must not scan raw events)
+    telClicks: v.optional(v.number()),
+    emailClicks: v.optional(v.number()),
+    directionsClicks: v.optional(v.number()),
+    // Stage 3: coarse referrer class counts for the day
+    referrerClasses: v.optional(
+      v.object({
+        organic: v.number(),
+        social: v.number(),
+        direct: v.number(),
+        other: v.number(),
+      }),
+    ),
   }).index("by_projectId_and_date", ["projectId", "date"]),
+
+  /**
+   * Stage 3: typed raw events for pageviews and conversion clicks.
+   * Portal reads aggregates from client_analytics, not this table.
+   */
+  client_events: defineTable({
+    projectId: v.id("projects"),
+    publishableKeyId: v.string(),
+    type: clientEventTypeValidator,
+    path: v.string(),
+    referrerClass: v.optional(referrerClassValidator),
+    payload: v.optional(clientEventPayloadValidator),
+    createdAt: v.number(),
+  })
+    .index("by_projectId_and_createdAt", ["projectId", "createdAt"])
+    .index("by_projectId_and_type_and_createdAt", [
+      "projectId",
+      "type",
+      "createdAt",
+    ]),
 
   marketing_searches: defineTable({
     city: v.string(),

@@ -12,6 +12,7 @@ import {
   normalizeReferrer,
   observeTrustedVisitor,
   readJsonBodyWithLimit,
+  validateClientEventPayload,
   validateLeadPayload,
   LEAD_FIELD_LIMITS,
 } from "./httpValidation";
@@ -20,6 +21,7 @@ import {
   parseCredential,
   verifyPresentedCredential,
 } from "./credentialCrypto";
+import { classifyReferrer } from "./lib/referrerClass";
 
 const http = httpRouter();
 
@@ -584,6 +586,193 @@ http.route({
 });
 
 // ============================================================================
+// EVENTS v2 — publishable key + Origin (Stage 3 / Phase 2)
+// ============================================================================
+// Typed pageviews and conversion clicks (tel / mailto / directions).
+// Auth: full pk_live_… in body.publishableKey + browser Origin allowlist.
+// Soft integrity boundary — not equivalent to secret lead auth.
+// Pre-auth failures write no counters (same cost-amplification rule as leads).
+// ============================================================================
+
+const eventsV2Handler = httpAction(async (ctx, request) => {
+  const origin = request.headers.get("origin");
+
+  const parsed = await readJsonBodyWithLimit(request);
+  if (!parsed.ok) {
+    return new Response(null, {
+      status: parsed.status === 413 ? 413 : 400,
+    });
+  }
+
+  const body = parsed.value as Record<string, unknown>;
+
+  // Publishable key from body (browser-safe; never use Authorization for pk_)
+  const rawKey =
+    typeof body.publishableKey === "string" ? body.publishableKey.trim() : "";
+  if (!rawKey) {
+    console.log("[hub.events.v2] auth_failed", { reason: "missing_key" });
+    return new Response(null, { status: 401 });
+  }
+
+  const parsedCred = parseCredential(rawKey);
+  if (!parsedCred || parsedCred.kind !== "publishable") {
+    console.log("[hub.events.v2] auth_failed", { reason: "malformed_credential" });
+    return new Response(null, { status: 401 });
+  }
+
+  const credential = await ctx.runQuery(
+    internal.projectCredentials.getActivePublishableByKeyId,
+    { keyId: parsedCred.keyId },
+  );
+  if (!credential) {
+    console.log("[hub.events.v2] auth_failed", {
+      reason: "unknown_or_revoked",
+      keyId: parsedCred.keyId,
+    });
+    return new Response(null, { status: 401 });
+  }
+
+  const hashOk = await verifyPresentedCredential(
+    rawKey.toLowerCase(),
+    credential.credentialHash,
+  );
+  if (!hashOk) {
+    console.log("[hub.events.v2] auth_failed", {
+      reason: "hash_mismatch",
+      keyId: parsedCred.keyId,
+    });
+    return new Response(null, { status: 401 });
+  }
+
+  const projectDoc = await ctx.runQuery(internal.projects.internalGetProjectById, {
+    projectId: credential.projectId,
+  });
+  if (!projectDoc) {
+    console.log("[hub.events.v2] auth_failed", {
+      reason: "project_missing",
+      keyId: parsedCred.keyId,
+    });
+    return new Response(null, { status: 401 });
+  }
+
+  // Full project (with deployment) for Origin allowlist — slug query returns deployment
+  const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
+    projectId: projectDoc.projectId,
+  });
+  if (!project) {
+    return new Response(null, { status: 401 });
+  }
+
+  const corsHeaders = getCorsHeaders(
+    project.deployment?.liveUrl,
+    project.deployment?.stagingUrl,
+    origin,
+  );
+
+  // Origin required for browser analytics (soft integrity boundary)
+  if (!corsHeaders["Access-Control-Allow-Origin"]) {
+    console.log("[hub.events.v2] origin_rejected", {
+      projectId: project.projectId,
+      keyId: parsedCred.keyId,
+      hasOrigin: Boolean(origin),
+    });
+    return new Response(null, { status: 403 });
+  }
+
+  // Optional body projectId must match when present
+  if (body.projectId !== undefined && body.projectId !== null && body.projectId !== "") {
+    if (typeof body.projectId !== "string") {
+      return new Response(null, { status: 400, headers: corsHeaders });
+    }
+    const bodyProjectId = body.projectId.trim().slice(0, LEAD_FIELD_LIMITS.projectId);
+    if (bodyProjectId !== project.projectId) {
+      console.log("[hub.events.v2] auth_failed", {
+        reason: "project_mismatch",
+        keyId: parsedCred.keyId,
+        projectId: project.projectId,
+      });
+      return new Response(null, { status: 401, headers: corsHeaders });
+    }
+  }
+
+  const validated = validateClientEventPayload(body);
+  if (!validated.ok) {
+    return new Response(null, { status: 400, headers: corsHeaders });
+  }
+
+  const visitor = await observeTrustedVisitor(request);
+  logVisitorObservation("analytics", project.projectId, visitor);
+
+  if (visitor.key) {
+    const { ok } = await rateLimiter.limit(ctx, "eventsPerVisitor", {
+      key: `${project.projectId}:${visitor.key}`,
+    });
+    if (!ok) {
+      console.log("[hub.events.v2] rate_limited", {
+        kind: "eventsPerVisitor",
+        projectId: project.projectId,
+      });
+      return new Response(null, { status: 429, headers: corsHeaders });
+    }
+  } else {
+    const { ok } = await rateLimiter.limit(ctx, "analyticsProjectFallback", {
+      key: project.projectId,
+    });
+    if (!ok) {
+      console.log("[hub.events.v2] rate_limited", {
+        kind: "analyticsProjectFallback",
+        projectId: project.projectId,
+      });
+      return new Response(null, { status: 429, headers: corsHeaders });
+    }
+  }
+
+  const referrerClass = classifyReferrer(validated.referrer);
+
+  await ctx.runMutation(internal.clientEvents.recordEvent, {
+    projectDocId: project._id,
+    projectSlug: project.projectId,
+    publishableKeyId: credential.keyId,
+    type: validated.type,
+    path: validated.path,
+    referrerClass,
+    ...(validated.type === "click" ? { payload: validated.payload } : {}),
+    ...(validated.referrer ? { referrerForRollup: validated.referrer } : {}),
+  });
+
+  // Best-effort lastUsedAt. Throttled — one credential row serves every browser
+  // event for the project, so an unthrottled patch per event contends on write.
+  try {
+    await ctx.runMutation(internal.projectCredentials.touchLastUsed, {
+      credentialId: credential._id,
+      minIntervalMs: 5 * 60_000,
+    });
+  } catch (error) {
+    console.error("[hub.events.v2] touch_last_used_failed", {
+      projectId: project.projectId,
+      keyId: parsedCred.keyId,
+      error,
+    });
+  }
+
+  console.log("[hub.events.v2] accepted", {
+    projectId: project.projectId,
+    keyId: parsedCred.keyId,
+    type: validated.type,
+    ...(validated.type === "click" ? { target: validated.payload.target } : {}),
+    referrerClass,
+  });
+
+  return new Response(null, { status: 204, headers: corsHeaders });
+});
+
+http.route({
+  path: "/api/v2/events",
+  method: "POST",
+  handler: eventsV2Handler,
+});
+
+// ============================================================================
 // CORS PREFLIGHT HANDLERS
 // ============================================================================
 // Note: Preflight handlers are intentionally permissive because we cannot
@@ -609,5 +798,6 @@ const handleClientApiPreflight = httpAction(async (_ctx, request) => {
 
 http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
 http.route({ path: "/api/v1/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
+http.route({ path: "/api/v2/events", method: "OPTIONS", handler: handleClientApiPreflight });
 
 export default http;

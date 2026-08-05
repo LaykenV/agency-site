@@ -1,7 +1,7 @@
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
-import { projectStatusValidator, buildDetailsValidator, deploymentValidator, calBookingValidator } from "./validators";
+import { projectStatusValidator, buildDetailsValidator, deploymentValidator, calBookingValidator, pageSpeedDataValidator } from "./validators";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
@@ -300,6 +300,9 @@ export const getPortalProject = query({
       deployment: v.optional(deploymentValidator),
       calKickoffBooking: v.optional(calBookingValidator),
       calReviewBooking: v.optional(calBookingValidator),
+      // Stage 3: PageSpeed snapshot for portal metrics
+      pageSpeedSnapshot: v.optional(pageSpeedDataValidator),
+      pageSpeedSnapshotUrl: v.optional(v.string()),
     }),
     v.null(),
   ),
@@ -350,6 +353,8 @@ export const getPortalProject = query({
       deployment: project.deployment,
       calKickoffBooking: project.calKickoffBooking,
       calReviewBooking: project.calReviewBooking,
+      pageSpeedSnapshot: project.pageSpeedSnapshot,
+      pageSpeedSnapshotUrl: project.pageSpeedSnapshotUrl,
     } as const;
   },
 });

@@ -584,16 +584,20 @@ Promoted ahead of the portal work on 2026-08-05 (`UPGRADE_PLAN.md` Stage 3) and
 reduced to the signals that justify an invoice. All About Towing has no contact
 form, so tap-to-call is its only conversion signal.
 
-- [ ] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
+**Implementation landed 2026-08-05** (Hub + template + docs). Production exit
+still requires live click events on a project with a publishable key and a
+referrer-class spot-check (`UPGRADE_PLAN.md` § 6).
+
+- [x] Add `client_events` and `POST /api/v2/events` authenticated by the Phase 1B
       publishable key; make `pageview` one type.
-- [ ] Add `tel:` / `mailto:` click tracking, plus directions clicks only on
+- [x] Add `tel:` / `mailto:` click tracking, plus directions clicks only on
       sites that expose a real directions link — highest value here.
-- [ ] Classify `referrer` coarsely into organic / social / direct / other. Do
+- [x] Classify `referrer` coarsely into organic / social / direct / other. Do
       not present this as campaign attribution.
-- [ ] Extract `runPageSpeed()` to a shared module; add `pageSpeedSnapshot` to
+- [x] Extract `runPageSpeed()` to a shared module; add `pageSpeedSnapshot` to
       `projects`; schedule a non-blocking run against `liveUrl` on the first
       transition to `LIVE` only when missing, and add an admin refresh button.
-- [ ] Render the new metrics through one thin, self-contained portal component.
+- [x] Render the new metrics through one thin, self-contained portal component.
       Do not build the module registry in this phase; Stage 5 should register
       and reuse this component rather than rewrite it.
 
@@ -627,5 +631,7 @@ No date. Revisit per item when a client pays for the outcome.
   [Places API field pricing](https://developers.google.com/maps/documentation/places/web-service/usage-and-billing),
   [Business Profile API prerequisites](https://developers.google.com/my-business/content/prereqs),
   and [Search Console authorization](https://developers.google.com/webmaster-tools/v1/how-tos/authorizing).
-- `agency-template/` is no longer the path new client sites take, but it is
-  patched to v2 and its validator rejects retired lead-endpoint references.
+- `agency-template/` is **fully retired as of 2026-08-05**. It was patched to v2
+  during Stage 2, but it is no longer maintained, cloned, or merged from. The
+  Stage 3 client lives in `agency-playground/`, which is now the reference Spoke.
+  See `UPGRADE_PLAN.md` § 5.

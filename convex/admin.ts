@@ -1,6 +1,6 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
-import { prospectValidator, prospectDetailsStoredValidator, projectStatusValidator, deploymentValidator } from "./validators";
+import { prospectValidator, prospectDetailsStoredValidator, projectStatusValidator, deploymentValidator, pageSpeedDataValidator } from "./validators";
 import { requireAdmin } from "./adminGuard";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
@@ -132,6 +132,8 @@ export const listProjects = query({
       brandAssetsUploaded: v.boolean(),
     })),
     deployment: v.optional(deploymentValidator),
+    pageSpeedSnapshot: v.optional(pageSpeedDataValidator),
+    pageSpeedSnapshotUrl: v.optional(v.string()),
     createdAt: v.optional(v.number()),
     updatedAt: v.optional(v.number()),
     prospect: v.optional(v.object({
@@ -183,6 +185,8 @@ export const listProjects = query({
             brandAssetsUploaded: p.buildDetails.brandAssetsUploaded,
           } : undefined,
           deployment: p.deployment,
+          pageSpeedSnapshot: p.pageSpeedSnapshot,
+          pageSpeedSnapshotUrl: p.pageSpeedSnapshotUrl,
           createdAt: p.createdAt,
           updatedAt: p.updatedAt,
           prospect,
@@ -473,6 +477,21 @@ export const updateProjectStatus = mutation({
       kind: "project.status_updated",
       payload: { from: fromStatus, to: args.status },
     });
+
+    // Stage 3: first transition to LIVE schedules a non-blocking PageSpeed
+    // snapshot when missing. Status transition must succeed even if PageSpeed fails.
+    if (args.status === "LIVE" && fromStatus !== "LIVE") {
+      if (!project.pageSpeedSnapshot) {
+        await ctx.scheduler.runAfter(
+          0,
+          internal.projectPageSpeed.captureSnapshot,
+          {
+            projectId: args.projectId,
+            onlyIfMissing: true,
+          },
+        );
+      }
+    }
     
     console.log("[admin] project status updated", {
       projectId: args.projectId,

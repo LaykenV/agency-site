@@ -3,6 +3,7 @@ import {
   MAX_BODY_BYTES,
   observeTrustedVisitor,
   readJsonBodyWithLimit,
+  validateClientEventPayload,
   validateLeadPayload,
 } from "../convex/httpValidation";
 
@@ -72,6 +73,49 @@ describe("validateLeadPayload", () => {
     });
 
     expect(result).toEqual({ ok: false, error: "Invalid message" });
+  });
+});
+
+describe("validateClientEventPayload", () => {
+  test("accepts a pageview with path and referrer", () => {
+    const result = validateClientEventPayload({
+      type: "pageview",
+      path: "/services",
+      referrer: "https://www.google.com/",
+    });
+    expect(result).toEqual({
+      ok: true,
+      type: "pageview",
+      path: "/services",
+      referrer: "https://www.google.com/",
+    });
+  });
+
+  test("accepts a tel click with meta.target", () => {
+    const result = validateClientEventPayload({
+      type: "click",
+      path: "/",
+      meta: { target: "tel" },
+    });
+    expect(result).toEqual({
+      ok: true,
+      type: "click",
+      path: "/",
+      payload: { kind: "link", target: "tel" },
+    });
+  });
+
+  test("rejects unknown event types and invalid click targets", () => {
+    expect(validateClientEventPayload({ type: "bounce", path: "/" })).toEqual({
+      ok: false,
+      error: "Invalid event type",
+    });
+    expect(
+      validateClientEventPayload({ type: "click", path: "/", meta: { target: "sms" } }),
+    ).toEqual({
+      ok: false,
+      error: "Invalid click target",
+    });
   });
 });
 

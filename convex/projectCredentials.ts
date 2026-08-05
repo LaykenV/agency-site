@@ -217,14 +217,71 @@ export const getActiveSecretByKeyId = internalQuery({
   },
 });
 
-/** Update lastUsedAt after a successful authenticated request. */
+/**
+ * Look up a non-revoked publishable credential by public keyId.
+ * Used by Stage 3 `POST /api/v2/events` (browser analytics + click tracking).
+ */
+export const getActivePublishableByKeyId = internalQuery({
+  args: { keyId: v.string() },
+  returns: v.union(
+    v.object({
+      _id: v.id("project_credentials"),
+      projectId: v.id("projects"),
+      keyId: v.string(),
+      kind: v.literal("publishable"),
+      credentialHash: v.string(),
+    }),
+    v.null(),
+  ),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("project_credentials")
+      .withIndex("by_keyId", (q) => q.eq("keyId", args.keyId))
+      .first();
+
+    if (!row) return null;
+    if (row.kind !== "publishable") return null;
+    if (row.revokedAt) return null;
+
+    return {
+      _id: row._id,
+      projectId: row.projectId,
+      keyId: row.keyId,
+      kind: "publishable" as const,
+      credentialHash: row.credentialHash,
+    };
+  },
+});
+
+/**
+ * Update lastUsedAt after a successful authenticated request.
+ *
+ * `minIntervalMs` skips the write when the stamp is already recent. Leads are
+ * low-volume and pass nothing, so every submission still stamps immediately —
+ * the Stage 2 runbook checks `lastUsedAt` after a single form post. Analytics
+ * events are high-volume and all share one credential row, so an unthrottled
+ * patch per pageview/click would make that document a write-contention hotspot.
+ */
 export const touchLastUsed = internalMutation({
-  args: { credentialId: v.id("project_credentials") },
+  args: {
+    credentialId: v.id("project_credentials"),
+    minIntervalMs: v.optional(v.number()),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const row = await ctx.db.get(args.credentialId);
     if (!row || row.revokedAt) return null;
-    await ctx.db.patch(args.credentialId, { lastUsedAt: Date.now() });
+
+    const now = Date.now();
+    if (
+      args.minIntervalMs !== undefined &&
+      row.lastUsedAt !== undefined &&
+      now - row.lastUsedAt < args.minIntervalMs
+    ) {
+      return null;
+    }
+
+    await ctx.db.patch(args.credentialId, { lastUsedAt: now });
     return null;
   },
 });

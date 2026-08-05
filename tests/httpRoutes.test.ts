@@ -15,4 +15,10 @@ describe("Hub public HTTP routes", () => {
     expect(httpSource).toContain('path: "/api/v1/analytics/pixel"');
     expect(httpSource).toContain('path: "/api/analytics/pixel"');
   });
+
+  test("exposes Stage 3 typed events endpoint", () => {
+    expect(httpSource).toContain('path: "/api/v2/events"');
+    expect(httpSource).toContain("getActivePublishableByKeyId");
+    expect(httpSource).toContain("validateClientEventPayload");
+  });
 });

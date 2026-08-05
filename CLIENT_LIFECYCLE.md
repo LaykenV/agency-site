@@ -5,9 +5,15 @@ How a single client moves from "scraped lead" or inbound prospect all the way to
 The lifecycle spans two repos:
 
 - **`agency-site`** (this repo) — marketing pipeline, admin portal, client portal, agreement clickwrap, Stripe billing, hub API (lead intake + analytics), Cal.com integration, email.
-- **`agency-template`** — bespoke client site starter. Cloned per paid client. Builds custom UI but talks to the hub APIs in this repo.
+- **the client site repo** — one bespoke repo per paid client. Builds custom UI but talks to the hub APIs in this repo.
 
-Stages 0–8 happen in `agency-site`. Stages 9–11 cross over to `agency-template`. Stages 12+ return to `agency-site` for operations.
+Stages 0–8 happen in `agency-site`. Stages 9–11 cross over to the client site repo. Stages 12+ return to `agency-site` for operations.
+
+> **Stale (2026-08-05):** `agency-template` is fully retired — not cloned, not
+> patched, not merged from. Stage 9b and Stage 18 below still describe the
+> template clone-and-merge workflow and have **not** been rewritten for the
+> bespoke flow. Treat them as history. `../agency-playground/` is the current
+> reference Spoke; copy from it by hand. See `UPGRADE_PLAN.md` § 5.
 
 ---
 
