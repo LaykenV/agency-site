@@ -4,35 +4,96 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 
+/**
+ * Snapshot both halves of the agreement: the universal MSA and the project's
+ * order form, each exactly as accepted. The order form is re-rendered from its
+ * stored spec and issue-time binding, so it reproduces the bytes that were
+ * hashed at issue.
+ */
 export const generateAndStoreTermsSnapshot = internalAction({
   args: {
     agreementId: v.id("agreements"),
-    termsVersion: v.string(),
+    orderFormId: v.optional(v.id("order_forms")),
+    expectedMsaHash: v.string(),
+    expectedOrderFormHash: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Fetch the terms HTML from the canonical module
-    // Note: In a Node.js action, we need to dynamically import the terms module
-    const { TERMS_CANONICAL_HTML } = await import("../lib/legal/terms.js");
-    
-    // Store the HTML snapshot in Convex storage
-    const blob = new Blob([TERMS_CANONICAL_HTML], { type: "text/html" });
-    const storageId = await ctx.storage.store(blob);
-    
-    // Generate the URL for the stored snapshot
-    const snapshotUrl: string | null = await ctx.storage.getUrl(storageId);
-    
+    // Node.js action: the legal modules are dynamically imported.
+    const { MSA_CANONICAL_HTML } = await import("../lib/legal/msa.js");
+    const { sha256Hex, timingSafeEqualHex } = await import(
+      "./credentialCrypto.js"
+    );
+    const msaHash = await sha256Hex(MSA_CANONICAL_HTML);
+    if (!timingSafeEqualHex(msaHash, args.expectedMsaHash)) {
+      throw new Error("MSA snapshot bytes no longer match the accepted hash");
+    }
+
+    const msaBlob = new Blob([MSA_CANONICAL_HTML], { type: "text/html" });
+    const msaStorageId = await ctx.storage.store(msaBlob);
+    const snapshotUrl: string | null = await ctx.storage.getUrl(msaStorageId);
+
     if (!snapshotUrl) {
-      console.error("[agreement] Failed to get storage URL for terms snapshot");
+      console.error("[agreement] Failed to get storage URL for MSA snapshot");
+    }
+
+    let orderFormSnapshotUrl: string | null = null;
+
+    if (args.orderFormId) {
+      const orderForm = await ctx.runQuery(internal.orderForms.internalGetById, {
+        orderFormId: args.orderFormId,
+      });
+
+      if (orderForm?.issuedAt) {
+        const { buildOrderFormCanonicalHtml } = await import(
+          "../lib/legal/orderForm.js"
+        );
+        const canonicalHtml = buildOrderFormCanonicalHtml(orderForm.spec, {
+          projectSlug: orderForm.projectSlug,
+          clientName: orderForm.clientName,
+          msaVersion: orderForm.msaVersion,
+          version: orderForm.version,
+          issuedAt: orderForm.issuedAt,
+        });
+        const snapshotHash = await sha256Hex(canonicalHtml);
+        if (
+          !args.expectedOrderFormHash ||
+          !orderForm.issuedHash ||
+          !timingSafeEqualHex(snapshotHash, args.expectedOrderFormHash) ||
+          !timingSafeEqualHex(snapshotHash, orderForm.issuedHash)
+        ) {
+          throw new Error(
+            "Order Form snapshot bytes no longer match the accepted hash",
+          );
+        }
+        const orderFormStorageId = await ctx.storage.store(
+          new Blob([canonicalHtml], { type: "text/html" }),
+        );
+        orderFormSnapshotUrl = await ctx.storage.getUrl(orderFormStorageId);
+
+        if (orderFormSnapshotUrl) {
+          await ctx.runMutation(internal.orderForms.internalPatchSnapshot, {
+            orderFormId: args.orderFormId,
+            snapshotUrl: orderFormSnapshotUrl,
+          });
+        }
+      } else {
+        console.error("[agreement] order form missing or not issued", {
+          orderFormId: args.orderFormId,
+        });
+      }
+    }
+
+    if (!snapshotUrl && !orderFormSnapshotUrl) {
       return null;
     }
-    
-    // Update the agreement with the snapshot URL
+
     await ctx.runMutation(internal.agreement.internalPatchAgreementSnapshot, {
+      ...(snapshotUrl ? { snapshotUrl } : {}),
+      ...(orderFormSnapshotUrl ? { orderFormSnapshotUrl } : {}),
       agreementId: args.agreementId,
-      snapshotUrl,
     });
-    
+
     return null;
   },
 });
@@ -135,4 +196,3 @@ export const sendWelcomeEmailAfterSnapshot = internalAction({
     return null;
   },
 });
-

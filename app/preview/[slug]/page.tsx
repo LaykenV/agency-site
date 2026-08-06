@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cormorant_Garamond, Oswald } from "next/font/google";
 import { notFound } from "next/navigation";
 import { LeadDemoPage } from "@/components/lead-demo/LeadDemoPage";
+import { PreviewViewTracker } from "@/components/lead-demo/PreviewViewTracker";
 import { getLeadDemo, getLeadDemoSlugs } from "@/lib/lead-demos";
 
 const leadDisplay = Cormorant_Garamond({
@@ -63,6 +64,7 @@ export default async function PreviewPage({ params }: PreviewPageProps) {
 
   return (
     <div className={displayFont.variable}>
+      <PreviewViewTracker slug={slug} />
       <LeadDemoPage demo={demo} />
     </div>
   );

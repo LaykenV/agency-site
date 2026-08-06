@@ -1,3 +1,13 @@
+/**
+ * ARCHIVED — superseded by `msa.ts` + `orderForm.ts` on 2026-08-06 (Stage 4A).
+ *
+ * No live code imports this module. It is retained, unmodified, because
+ * agreements accepted before Stage 4A recorded a `termsHash` computed from
+ * TERMS_CANONICAL_HTML below. Deleting the file would destroy the only way to
+ * recompute and verify that hash. Do not edit it — any change invalidates the
+ * evidence it exists to preserve. New terms go in `msa.ts` (universal) or the
+ * per-project order form (commercial).
+ */
 export const TERMS_VERSION = "2026-04-08" as const;
 export const TERMS_LAST_UPDATED = "2026-04-08" as const;
 

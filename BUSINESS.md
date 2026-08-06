@@ -2,10 +2,21 @@
 
 Single source of truth for the business: model, pricing, target, traction, and the active marketing plan. Hand this to any advisor or AI agent and they have the full strategic picture.
 
-**Last reviewed:** 2026-05-15
+**Last reviewed:** 2026-08-06
 
 For the operational lifecycle (lead → live), see `CLIENT_LIFECYCLE.md`.
 For technical architecture, see `ARCHITECTURE.md`.
+
+---
+
+## Legal entity and funding record
+
+- **Operating entity:** Varholdt AI LLC. Acadiana Web Design is the permanent customer-facing trade name for the local website business.
+- **Trade-name filing:** geauxBIZ reference **12276617** was paid and submitted on **2026-08-06**. It is **In-Process** and is not final until the Louisiana Secretary of State issues the acceptance alert and registration document.
+- **Original funding source:** Mercury's initial **$20** seed funding and the later **$1,000** transfer originated from Layken's **personal USAA account**. Both are owner/member contributions, not business revenue.
+- **Advertising payment source:** The initial **$15.78** of Meta advertising charges ran through the Mercury business Mastercard, but the Mercury funds used were contributed from Layken's personal USAA account. The payment rail was a business card; the economic source was personal owner funding, not earned business money.
+- **Filing payment source:** The **$80** geauxBIZ charge ($75 filing + $5 state fee) was charged to Layken's **personal Visa ending 5100**, not Mercury or another business account. It is an owner-paid business expense to be classified as an additional owner contribution or reimbursed by the LLC.
+- **Provenance:** The Mercury seed money, later $1,000 funding transfer, and $80 filing payment all originated from personal accounts. None came from business-originated revenue. The Meta charge used the Mercury business-card rail after personal cash was contributed; the geauxBIZ charge went directly to the personal Visa.
 
 ---
 

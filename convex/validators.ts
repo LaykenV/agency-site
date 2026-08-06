@@ -90,14 +90,83 @@ export const calBookingValidator = v.object({
   externalBookingId: v.optional(v.string()),
 });
 
+/** Stage 4A: commercial terms of one engagement, hashed alongside the MSA. */
+export const orderFormPricingValidator = v.object({
+  setupFeeCents: v.number(),
+  monthlyCents: v.number(),
+  minimumTermMonths: v.number(),
+  cancellationNoticeDays: v.number(),
+  collectionMethod: v.union(
+    v.literal("stripe_checkout"),
+    v.literal("manual_invoice"),
+  ),
+});
+
+export const orderFormSpecValidator = v.object({
+  title: v.string(),
+  engagementType: v.string(),
+  summary: v.string(),
+  pricing: orderFormPricingValidator,
+  scope: v.array(v.string()),
+  deliverables: v.array(v.string()),
+  assignedDeliverables: v.array(v.string()),
+  acceptanceCriteria: v.array(v.string()),
+  exclusions: v.array(v.string()),
+  clientDependencies: v.array(v.string()),
+  notes: v.optional(v.string()),
+});
+
+export const orderFormStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("issued"),
+  v.literal("superseded"),
+);
+
+export const orderFormValidator = v.object({
+  projectId: v.id("projects"),
+  version: v.string(),
+  status: orderFormStatusValidator,
+  spec: orderFormSpecValidator,
+  /** MSA version this order form incorporates; bound into the hashed document. */
+  msaVersion: v.string(),
+  /** Client company name as rendered into the document. */
+  clientName: v.string(),
+  /** Public project slug, bound into the hashed document. */
+  projectSlug: v.string(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  issuedAt: v.optional(v.number()),
+  supersededAt: v.optional(v.number()),
+  /** SHA-256 of the canonical HTML, computed server-side at issue. */
+  issuedHash: v.optional(v.string()),
+  /** Immutable billing link used only when collectionMethod is stripe_checkout. */
+  stripePriceId: v.optional(v.string()),
+  /** Optional one-time setup/deposit Price, charged on the initial subscription invoice. */
+  setupStripePriceId: v.optional(v.string()),
+  snapshotUrl: v.optional(v.string()),
+  /** "system" for the prefilled standard draft, "admin" when authored from scratch. */
+  authoredBy: v.union(v.literal("system"), v.literal("admin")),
+});
+
 export const agreementValidator = v.object({
   projectId: v.id("projects"),
   prospectId: v.optional(v.id("prospects")),
   authUserId: v.string(),
   method: v.literal("clickwrap"),
   source: v.literal("portal"),
+  /**
+   * Legacy fields, still written. Since Stage 4A these carry the MSA version and
+   * hash so existing readers (checkout metadata, agreement email) keep working.
+   */
   termsVersion: v.string(),
   termsHash: v.string(),
+  /** Stage 4A: explicit MSA + order form provenance. Optional until backfilled. */
+  msaVersion: v.optional(v.string()),
+  msaHash: v.optional(v.string()),
+  orderFormId: v.optional(v.id("order_forms")),
+  orderFormVersion: v.optional(v.string()),
+  orderFormHash: v.optional(v.string()),
+  orderFormSnapshotUrl: v.optional(v.string()),
   acceptedAt: v.number(),
   ip: v.optional(v.string()),
   userAgent: v.optional(v.string()),

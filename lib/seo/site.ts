@@ -167,7 +167,7 @@ export function organizationSchema(baseUrl: string) {
       },
       priceCurrency: "USD",
       availability: "https://schema.org/InStock",
-      url: `${baseUrl}/onboarding`,
+      url: baseUrl,
       eligibleRegion: {
         "@type": "Place",
         name: "Louisiana",

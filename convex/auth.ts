@@ -282,7 +282,16 @@ export const getPortalDecision = query({
     let redirect: string | null = null;
 
     if (!primaryProject && prospect) {
-      redirect = `/portal/agreement?sid=${prospect.sessionId}`;
+      const adminCreatedProjects = await ctx.db
+        .query("projects")
+        .withIndex("by_prospectId", (q) => q.eq("prospectId", prospect._id))
+        .collect();
+      const adminCreatedProject = adminCreatedProjects.find(
+        (project) => project.projectStatus !== "ARCHIVED",
+      );
+      if (adminCreatedProject) {
+        redirect = `/portal/agreement?sid=${prospect.sessionId}`;
+      }
     }
 
     if (primaryProject) {

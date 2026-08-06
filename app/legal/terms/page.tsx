@@ -1,26 +1,26 @@
 import {
-  TERMS_CANONICAL_HTML,
-  TERMS_LAST_UPDATED,
-  TERMS_SECTIONS,
-  TERMS_SUMMARY_POINTS,
-  TERMS_VERSION,
-} from "@/lib/legal/terms";
+  MSA_CANONICAL_HTML,
+  MSA_LAST_UPDATED,
+  MSA_SECTIONS,
+  MSA_SUMMARY_POINTS,
+  MSA_VERSION,
+} from "@/lib/legal/msa";
 import { type Metadata } from "next";
 import { PrintButton } from "@/components/PrintButton";
 
 export const metadata: Metadata = {
-  title: "Terms of Service",
+  title: "Master Services Agreement",
 };
 
 const buildTOC = () =>
-  TERMS_SECTIONS.map((section) => ({
+  MSA_SECTIONS.map((section) => ({
     anchor: section.anchor,
     title: section.title,
   }));
 
 const SummaryList = () => (
   <dl className="grid gap-4 sm:grid-cols-2">
-    {TERMS_SUMMARY_POINTS.map((item) => (
+    {MSA_SUMMARY_POINTS.map((item) => (
       <div key={item.label} className="surface relative overflow-hidden rounded-xl p-4">
         {/* Stronger gradient wash for better contrast */}
         <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/10 via-[var(--card)] to-[var(--accent)]/10 opacity-100" />
@@ -37,7 +37,7 @@ const SummaryList = () => (
 );
 
 const TableOfContents = () => (
-  <nav aria-label="Terms of Service table of contents" className="sticky top-24 rounded-2xl border border-[var(--border)]/60 bg-[var(--card)]/80 p-6 backdrop-blur-xl transition-all hover:border-[var(--border)] hover:bg-[var(--card)] hover:shadow-lg">
+  <nav aria-label="Master Services Agreement table of contents" className="sticky top-24 rounded-2xl border border-[var(--border)]/60 bg-[var(--card)]/80 p-6 backdrop-blur-xl transition-all hover:border-[var(--border)] hover:bg-[var(--card)] hover:shadow-lg">
     <p className="text-xs font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Contents</p>
     <ul className="mt-4 space-y-2.5 text-sm font-medium text-[var(--muted-foreground)]">
       {buildTOC().map((entry) => (
@@ -61,7 +61,7 @@ const TableOfContents = () => (
 );
 
 const renderSectionContent = () =>
-  TERMS_SECTIONS.map((section) => (
+  MSA_SECTIONS.map((section) => (
     <section key={section.anchor} id={section.anchor} className="anchor-target scroll-mt-32">
       <h2 className="heading-gradient-soft text-2xl font-bold tracking-tight md:text-3xl">{section.title}</h2>
       <div className="mt-6 space-y-5 text-base leading-relaxed text-[var(--secondary-foreground)]/90">
@@ -100,14 +100,14 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
 
   if (printMode) {
     return (
-      <div className="mx-auto max-w-3xl px-8 py-12 text-black" data-terms-version={TERMS_VERSION}>
+      <div className="mx-auto max-w-3xl px-8 py-12 text-black" data-msa-version={MSA_VERSION}>
         <article className="prose prose-neutral max-w-none">
           <div className="mb-8 border-b border-neutral-200 pb-8">
-            <h1 className="text-4xl font-bold text-neutral-900">Terms of Service</h1>
-            <p className="mt-2 text-lg text-neutral-600">Website-as-a-Service Agreement</p>
+            <h1 className="text-4xl font-bold text-neutral-900">Master Services Agreement</h1>
+            <p className="mt-2 text-lg text-neutral-600">Universal terms. Price and scope live in your Order Form.</p>
             <div className="mt-4 flex gap-6 text-sm text-neutral-500">
-              <p>Version: {TERMS_VERSION}</p>
-              <p>Last updated: {TERMS_LAST_UPDATED}</p>
+              <p>Version: {MSA_VERSION}</p>
+              <p>Last updated: {MSA_LAST_UPDATED}</p>
             </div>
           </div>
           {renderSectionContent()}
@@ -117,17 +117,17 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
   }
 
   return (
-    <div className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-terms-version={TERMS_VERSION}>
+    <div className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-msa-version={MSA_VERSION}>
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
         
         {/* Header Section */}
         <div className="mx-auto mb-16 max-w-3xl text-center md:mb-24">
           <h1 className="hero-title mb-6 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
-            Terms of Service
+            Master Services Agreement
           </h1>
           
           <p className="mx-auto max-w-2xl text-lg leading-8 text-[var(--muted-foreground)] md:text-xl">
-            Clear, fair, and transparent. Our Website-as-a-Service agreement is designed to protect both your business and ours.
+            The universal terms behind every engagement. Price, scope, and term live in the Order Form attached to your project.
           </p>
 
           <div className="mt-8 flex justify-center lg:hidden">
@@ -154,13 +154,13 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
                 </div>
                 
                 <p className="mb-8 text-[var(--muted-foreground)]">
-                  These terms govern your Website-as-a-Service subscription. While we recommend reading the full agreement, here are the key points you should know:
+                  These terms apply to every engagement we take on. Your Order Form carries the commercial details for your specific project. Here are the key points:
                 </p>
                 
                 <SummaryList />
                 
                 <p className="mt-6 text-sm text-[var(--muted-foreground)]/80">
-                  Refer to the full agreement below for complete details, including order summary, scope of service, unlimited edits policy, and early termination terms.
+                  Refer to the full agreement below for complete details, including ownership of deliverables, acceptance, confidentiality, and the limitation of liability. Your price, minimum term, and scope of work are stated in your Order Form, not here.
                 </p>
               </div>
             </div>
@@ -183,11 +183,11 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
                   
                   <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-[var(--muted-foreground)] md:flex-col md:items-end md:gap-1">
                     <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1">
-                      Version {TERMS_VERSION}
+                      Version {MSA_VERSION}
                     </span>
                     <span className="hidden md:inline">•</span>
                     <span className="rounded-full border border-[var(--border)] bg-[var(--background)] px-3 py-1 md:border-0 md:bg-transparent md:p-0 md:opacity-80">
-                      Updated {TERMS_LAST_UPDATED}
+                      Updated {MSA_LAST_UPDATED}
                     </span>
                   </div>
                 </div>
@@ -202,9 +202,9 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
       </div>
       
       <script
-        id="terms-html"
+        id="msa-html"
         type="application/json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(TERMS_CANONICAL_HTML) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(MSA_CANONICAL_HTML) }}
       />
     </div>
   );

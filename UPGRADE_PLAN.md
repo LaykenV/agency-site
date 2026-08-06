@@ -1,14 +1,29 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stages 0, 1A, 2, and the configured Stage 3 surfaces are complete in
-production.** Stage 3 is verified end to end on the playground, TB Tree, and
+Status: **Stages 0, 1A, 2, the configured Stage 3 surfaces, and Stage 4A are
+complete.** Stage 3 is verified end to end on the playground, TB Tree, and
 Chelsea Social Co. All About Towing is live as a website but still has no Hub
 project or telemetry enabled; it sends neither v1 nor v2 events. The
 post-Stage-3 hardening pass shipped in `14bd600` and is production-smoked — see
-§ 5. Next up: Stage 4 (offering registry).
+§ 5. Stage 4A (MSA + order form split) is implemented and locally verified,
+pending deploy — see § 5.
+
+On 2026-08-06, the explicit admin-only intake slice of Stage 5 and the narrow
+setup-plus-recurring Checkout bridge from Stage 6 were pulled forward: public
+`/onboarding` is retired, only admin creates projects, and the existing direct
+Stripe writer can send a one-time setup Price plus the recurring Price. The
+remaining portal decomposition, offering registry, Stripe-component migration,
+and multi-project work remain trigger-gated.
+
+**Nothing after Stage 4A is scheduled.** Stages 4B, 5, 6, and 7 are
+trigger-gated, not queued; the triggers are in § 4. This was decided on
+2026-08-06 after asking whether the remaining stages should be built now or when
+a client needs them. The answer was neither "yes" nor "wait" uniformly: the
+MSA/order-form split gets strictly harder to do after a client signs, so it
+shipped; the registry, portal refactor, and billing work do not, so they wait.
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-06 (post-Stage-3 hardening pass deployed and smoked)
+Last reviewed: 2026-08-06 (Stage 4A implemented; 4B–7 trigger-gated)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -41,15 +56,24 @@ Stage 0   Dependency baseline ......... reconcile Bun lock + peers        [done]
 Stage 1A  WAAS containment ............ cap cost without breaking v1      [shipped]
 Stage 2   WAAS authenticated v2 ....... clients migrated; v1 leads retired [done]
 Stage 3   Typed events + click tracking  tel:/mailto:/directions          [done]
-Stage 4   Offering registry ........... offerings, capabilities, MSA/SOW  [data-safe]
-Stage 5   Portal refactor ............. modules + explicit creation       [no multi-project]
-Stage 6   Stripe component ............ spike, then cutover               [spike-gated]
+Stage 4A  MSA + order form split ...... universal terms vs per-project    [done]
+Stage 4B  Offering registry ........... offerings, capabilities           [trigger-gated]
+Stage 5   Portal refactor ............. intake slice done; modules gated  [partial]
+Stage 6   Stripe component ............ spike, then cutover               [trigger-gated]
 Stage 7   Multi-project ............... picker + independent billing      [needs Stage 6]
 Stage 8   Deferred backlog ............ external data, visitor identity   [no date]
 
 Contingency (not a stage):
   Stripe metadata bridge ............. only if a client signs before Stage 6
 ```
+
+Stage 4 was split on 2026-08-06. The original single stage bundled a legal
+change with a data-model change on the theory that both were needed before a
+bespoke engagement. Only the legal half has that property. Terms are fixed at
+signature and cannot be retrofitted onto an executed agreement; a registry can
+be built the week after a contract lands, informed by what that contract
+actually needs. Bundling them meant the urgent half waited on the speculative
+half.
 
 Execution order changed on 2026-08-05 against the original 0-8 listing. Two
 stages moved and one was added:
@@ -278,34 +302,58 @@ one per pageview and click, and nothing reads them; the portal reads only the
 row count is large enough to matter, at which point the fix is a cron deleting
 rows past a fixed age, not a schema change.
 
-### Stage 4 — offering registry
+### Stage 4A — MSA / order form split
 
-`portal_architecture.md` § Phases 1-2. Introduce offerings using an
-expand → backfill → verify → contract migration, then add stage metadata and
-explicit capabilities such as `acceptsLeads`.
+`portal_architecture.md` § 5.4. **Done 2026-08-06** — implementation and
+verification evidence in § 5.
+
+Why this ran ahead of the registry: it is the only remaining stage that gets
+harder if it waits. Everything else can be built after a client signs; terms are
+fixed *at* signature, and a signed agreement under the wrong terms is a legal
+artifact no later refactor can correct.
+
+The pre-4A terms were a single global `TERMS_VERSION` and every clause in it was
+wrong for a bespoke build:
+
+- `$199/mo, $0 down` was written into the prose in three places, so any other
+  price contradicted the document the client clicked.
+- The IP clause granted only "a license to use the delivered website during an
+  active subscription." A client paying a five-figure deposit for a custom app
+  would have owned nothing, and the license would have ended on cancellation.
+- Liability was capped at three months of fees — **$597**. On a five-figure
+  engagement a cap that disproportionate risks being struck entirely, which
+  leaves no cap rather than a low one.
+
+What shipped: a versioned MSA holding universal terms only, and a per-project
+order form holding price, term, scope, deliverables, assigned deliverables, and
+acceptance criteria. Both hashes are recorded on the agreement.
+
+Deliberately **not** included, so this stage did not become 4B: no offerings
+table, no capability registry, no `serviceType` on projects, no
+expand/backfill/contract migration. `order_forms.spec.engagementType` is a free
+string today and becomes the offering key in 4B.
+
+### Stage 4B — offering registry
+
+`portal_architecture.md` § Phases 1-2. **Trigger-gated — see § 4.** Introduce
+offerings using an expand → backfill → verify → contract migration, then add
+stage metadata and explicit capabilities such as `acceptsLeads`.
 
 `phase` is for broad portal presentation. Operational behavior must use named
 capabilities; replacing today's `IN_REVIEW`/`LIVE` lead rule with
 `phase === "DELIVERED"` would reject review-site leads.
 
-`mobile_app` and `idx_website` are no longer hypothetical — both have expected
-clients — so the registry must express an offering with no `leads` module and a
-completely different fulfillment stage list from day one.
-
-This stage also owns the **MSA / order-form split** (`portal_architecture.md`
-§ 5.4). Today's terms are one global `TERMS_VERSION` with `$199` written into the
-prose, an IP clause granting only a license during an active subscription, and a
-liability cap of three months of fees. None of that survives a five-figure build
-engagement. Universal terms become a versioned MSA; price, term, scope,
-deliverables, and acceptance criteria move to a per-project order form generated
-from the offering for `waas_local` and admin-authored for bespoke work. Both
-hashes are recorded on the agreement.
+`mobile_app` and `idx_website` are expected but unsigned. Building the registry
+now means guessing where the seams go — which capabilities exist, which
+fulfillment stages a mobile app has — and guessing produces capabilities nobody
+needs alongside missing ones the real contract requires. Build it when a signed
+contract defines the second offering, and before that client's portal is built.
 
 ### Stage 5 — portal refactor and onboarding retirement
 
-`portal_architecture.md` § Phases 3-4. Decompose the portal, build the module
-registry, create projects explicitly, and retire public `/onboarding` plus its
-website-only AI plan generator.
+`portal_architecture.md` § Phases 3-4. **Trigger-gated — see § 4.** Decompose the
+portal, build the module registry, create projects explicitly, and retire public
+`/onboarding` plus its website-only AI plan generator.
 
 Keep per-project `moduleOverrides` and build the admin toggle. All About Towing
 is a live `waas_local` project with no contact form, so it needs `leads` off and
@@ -316,7 +364,9 @@ second real client project is forbidden until Stage 6 exits.
 
 ### Stage 6 — Stripe component
 
-`billing_migration.md` § Phases B-E. Sandbox spike first: two subscriptions on
+`billing_migration.md` § Phases B-E. **Trigger-gated — see § 4.** Three live
+subscriptions total, no deadline, and nothing currently blocked on it. Sandbox
+spike first: two subscriptions on
 one customer with distinct `project:*` org IDs, duplicate and out-of-order
 webhook delivery, cancel/resubscribe selection, and test-clock lifecycle. Then
 install `@convex-dev/stripe@0.1.6`, move the app's direct Stripe SDK to an exact
@@ -324,11 +374,13 @@ install `@convex-dev/stripe@0.1.6`, move the app's direct Stripe SDK to an exact
 `STRIPE_WEBHOOK_SECRET_V2`, and add the application event-ID ledger before
 enabling any event hook.
 
-Checkout must support **deposit/setup fee + monthly**: a one-time price line item
-alongside the recurring price in `mode: "subscription"`, billed on the first
-invoice. Today `stripeActions.ts:229` hardcodes a single recurring line item.
-Milestone invoicing is explicitly out of scope; if a later deal needs it, that is
-Stripe Invoices and a new portal billing surface, not an extension of Checkout.
+Checkout now supports **deposit/setup fee + monthly** in the existing writer: a
+validated one-time Price line item sits alongside the validated recurring Price
+in `mode: "subscription"` and is billed only on the first invoice. Stage 6 still
+owns migration to the Stripe component, canonical project-scoped reads, webhook
+idempotency, and multi-project attribution. Milestone invoicing remains out of
+scope; if a later deal needs it, that is Stripe Invoices and a new portal billing
+surface, not an extension of Checkout.
 
 Flip reads behind a reversible switch, then move checkout writes after parity is
 proven. Stage 6 exits when project-scoped reads and the single Checkout writer
@@ -375,12 +427,19 @@ No date. Revisit each item only when a client is paying for the outcome:
 4. **Stage 2 before any new spoke goes live on the Hub.** Three new sites are
    expected (towing, mobile app, IDX). Onboarding them onto the unauthenticated
    v1 contract means migrating five clients later instead of two.
-5. **Stage 4 before the portal decomposition.** Capabilities and data shape are
+5. **Stage 4B before the portal decomposition.** Capabilities and data shape are
    the seams the refactor depends on.
-6. **Stage 4 before quoting a bespoke build.** The MSA/order-form split must
-   exist before an agreement is signed for a mobile app or IDX engagement; the
-   current terms grant only a license during an active subscription and cap
-   liability at three months of fees.
+6. **Stage 4A before quoting a bespoke build.** Satisfied 2026-08-06. Every
+   engagement now needs an issued order form before its agreement can be
+   accepted — `agreement.createFromClickwrap` throws without one, by design.
+   Author and issue the order form in admin *before* sending a bespoke client to
+   the portal.
+6a. **Never edit an issued order form.** Issued and superseded rows are
+   immutable because an accepted agreement records their hash. Before signature,
+   replace one by drafting and issuing a new version. After signature, use a
+   separate re-acceptance workflow; Stage 4A blocks replacement rather than
+   silently changing signed terms. The same immutability rule applies to
+   `lib/legal/terms.ts`, which stays archived so pre-4A hashes are reproducible.
 7. **Stage 6 before Stage 7.** Per-project subscription attribution must exist
    before a client can own two live projects.
 8. **No schema contraction before verified backfill.** New fields begin optional,
@@ -393,6 +452,28 @@ No date. Revisit each item only when a client is paying for the outcome:
 ---
 
 ## 4. Ordering and behavior rules
+
+### Triggers for the unscheduled stages (set 2026-08-06)
+
+Nothing below is on a calendar. Each starts when its trigger fires and not
+before. If a trigger has not fired, the correct action is to sell, not to build
+the mechanism that a hypothetical sale would need.
+
+| Stage | Starts when | Explicitly does **not** start because |
+|---|---|---|
+| 4B — offering registry | A contract is signed for `mobile_app` or `idx_website`. Start before that client's portal work, not after. | Both are "expected." Expected is not signed, and an unsigned offering does not tell you where the capability seams go. |
+| 5 — remaining portal refactor | Same trigger as 4B, immediately after it. Admin-only project creation and `/onboarding` retirement are already complete; the 2,211-line `app/portal/[projectId]/page.tsx` must not gain a second engagement type before decomposition. | All About Towing needs a `leads`-off override, but it has no Hub project to override, so it is not a forcing function. |
+| 6 — Stripe component | A client needs two independently billed projects or the existing direct writer stops being sufficient. Setup + monthly Checkout no longer triggers the whole component migration because the narrow mixed-cart bridge is implemented. | Three subscriptions, hand-reconcilable, and the current writer now supports both current billing shapes. |
+| 7 — multi-project | Stage 6 exits. First real case is Chelsea holding All About Towing. | Towing is live, its owner is happy, it has no contact form, and no one has asked for a portal for it. |
+
+If the only thing wanted is All About Towing telemetry, note that Stage 7 is
+gated on Stage 6 for *per-project subscription attribution*. A Hub project
+carrying no Stripe subscription of its own does not raise that problem. That is
+not a recommendation to do it — it is a note that the gate is narrower than it
+looks, so Stage 6 should not be treated as a wall if telemetry is the actual
+goal.
+
+### Behavior rules
 
 - Do not add `mobile_app` or `idx_website` before the Stage 5 portal module
   refactor is complete. Both are expected, which makes this rule load-bearing
@@ -594,6 +675,95 @@ Production evidence:
 
 Rollback is `git revert` + redeploy; no schema or data migration is involved.
 
+### Stage 4A — MSA / order form split (2026-08-06)
+
+Implemented and locally verified; not yet deployed.
+
+**Documents**
+
+- `lib/legal/msa.ts` — versioned universal terms (`MSA_VERSION` 2026-08-06). No
+  price, term, or scope anywhere in it. New sections: agreement structure and
+  order of precedence, delivery/review/acceptance with a five-business-day
+  deemed-acceptance window, change requests, and confidentiality.
+- `lib/legal/orderForm.ts` — spec types, a deterministic canonical-HTML builder,
+  and `WAAS_LOCAL_ORDER_FORM_SPEC` holding the commercial prose that used to be
+  hardcoded in the terms document ($199/mo, 12-month minimum, seven pages,
+  unlimited edits).
+- `lib/legal/render.ts` — shared escaping and block rendering for both.
+- `lib/legal/terms.ts` — archived, unmodified, unreferenced by live code. It is
+  the only way to recompute the `termsHash` on agreements signed before 4A.
+
+**The two clauses that were the point**
+
+- IP: Client Materials stay the client's; items the order form lists as Assigned
+  Deliverables transfer on receipt of all amounts due; subscription engagements
+  get a license during the term plus export on request; our Retained Materials
+  stay ours with a perpetual license as embodied in the deliverable.
+- Liability: capped at fees paid or payable under **the applicable order form**
+  in the preceding twelve months, with each order form carrying its own separate
+  cap, and carve-outs for payment obligations, confidentiality breach, and
+  anything Louisiana law does not permit limiting.
+
+**Data**
+
+- New `order_forms` table: one issued row per project, `draft` → `issued` →
+  `superseded`. Issue computes and stores the SHA-256 of the canonical document.
+  Stripe-subscription rows also bind an immutable Stripe Price ID; manual-invoice
+  rows deliberately carry none.
+- `agreements` gains optional `msaVersion`, `msaHash`, `orderFormId`,
+  `orderFormVersion`, `orderFormHash`, `orderFormSnapshotUrl`. `termsVersion` and
+  `termsHash` are still written, now carrying the MSA identity, so checkout
+  metadata and the welcome email keep working without a backfill.
+
+**Behavior changes worth knowing**
+
+- Hashes are computed **server-side**. The browser sends the displayed Order
+  Form ID and hash only to identify what it saw; `createFromClickwrap` reloads
+  that exact issued row, rebuilds its canonical HTML, and rejects a stale or
+  mismatched version before recording acceptance.
+- Acceptance now **requires** an issued order form and throws without one.
+  Only an admin creates projects. Creation seeds an editable standard $199/month
+  draft; the admin reviews or changes it, issues it, and only then can send the
+  client invitation. The agreement page claims the exact prepared project for
+  the matching verified email but never creates one.
+- `createCheckoutSession` loads the Order Form referenced by the signed
+  agreement, retrieves its saved recurring Price and optional one-time setup
+  Price from Stripe, and verifies their active/USD/type/amount details against
+  the signed amounts. Checkout sends both line items in `subscription` mode, so
+  the setup Price lands only on the initial invoice. It never follows a later
+  issued form. Pre-4A agreements retain the old email-based mapping solely for
+  compatibility, including Chelsea's $49 subscription.
+- The agreement page renders the complete Order Form above the complete MSA and
+  one checkbox accepts both. The welcome email also reads the accepted row, not
+  a later replacement. `/legal/terms` keeps its URL and its
+  `#sms-lead-notifications` anchor.
+- Admin gains `components/admin/OrderFormPanel.tsx` for authoring and issuing per
+  project. Replacing an unsigned version is supported; changing a signed
+  engagement is blocked until a separate re-acceptance flow exists.
+
+Verification: `bun test`, `npx tsc --noEmit`,
+`npx convex codegen --typecheck enable`, `bun run lint`, `bun run build`, and
+`git diff --check` — all clean.
+
+Not yet done, and required before a bespoke client signs:
+
+- [ ] Deploy and smoke: create a prospect and project in admin, confirm the
+      standard draft is editable, issue it, confirm invitation gating, accept,
+      and verify both hashes and both snapshot URLs land on the agreement row.
+- [ ] Attorney review of the MSA. This is a real contract for five-figure work
+      and it has not been reviewed by a lawyer.
+
+**Deliberately not backfilled:** Chelsea and every other pre-4A signer keep the
+agreement and snapshot they actually accepted. They receive no retroactive Order
+Form. The legacy checkout fallback retains Chelsea's existing email-to-$49 Price
+mapping. Unsigned old projects may receive today's standard Order Form when they
+next enter the agreement flow; that is prospective issuance, not a backfill.
+- [ ] Confirm the contracting-entity line. The MSA names Varholdt AI LLC
+      operating under the trade name Acadiana Web Design; per `BUSINESS.md` the
+      geauxBIZ trade-name filing (ref 12276617) was **In-Process** as of
+      2026-08-06 and is not final until the Secretary of State issues the
+      registration.
+
 ### Stage 0 — resolved evidence (2026-08-04)
 
 Pinned exact versions in `package.json` and regenerated `bun.lock`. Verified:
@@ -678,12 +848,14 @@ Consequences:
   placeholder. The Hub has no unauthenticated analytics or lead route left.
 - Every project is implicitly `waas_local`; `serviceType` does not exist.
 - Chelsea's price selection is a hardcoded email branch.
-- One project per user is enforced by the fallback guard in `projects.ts`.
-- Public `/onboarding` is live in code but retired by product decision.
-- `checkout.sessions.create` is `mode: "subscription"` with one recurring line
-  item and current project/agreement metadata in both the session and
-  `subscription_data`; it does not yet support Stage 6's deposit/setup + monthly
-  shape or canonical `orgId` mapping (`stripeActions.ts:227-245`).
+- Projects are created only through `admin.createProjectForProspect`; the client
+  may claim the prepared project after verified-email sign-in but cannot create
+  one. Multi-project remains deferred.
+- Public `/onboarding` redirects permanently to the sales call and its intake,
+  hooks, plan generator, public Convex functions, sitemap entry, and CTAs are removed.
+- `checkout.sessions.create` remains the direct Stripe writer and still lacks
+  Stage 6's component/canonical `orgId` model, but now supports an optional
+  one-time setup Price beside the recurring Price in subscription mode.
 - Terms are a single global `TERMS_VERSION` with `$199` in the prose
   (`lib/legal/terms.ts:22,40,118`); `agreementValidator.method` is
   `v.literal("clickwrap")`.
@@ -732,16 +904,20 @@ Required operational signals and exit evidence:
 | 1A | Leads accepted, `429`s, paid fan-out paused, SMS sent, SMS blocked by verdict; one labeled post-deploy submission through each live spoke |
 | 2 | v1/v2 lead volume, credential `lastUsedAt`, auth failures (from `[hub.lead.v2] auth_failed` logs — deliberately not a counter), `hasVisitorHash: true` on live spoke traffic, duplicate triage count (must be zero) |
 | 3 | Click events by type for a live project (met on playground 2026-08-05); per-spoke: one `tel` click reaching the portal after that site's key is issued. Referrer classification is collected but hidden, so it is no longer an exit signal |
-| 4 | Backfill report with zero unresolved rows; both price paths resolve from project data in Stripe test mode; MSA + order-form hashes recorded on a test agreement |
+| 4A | MSA + order-form hashes and both snapshot URLs recorded on a test agreement; admin creation seeds an editable $199 draft; invite stays disabled until issue; stale-form acceptance refused; recurring and optional setup Stripe Prices verified against the accepted row; mixed Checkout and manual-invoice paths both covered |
+| 4B | Backfill report with zero unresolved rows; both price paths resolve from project data in Stripe test mode |
 | 6 | Sandbox spike outputs and Stripe object IDs; hand reconciliation of every live subscription; visible reader/writer/side-effect flag state; completed rollback drill |
 
 Specific documentation checkpoints:
 
 - After Stage 2: Hub ↔ Spoke auth, endpoint versions, trusted visitor metadata,
   and troubleshooting.
-- After Stage 4: offering registry, capabilities, archival model, and the
-  MSA/order-form agreement structure.
-- After Stage 5: `/onboarding` retirement and explicit project creation.
+- After Stage 4A: the MSA/order-form agreement structure, the immutability rule,
+  admin-only creation, and setup-plus-recurring Checkout. Done in `CLAUDE.md`
+  § Agreements and in § 5 above.
+- After Stage 4B: offering registry, capabilities, and the archival model.
+- Stage 5 intake slice: `/onboarding` retirement and explicit admin project
+  creation. Done early on 2026-08-06; portal decomposition remains gated.
 - After Stage 6: component billing source, webhook secrets/idempotency, the
   deposit + monthly Checkout shape, and the exact successful-payment status
   transition.

@@ -7,14 +7,56 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { MSA_SECTIONS, MSA_VERSION } from "@/lib/legal/msa";
 import {
-  TERMS_SUMMARY_POINTS,
-  TERMS_VERSION,
-  TERMS_HASH_INPUT,
-} from "@/lib/legal/terms";
+  buildOrderFormSections,
+  buildOrderFormSummaryPoints,
+  describePricing,
+  formatUsd,
+} from "@/lib/legal/orderForm";
+import type { LegalSection } from "@/lib/legal/render";
 import { PageHeader } from "@/components/PageHeader";
 import { ProgressTimeline } from "@/components/portal";
 import { StickyAuth } from "@/components/StickyAuth";
+
+function LegalDocumentSections({ sections }: { sections: Array<LegalSection> }) {
+  return (
+    <div className="space-y-8">
+      {sections.map((section) => (
+        <section key={section.anchor} id={section.anchor} className="scroll-mt-28">
+          <h3 className="text-base font-semibold text-[var(--foreground)]">
+            {section.title}
+          </h3>
+          <div className="mt-3 space-y-3 text-sm leading-relaxed text-[var(--muted-foreground)]">
+            {section.blocks.map((block, index) => {
+              if (block.type === "paragraph") {
+                return <p key={index}>{block.text}</p>;
+              }
+              if (block.type === "subheading") {
+                return (
+                  <h4 key={index} className="font-semibold text-[var(--foreground)]">
+                    {block.text}
+                  </h4>
+                );
+              }
+              const List = block.ordered ? "ol" : "ul";
+              return (
+                <List
+                  key={index}
+                  className={`${block.ordered ? "list-decimal" : "list-disc"} space-y-1 pl-5`}
+                >
+                  {block.items.map((item, itemIndex) => (
+                    <li key={`${itemIndex}-${item}`}>{item}</li>
+                  ))}
+                </List>
+              );
+            })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
 
 export default function AgreementPage() {
   return (
@@ -64,7 +106,7 @@ function AuthenticatedAgreementView() {
   const router = useRouter();
   const errorRef = useRef<HTMLDivElement | null>(null);
 
-  const findOrCreateProject = useMutation(api.projects.findOrCreateProjectForProspect);
+  const claimProject = useMutation(api.projects.claimProjectForProspect);
   const createFromClickwrap = useMutation(api.agreement.createFromClickwrap);
   const createCheckout = useAction(api.stripeActions.createCheckoutSession);
 
@@ -118,7 +160,7 @@ function AuthenticatedAgreementView() {
       return;
     }
 
-    void findOrCreateProject({
+    void claimProject({
       prospectId: prospect._id,
     })
       .then((projectId) => {
@@ -126,10 +168,14 @@ function AuthenticatedAgreementView() {
         setIsInitialized(true);
       })
       .catch((initializationError) => {
-        console.error("[agreement] failed to initialize project", initializationError);
-        setError("We couldn't prepare your project. Please refresh or contact support.");
+        console.error("[agreement] failed to load admin-created project", initializationError);
+        setError(
+          initializationError instanceof Error
+            ? initializationError.message
+            : "We couldn't load your project. Please contact support.",
+        );
       });
-  }, [findOrCreateProject, isInitialized, prospect, router, setError, user]);
+  }, [claimProject, isInitialized, prospect, router, setError, user]);
 
   useEffect(() => {
     if (!decision || !prospect || !user?._id) return;
@@ -170,6 +216,30 @@ function AuthenticatedAgreementView() {
     return null;
   }, [decision?.primaryProject, primaryProjectId]);
 
+  // The commercial half of the agreement. The MSA is universal; price, term,
+  // and scope come from the project's issued order form.
+  const orderForm = useQuery(
+    api.orderForms.getIssuedForMyProject,
+    latestProject?._id ? { projectId: latestProject._id } : "skip",
+  );
+
+  const orderFormSections = useMemo(() => {
+    if (!orderForm?.issuedAt) return [];
+    return buildOrderFormSections(orderForm.spec, {
+      projectSlug: orderForm.projectSlug,
+      clientName: orderForm.clientName,
+      msaVersion: orderForm.msaVersion,
+      version: orderForm.version,
+      issuedAt: orderForm.issuedAt,
+    });
+  }, [orderForm]);
+
+  // A reactive amendment can replace the document while this page is open.
+  // Require a fresh checkbox click for the exact version now on screen.
+  useEffect(() => {
+    setIsChecked(false);
+  }, [orderForm?._id, orderForm?.issuedHash]);
+
   const renderStatusPill = (status: string | undefined) => {
     const base = "pill";
     switch (status) {
@@ -194,27 +264,32 @@ function AuthenticatedAgreementView() {
     }
   };
 
-  const computeTermsHash = useCallback(async () => {
-    const encoder = new TextEncoder();
-    const data = encoder.encode(TERMS_HASH_INPUT);
-    const hashBuffer = await window.crypto.subtle.digest("SHA-256", data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-  }, []);
-
   const handleAgreementAccept = async () => {
-    if (!latestProject || !isChecked || acceptStage !== 'idle') return;
+    if (
+      !latestProject ||
+      !orderForm?.issuedHash ||
+      orderForm.msaVersion !== MSA_VERSION ||
+      !isChecked ||
+      acceptStage !== 'idle'
+    ) return;
     setAcceptanceError(null);
     setAcceptStage('agreement');
     try {
-      const termsHash = await computeTermsHash();
+      // Both document hashes are computed server-side from the canonical
+      // documents; a hash this browser supplied would prove nothing.
       const userAgent = typeof window !== "undefined" ? window.navigator.userAgent : undefined;
-      await createFromClickwrap({
+      const acceptance = await createFromClickwrap({
         projectId: latestProject._id,
-        termsVersion: TERMS_VERSION,
-        termsHash,
+        orderFormId: orderForm._id,
+        orderFormHash: orderForm.issuedHash,
         userAgent,
       });
+
+      if (acceptance.paymentNextStep === "manual_invoice") {
+        setAcceptStage("idle");
+        router.replace("/portal/subscribe");
+        return;
+      }
 
       // Try to redirect directly to Stripe checkout for frictionless happy path
       setAcceptStage('checkout');
@@ -290,7 +365,7 @@ function AuthenticatedAgreementView() {
               rel="noopener noreferrer"
               className="btn-secondary px-4 py-2"
             >
-              View Terms
+              View Master Agreement
             </a>
           }
         />
@@ -323,21 +398,98 @@ function AuthenticatedAgreementView() {
             )}
           </div>
 
+          {orderForm === undefined ? (
+            <div className="surface-soft rounded-xl p-6">
+              <p className="text-sm text-[var(--muted-foreground)]">Loading your order form…</p>
+            </div>
+          ) : orderForm === null ? (
+            <div className="surface-soft rounded-xl p-6 border border-amber-500/50">
+              <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-foreground)]">Order Form</p>
+              <p className="mt-3 text-sm text-[var(--foreground)]">
+                No order form has been issued for this project yet, so there is nothing to
+                accept. Email{" "}
+                <a className="text-[var(--primary)]" href="mailto:support@acadianawebdesign.com">
+                  support@acadianawebdesign.com
+                </a>{" "}
+                and we will send your terms.
+              </p>
+            </div>
+          ) : (
+            <div className="surface-soft rounded-xl p-6 glow-primary">
+              <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-foreground)]">Order Form</p>
+              <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)] heading-gradient-soft">
+                {orderForm.spec.title}
+              </h2>
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">{orderForm.spec.summary}</p>
+
+              <ul className="mt-5 space-y-3 text-sm">
+                {buildOrderFormSummaryPoints(orderForm.spec).map((item) => (
+                  <li key={item.label} className="flex items-start gap-3">
+                    <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-[var(--primary)]" />
+                    <span>
+                      <span className="font-semibold text-[var(--foreground)]">{item.label}:</span> {item.value}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+
+              {orderForm.spec.scope.length > 0 && (
+                <div className="mt-6">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-[var(--muted-foreground)]">
+                    What&apos;s included
+                  </p>
+                  <ul className="mt-3 space-y-2 text-sm text-[var(--muted-foreground)]">
+                    {orderForm.spec.scope.map((item) => (
+                      <li key={item} className="flex items-start gap-3">
+                        <span className="mt-1.5 inline-flex h-1.5 w-1.5 flex-none rounded-full bg-[var(--muted-foreground)]" />
+                        <span>{item}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              <p className="mt-6 text-xs text-[var(--muted-foreground)]">
+                Order Form {orderForm.version} • Master Services Agreement {orderForm.msaVersion}
+              </p>
+
+              {orderForm.msaVersion !== MSA_VERSION && (
+                <p className="mt-4 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 text-sm text-amber-700">
+                  This Order Form references an older Master Services Agreement. Contact
+                  support for a current version before accepting.
+                </p>
+              )}
+
+              <div className="mt-8 border-t border-[var(--border)] pt-8">
+                <p className="mb-5 text-xs font-semibold uppercase tracking-[0.2em] text-[var(--muted-foreground)]">
+                  Complete Order Form
+                </p>
+                <LegalDocumentSections sections={orderFormSections} />
+              </div>
+            </div>
+          )}
+
           <div className="surface-soft rounded-xl p-6 glow-primary">
-            <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-foreground)]">Plan Snapshot</p>
-            <ul className="mt-4 space-y-3 text-sm">
-              {TERMS_SUMMARY_POINTS.map((item) => (
-                <li key={item.label} className="flex items-start gap-3">
-                  <span className="mt-1 inline-flex h-2 w-2 flex-none rounded-full bg-[var(--primary)]" />
-                  <span>
-                    <span className="font-semibold text-[var(--foreground)]">{item.label}:</span> {item.value}
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="mt-5 text-xs text-[var(--muted-foreground)]">
-              Version {TERMS_VERSION}. The complete agreement is available at the link above.
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-[var(--muted-foreground)]">
+                  Universal Terms
+                </p>
+                <h2 className="mt-2 text-lg font-semibold text-[var(--foreground)] heading-gradient-soft">
+                  Master Services Agreement
+                </h2>
+              </div>
+              <span className="text-xs text-[var(--muted-foreground)]">
+                Version {MSA_VERSION}
+              </span>
+            </div>
+            <p className="mt-3 text-sm text-[var(--muted-foreground)]">
+              These terms apply across every engagement. Your project-specific price,
+              scope, deliverables, and acceptance criteria are in the Order Form above.
             </p>
+            <div className="mt-8 border-t border-[var(--border)] pt-8">
+              <LegalDocumentSections sections={MSA_SECTIONS} />
+            </div>
           </div>
 
           <div className="surface rounded-xl p-6 glow-primary">
@@ -352,11 +504,21 @@ function AuthenticatedAgreementView() {
                   aria-describedby="agreement-fine-print"
                 />
                 <label htmlFor="agree" className="text-sm">
-                  I have read and agree to the Terms of Service, including the 12-month commitment and recurring billing authorization.
+                  I have read and agree to the Master Services Agreement and to Order Form{" "}
+                  {orderForm?.version ?? "—"}
+                  {orderForm && orderForm.spec.pricing.minimumTermMonths > 0
+                    ? `, including the ${orderForm.spec.pricing.minimumTermMonths}-month commitment and billing authorization.`
+                    : ", including its billing authorization."}
                 </label>
               </div>
               <p id="agreement-fine-print" className="text-xs text-[var(--muted-foreground)]">
-                By clicking accept, you authorize the monthly subscription charge of $199 after checkout. Questions? Email{" "}
+                {orderForm ? `By clicking accept, you authorize the following: ${describePricing(orderForm.spec.pricing)}` : ""}
+                {orderForm && orderForm.spec.pricing.setupFeeCents > 0
+                  ? orderForm.spec.pricing.collectionMethod === "stripe_checkout"
+                    ? ` The ${formatUsd(orderForm.spec.pricing.setupFeeCents)} setup fee is included in the initial Checkout charge.`
+                    : ` The ${formatUsd(orderForm.spec.pricing.setupFeeCents)} due at signing will be invoiced separately.`
+                  : ""}{" "}
+                Questions? Email{" "}
                 <a className="text-[var(--primary)]" href="mailto:support@acadianawebdesign.com">
                   support@acadianawebdesign.com
                 </a>.
@@ -375,15 +537,17 @@ function AuthenticatedAgreementView() {
               <button
                 onClick={handleAgreementAccept}
                 className="btn-cta w-full px-4 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-60"
-                disabled={!isChecked || acceptStage !== 'idle'}
-                aria-disabled={!isChecked || acceptStage !== 'idle'}
+                disabled={!isChecked || acceptStage !== 'idle' || !orderForm || orderForm.msaVersion !== MSA_VERSION}
+                aria-disabled={!isChecked || acceptStage !== 'idle' || !orderForm || orderForm.msaVersion !== MSA_VERSION}
                 aria-busy={acceptStage !== 'idle'}
               >
                 {acceptStage === 'agreement' 
                   ? "Capturing agreement..." 
                   : acceptStage === 'checkout' 
                     ? "Redirecting to payment..." 
-                    : "Accept & Continue to Payment"}
+                    : orderForm?.spec.pricing.collectionMethod === "manual_invoice"
+                      ? "Accept Agreement"
+                      : "Accept & Continue to Payment"}
               </button>
             </div>
           </div>
@@ -392,4 +556,3 @@ function AuthenticatedAgreementView() {
     </div>
   );
 }
-

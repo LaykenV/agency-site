@@ -58,14 +58,14 @@ bun run video:render:all
 - `app/` — pages with server components by default.
 - `app/portal/` — magic-link-gated client portal.
 - `app/admin/` — admin dashboard (`ADMIN_EMAIL` server-gated).
-- `app/onboarding/` — prospect intake flow.
+- Public `/onboarding` is retired; sales intake is Cal.com, then admin-created prospects/projects.
 - `app/audit/[token]/` — public tokenized audit pages for outreach.
 - `components/` — feature components; UI primitives in `components/ui/`.
 - `lib/` — client utilities, auth helpers, hooks.
 
 ### Backend (Convex)
 
-- `convex/schema.ts` — all tables: `prospects`, `projects`, `agreements`, `activity_log`, `scheduled_calls`, `edit_requests`, `client_leads`, `client_analytics`, `marketing_searches`, `scraped_leads`, plus Stripe KV tables.
+- `convex/schema.ts` — all tables: `prospects`, `projects`, `agreements`, `order_forms`, `activity_log`, `scheduled_calls`, `edit_requests`, `client_leads`, `client_analytics`, `marketing_searches`, `scraped_leads`, plus Stripe KV tables.
 - `convex/validators.ts` — shared validators.
 - `convex/http.ts` — webhooks (Stripe, Cal.com), authenticated v2 lead ingestion, authenticated v2 events.
 - `convex/auth.ts` — Better Auth integration (magic link).
@@ -73,7 +73,6 @@ bun run video:render:all
 - `convex/projectAccess.ts` — `requireProjectOwner` / `requireProjectBySlug` / `getProjectIfOwner` / `getProjectBySlugIfOwner` for **client portal** functions.
 - `convex/files.ts` — file storage helpers (logos, brand images, edit request attachments).
 - `convex/marketing/` — outbound pipeline (`workflow.ts`, `pipeline.ts`, `search.ts`, `emails.ts`, `public.ts`).
-- `convex/onboarding/agent.ts` — Groq AI agent for prospect plan generation.
 
 ### Convex components (`convex.config.ts`)
 
@@ -142,6 +141,47 @@ ship as a public query leaking `resumeToken`.
 Never return `resumeToken` from any function a browser can call — it is the
 sole authorization check for onboarding session writes.
 
+## Agreements: MSA + order form (Stage 4A, 2026-08-06)
+
+An agreement is **two** documents, and both are hashed onto the `agreements` row.
+
+- `lib/legal/msa.ts` — versioned universal terms. **No price, term, or scope
+  belongs in this file.** Changing any string changes `MSA_HASH_INPUT`, so bump
+  `MSA_VERSION` in the same edit.
+- `lib/legal/orderForm.ts` — per-project commercial terms: price, minimum term,
+  scope, deliverables, assigned deliverables, acceptance criteria. Stored per
+  project in `order_forms`.
+- `lib/legal/terms.ts` — **archived, do not edit or delete.** No live code
+  imports it; it is the only way to recompute `termsHash` on agreements signed
+  before Stage 4A.
+
+Rules:
+
+- **Issued order forms are immutable.** Before signature, replace one by
+  drafting and issuing a new version (admin → Projects → expand → Order Form).
+  After signature, replacement is blocked until a separate re-acceptance flow
+  exists; never imply that issuing a row changes signed terms.
+- **Hashes are computed server-side**, in `agreement.createFromClickwrap` via
+  `credentialCrypto.sha256Hex`. The browser submits the displayed `orderFormId`
+  and hash only as a binding; the server reloads that row, requires it to remain
+  issued, rebuilds the canonical HTML, and verifies both values before signing.
+- **Acceptance requires an issued order form** and throws without one. Only an
+  admin creates projects. Creation seeds an editable standard $199/month draft;
+  the admin reviews or changes it, issues it, and only then can send the invite.
+  The agreement page may claim ownership for the matching verified email, but
+  it never creates a project.
+- **Canonical HTML must be deterministic.** Both builders are hashed, so no
+  `Intl`, no locale date formatting, no clock reads, no randomness. `formatUsd`
+  and `formatUtcDate` in `orderForm.ts` exist for this reason.
+- Stripe subscription Order Forms store an immutable recurring `stripePriceId`
+  and, when applicable, a one-time `setupStripePriceId`. Checkout loads the
+  exact accepted Order Form, retrieves both Prices from Stripe, verifies their
+  active/USD/type/amount details, and sends both line items in one subscription
+  Checkout. The one-time setup Price appears only on the initial invoice. Do
+  not select Price IDs from client email for post-4A agreements.
+- `termsVersion` / `termsHash` are still written, carrying the MSA identity, so
+  existing readers keep working without a backfill. Do not repurpose them.
+
 ## Hub ↔ Spoke contract
 
 Bespoke client sites POST to:
@@ -168,7 +208,9 @@ publishable key + Origin allowlist.
 
 **Never key a Hub rate limit on a client-supplied IP header.** `x-forwarded-for` and friends are caller-controlled, so a rotating value mints a fresh bucket per request — worse than no key at all. The trusted-visitor observation code and its `HUB_TRUSTED_IP_HEADER` / `HUB_VISITOR_OBSERVATION_UNTIL` env vars were **deleted** on 2026-08-05, not left dormant; per-visitor limiting lives in each spoke's Vercel Function where the platform overwrites the header. Leads keep a per-visitor tier via `meta.visitorHash` from that Function (`leadPerVisitor`) — trustworthy because the request already authenticated with a secret bearer.
 
-**Unauthenticated public surfaces have their own ceilings** (added 2026-08-05): `onboardingSessionGlobal`, `onboardingPlanGlobal`, and `publicAuditGlobalDaily`. These are global keys on purpose — a per-session or per-host key is defeated by rotating the value, which is exactly how the old per-session onboarding throttle failed to cap Groq spend.
+**Unauthenticated paid public surfaces have global ceilings.** The retired
+onboarding generator and its limits are gone; `publicAuditGlobalDaily` remains
+because public audits spend Firecrawl, PageSpeed, and Groq.
 
 **Origin:** analytics browser requests must match `deployment.liveUrl` /
 `stagingUrl`. Store these as a **bare host** (`example.com`) — the Hub builds
@@ -203,7 +245,7 @@ the Origin allowlist, publishable credential `lastUsedAt`, and
 - **Never** mutate `projectStatus` from Stripe payment failures or Cal.com booking events — those are admin-driven transitions. Webhooks log activity only.
 - **Never** store raw payment details — Stripe handles all card data.
 - **Always** verify Stripe webhook signatures and use event IDs for idempotency.
-- **Always** hash terms content (SHA-256) on agreement acceptance; record `termsVersion` + `termsHash` + `userAgent`.
+- **Always** hash both agreement documents (SHA-256) server-side on acceptance; record `msaVersion` + `msaHash` + `orderFormVersion` + `orderFormHash` + `userAgent`. See § Agreements.
 - **Never** reintroduce an unauthenticated ingest alias. Both leads and events
   are v2-and-authenticated-only.
 - **Never** return `resumeToken` from a function a browser can call, and route

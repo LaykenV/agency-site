@@ -662,19 +662,21 @@ location plus restore owner in the migration log.
 ### Phase 4 — explicit project creation and onboarding steps
 
 - [ ] Add `serviceType` + `priceIdOverride` to `admin.createProspect` (C1).
-- [ ] Add `admin.createProjectForProspect` (C2).
-- [ ] Narrow `getOrCreateProject` to exact-prospect matching; remove the
-      `anyExistingProject` fallback (B1).
-- [ ] Make the agreement page load-or-empty-state; never create (C2).
-- [ ] Gate the **admin** magic-link action on project existence (C2a).
+- [x] Add `admin.createProjectForProspect` (C2). Completed 2026-08-06; it
+      creates the project with an editable standard Order Form draft.
+- [x] Remove lazy `getOrCreateProject`; the client may claim an exact
+      admin-created project after email verification but cannot create one.
+- [x] Make the agreement page load-or-empty-state; never create (C2).
+- [x] Gate the **admin** magic-link action on project existence and an issued
+      Order Form (C2a, strengthened).
       Leave the portal self-serve login ungated.
 - [ ] Drive onboarding steps from `offering.onboardingSteps` (C3).
 - [ ] Expand with typed `offeringDetails`, dual-read legacy `buildDetails`,
       backfill and verify row-by-row, switch writes, then contract the
       website-specific legacy fields in a later deploy (§5.3).
-- [ ] Retire `/onboarding` and fix all ten-plus references (§5.5), starting with
+- [x] Retire `/onboarding` and fix all ten-plus references (§5.5), starting with
       the two `components/lead-demo/*` CTAs.
-- [ ] Remove the now-unreferenced public onboarding hook and plan generator; run
+- [x] Remove the now-unreferenced public onboarding hook and plan generator; run
       a repo-wide reference/link check and verify every replacement CTA.
 
 ### Phase 5 — multiple projects per client

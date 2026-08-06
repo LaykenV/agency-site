@@ -4,6 +4,7 @@ import { prospectValidator, prospectDetailsStoredValidator, projectStatusValidat
 import { requireAdmin } from "./adminGuard";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { createDefaultOrderFormDraft } from "./orderForms";
 
 export const getProspects = query({
   args: {},
@@ -24,6 +25,40 @@ export const listProspects = query({
       .withIndex("by_updatedAt", (q) => q.gte("updatedAt", 0))
       .order("desc")
       .collect();
+  },
+});
+
+/** Admin-only readiness for the deliberate prospect -> project -> invite flow. */
+export const listProspectProjectReadiness = query({
+  args: {},
+  returns: v.array(v.object({
+    prospectId: v.id("prospects"),
+    projectId: v.id("projects"),
+    projectStatus: v.optional(projectStatusValidator),
+    hasIssuedOrderForm: v.boolean(),
+  })),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const projects = await ctx.db.query("projects").collect();
+    const rows = await Promise.all(
+      projects
+        .filter((project) => project.prospectId && project.projectStatus !== "ARCHIVED")
+        .map(async (project) => {
+          const issued = await ctx.db
+            .query("order_forms")
+            .withIndex("by_projectId_and_status", (q) =>
+              q.eq("projectId", project._id).eq("status", "issued"),
+            )
+            .first();
+          return {
+            prospectId: project.prospectId!,
+            projectId: project._id,
+            projectStatus: project.projectStatus,
+            hasIssuedOrderForm: issued !== null,
+          };
+        }),
+    );
+    return rows;
   },
 });
 
@@ -390,6 +425,60 @@ export const createProspect = mutation({
     console.log("[admin] prospect created", { prospectId, sessionId });
 
     return prospectId;
+  },
+});
+
+/**
+ * Projects are created only by an admin. The temporary owner marker is claimed
+ * by the matching email account after the client follows the magic link; that
+ * claim never creates a project.
+ */
+export const createProjectForProspect = mutation({
+  args: { prospectId: v.id("prospects") },
+  returns: v.object({
+    projectId: v.id("projects"),
+    orderFormId: v.id("order_forms"),
+  }),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const prospect = await ctx.db.get(args.prospectId);
+    if (!prospect) throw new Error("Prospect not found");
+
+    const existingProjects = await ctx.db
+      .query("projects")
+      .withIndex("by_prospectId", (q) => q.eq("prospectId", args.prospectId))
+      .collect();
+    const existing = existingProjects.find(
+      (project) => project.projectStatus !== "ARCHIVED",
+    );
+    if (existing) throw new Error("This prospect already has an active project");
+
+    const now = Date.now();
+    const projectId = await ctx.db.insert("projects", {
+      authUserId: `pending:${args.prospectId}`,
+      projectId: crypto.randomUUID(),
+      prospectId: args.prospectId,
+      projectStatus: "AWAITING_AGREEMENT",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const orderFormId = await createDefaultOrderFormDraft(ctx, projectId);
+    if (!orderFormId) throw new Error("Could not create the standard Order Form draft");
+
+    await ctx.db.insert("activity_log", {
+      projectId,
+      prospectId: args.prospectId,
+      actor: "admin",
+      kind: "project_created",
+      payload: {
+        source: "admin",
+        defaultOrderForm: "draft",
+      },
+      createdAt: now,
+    });
+
+    return { projectId, orderFormId };
   },
 });
 

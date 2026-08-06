@@ -4,7 +4,8 @@ import { components, internal } from "./_generated/api";
 import { Resend } from "@convex-dev/resend";
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
-import { TERMS_SUMMARY_POINTS, TERMS_VERSION } from "../lib/legal/terms";
+import { MSA_VERSION } from "../lib/legal/msa";
+import { buildOrderFormSummaryPoints } from "../lib/legal/orderForm";
 import { rateLimiter } from "./rateLimiter";
 
 export const resend: Resend = new Resend(components.resend, {
@@ -350,8 +351,18 @@ export const sendWelcomeEmail = internalAction({
       projectId: args.projectId,
     });
 
-    // Build the summary points HTML
-    const summaryPointsHtml = TERMS_SUMMARY_POINTS.map((point) => `
+    // Read the immutable Order Form referenced by the agreement, not a later
+    // amendment that happens to be currently issued.
+    const orderForm = agreement?.orderFormId
+      ? await ctx.runQuery(internal.orderForms.internalGetById, {
+          orderFormId: agreement.orderFormId,
+        })
+      : null;
+    const summaryPoints = orderForm
+      ? buildOrderFormSummaryPoints(orderForm.spec)
+      : [];
+
+    const summaryPointsHtml = summaryPoints.map((point) => `
       <tr>
         <td style="padding: 12px 16px; border-bottom: 1px solid ${EMAIL_STYLES.border};">
           <strong style="color: ${EMAIL_STYLES.textDark};">${point.label}</strong>
@@ -362,10 +373,18 @@ export const sendWelcomeEmail = internalAction({
       </tr>
     `).join("");
 
-    const snapshotLink = agreement?.snapshotUrl 
+    const snapshotLink = agreement?.snapshotUrl
       ? `<p style="margin: 16px 0; font-size: 14px; color: ${EMAIL_STYLES.textMuted};">
            <a href="${agreement.snapshotUrl}" style="color: ${EMAIL_STYLES.primaryColor}; text-decoration: underline;">
-             View your signed agreement (Version ${agreement.termsVersion})
+             View your signed Master Services Agreement (Version ${agreement.msaVersion ?? agreement.termsVersion})
+           </a>
+         </p>`
+      : "";
+
+    const orderFormLink = agreement?.orderFormSnapshotUrl
+      ? `<p style="margin: 16px 0; font-size: 14px; color: ${EMAIL_STYLES.textMuted};">
+           <a href="${agreement.orderFormSnapshotUrl}" style="color: ${EMAIL_STYLES.primaryColor}; text-decoration: underline;">
+             View your signed Order Form ${agreement.orderFormVersion ?? ""}
            </a>
          </p>`
       : "";
@@ -393,6 +412,7 @@ export const sendWelcomeEmail = internalAction({
         </div>
         
         ${snapshotLink}
+        ${orderFormLink}
         
         ${getInfoBox("What's Next?", [
           "Log in to your portal to schedule your kickoff call",
@@ -412,10 +432,10 @@ export const sendWelcomeEmail = internalAction({
         </p>
       </div>
       
-      ${getEmailFooter(new Date().getFullYear(), `Agreement Version: ${agreement?.termsVersion || TERMS_VERSION}`)}
+      ${getEmailFooter(new Date().getFullYear(), `MSA ${agreement?.msaVersion ?? agreement?.termsVersion ?? MSA_VERSION}${agreement?.orderFormVersion ? ` \u2022 Order Form ${agreement.orderFormVersion}` : ""}`)}
     `);
 
-    const summaryText = TERMS_SUMMARY_POINTS.map(p => `${p.label}: ${p.value}`).join('\n');
+    const summaryText = summaryPoints.map(p => `${p.label}: ${p.value}`).join('\n');
     const portalUrl = `${getBaseUrl()}/portal`;
 
     await resend.sendEmail(ctx, {
@@ -423,7 +443,7 @@ export const sendWelcomeEmail = internalAction({
       to: args.userEmail,
       subject: `Welcome Aboard, ${args.userName}! Your Website Project Starts Now`,
       html: htmlContent,
-      text: `Welcome Aboard, ${args.userName}!\n\nThank you for choosing ${COMPANY_NAME}! Your subscription is now active, and we're excited to build something amazing for ${args.companyName}.\n\nOrder Summary:\n${summaryText}\n${agreement?.snapshotUrl ? `\nView your signed agreement: ${agreement.snapshotUrl}\n` : ''}\nWhat's Next:\n1. Log in to your portal to schedule your kickoff call\n2. Upload your brand assets (logo, photos, copy)\n3. We'll begin building your high-performance website\n\nGo to your portal: ${portalUrl}\n\nQuestions? Reply to this email or contact us at ${SUPPORT_EMAIL}.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
+      text: `Welcome Aboard, ${args.userName}!\n\nThank you for choosing ${COMPANY_NAME}! Your subscription is now active, and we're excited to build something amazing for ${args.companyName}.\n\nOrder Summary:\n${summaryText}\n${agreement?.snapshotUrl ? `\nView your signed Master Services Agreement: ${agreement.snapshotUrl}\n` : ''}${agreement?.orderFormSnapshotUrl ? `View your signed Order Form: ${agreement.orderFormSnapshotUrl}\n` : ''}\nWhat's Next:\n1. Log in to your portal to schedule your kickoff call\n2. Upload your brand assets (logo, photos, copy)\n3. We'll begin building your high-performance website\n\nGo to your portal: ${portalUrl}\n\nQuestions? Reply to this email or contact us at ${SUPPORT_EMAIL}.\n\n© ${new Date().getFullYear()} ${COMPANY_NAME}. All rights reserved.`,
       replyTo: [SUPPORT_EMAIL],
       headers: getListUnsubscribeHeaders(),
     });

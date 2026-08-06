@@ -8,6 +8,7 @@ import {
   projectStatusValidator,
   prospectDetailsStoredValidator,
   agreementValidator,
+  orderFormValidator,
   activityLogValidator,
   scheduledCallValidator,
   triageVerdictValidator,
@@ -69,6 +70,15 @@ export default defineSchema({
     .index("by_prospectId", ["prospectId"])
     .index("by_authUserId", ["authUserId"])
     .index("by_acceptedAt", ["acceptedAt"]),
+
+  /**
+   * Stage 4A: per-project commercial terms. Exactly one row per project may be
+   * "issued" at a time; issuing a new one supersedes the previous.
+   */
+  order_forms: defineTable(orderFormValidator)
+    .index("by_projectId", ["projectId"])
+    .index("by_projectId_and_status", ["projectId", "status"])
+    .index("by_status_and_updatedAt", ["status", "updatedAt"]),
 
   activity_log: defineTable(activityLogValidator)
     .index("by_projectId", ["projectId"])
@@ -305,6 +315,21 @@ export default defineSchema({
     .index("by_token", ["token"])
     .index("by_prospectId", ["prospectId"])
     .index("by_createdAt", ["createdAt"]),
+
+  /**
+   * Opens of an unlisted `/preview/<slug>` concept sent to an outbound lead.
+   *
+   * Unlike `public_audits.viewedAt`, this counts repeat opens on purpose: a
+   * lead re-opening the concept after a follow-up is the signal worth acting
+   * on, and a one-shot timestamp throws it away. Slugs come from
+   * `lib/lead-demos.ts`, so there is one row per demo, not per recipient.
+   */
+  preview_views: defineTable({
+    slug: v.string(),
+    firstViewedAt: v.number(),
+    lastViewedAt: v.number(),
+    viewCount: v.number(),
+  }).index("by_slug", ["slug"]),
 
   //errorReports - future
 });

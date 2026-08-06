@@ -6,6 +6,10 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { Id } from "./_generated/dataModel";
 import { authComponent } from "./auth";
+import {
+  validateStripePriceForMonthlyOrderForm,
+  validateStripePriceForSetupFee,
+} from "../lib/legal/stripePrice";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
   apiVersion: "2025-10-29.clover",
@@ -13,7 +17,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 const CHELSEA_BILLING_EMAIL = "chelsea_bordelon@yahoo.com";
 
-function getCheckoutPriceId(email: string | null | undefined): string {
+function getLegacyCheckoutPriceId(email: string | null | undefined): string {
   const isChelsea = email?.trim().toLowerCase() === CHELSEA_BILLING_EMAIL;
   const priceId = isChelsea
     ? process.env.STRIPE_CHELSEA_PRICE_ID
@@ -193,6 +197,74 @@ export const createCheckoutSession = action({
       throw new Error("Project must be awaiting payment before starting checkout");
     }
 
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL;
+    if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL or SITE_URL must be set");
+
+    const agreement = await ctx.runQuery(internal.agreement.internalGetLatestAgreementForProject, {
+      projectId: primaryProject._id,
+    });
+    if (!agreement) throw new Error("A signed agreement is required before checkout");
+
+    let priceId: string;
+    let setupPriceId: string | undefined;
+    if (agreement.orderFormId) {
+      const acceptedOrderForm = await ctx.runQuery(internal.orderForms.internalGetById, {
+        orderFormId: agreement.orderFormId,
+      });
+      if (
+        !acceptedOrderForm ||
+        acceptedOrderForm.projectId !== primaryProject._id ||
+        acceptedOrderForm.version !== agreement.orderFormVersion ||
+        acceptedOrderForm.issuedHash !== agreement.orderFormHash
+      ) {
+        throw new Error("The Order Form attached to this agreement could not be verified");
+      }
+      if (acceptedOrderForm.spec.pricing.collectionMethod !== "stripe_checkout") {
+        throw new Error(
+          "This agreement uses manual invoicing and does not have a self-serve checkout",
+        );
+      }
+      priceId = acceptedOrderForm.stripePriceId?.trim() ?? "";
+      if (!priceId) throw new Error("The accepted Order Form has no Stripe Price ID");
+
+      setupPriceId = acceptedOrderForm.setupStripePriceId?.trim() || undefined;
+      if (acceptedOrderForm.spec.pricing.setupFeeCents > 0 && !setupPriceId) {
+        throw new Error("The accepted Order Form has no one-time setup Stripe Price ID");
+      }
+
+      const [stripePrice, setupStripePrice] = await Promise.all([
+        stripe.prices.retrieve(priceId),
+        setupPriceId ? stripe.prices.retrieve(setupPriceId) : Promise.resolve(null),
+      ]);
+      const priceErrors = validateStripePriceForMonthlyOrderForm(
+        stripePrice,
+        priceId,
+        acceptedOrderForm.spec.pricing.monthlyCents,
+      );
+      if (setupPriceId && setupStripePrice) {
+        priceErrors.push(
+          ...validateStripePriceForSetupFee(
+            setupStripePrice,
+            setupPriceId,
+            acceptedOrderForm.spec.pricing.setupFeeCents,
+          ),
+        );
+      }
+      if (priceErrors.length > 0) {
+        console.error("[stripe] accepted Order Form does not match Stripe Price", {
+          projectId: primaryProject._id,
+          orderFormId: acceptedOrderForm._id,
+          priceId,
+          errors: priceErrors,
+        });
+        throw new Error(`Checkout configuration mismatch: ${priceErrors.join("; ")}`);
+      }
+    } else {
+      // Pre-4A agreements keep their original behavior. This retains Chelsea's
+      // signed record and $49 Price mapping without fabricating an Order Form.
+      priceId = getLegacyCheckoutPriceId(userEmail);
+    }
+
     type BillingCustomer = {
       _id: Id<"billingCustomers">;
       _creationTime: number;
@@ -214,26 +286,28 @@ export const createCheckoutSession = action({
       stripeCustomerId = ensured.stripeCustomerId;
     }
     if (!stripeCustomerId) throw new Error("Failed to ensure Stripe customer");
-    
-    const priceId = getCheckoutPriceId(userEmail);
-    
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.SITE_URL;
-    if (!baseUrl) throw new Error("NEXT_PUBLIC_BASE_URL or SITE_URL must be set");
 
-    const agreement = await ctx.runQuery(internal.agreement.internalGetLatestAgreementForProject, {
-      projectId: primaryProject._id,
-    });
+    const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+      { price: priceId, quantity: 1 },
+    ];
+    if (setupPriceId) {
+      lineItems.unshift({ price: setupPriceId, quantity: 1 });
+    }
 
     const session: Stripe.Checkout.Session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       mode: "subscription",
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: lineItems,
       metadata: {
         projectId: primaryProject._id,
         projectSlug: primaryProject.projectId,
         prospectId: primaryProject.prospectId ?? "",
         agreementId: agreement?._id ?? "",
         termsVersion: agreement?.termsVersion ?? "",
+        orderFormId: agreement?.orderFormId ?? "",
+        orderFormVersion: agreement?.orderFormVersion ?? "",
+        orderFormHash: agreement?.orderFormHash ?? "",
+        setupPriceId: setupPriceId ?? "",
       },
       subscription_data: {
         metadata: {
@@ -242,6 +316,10 @@ export const createCheckoutSession = action({
           prospectId: primaryProject.prospectId ?? "",
           agreementId: agreement?._id ?? "",
           termsVersion: agreement?.termsVersion ?? "",
+          orderFormId: agreement?.orderFormId ?? "",
+          orderFormVersion: agreement?.orderFormVersion ?? "",
+          orderFormHash: agreement?.orderFormHash ?? "",
+          setupPriceId: setupPriceId ?? "",
         },
       },
       success_url: `${baseUrl}/portal/paymentSuccess`,
@@ -258,31 +336,25 @@ export const syncAfterSuccessForSelf = action({
   handler: async (ctx) => {
     const user = await authComponent.getAuthUser(ctx);
     if (!user?._id) return null;
-    
-    const userId = user._id;
-    const mapping = await ctx.runQuery(internal.stripeHelpers.getCustomerMappingByUser, { userId });
-    let stripeCustomerId = mapping?.stripeCustomerId;
-    if (!stripeCustomerId) {
-      const ensured = await ctx.runAction(internal.stripeActions.ensureCustomerForUser, { 
-        userId,
-        email: user.email,
-      });
-      stripeCustomerId = ensured.stripeCustomerId;
+
+    const mapping = await ctx.runQuery(
+      internal.stripeHelpers.getCustomerMappingByUser,
+      { userId: user._id },
+    );
+    if (!mapping?.stripeCustomerId) {
+      // Visiting the success URL is not evidence of payment and must not create
+      // billing state. A legitimate Checkout attempt creates this mapping
+      // before redirecting to Stripe.
+      throw new Error("No Stripe checkout exists for this account");
     }
-    if (!stripeCustomerId) {
-      throw new Error("Failed to get or create Stripe customer ID");
-    }
-    await ctx.runAction(internal.stripeActions.syncStripeCustomer, { stripeCustomerId });
-    const project = await ctx.runQuery(internal.projects.internalGetLatestProjectByAuthUser, {
-      authUserId: userId,
+
+    // `syncStripeCustomer` retrieves Stripe state and advances only the project
+    // named in an active/trialing subscription's server-controlled metadata.
+    // Never add a status fallback here: this action is callable by any signed-in
+    // client simply by visiting /portal/paymentSuccess.
+    await ctx.runAction(internal.stripeActions.syncStripeCustomer, {
+      stripeCustomerId: mapping.stripeCustomerId,
     });
-    if (project && project.projectStatus === "AWAITING_PAYMENT") {
-      await ctx.runMutation(internal.projects.internalSetStatusIfEligible, {
-        projectId: project._id,
-        status: "AWAITING_ASSETS",
-        expectedCurrentStatus: "AWAITING_PAYMENT",
-      });
-    }
     return null;
   },
 });

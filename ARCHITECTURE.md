@@ -23,7 +23,7 @@ Client sites are built bespoke. `../agency-template/` is **fully retired as of 2
 
 Wired in `convex.config.ts`:
 
-- `@convex-dev/agent` — AI agent framework (used by `convex/onboarding/agent.ts`).
+- `@convex-dev/agent` — AI agent framework used by lead triage and marketing workflows.
 - `@convex-dev/better-auth` — Authentication.
 - `@convex-dev/resend` — Email sending.
 - `@convex-dev/rate-limiter` — Rate limiting for HTTP endpoints.
@@ -38,7 +38,6 @@ Wired in `convex.config.ts`:
 | Route | Purpose | Auth |
 |---|---|---|
 | `/` | Marketing site (landing) | Public |
-| `/onboarding` | Prospect intake flow | Public |
 | `/audit/[token]` | Tokenized public audit report (redirects from `/demo/[token]`) | Public, token-gated |
 | `/portal/agreement` | Clickwrap first step (gated by magic link) | Magic link |
 | `/portal/success` | Post-checkout Stripe sync + redirect | Magic link |
@@ -160,7 +159,9 @@ Per request (cheapest rejections first):
   - `smsPerProject` — 20/day; SMS is **allow-verdict only**.
 - Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request.
 - Events use one project-scoped ceiling, `analyticsProjectFallback` (120/min), shared by every visitor on the project. There is no per-visitor tier, so this is sized as a burst guard rather than a cost control — a rejected event spends nothing, and the real failure mode is silently undercounting a client's busiest day. Worst case is an inaccurate pageview/click count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries; Stage 3 also stores coarse `referrerClass` (organic/social/direct/other).
-- **Unauthenticated public marketing surfaces carry global ceilings** (`onboardingSessionGlobal` 200/hr, `onboardingPlanGlobal` 100/day, `publicAuditGlobalDaily` 200/day). The key must be global: a per-session or per-host key is defeated by rotating the value, which is how the original per-session onboarding throttle failed to cap Groq spend.
+- **Unauthenticated paid public marketing surfaces carry global ceilings.**
+  `/onboarding` and its AI generator are retired; `publicAuditGlobalDaily`
+  remains because audits spend Firecrawl, PageSpeed, and Groq.
 - Threshold alerts are claimed once per project+limit window before scheduling (`thresholdAlertPerProjectLimit`), then persist one `hub.threshold_alert` before the independent global delivery cap (`adminOpsAlertGlobal`). `hub.threshold_alert_delivered` is written only after a successful email. Daily accepted, 429-by-bucket, and paused-fan-out totals are aggregated in `hub_operational_counters` so hostile traffic cannot create unbounded event rows.
 
 Stage 2 closed the unauthenticated paid-fan-out hole by removing every

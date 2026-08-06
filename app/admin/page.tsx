@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { StickyAuth } from "@/components/StickyAuth";
 import { ProjectCredentialsPanel } from "@/components/admin/ProjectCredentialsPanel";
+import { OrderFormPanel } from "@/components/admin/OrderFormPanel";
 
 type ProspectDetails = Doc<"prospects">["details"];
 
@@ -178,7 +179,9 @@ export default function AdminPage() {
 
 function ProspectsTab() {
   const prospects = useQuery(api.admin.listProspects);
+  const projectReadiness = useQuery(api.admin.listProspectProjectReadiness);
   const createProspect = useMutation(api.admin.createProspect);
+  const createProject = useMutation(api.admin.createProjectForProspect);
   const updateProspect = useMutation(api.admin.updateProspectDetails);
   const logMagicLinkSent = useMutation(api.admin.logMagicLinkSent);
 
@@ -186,6 +189,7 @@ function ProspectsTab() {
   const [editingProspectId, setEditingProspectId] = useState<string | null>(null);
   const [formData, setFormData] = useState<ProspectDetails>(emptyDetails);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [creatingProjectId, setCreatingProjectId] = useState<string | null>(null);
   const [cooldowns, setCooldowns] = useState<Record<string, number>>({});
   
   // State for duplicate warning confirmation
@@ -297,7 +301,24 @@ function ProspectsTab() {
     }));
   };
 
+  /**
+   * The Order Form gate applies to the *signing* invite only. An existing
+   * client past AWAITING_AGREEMENT already signed under whatever terms were in
+   * force, and `orderForms.issue` refuses to issue against a signed agreement —
+   * so gating their sign-in link on an issued form would disable it forever.
+   */
+  const needsOrderFormBeforeInvite = (prospectId: string): boolean => {
+    const readiness = projectReadiness?.find((row) => row.prospectId === prospectId);
+    if (!readiness) return true;
+    if (readiness.projectStatus !== "AWAITING_AGREEMENT") return false;
+    return !readiness.hasIssuedOrderForm;
+  };
+
   const handleSendMagicLink = async (prospect: Doc<"prospects">) => {
+    if (needsOrderFormBeforeInvite(prospect._id)) {
+      alert("Create the project and issue its Order Form before inviting the client.");
+      return;
+    }
     const cooldownKey = prospect._id;
     if (cooldowns[cooldownKey] && cooldowns[cooldownKey] > 0) {
       return;
@@ -343,6 +364,21 @@ function ProspectsTab() {
       console.error("Failed to send magic link:", error);
       setCooldowns((prev) => ({ ...prev, [cooldownKey]: 0 }));
       alert("Failed to send magic link. Please try again.");
+    }
+  };
+
+  const handleCreateProject = async (prospect: Doc<"prospects">) => {
+    setCreatingProjectId(prospect._id);
+    try {
+      await createProject({ prospectId: prospect._id });
+      alert(
+        "Project created with an editable $199/month Order Form draft. Review and issue it in the Projects tab before sending the magic link.",
+      );
+    } catch (error) {
+      console.error("Failed to create project:", error);
+      alert(error instanceof Error ? error.message : "Failed to create project.");
+    } finally {
+      setCreatingProjectId(null);
     }
   };
 
@@ -541,9 +577,27 @@ function ProspectsTab() {
                   <p className="text-sm text-[var(--muted-foreground)]">{prospect.sessionId}</p>
                 </div>
                 <div className="text-right flex gap-2 justify-end">
+                  {!projectReadiness?.some((row) => row.prospectId === prospect._id) && (
+                    <button
+                      onClick={() => handleCreateProject(prospect)}
+                      disabled={creatingProjectId === prospect._id || projectReadiness === undefined}
+                      className="btn-secondary px-4 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {creatingProjectId === prospect._id ? "Creating…" : "Create Project"}
+                    </button>
+                  )}
                   <button
                     onClick={() => handleSendMagicLink(prospect)}
-                    disabled={cooldowns[prospect._id] > 0}
+                    disabled={
+                      cooldowns[prospect._id] > 0 ||
+                      projectReadiness === undefined ||
+                      needsOrderFormBeforeInvite(prospect._id)
+                    }
+                    title={
+                      needsOrderFormBeforeInvite(prospect._id)
+                        ? "Issue the project's Order Form before inviting the client"
+                        : "Send this client a sign-in link"
+                    }
                     className="btn-cta px-4 py-2 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {cooldowns[prospect._id] > 0
@@ -557,9 +611,11 @@ function ProspectsTab() {
                     Edit
                   </button>
                   <p className="text-sm font-medium text-[var(--muted-foreground)] self-center">
-                    {prospect.planGenerationInProgress
-                      ? "🔄 Generating Plan..."
-                      : "✓ Ready"}
+                    {!projectReadiness?.some((row) => row.prospectId === prospect._id)
+                      ? "Prospect only"
+                      : needsOrderFormBeforeInvite(prospect._id)
+                        ? "Order Form draft"
+                        : "✓ Ready to invite"}
                   </p>
                 </div>
               </div>
@@ -1002,6 +1058,7 @@ function ProjectsTab() {
                       </div>
                       <div className="pt-2 border-t border-[hsl(var(--border))]">
                         <ProjectCredentialsPanel projectId={project._id} />
+                        <OrderFormPanel projectId={project._id} />
                       </div>
                       <div className="pt-2 border-t border-[hsl(var(--border))] space-y-2">
                         <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">
@@ -1349,6 +1406,7 @@ function ProjectsTab() {
                               </div>
                               <div className="pt-2 border-t border-[hsl(var(--border))]">
                                 <ProjectCredentialsPanel projectId={project._id} />
+                                <OrderFormPanel projectId={project._id} />
                               </div>
                               <div className="pt-2 border-t border-[hsl(var(--border))] space-y-2">
                                 <p className="text-xs font-medium text-[var(--muted-foreground)] uppercase tracking-wide">

@@ -13,14 +13,14 @@ import { authClient } from "@/lib/auth-client";
  * This provider wraps the app with both Convex and Better Auth functionality.
  * 
  * Key configuration:
- * - expectAuth: false - Allows anonymous onboarding queries to run without authentication
- *   (Pre-pay queries do not require auth, only portal queries do)
+ * - expectAuth: false - Public marketing queries can run without authentication;
+ *   protected portal queries still enforce auth server-side.
  * - initialToken: Pre-fetched server-side auth token to avoid client-side hydration delays
  *   (Fixes magic link redirect issues on mobile browsers where session sync could stall)
  */
 const convex = new ConvexReactClient(process.env.NEXT_PUBLIC_CONVEX_URL!, {
   // Don't pause queries waiting for authentication
-  // This is critical for anonymous onboarding flow
+  // Public marketing surfaces must not pause while auth initializes.
   expectAuth: false,
 });
 

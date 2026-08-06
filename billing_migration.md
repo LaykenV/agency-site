@@ -168,15 +168,49 @@ adapter. Do not fork or patch the component as part of this project.
 - Checkout supports **deposit/setup fee + monthly**, which is how the expected
   mobile app and IDX engagements are priced. Stripe Checkout accepts a one-time
   price in `line_items` alongside the recurring price while still in
-  `mode: "subscription"`; the one-time amount lands on the first invoice. Today
-  `stripeActions.ts:229` hardcodes a single recurring line item, so the offering
-  needs an optional one-time price alongside its recurring one.
+  `mode: "subscription"`; the one-time amount lands on the first invoice. The
+  existing writer gained this mixed-cart shape on 2026-08-06 by binding both
+  Stripe Price IDs to the accepted Order Form. Stage 6 keeps the same behavior
+  when it moves the writer into the Stripe component.
 
   Milestone invoicing — for example 30% on design approval, 30% on beta, 40% on
   launch — is **out of scope**. That is Stripe Invoices rather than Checkout:
   different objects, different webhook events, and a new portal billing surface.
   Do not design for it speculatively. If a signed deal requires it, scope it as
   its own stage.
+
+  **Optional, unscheduled: deferred monthly start.** A build-then-host
+  engagement — $4,500 app build plus $99/month — currently starts the
+  subscription at checkout, so the client is billed for hosting during the
+  build, before anything is live. Stripe's answer is
+  `subscription_data.trial_period_days`; the one-time line item still charges on
+  the initial invoice while the recurring rides at $0 through the trial (prove
+  this in the §4 sandbox spike before relying on it — it is the one assumption
+  here that has not been executed).
+
+  This is **not** blocked on the component and gains nothing by waiting for it.
+  `trial_period_days` is a Stripe API parameter, so the component would only
+  pass it through. The real work is ours either way:
+
+  1. `monthlyStartsAfterDays?: number` on `OrderFormSpec` and
+     `orderFormSpecValidator`.
+  2. Render it in the fees section of the canonical HTML. **Required, not
+     cosmetic** — when recurring billing starts is a commercial term the client
+     accepts, and the document is the hashed record of it. A document reading
+     "$99 per month" against a subscription that waits 90 days is an inaccurate
+     signed record.
+  3. Pass it into `subscription_data` in `stripeActions.createCheckoutSession`,
+     and into the component's equivalent after Stage 6.
+
+  Already compatible: the subscription webhook advances on
+  `sub.status === "active" || "trialing"`, so a trialing subscription still
+  moves `AWAITING_PAYMENT → AWAITING_ASSETS` with no change.
+
+  Zero-code interim, good for exactly one month: fold the first month into the
+  setup fee — $4,401 setup plus $99/month bills $4,500 at checkout. State it in
+  the Order Form `notes` field, because a client reading a bare "$4,401" on
+  their signed document will ask. It defers one month, not the whole build, so
+  a build running past ~30 days still bills hosting against nothing live.
 
   ```ts
   subscriptionMetadata: {

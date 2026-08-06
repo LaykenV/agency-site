@@ -37,7 +37,6 @@ export function GlobalHeader() {
       !pathname.startsWith("/admin") &&
       !pathname.startsWith("/blog") &&
       !pathname.startsWith("/legal") &&
-      !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/services")
     ) ||
     // Match city+industry pages like /lafayette/plumbers (but not protected routes)
@@ -47,7 +46,6 @@ export function GlobalHeader() {
       !pathname.startsWith("/admin") &&
       !pathname.startsWith("/blog") &&
       !pathname.startsWith("/legal") &&
-      !pathname.startsWith("/onboarding") &&
       !pathname.startsWith("/services")
     );
   const onLanding = isGradientPage;

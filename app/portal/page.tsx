@@ -9,7 +9,6 @@ import {
 } from "convex/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { api } from "@/convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { ONBOARDING_CAL_LINK } from "@/lib/config";
@@ -139,7 +138,7 @@ function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boo
       return "Checking your account...";
     }
     if (status === "unknown") {
-      return "We couldn't find that email. Start onboarding or schedule a call.";
+      return "We couldn't find that email. Schedule a call and we'll get you set up.";
     }
     if (status === "error") {
       return errorMessage;
@@ -191,10 +190,7 @@ function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boo
         )}
 
         {status === "unknown" && (
-          <div className="mt-6 grid gap-2 sm:grid-cols-2">
-            <Button asChild variant="outline">
-              <Link href="/onboarding">Get Your Tailored Plan</Link>
-            </Button>
+          <div className="mt-6">
             <Button asChild variant="outline">
               <a href={ONBOARDING_CAL_LINK}>Schedule a call</a>
             </Button>
@@ -275,12 +271,11 @@ function AuthenticatedPortalRedirect() {
         <div className="surface rounded-xl p-6">
           <h1 className="text-xl md:text-2xl font-semibold text-[var(--foreground)]">Welcome to your portal</h1>
           <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-            We couldn&apos;t find an active project yet. If you recently signed up, check your email for your
-            agreement link or start the onboarding flow below.
+            We couldn&apos;t find an active project for this account. Projects are prepared by
+            Acadiana Web Design before a client is invited.
           </p>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-            <Button asChild variant="outline"><Link href="/onboarding">Start onboarding</Link></Button>
-            <Button asChild variant="outline"><a href="https://cal.com/acadianawebdesign">Schedule a call</a></Button>
+          <div className="mt-4">
+            <Button asChild variant="outline"><a href={ONBOARDING_CAL_LINK}>Schedule a call</a></Button>
           </div>
         </div>
       </section>
@@ -294,4 +289,3 @@ function AuthenticatedPortalRedirect() {
     </div>
   );
 }
-

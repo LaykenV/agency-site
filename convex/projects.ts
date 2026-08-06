@@ -1,4 +1,9 @@
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import {
+  internalMutation,
+  internalQuery,
+  mutation,
+  query,
+} from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
 import {
@@ -31,7 +36,12 @@ function normalizeNotificationPhone(input: string): string | undefined {
   return normalized;
 }
 
-export const findOrCreateProjectForProspect = mutation({
+/**
+ * Attach an admin-created project to the authenticated client account whose
+ * verified email matches the prospect. This may claim a project, but it never
+ * creates one; project creation is an admin-only action.
+ */
+export const claimProjectForProspect = mutation({
   args: {
     prospectId: v.id("prospects"),
   },
@@ -39,17 +49,15 @@ export const findOrCreateProjectForProspect = mutation({
   handler: async (ctx, args) => {
     const authedUser = await authComponent.getAuthUser(ctx);
     if (!authedUser?._id) {
-      console.warn("[projects] findOrCreateProjectForProspect unauthenticated call");
+      console.warn("[projects] claimProjectForProspect unauthenticated call");
       throw new Error("Authentication required");
     }
-
-    const authUserId = authedUser._id;
 
     const prospect = await ctx.db.get(args.prospectId);
     if (!prospect) {
       console.error("[projects] prospect not found", {
         prospectId: args.prospectId,
-        authUserId,
+        authUserId: authedUser._id,
       });
       throw new Error("Prospect not found");
     }
@@ -59,7 +67,7 @@ export const findOrCreateProjectForProspect = mutation({
 
     if (!normalizedUserEmail || normalizedUserEmail !== normalizedProspectEmail) {
       console.warn("[projects] prospect email mismatch", {
-        authUserId,
+        authUserId: authedUser._id,
         userEmail: authedUser.email,
         prospectEmail: prospect.details.contactEmail,
         prospectId: args.prospectId,
@@ -67,81 +75,29 @@ export const findOrCreateProjectForProspect = mutation({
       throw new Error("Prospect does not belong to this account");
     }
 
-    // First, check for ANY existing non-archived project for this user (prevents duplicate projects)
-    // This is a safety guard for when the user has multiple prospects with the same email
-    let anyExistingProject: Doc<"projects"> | null = null;
-    let exactMatch: Doc<"projects"> | null = null;
-    
-    for await (const project of ctx.db
+    const projects = await ctx.db
       .query("projects")
-      .withIndex("by_authUserId", (q) => q.eq("authUserId", authUserId))) {
-      // Skip archived projects
-      if (project.projectStatus === "ARCHIVED") {
-        continue;
-      }
-      
-      // Track first non-archived project as fallback
-      if (!anyExistingProject) {
-        anyExistingProject = project;
-      }
-      
-      // Check for exact prospect match
-      if (project.prospectId && project.prospectId === args.prospectId) {
-        exactMatch = project;
-        break;
-      }
+      .withIndex("by_prospectId", (q) => q.eq("prospectId", args.prospectId))
+      .collect();
+    const project = projects.find((row) => row.projectStatus !== "ARCHIVED");
+    if (!project) {
+      throw new Error(
+        "This project has not been created yet. Please contact Acadiana Web Design.",
+      );
     }
 
-    // If we found an exact match (same prospect), return it
-    if (exactMatch) {
-      console.log("[projects] found existing project with matching prospect", {
-        projectId: exactMatch._id,
-        authUserId,
-        prospectId: args.prospectId,
-      });
-      return exactMatch._id;
+    if (project.authUserId === authedUser._id) return project._id;
+
+    const pendingOwner = `pending:${args.prospectId}`;
+    if (project.authUserId !== pendingOwner) {
+      throw new Error("This project is already attached to another account");
     }
 
-    // If user has any existing non-archived project (even with different prospect), return it
-    // This prevents creating duplicate projects when multiple prospects exist for the same email
-    if (anyExistingProject) {
-      console.log("[projects] user already has a project, returning existing (different prospect)", {
-        projectId: anyExistingProject._id,
-        authUserId,
-        requestedProspectId: args.prospectId,
-        existingProspectId: anyExistingProject.prospectId,
-      });
-      return anyExistingProject._id;
-    }
-
-    const now = Date.now();
-    const projectId = crypto.randomUUID();
-
-    const newProjectId = await ctx.db.insert("projects", {
-      authUserId,
-      projectId,
-      prospectId: prospect._id,
-      projectStatus: "AWAITING_AGREEMENT",
-      createdAt: now,
-      updatedAt: now,
-    } as const);
-
-    await ctx.db.insert("activity_log", {
-      projectId: newProjectId,
-      prospectId: prospect._id,
-      actor: "system",
-      kind: "project_created",
-      payload: { authUserId },
-      createdAt: now,
+    await ctx.db.patch(project._id, {
+      authUserId: authedUser._id,
+      updatedAt: Date.now(),
     });
-
-    console.log("[projects] created new project", {
-      projectId: newProjectId,
-      authUserId,
-      prospectId: prospect._id,
-    });
-
-    return newProjectId;
+    return project._id;
   },
 });
 

@@ -12,8 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { StickyAuth } from "@/components/StickyAuth";
+import { PreviewsPanel } from "@/components/admin/PreviewsPanel";
 
-type Tab = "searches" | "leads" | "followups";
+type Tab = "searches" | "leads" | "followups" | "previews";
 
 type LeadStatusFilter =
   | "all"
@@ -680,7 +681,7 @@ function MarketingAdminContent() {
         {/* Tabs */}
         <div className="mb-8 border-b border-border">
           <nav className="flex gap-1 overflow-x-auto" aria-label="Marketing tabs">
-            {(["searches", "leads", "followups"] as const).map((tab) => (
+            {(["searches", "leads", "followups", "previews"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -1612,6 +1613,9 @@ function MarketingAdminContent() {
             ) : null}
           </div>
         ) : null}
+
+        {/* PREVIEWS TAB */}
+        {activeTab === "previews" ? <PreviewsPanel /> : null}
       </div>
     </div>
   );

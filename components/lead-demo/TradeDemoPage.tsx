@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Phone } from "lucide-react";
 import type { LeadDemoTradeField } from "@/lib/lead-demos";
+import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import styles from "./trade-demo.module.css";
 
 type TradeDemoPageProps = {
@@ -13,7 +14,7 @@ export function TradeDemoPage({ demo }: TradeDemoPageProps) {
     <div className={`lead-theme-trade ${styles.page}`}>
       <aside className={styles.conceptBar} aria-label="Website concept notice">
         <span>Unlisted website concept for {demo.businessName}</span>
-        <Link className={styles.conceptBarLink} href="/onboarding">
+        <Link className={styles.conceptBarLink} href={ONBOARDING_CAL_LINK}>
           Want this live? From $199/mo, no setup fee
         </Link>
       </aside>
@@ -159,7 +160,7 @@ export function TradeDemoPage({ demo }: TradeDemoPageProps) {
               $0 down — hosting, domain, unlimited edits, and support included
               with a 12-month commitment. Launch-ready in days, not months.
             </p>
-            <Link className={styles.awdCta} href="/onboarding">
+            <Link className={styles.awdCta} href={ONBOARDING_CAL_LINK}>
               <span className={styles.actionLabel}>See how it works</span>
               <span aria-hidden="true" className={styles.actionArrow}>
                 →

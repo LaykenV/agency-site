@@ -62,7 +62,9 @@ function PaymentSuccessContent() {
         router.push("/portal");
       } catch (err) {
         console.error("Error syncing subscription:", err);
-        setError("Failed to sync subscription. Redirecting anyway...");
+        setError(
+          "We could not verify an active subscription. Your project remains awaiting payment.",
+        );
         setTimeout(() => {
           router.push("/portal");
         }, 2000);
@@ -83,7 +85,7 @@ function PaymentSuccessContent() {
               ⚠️
             </span>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Payment Successful</h1>
+          <h1 className="text-2xl font-bold mb-2">Payment not verified</h1>
           <p className="text-[var(--secondary)] mb-4">{error}</p>
           <div className="flex items-center justify-center gap-2 text-sm text-[var(--secondary)]">
             <Loader2 className="h-4 w-4 animate-spin text-[var(--primary)]" />
@@ -176,4 +178,3 @@ function PaymentSuccessContent() {
     </section>
   );
 }
-

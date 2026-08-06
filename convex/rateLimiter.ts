@@ -103,34 +103,8 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
 
   // --- Unauthenticated public marketing surfaces ---
   //
-  // These predate Stage 1A and carry the same risk its lead ceilings closed:
-  // anyone can reach them, and each accepted request spends money (Groq for
-  // onboarding plans; Firecrawl + PageSpeed + Groq for audits). Global keys are
-  // the point — a per-session or per-host key is defeated by rotating the value.
-
-  /**
-   * Global ceiling on new onboarding sessions. `initSession` is an
-   * unauthenticated insert, so without this a script can grow the `prospects`
-   * table without bound.
-   */
-  onboardingSessionGlobal: {
-    kind: "fixed window",
-    rate: 200,
-    period: HOUR,
-  },
-
-  /**
-   * Global ceiling on onboarding plan generation (Groq).
-   *
-   * The per-session throttle in `sessions.generatePlan` is not a cost control:
-   * `initSession` mints a fresh session on demand, so a caller rotating
-   * sessions bypasses it entirely. This is the ceiling that actually holds.
-   */
-  onboardingPlanGlobal: {
-    kind: "fixed window",
-    rate: 100,
-    period: DAY,
-  },
+  // Public audits spend Firecrawl + PageSpeed + Groq. Global keys are the
+  // point — a per-session or per-host key is defeated by rotating the value.
 
   marketingAuditView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
 
@@ -147,5 +121,19 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     kind: "fixed window",
     rate: 200,
     period: DAY,
+  },
+
+  /**
+   * Global ceiling on preview-open recording.
+   *
+   * `previewViews.recordView` spends no money, but it is an unauthenticated
+   * write reachable by anyone with a demo slug. A per-slug key would not hold
+   * — the slug is the thing the caller controls. Real volume is a handful of
+   * opens per demo, so this is generous by orders of magnitude.
+   */
+  previewViewGlobal: {
+    kind: "fixed window",
+    rate: 500,
+    period: HOUR,
   },
 });

@@ -3,6 +3,7 @@ import Link from "next/link";
 import type { CSSProperties } from "react";
 import { MapPin, MessageCircle, Phone } from "lucide-react";
 import type { LeadDemoSoftService } from "@/lib/lead-demos";
+import { ONBOARDING_CAL_LINK } from "@/lib/config";
 import styles from "./lead-demo.module.css";
 
 type SoftServiceDemoPageProps = {
@@ -18,7 +19,7 @@ export function SoftServiceDemoPage({ demo }: SoftServiceDemoPageProps) {
     <div className={styles.page}>
       <aside className={styles.conceptBar} aria-label="Website concept notice">
         <span>Unlisted website concept for {demo.businessName}</span>
-        <Link className={styles.conceptBarLink} href="/onboarding">
+        <Link className={styles.conceptBarLink} href={ONBOARDING_CAL_LINK}>
           Want this live? From $199/mo, no setup fee
         </Link>
       </aside>
@@ -225,7 +226,7 @@ export function SoftServiceDemoPage({ demo }: SoftServiceDemoPageProps) {
               $0 down — hosting, domain, unlimited edits, and support included
               with a 12-month commitment. Launch-ready in days, not months.
             </p>
-            <Link className={styles.awdCta} href="/onboarding">
+            <Link className={styles.awdCta} href={ONBOARDING_CAL_LINK}>
               See how it works
             </Link>
           </div>

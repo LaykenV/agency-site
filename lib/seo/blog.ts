@@ -103,7 +103,7 @@ The result? Sites that load in under a second and score 95+ on PageSpeed.
 
 In Lafayette's competitive local market, a slow website is losing you money. Every second of delay is a customer who called someone else.
 
-Ready to see how fast your site could be? [Schedule a free 15-minute call](/onboarding) and we'll audit your current site's speed.
+Ready to see how fast your site could be? [Schedule a free 15-minute call](https://cal.com/layken-varholdt/agency-prospect?utm_source=site&utm_medium=blog) and we'll audit your current site's speed.
 `,
   },
   {
@@ -170,7 +170,7 @@ One Lafayette landscaper came to us getting 2-3 calls per month from Facebook. A
 
 A Facebook page is a nice-to-have. A website is a must-have for any Acadiana service business that wants to grow.
 
-[Schedule a free call](/onboarding) to see what a professional website can do for your business.
+[Schedule a free call](https://cal.com/layken-varholdt/agency-prospect?utm_source=site&utm_medium=blog) to see what a professional website can do for your business.
 `,
   },
   {
@@ -257,7 +257,7 @@ For most Lafayette service businesses, aim for:
 - **5+ rating**: Ideally 4.7 or higher
 - **1 new review**: Per week to show you're active
 
-[Get a website that showcases your reviews](/onboarding) and helps you get more.
+[Schedule a free call](https://cal.com/layken-varholdt/agency-prospect?utm_source=site&utm_medium=blog) to get a website that showcases your reviews and helps you get more.
 `,
   },
 ];
