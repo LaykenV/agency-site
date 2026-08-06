@@ -3,12 +3,12 @@
 Status: **Stages 0, 1A, 2, and the configured Stage 3 surfaces are complete in
 production.** Stage 3 is verified end to end on the playground, TB Tree, and
 Chelsea Social Co. All About Towing is live as a website but still has no Hub
-project or telemetry enabled; it sends neither v1 nor v2 events. A post-Stage-3 hardening pass is **written and
-locally verified but not yet deployed** — see § 5. Next up: deploy that pass,
-then Stage 4 (offering registry).
+project or telemetry enabled; it sends neither v1 nor v2 events. The
+post-Stage-3 hardening pass shipped in `14bd600` and is production-smoked — see
+§ 5. Next up: Stage 4 (offering registry).
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (post-Stage-3 hardening pass; awaiting deploy)
+Last reviewed: 2026-08-06 (post-Stage-3 hardening pass deployed and smoked)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -559,9 +559,8 @@ Verification: `bun test` (32 pass), `npx tsc --noEmit`,
 `git diff --check` all clean. The build retains the documented dynamic-server
 warnings from layouts that call `getToken()` / `headers`.
 
-**Deploy gate — not yet production-smoked.** Only one change in this pass is
-outward-facing, and it is the one that can break a live site. Before deploying,
-confirm the v1 pixel is genuinely cold:
+**Deployed and production-smoked 2026-08-06 (`14bd600`).** The outward-facing
+pixel retirement passed its cold-route gate before deployment:
 
 ```bash
 npx convex logs --prod | grep -i "analytics/pixel"
@@ -571,21 +570,26 @@ Every live spoke moved to `/api/v2/events` during Stage 3, so this should be
 silent. If any project is still posting to the pixel, fix that spoke before
 deploying — the route will 404 afterward.
 
-After deploying, in this order:
+Production evidence:
 
-- [ ] Load a page on each live spoke → pageview lands in that project's portal
-      **Site activity**. This proves the removed pixel was not load-bearing.
+- [x] Both retired pixel aliases return `404`; bad v2 event/lead credentials
+      return `401`; a valid publishable credential with the wrong Origin
+      returns `403`.
+- [x] Controlled page loads landed in **Site activity**: Chelsea 27 → 28,
+      TB Tree 39 → 40, and playground 28 → 29.
 - [ ] All About Towing remains telemetry-silent until it can receive a distinct
       Hub project without violating the current one-project-per-user portal
       model. Do not claim a click-counter smoke test before that project exists.
-- [ ] Submit a lead through TB Tree and Chelsea → stored, triaged, notified;
-      secret credential `lastUsedAt` updates. Confirms `projectAccess.ts` did
-      not disturb the lead path.
-- [ ] Sign in to a client portal → leads, metrics, and edit requests all render.
-      This is the real test of the `requireProjectOwner` refactor: a mistake
-      there shows up as an empty portal, not an error.
-- [ ] Run one `/audit` submission → completes, and a second within the minute
-      is refused by the burst guard rather than the new daily cap.
+- [x] Signed-in owned portal renders leads, metrics, and support/edit-request
+      state after the `projectAccess.ts` refactor, with no browser errors.
+- [x] Existing onboarding session hydrates through the new
+      sessionId + resumeToken read contract; the auth-error page is generic and
+      exposes no prospect PII.
+- [ ] A fresh live TB Tree/Chelsea lead was not created during this release
+      smoke because it would notify the clients. Bad bearer rejection is
+      verified; the next organic lead is the non-disruptive happy-path proof.
+- [ ] A paid `/audit` run was not triggered solely for release QA. Local tests
+      cover the limiter wiring; observe the next real audit submission.
 
 Rollback is `git revert` + redeploy; no schema or data migration is involved.
 
