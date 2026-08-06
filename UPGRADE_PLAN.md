@@ -127,9 +127,12 @@ to close the authentication hole.
 
 ### Contingency — Stripe metadata bridge
 
-**Not scheduled (decided 2026-08-05).** `checkout.sessions.create`
-(`stripeActions.ts:227`) writes no project reference, so subscriptions are born
-unattributed. The fix is a few lines with no dependency or schema change:
+**Not scheduled (decided 2026-08-05).** The current legacy
+`checkout.sessions.create` (`stripeActions.ts:227`) already writes
+`projectId`, `projectSlug`, `prospectId`, `agreementId`, and `termsVersion` to
+both Checkout session metadata and `subscription_data.metadata`. It does not
+yet write the canonical Stage 6 `orgId: project:<projectId>` shape. The target
+Stage 6 writer remains:
 
 ```ts
 subscription_data: {
@@ -142,10 +145,11 @@ attributing subscriptions created *between now and Stage 6* — and no client wi
 be signed in that window. Stage 6's Checkout writer sets this metadata anyway,
 and the existing live subscriptions need a hand-backfill either way.
 
-**Trigger that reinstates it:** a client signs before Stage 6 lands. Ship this
-before their checkout. The failure mode is silent — an unattributed subscription
-looks completely normal until Stage 6 reconciliation — so do not rely on noticing
-it later.
+**Trigger that reinstates it:** a client signs before Stage 6 lands and requires
+the canonical `orgId` mapping before checkout. Otherwise, do not add a bridge:
+the existing metadata is attributable, no client is expected to sign in the
+interim, and Stage 6 still requires hand reconciliation/backfill of every live
+subscription.
 
 ### Stage 2 — WAAS authenticated v2
 
@@ -545,15 +549,18 @@ Consequences:
 ### Unchanged product state
 
 - `@convex-dev/stripe` is not installed.
-- Chelsea and TB Tree are the two live client sites using unauthenticated legacy
-  lead endpoints. Chelsea posts from the browser; TB Tree posts from a Server
-  Action without `Origin`.
+- Chelsea and TB Tree are live client sites using authenticated v2 lead routes.
+  Chelsea's browser form posts to its same-origin Vercel Function; TB Tree posts
+  from a Server Action. The Hub retains v1 analytics for compatibility, while
+  current production spokes use authenticated v2 events.
 - Every project is implicitly `waas_local`; `serviceType` does not exist.
 - Chelsea's price selection is a hardcoded email branch.
 - One project per user is enforced by the fallback guard in `projects.ts`.
 - Public `/onboarding` is live in code but retired by product decision.
 - `checkout.sessions.create` is `mode: "subscription"` with one recurring line
-  item and no subscription metadata (`stripeActions.ts:227-238`).
+  item and current project/agreement metadata in both the session and
+  `subscription_data`; it does not yet support Stage 6's deposit/setup + monthly
+  shape or canonical `orgId` mapping (`stripeActions.ts:227-245`).
 - Terms are a single global `TERMS_VERSION` with `$199` in the prose
   (`lib/legal/terms.ts:22,40,118`); `agreementValidator.method` is
   `v.literal("clickwrap")`.
