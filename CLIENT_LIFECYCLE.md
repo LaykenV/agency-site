@@ -9,11 +9,10 @@ The lifecycle spans two repos:
 
 Stages 0–8 happen in `agency-site`. Stages 9–11 cross over to the client site repo. Stages 12+ return to `agency-site` for operations.
 
-> **Stale (2026-08-05):** `agency-template` is fully retired — not cloned, not
-> patched, not merged from. Stage 9b and Stage 18 below still describe the
-> template clone-and-merge workflow and have **not** been rewritten for the
-> bespoke flow. Treat them as history. `../agency-playground/` is the current
-> reference Spoke; copy from it by hand. See `UPGRADE_PLAN.md` § 5.
+> `agency-template` is fully retired (2026-08-05) — not cloned, not patched,
+> not merged from. `../agency-playground/` is the reference Spoke and the first
+> site to run each new Hub contract in production. Stages 9 and 18 below were
+> rewritten for the bespoke flow.
 
 ---
 
@@ -145,9 +144,16 @@ Cal.com webhook writes the booking into `projects.calKickoffBooking`. The portal
 
 ---
 
-## Stage 9 — Build the bespoke site (`agency-template`)
+## Stage 9 — Build the bespoke site
 
-This stage moves to the `agency-template` repo and the terminal. The result is a new client repo with a fully custom site.
+This stage moves to a new client repo and the terminal. The result is a fully
+custom site that talks to the Hub through the contract in `ARCHITECTURE.md`
+§ Hub ↔ Spoke.
+
+There is no starter template. Each site is built from a fresh Next.js app, and
+`../agency-playground/` is read as the **reference implementation** for the
+Hub-facing plumbing only — the lead Function, the events client, and the
+schema graph. Never its design.
 
 ### 9a. Pull what you need from admin
 
@@ -157,18 +163,39 @@ This stage moves to the `agency-template` repo and the terminal. The result is a
 4. Read the expanded Build Details: headline, domain, color scheme (with hex values), inspiration links, brand images, and admin notes.
 5. Read your own kickoff call notes.
 
-### 9b. Clone the template
+### 9b. Issue the project's Hub credentials
+
+Do this **before** writing any code, so the build has real values to wire in.
+In `/admin` → Projects → expand the project → **API Credentials**, issue two:
+
+| Credential | Prefix | Where it lives on the spoke |
+|---|---|---|
+| Secret (leads) | `sk_live_…` | Server-only env var. Never in a `NEXT_PUBLIC_*` var, never in client code. |
+| Publishable (events) | `pk_live_…` | Sent from the browser in the `/api/v2/events` body. Public by design. |
+
+The raw key is shown **once** — the Hub stores only its SHA-256. If you lose
+it, revoke and issue a new one; that's a normal operation, not an incident.
+Multiple active credentials per project are allowed, which is what makes
+rotation zero-downtime: issue the new key, deploy the spoke, then revoke the
+old one.
+
+### 9c. Create the repo
 
 ```bash
-gh repo create "CLIENT_SLUG-web" --template "your-org/agency-template" --private --clone
+gh repo create "CLIENT_SLUG-web" --private --clone
 cd CLIENT_SLUG-web
-git remote add upstream git@github.com:your-org/agency-template.git
-git remote set-url --push upstream DISABLE
+bunx create-next-app@latest . --typescript --tailwind --app
 mkdir -p public/images/CLIENT_SLUG
-bun install
 ```
 
-### 9c. Drop client assets
+Then port the Hub-facing plumbing from `../agency-playground/` by hand — the
+lead-submitting Route Handler or Server Action, the events beacon, and the
+`LocalBusinessSchema` graph builder. Copying these deliberately rather than
+inheriting them is the tradeoff the template retirement bought: no client repo
+silently drifts when the Hub contract changes, because propagation is Stage 18's
+explicit checklist instead of a merge that may or may not have run.
+
+### 9d. Drop client assets
 
 Save everything from the portal Build Details + the kickoff into `public/images/CLIENT_SLUG/`:
 
@@ -178,7 +205,7 @@ Save everything from the portal Build Details + the kickoff into `public/images/
 - `team/*` — staff photos if a team page is in scope
 - `og-default.jpg` — 1200×630 for social shares
 
-### 9d. Configure `config/client.ts`
+### 9e. Configure `config/client.ts`
 
 ```ts
 export const clientConfig = {
@@ -208,14 +235,24 @@ export const clientConfig = {
 };
 ```
 
-### 9e. Set up `.env.local`
+### 9f. Set up `.env.local`
 
 ```bash
 NEXT_PUBLIC_WAAS_API_URL=https://your-hub.convex.site
-GOOGLE_PLACES_API_KEY=AIza...   # only if Google Place ID is set
+NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY=pk_live_...   # events; safe in the bundle
+WAAS_LEAD_SECRET=sk_live_...                   # leads; server-only, NEVER NEXT_PUBLIC_
+GOOGLE_PLACES_API_KEY=AIza...                  # only if Google Place ID is set
 ```
 
-### 9f. Run the bespoke build prompt
+The `NEXT_PUBLIC_` prefix is the whole security boundary here. A `sk_live_` key
+in a `NEXT_PUBLIC_` var ships to every visitor's browser and hands out the
+ability to write leads into this project. Leads must be posted from a Server
+Action or Route Handler that reads `WAAS_LEAD_SECRET` server-side.
+
+Mirror all of these into Vercel → Project Settings → Environment Variables at
+9i, and mark `WAAS_LEAD_SECRET` as a non-preview-exposed secret.
+
+### 9g. Run the bespoke build prompt
 
 1. Open `ONBOARDING.md` § 4 in the new client repo.
 2. Replace every bracketed placeholder with this client's data (admin Build Details + kickoff notes).
@@ -228,22 +265,23 @@ GOOGLE_PLACES_API_KEY=AIza...   # only if Google Place ID is set
    - Fills in `ONBOARDING.md` § Per-Client Maintenance Notes at the bottom.
 5. **Plan 1–2 iteration passes.** The first output will not be client-ready. Review critically. Push back on generic sections. Be specific in feedback ("rework the hero, gradient feels off-brand"; "services grid is too SaaS-y for plumbing").
 
-### 9g. Validate locally
+### 9h. Validate locally
 
 ```bash
-bun run dev               # walk through every page in the browser
-bun run validate:plumbing # plumbing integrity check
-bun run build             # also runs the validator first
+bun run dev    # walk through every page in the browser
+bun run build
 ```
 
 Explicitly check:
 
 - Mobile and desktop layout in a real browser.
-- Contact form submission (will try to POST to the hub — see 9h about Origin).
-- Analytics pixel fires in the network tab on each route change.
+- Contact form submission (will try to POST to the hub — see 9i about Origin).
+- A `POST /api/v2/events` fires in the network tab on each route change, and a
+  `tel:` / `mailto:` / directions tap fires a `click` event.
 - `LocalBusinessSchema` JSON-LD renders correctly (View Source).
+- `grep -r "sk_live_" .next/ public/` returns nothing.
 
-### 9h. Push and deploy
+### 9i. Push and deploy
 
 ```bash
 git add .
@@ -256,6 +294,8 @@ In Vercel:
 1. Import the new repo from GitHub.
 2. Add env vars (Project Settings → Environment Variables):
    - `NEXT_PUBLIC_WAAS_API_URL`
+   - `NEXT_PUBLIC_WAAS_PUBLISHABLE_KEY`
+   - `WAAS_LEAD_SECRET` (secret; server-only)
    - `GOOGLE_PLACES_API_KEY` (if Google reviews are enabled)
 3. Deploy. Note the Vercel preview URL (e.g., `apex-plumbing-web.vercel.app`).
 
@@ -266,9 +306,13 @@ In Vercel:
 Back in `agency-site`:
 
 1. Open `/admin/projects/{id}`. Expand the project.
-2. Set `projects.deployment.stagingUrl = https://apex-plumbing-web.vercel.app`.
+2. Set `projects.deployment.stagingUrl` to the **bare host** —
+   `apex-plumbing-web.vercel.app`, not `https://apex-plumbing-web.vercel.app`.
+   The Hub builds `https://<host>` itself, so a stored scheme makes every
+   analytics event `403`. Same rule for `liveUrl` at Stage 13.
 3. Optionally set `projects.deployment.vercelProjectId` for internal tracking.
-4. The hub's Origin check now accepts requests from this URL.
+4. The hub's Origin check now accepts browser events from this URL. Leads are
+   unaffected — they authenticate with the secret bearer, not with Origin.
 5. If you haven't already, transition `projectStatus → IN_REVIEW`.
 
 ---
@@ -277,9 +321,19 @@ Back in `agency-site`:
 
 From the staging Vercel URL:
 
-1. Submit the contact form → check `/admin/projects/{id}` → Leads view. The lead must appear in `client_leads`.
-2. Visit several routes → check `/admin/projects/{id}` → Analytics view. Page views must appear in `client_analytics`.
-3. If anything fails: 99% of the time it's a stale Origin allowlist (the URL in admin doesn't match the URL the form is POSTing from). Check the browser network tab for the actual `Origin` header.
+1. Submit the contact form → check `/admin/projects/{id}` → Leads view. The lead must appear in `client_leads`, and the secret credential's `lastUsedAt` must update.
+2. Visit several routes → check the portal **Site activity** panel. Page views must appear in `client_analytics`.
+3. Tap a `tel:` link (and `mailto:` / directions if the build has them) → the matching click counter must increment.
+4. If anything fails, the two surfaces fail differently and are diagnosed differently:
+
+| Symptom | Check |
+|---|---|
+| Leads missing | Server-only `WAAS_LEAD_SECRET` reaching the Function, secret credential `lastUsedAt`, `[hub.lead.v2]` logs, admin **Untriaged / Fan-out paused** |
+| Events missing / `403` | Origin allowlist stored as a bare host, publishable credential `lastUsedAt`, `[hub.events.v2]` logs |
+
+A stale Origin allowlist is still the single most common cause on the events
+side — compare the admin value against the actual `Origin` header in the
+browser network tab.
 
 ---
 
@@ -361,40 +415,63 @@ The client logs into `/portal/{projectId}` and sees a status-driven dashboard:
 
 ---
 
-## Stage 18 — Template updates over the client's lifetime
+## Stage 18 — Propagating Hub contract changes over the client's lifetime
 
-When `agency-template` ships a plumbing fix (e.g., updated spam check, new analytics field in v2, `LocalBusinessSchema` fix), pull it into each client repo:
+There is no upstream remote and no merge. Client repos share no git history, so
+a Hub-side plumbing change (new event type, changed auth, a `LocalBusinessSchema`
+fix) reaches each site only because someone applies it there.
+
+That is the cost of retiring the template, and it is paid deliberately: a merge
+that silently conflicted or was never run produced a spoke that *looked*
+migrated and wasn't. An explicit per-repo checklist fails loudly instead.
+
+**The order is fixed. Playground first, always.**
+
+1. Ship the Hub change with both paths live — the old contract must keep
+   working while spokes are mid-migration.
+2. Apply it in `../agency-playground/` and smoke-test there. Playground is the
+   first site to run every new Hub contract in production, so its job is to
+   find the defect before a paying client does.
+3. Apply to each live client repo under `../clients/`, one at a time, smoke
+   testing each before moving on:
 
 ```bash
-cd apex-plumbing-web
-git fetch upstream
-git merge upstream/main --no-edit
+cd ../clients/apex-plumbing-web
+# hand-apply the change
+bun run build
+git commit -am "Hub contract: <change>"
 git push origin main   # Vercel auto-deploys
 ```
 
-`.gitattributes` ensures the right files merge and the right files survive:
+4. Only after every spoke passes may the Hub retire the old path. Retiring it
+   early is what breaks a live client form.
 
-| Auto-merges from upstream | Locked with `merge=ours` |
-|---|---|
-| `lib/waas/*` | `app/layout.tsx` |
-| `actions/*` | `app/page.tsx`, `app/<route>/**` |
-| `components/utils/*` | `app/globals.css` |
-| `app/sitemap.ts`, `app/robots.ts` | `components/site/**` |
-| `app/not-found.tsx` | `config/client.ts` |
-| `scripts/validate-plumbing.ts` | `public/images/**` |
-| `README.md` | `ONBOARDING.md` (per-client notes) |
+Track the rollout in a table in the Hub-side plan doc, with a row per spoke and
+an explicit live-verified checkmark — not "deployed." Stage 2 and Stage 3 both
+used this shape (`UPGRADE_PLAN.md` § Stage 3); reuse it.
 
-Conflicts in template-owned files: usually `git checkout --theirs <file>` unless there's a deliberate reason to fork.
-
-`app/layout.tsx` and `ONBOARDING.md` being `merge=ours` is the documented trade-off: structural changes to those files in the template must be hand-propagated to existing client repos.
+| Site | Repo | State |
+|---|---|---|
+| Agency Playground | `../agency-playground/` | |
+| All About Towing | `../clients/all-about-towing-web/` | |
+| TB Tree | `../clients/tb-tree/` | |
+| Chelsea Social Co. | `../clients/chelsea-social/` | |
 
 ---
 
-## The single failure mode worth memorizing
+## The failure modes worth memorizing
 
-If a client's lead form or analytics stops working, **check the Origin allowlist first**.
+The Hub's v2 surfaces fail differently:
 
-The hub validates the browser `Origin` header against `projects.deployment.liveUrl` and `projects.deployment.stagingUrl` on every POST to `/api/v1/ingest-lead` and `/api/v1/analytics/pixel`. If the URLs in admin don't exactly match what the browser is sending, the hub silently rejects every request — and the client sees nothing in the portal because nothing got recorded.
+- `/api/v2/leads` is called by the spoke's server-side function with a secret
+  bearer. A missing or stale secret returns `401`; an inactive project or stale
+  project configuration is rejected before the lead is stored.
+- `/api/v2/events` is called by the browser with a publishable key and validates
+  the browser `Origin` against `projects.deployment.liveUrl` and
+  `projects.deployment.stagingUrl`. A stale admin URL returns `403`; a missing
+  publishable key means the spoke should send no event at all.
+
+The v1 lead and analytics aliases are retired. Do not add them as fallbacks.
 
 Common triggers:
 
@@ -403,7 +480,9 @@ Common triggers:
 - Client added a new alias domain that isn't registered in admin.
 - A staging environment was rebuilt at a new preview URL.
 
-Always fix this in admin first, before assuming anything is wrong with the code.
+For event failures, fix the Origin allowlist in admin before assuming the browser
+code is broken. For lead failures, verify the spoke's server-only secret and the
+Hub credential's `lastUsedAt` before changing Origin settings.
 
 ---
 

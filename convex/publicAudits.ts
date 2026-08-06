@@ -214,16 +214,25 @@ export const submit = mutation({
   returns: v.object({ token: v.string() }),
   handler: async (ctx, args) => {
     const normalizedUrl = normalizeUrl(args.url);
-    const [{ ok: hostOk }, { ok: globalOk }] = await Promise.all([
+    const [{ ok: hostOk }, { ok: globalOk }, { ok: dailyOk }] = await Promise.all([
       rateLimiter.limit(ctx, "publicAuditSubmit", {
-      key: new URL(normalizedUrl).hostname,
+        key: new URL(normalizedUrl).hostname,
       }),
       rateLimiter.limit(ctx, "publicAuditSubmit", {
+        key: "global",
+      }),
+      // Burst guards alone are not a spend ceiling: a token bucket refills
+      // continuously, so 3/min sustained is thousands of paid audits a day.
+      rateLimiter.limit(ctx, "publicAuditGlobalDaily", {
         key: "global",
       }),
     ]);
     if (!hostOk || !globalOk) {
       throw new Error("Too many audit requests. Please try again in a minute.");
+    }
+    if (!dailyOk) {
+      console.warn("[publicAudits] daily global ceiling reached", { normalizedUrl });
+      throw new Error("Audits are temporarily unavailable. Please try again tomorrow.");
     }
 
     const now = Date.now();

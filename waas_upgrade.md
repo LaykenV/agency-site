@@ -1,11 +1,12 @@
 # WAAS Upgrade — Hub ↔ Spoke Security & Telemetry
 
-Status: **Phases 1A, 1B, and 2 complete in production.** Phase 2 (typed events +
-click tracking) is verified on the playground and all three live client spokes
-(All About Towing, TB Tree, Chelsea Social Co.).
+Status: **Phases 1A, 1B, and the configured Phase 2 surfaces are complete in
+production.** Typed events and click tracking are verified on the playground,
+TB Tree, and Chelsea Social Co. All About Towing's client code is deployed but
+gated off pending a distinct Hub project and publishable key.
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Phase 2 live on all spokes; smoke tests passed)
+Last reviewed: 2026-08-06 (Phase 2 evidence corrected; hardening release)
 
 Plan to replace the current Hub ↔ client-site connection, which has no real
 authentication, with a credential-based contract — using only Convex and the
@@ -28,8 +29,9 @@ Hub contract described to the model rather than inherited from a template.
 
 - `waas-config.js` — frozen global with `apiUrl`, `projectId` (a UUID), `allowedPaths`.
 - `waas.js` — one IIFE:
-  - Pageview → `POST /api/v1/analytics/pixel` with `{projectId, path, referrer}`.
-  - Contact form → `POST /api/v1/ingest-lead`, guarded by a honeypot field
+  - Historical pageview path: `POST /api/v1/analytics/pixel` with
+    `{projectId, path, referrer}` (retired after the v2 rollout).
+  - Historical contact-form path: `POST /api/v1/ingest-lead`, guarded by a honeypot field
     (`website`) and a 3-second minimum fill time (`waas.js:66-74`).
 
 ### Hub side (`convex/http.ts`)
@@ -274,12 +276,12 @@ Per `CLAUDE.md`, breaking changes ship as a new version. v1 stays alive.
 | `POST /api/v2/leads` | hashed `sk_` bearer | New authenticated lead path |
 | `POST /api/v2/events` | `pk_` + Origin | Pageviews **and** click/conversion events |
 | `POST /api/v1/ingest-lead` | retired | Removed after Phase 1B production verification |
-| `POST /api/v1/analytics/pixel` | Origin | Retained until Phase 2 events migration |
+| `POST /api/v1/analytics/pixel` | retired | Removed after Phase 2 production verification |
 | `POST /api/ingest-lead` | retired | Removed after Phase 1B production verification |
-| `POST /api/analytics/pixel` | Origin | Retained analytics alias until Phase 2 |
+| `POST /api/analytics/pixel` | retired | Removed after Phase 2 production verification |
 
 Phase 1A kept the lead aliases temporarily. Phase 1B migrated both configured
-production clients and retired the lead aliases together. Analytics v1 remains
+production clients and retired the lead aliases together. Analytics v1 remained
 independent until Phase 2.
 
 ### 3.7 Rate limits
@@ -585,14 +587,16 @@ Promoted ahead of the portal work on 2026-08-05 (`UPGRADE_PLAN.md` Stage 3) and
 reduced to the signals that justify an invoice. All About Towing has no contact
 form, so tap-to-call is its only conversion signal.
 
-**Complete in production 2026-08-05 on Hub + all live spokes.** Verified on the
-playground and All About Towing, TB Tree, and Chelsea Social Co.: pageviews and
-conversion clicks accepted, attributed, and rendered in each project's portal
-**Site activity** panel; playground also confirmed all three click targets
-(`tel`, `email`, `directions`) and PageSpeed refresh. Two defects were found and
-fixed during the playground smoke — self-referrals classified as `other`, and
-referrer classes labeled as visit counts when they are per-page-view counts.
-See `UPGRADE_PLAN.md` § Stage 3.
+**Complete in production 2026-08-05 on the Hub and configured spokes.** Verified
+on the playground, TB Tree, and Chelsea Social Co.: pageviews and conversion
+clicks accepted, attributed, and rendered in each project's portal **Site
+activity** panel; playground also confirmed all three click targets (`tel`,
+`email`, `directions`) and PageSpeed refresh. All About Towing remains
+telemetry-silent because its deployed config deliberately gates the component
+until a distinct Hub project exists. Two defects were found and fixed during
+the playground smoke — self-referrals classified as `other`, and referrer
+classes labeled as visit counts when they are per-page-view counts. See
+`UPGRADE_PLAN.md` § Stage 3.
 
 Referrer classes are collected but **not shown to clients**; the class rollup
 cannot yet separate a Business Profile tap from a search result, and `direct` is

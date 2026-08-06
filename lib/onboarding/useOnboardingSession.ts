@@ -14,14 +14,24 @@ type UseOnboardingSessionOptions = {
   onError?: () => void;
 };
 
-export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = {}) {
-  const [localDetails, setLocalDetails] = useState<ProspectDetails>(defaultProspectDetails);
+export function useOnboardingSession({
+  onError,
+}: UseOnboardingSessionOptions = {}) {
+  const [localDetails, setLocalDetails] = useState<ProspectDetails>(
+    defaultProspectDetails,
+  );
   const [dirtyFields, setDirtyFields] = useState<Set<ProspectField>>(new Set());
 
-  const { sessionId, resumeToken, isInitializing, error: initError } = useSessionInit();
+  const {
+    sessionId,
+    resumeToken,
+    isInitializing,
+    error: initError,
+  } = useSessionInit();
 
   const { remoteDetails, remotePlan, isHydrated } = useSessionData({
     sessionId,
+    resumeToken,
     localDetails,
   });
 
@@ -37,7 +47,9 @@ export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = 
 
   const details = localDetails;
 
-  const updateDetailsMutation = useMutation(api.onboarding.sessions.updateDetails);
+  const updateDetailsMutation = useMutation(
+    api.onboarding.sessions.updateDetails,
+  );
 
   const { isGenerating, generate } = usePlanGenerator({
     sessionId,
@@ -83,7 +95,14 @@ export function useOnboardingSession({ onError }: UseOnboardingSessionOptions = 
       onError?.();
       throw error;
     }
-  }, [sessionId, resumeToken, dirtyFields.size, updateDetailsMutation, localDetails, onError]);
+  }, [
+    sessionId,
+    resumeToken,
+    dirtyFields.size,
+    updateDetailsMutation,
+    localDetails,
+    onError,
+  ]);
 
   const generatePlan = useCallback(async () => {
     if (!sessionId) {

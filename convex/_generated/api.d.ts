@@ -39,6 +39,7 @@ import type * as marketing_workflow from "../marketing/workflow.js";
 import type * as notifications from "../notifications.js";
 import type * as onboarding_agent from "../onboarding/agent.js";
 import type * as onboarding_sessions from "../onboarding/sessions.js";
+import type * as projectAccess from "../projectAccess.js";
 import type * as projectCredentials from "../projectCredentials.js";
 import type * as projectPageSpeed from "../projectPageSpeed.js";
 import type * as projectStorage from "../projectStorage.js";
@@ -89,6 +90,7 @@ declare const fullApi: ApiFromModules<{
   notifications: typeof notifications;
   "onboarding/agent": typeof onboarding_agent;
   "onboarding/sessions": typeof onboarding_sessions;
+  projectAccess: typeof projectAccess;
   projectCredentials: typeof projectCredentials;
   projectPageSpeed: typeof projectPageSpeed;
   projectStorage: typeof projectStorage;

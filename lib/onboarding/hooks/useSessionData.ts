@@ -11,6 +11,7 @@ import {
 
 type UseSessionDataOptions = {
   sessionId: string | null;
+  resumeToken: string | null;
   localDetails: ProspectDetails;
 };
 
@@ -20,14 +21,22 @@ type UseSessionDataResult = {
   isHydrated: boolean;
 };
 
-export function useSessionData({ sessionId, localDetails }: UseSessionDataOptions): UseSessionDataResult {
+export function useSessionData({
+  sessionId,
+  resumeToken,
+  localDetails,
+}: UseSessionDataOptions): UseSessionDataResult {
   const [isHydrated, setIsHydrated] = useState(false);
-  const [remoteDetails, setRemoteDetails] = useState<ProspectDetails>(defaultProspectDetails);
-  const [remotePlan, setRemotePlan] = useState<ProspectPlan | undefined>(undefined);
+  const [remoteDetails, setRemoteDetails] = useState<ProspectDetails>(
+    defaultProspectDetails,
+  );
+  const [remotePlan, setRemotePlan] = useState<ProspectPlan | undefined>(
+    undefined,
+  );
 
   const sessionQuery = useQuery(
     api.onboarding.sessions.getSession,
-    sessionId ? { sessionId } : "skip",
+    sessionId && resumeToken ? { sessionId, resumeToken } : "skip",
   );
 
   useEffect(() => {
@@ -51,4 +60,3 @@ export function useSessionData({ sessionId, localDetails }: UseSessionDataOption
     isHydrated,
   };
 }
-

@@ -1,6 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
+import { requireProjectOwner } from "./projectAccess";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import {
@@ -29,16 +30,7 @@ export const getUrls = query({
   },
   returns: v.record(v.id("_storage"), v.string()),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      throw new Error("Authentication required");
-    }
-
-    // Verify the project belongs to the user
-    const project = await ctx.db.get(args.projectId);
-    if (!project || project.authUserId !== user._id) {
-      throw new Error("Unauthorized");
-    }
+    await requireProjectOwner(ctx, args.projectId);
 
     const projectStorageIds = await listProjectStorageIds(ctx, args.projectId);
 
@@ -64,16 +56,7 @@ export const deleteFile = mutation({
   },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      throw new Error("Authentication required");
-    }
-
-    // Verify the project belongs to the user
-    const project = await ctx.db.get(args.projectId);
-    if (!project || project.authUserId !== user._id) {
-      throw new Error("Unauthorized");
-    }
+    const project = await requireProjectOwner(ctx, args.projectId);
 
     const projectStorageIds = await listProjectStorageIds(ctx, args.projectId);
 

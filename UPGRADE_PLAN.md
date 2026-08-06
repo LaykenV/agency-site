@@ -1,11 +1,14 @@
 # Upgrade Plan — Cross-Doc Sequencing
 
-Status: **Stages 0, 1A, 2, and 3 complete in production.** Stage 3 is verified
-end to end on the playground and all three live client spokes (All About Towing,
-TB Tree, Chelsea Social Co.). Next up: Stage 4 (offering registry).
+Status: **Stages 0, 1A, 2, and the configured Stage 3 surfaces are complete in
+production.** Stage 3 is verified end to end on the playground, TB Tree, and
+Chelsea Social Co. All About Towing is live as a website but still has no Hub
+project or telemetry enabled; it sends neither v1 nor v2 events. A post-Stage-3 hardening pass is **written and
+locally verified but not yet deployed** — see § 5. Next up: deploy that pass,
+then Stage 4 (offering registry).
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (Stage 3 live on all spokes; smoke tests passed)
+Last reviewed: 2026-08-05 (post-Stage-3 hardening pass; awaiting deploy)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -217,13 +220,14 @@ browser event volume.
 **Spoke side is `../agency-playground/`, not `agency-template`.** Playground is
 the reference Spoke. Live client repos are siblings under `../clients/`.
 
-**Production proof (playground + all three live spokes, 2026-08-05).** Pageviews
-and conversion clicks were accepted, attributed, and rendered in each project's
-portal **Site activity** panel. Playground verified all three click targets
-(`tel`, `email`, `directions`) plus PageSpeed refresh. Live sites (All About
-Towing, TB Tree, Chelsea Social Co.) each passed their Stage 3 smoke after
-publishable credentials, bare-host deployment URLs, and rebuilds. Two defects
-were found and fixed during the playground smoke:
+**Production proof (playground + configured live spokes, 2026-08-05).**
+Pageviews and conversion clicks were accepted, attributed, and rendered for the
+playground, TB Tree, and Chelsea Social Co. Playground verified all three click
+targets (`tel`, `email`, `directions`) plus PageSpeed refresh. All About Towing's
+Stage 3 client code is deployed but intentionally gated off: its config still
+contains `PROJECT_ID_FROM_ADMIN` and its Vercel project has no publishable key.
+It therefore never exercised either the v1 pixel or v2 events. Two defects were
+found and fixed during the playground smoke:
 
 - Self-referrals were classified as `other`. A full page load between the site's
   own pages sets `document.referrer` to the site itself, which is internal
@@ -247,12 +251,19 @@ Stage 8's UTM work can attribute a call to a specific listing or campaign.
 | Site | Repo | Runbook | State |
 |---|---|---|---|
 | Agency Playground | `../agency-playground/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
-| All About Towing | `../clients/all-about-towing-web/` | `WAAS_V2_RUNBOOK.md` | live ✓ |
+| All About Towing | `../clients/all-about-towing-web/` | `WAAS_V2_RUNBOOK.md` | pending Hub project; telemetry gated off |
 | TB Tree | `../clients/tb-tree/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
 | Chelsea Social Co. | `../clients/chelsea-social/` | `WAAS_V2_RUNBOOK.md` § Stage 3 | live ✓ |
 
-The v1 pixel remains on the Hub as a harmless fallback for any future spoke that
-has not yet set a publishable key. All current production spokes use v2 events.
+**The v1 pixel was retired 2026-08-05 (hardening pass).** It had been kept as a
+fallback for a future spoke without a publishable key. That was a mistake in
+two ways: a new spoke gets a key at Stage 9b before it ships, and the pixel was
+not actually harmless. It required no credential — a project slug plus an
+`Origin` header, both trivially supplied by a non-browser client — and it drew
+from the *same* `analyticsProjectFallback` bucket, on the same key, as
+authenticated v2 events. Forged pixel traffic could therefore drain a project's
+bucket and suppress its real analytics. Both aliases and their OPTIONS handlers
+are gone, along with the now-orphaned `clientAnalytics.recordPageView` writer.
 
 **Declined 2026-08-05 — operational counters for `/api/v2/events`.** Stage 1A
 built `hub_operational_counters` because unauthenticated leads could burn Groq,
@@ -444,13 +455,13 @@ Tree's production Server Action after the containment deploy, exercising the
 no-`Origin` path end to end — accepted, stored, triaged, and notified — on live
 traffic rather than a synthetic test.
 
-Accepted residual: **Chelsea's browser POST was not separately smoke-tested.**
-That path is not the same code — it goes through the `Origin`/CORS branch that
-TB Tree skips entirely — so the TB Tree lead does not cover it. Closing anyway
-because Stage 2 migrates her off that path within days and rate-limit/validation
-regressions would surface as `429`s or rejections in the admin counters. If her
-project shows any accepted lead dated after the 2026-08-04 deploy, the residual
-is already closed; otherwise one form submission settles it in two minutes.
+**Residual closed by Stage 2 (2026-08-05).** Chelsea's browser POST was never
+separately smoke-tested on the Stage 1A code path, because that path went
+through the `Origin`/CORS branch TB Tree skips entirely. It is moot: Stage 2
+migrated her form to an authenticated v2 POST from her own Vercel Function, and
+that path produced a verified live lead with `hasVisitorHash: true`. The
+un-tested branch no longer exists — the legacy no-`Origin` and CORS lead routes
+were removed.
 
 **Declined 2026-08-05 — the 24-hour visitor-header observation.** Do not set
 `HUB_VISITOR_OBSERVATION_UNTIL`. The observation existed to discover whether
@@ -464,13 +475,119 @@ get a real per-visitor rate-limit key. Two reasons it is not worth running:
   belongs there, where it is trustworthy. The Hub then needs only its per-project
   ceilings, which use no IP at all.
 
-The observation code is gated off by default and Stage 2 rewrites that handler.
-Leave it dormant; do not treat it as an outstanding task.
+**Deleted 2026-08-05 (hardening pass).** The gated observation code was removed
+outright rather than left dormant — `observeTrustedVisitor`,
+`logVisitorObservation`, `trustedHeaderNames`, and the `eventsPerVisitor` limit
+it fed are gone, along with `HUB_TRUSTED_IP_HEADER` and
+`HUB_VISITOR_OBSERVATION_UNTIL`. Keeping it cost nothing at runtime but required
+a standing paragraph in `CLAUDE.md` warning future readers not to enable it;
+deleting the code let the warning go too. The decision it encoded is permanent,
+not deferred, so there is nothing to reinstate.
+
+Per-visitor limiting for **leads** is unaffected and still live: it keys on
+`meta.visitorHash` supplied by the spoke's own Function (`leadPerVisitor`),
+which the Hub can trust because the request already authenticated with a secret
+bearer.
 
 **Declined 2026-08-05 — the spoofed-XFF ceiling proof.** Every project ceiling is
 keyed on `projectId` alone (`http.ts:284`, `http.ts:311`, `leadTriage.ts:207`).
 There is no IP component for a rotated header to influence, so the property holds
 by construction. A code read replaces the staging load test.
+
+### Post-Stage-3 hardening pass (2026-08-05)
+
+A review of the completed Stage 0–3 work found that the containment discipline
+applied to `/api/v2/leads` had never been applied to the **public marketing
+surfaces**, which predate Stage 1A and carry the same risk. All items below are
+implemented and locally verified. None changes the Hub ↔ Spoke contract except
+the v1 pixel retirement.
+
+**Authorization**
+
+- `prospects.findLatestByEmail` was a **public** query returning
+  `prospectPublicValidator`, which included `resumeToken` — the sole
+  authorization check for `onboarding/sessions.saveDetailsInternal`. Anyone who
+  knew a prospect's email address could therefore read their name, phone,
+  company, business description, and AI plan, and then overwrite their
+  onboarding session. It is now an `internalQuery` (its only caller,
+  `auth.getPortalDecision`, already ran server-side), and `resumeToken` was
+  dropped from the validator. The follow-up release review found two other
+  sessionId-only token-return paths in `onboarding/sessions.ts`; those are now
+  closed too. `initSession` only returns the token it just minted, `getSession`
+  requires the existing token and never returns it, and scheduled plan
+  generation uses an internal query. `getProspectBySessionId` now requires a
+  signed-in user whose email matches the prospect before returning PII. The
+  pre-auth error page is deliberately generic.
+- Added `convex/projectAccess.ts` (`requireProjectOwner`,
+  `requireProjectBySlug`, `getProjectIfOwner`, `getProjectBySlugIfOwner`) and
+  routed all nine portal call sites in `clientAnalytics`, `clientLeads`,
+  `projects`, and `files` through it. Every one was individually correct; the
+  point is that ownership is now a function a new portal query has to call,
+  which is exactly what `prospects.ts` demonstrated the absence of.
+
+**Unauthenticated spend ceilings**
+
+- `onboarding.initSession` had **no** rate limit — an unauthenticated insert
+  into `prospects`. Now capped by `onboardingSessionGlobal` (200/hour),
+  and every call mints a genuinely new session. Returning visitors resume from
+  the sessionId + resumeToken pair already held in localStorage; a sessionId
+  alone can never recover the stored token.
+- `onboarding.generatePlan`'s 15-second throttle was per-session and therefore
+  not a cost control: `initSession` mints a fresh session on demand. Added
+  `onboardingPlanGlobal` (100/day), checked *after* the per-session throttle so
+  an honest double-click does not burn a global token.
+- `publicAudits.submit` had only token-bucket burst guards, which permit ~4,300
+  Firecrawl + PageSpeed + Groq audits/day sustained. Added
+  `publicAuditGlobalDaily` (200/day). Real QR-scan volume is single digits.
+
+**Telemetry sizing**
+
+- `analyticsProjectFallback` raised 30/min → 120/min and is now the only
+  ceiling on `/api/v2/events`. It had been sized as the *stricter* fallback for
+  when a per-visitor tier carried normal load — a tier that could never fire.
+  At 30/min shared across every visitor on a project, a promo or a shared post
+  would silently drop events on exactly the day a client is watching. A
+  rejected event spends nothing, so this is a burst guard, not a cost control.
+
+**Deletions**
+
+- The trusted-visitor observation machinery and the v1 analytics pixel, both
+  recorded above.
+
+Verification: `bun test` (32 pass), `npx tsc --noEmit`,
+`npx convex codegen --typecheck enable`, `bun run lint`, `bun run build`, and
+`git diff --check` all clean. The build retains the documented dynamic-server
+warnings from layouts that call `getToken()` / `headers`.
+
+**Deploy gate — not yet production-smoked.** Only one change in this pass is
+outward-facing, and it is the one that can break a live site. Before deploying,
+confirm the v1 pixel is genuinely cold:
+
+```bash
+npx convex logs --prod | grep -i "analytics/pixel"
+```
+
+Every live spoke moved to `/api/v2/events` during Stage 3, so this should be
+silent. If any project is still posting to the pixel, fix that spoke before
+deploying — the route will 404 afterward.
+
+After deploying, in this order:
+
+- [ ] Load a page on each live spoke → pageview lands in that project's portal
+      **Site activity**. This proves the removed pixel was not load-bearing.
+- [ ] All About Towing remains telemetry-silent until it can receive a distinct
+      Hub project without violating the current one-project-per-user portal
+      model. Do not claim a click-counter smoke test before that project exists.
+- [ ] Submit a lead through TB Tree and Chelsea → stored, triaged, notified;
+      secret credential `lastUsedAt` updates. Confirms `projectAccess.ts` did
+      not disturb the lead path.
+- [ ] Sign in to a client portal → leads, metrics, and edit requests all render.
+      This is the real test of the `requireProjectOwner` refactor: a mistake
+      there shows up as an empty portal, not an error.
+- [ ] Run one `/audit` submission → completes, and a second within the minute
+      is refused by the burst guard rather than the new daily cap.
+
+Rollback is `git revert` + redeploy; no schema or data migration is involved.
 
 ### Stage 0 — resolved evidence (2026-08-04)
 
@@ -551,8 +668,9 @@ Consequences:
 - `@convex-dev/stripe` is not installed.
 - Chelsea and TB Tree are live client sites using authenticated v2 lead routes.
   Chelsea's browser form posts to its same-origin Vercel Function; TB Tree posts
-  from a Server Action. The Hub retains v1 analytics for compatibility, while
-  current production spokes use authenticated v2 events.
+  from a Server Action. Every configured spoke uses authenticated v2 events;
+  All About Towing's component is gated off because its Hub project is still a
+  placeholder. The Hub has no unauthenticated analytics or lead route left.
 - Every project is implicitly `waas_local`; `serviceType` does not exist.
 - Chelsea's price selection is a hardcoded email branch.
 - One project per user is enforced by the fallback guard in `projects.ts`.
@@ -638,7 +756,8 @@ considered and cut deliberately.
 | Full per-offering terms documents | `portal_architecture.md` § 5.4 | Replaced by MSA + per-project order form. Duplicating boilerplate per offering guarantees drift between versions. |
 | Visitor hashes, session ids, bounce rate, Web Vitals, JS error beacon | `waas_upgrade.md` Phase 2 | Requires a privacy inventory, retention policy, and privacy-page updates on every client site, to produce metrics that do not sell. Moved to Stage 8. |
 | Legacy billing table decommissioning | `billing_migration.md` Phase F | Dead tables cost nothing and are the rollback evidence. Deferred with no date. |
-| 24-hour trusted-visitor header observation | `waas_upgrade.md` Phase 1A | The `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moves per-visitor limiting to the client's Vercel Function where the IP is trustworthy. Answers a question that stops mattering. |
+| 24-hour trusted-visitor header observation | `waas_upgrade.md` Phase 1A | The `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moves per-visitor limiting to the client's Vercel Function where the IP is trustworthy. Answers a question that stops mattering. **Code deleted 2026-08-05.** |
+| Legacy v1 / unversioned analytics pixel | Stage 3 "harmless fallback" | Not harmless: no credential required, and it shared a rate-limit bucket with authenticated v2 events, so forged traffic could suppress a project's real analytics. New spokes get a publishable key at Stage 9b. **Routes deleted 2026-08-05.** |
 | Spoofed-XFF ceiling load test | `waas_upgrade.md` Phase 1A | Project ceilings are keyed on `projectId` only. True by construction; a code read is better evidence than a staging load test. |
 | Stripe metadata bridge as a scheduled stage | `UPGRADE_PLAN.md` Stage 1B | No client signs before Stage 6, so there are no new subscriptions to attribute. Kept as a triggered contingency. |
 

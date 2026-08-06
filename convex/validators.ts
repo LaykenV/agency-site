@@ -214,11 +214,19 @@ export const prospectValidator = v.object({
   updatedAt: v.number(),
 });
 
+/**
+ * Prospect shape safe to return from a query a browser can call.
+ *
+ * `resumeToken` is deliberately absent. It is the sole authorization check for
+ * `onboarding/sessions.saveDetailsInternal`, so returning it from any query
+ * would hand out write access to the session. The onboarding client already
+ * receives its token from `initSession` and holds it in localStorage; nothing
+ * reads it back off a prospect document.
+ */
 export const prospectPublicValidator = v.object({
   _id: v.id("prospects"),
   _creationTime: v.number(),
   sessionId: v.string(),
-  resumeToken: v.string(),
   details: prospectDetailsPublicValidator,
   aiGeneratedPlan: v.optional(aiGeneratedPlanValidator),
   calProspectBooking: v.optional(calBookingValidator),

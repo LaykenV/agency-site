@@ -21,140 +21,21 @@ export const LEAD_FIELD_LIMITS = {
 const EMAIL_RE =
   /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
-export type TrustedVisitor = {
-  /** SHA-256 bucket key for rate limiting; null when none is trusted. */
-  key: string | null;
-  /** Which header supplied the key, if any. */
-  source: string | null;
-  /** Header values used internally; logs expose presence/shape only. */
-  observed: Record<string, string | null>;
-};
-
-type ObservedHeaderShape = {
-  present: boolean;
-  length?: number;
-  format?: "ipv4" | "ipv6" | "chain" | "other";
-};
-
-/**
- * Headers that may be used as a rate-limit key, in priority order.
+/*
+ * There is deliberately no trusted-visitor / client-IP helper here.
  *
- * Empty by default: a header is only safe to key on once production logs prove
- * the platform *overwrites* it rather than passing the client's value through.
- * An unproven header is worse than no header — an attacker rotates its value
- * and escapes the strict no-trusted-visitor bucket into a fresh per-visitor
- * bucket per request.
+ * The Hub cannot obtain a client IP it is able to trust: `x-forwarded-for` and
+ * friends are caller-supplied, and keying a rate limit on a spoofable header is
+ * worse than keying on nothing — a caller rotates the value and mints a fresh
+ * bucket per request. Per-visitor limiting lives in each spoke's own Vercel
+ * Function, where the platform overwrites the header with the real client IP.
+ * The Hub keeps project-scoped ceilings, which hold regardless of what any
+ * caller sends. Decided 2026-08-05; see UPGRADE_PLAN.md § 5.
  *
- * To enable after `[hub.visitor]` logs confirm injection, set the Convex env
- * var `HUB_TRUSTED_IP_HEADER` to the header name (e.g. `cf-connecting-ip`).
- * No code change required.
+ * Leads still get a per-visitor tier, but from `meta.visitorHash` computed by
+ * the spoke's Function — a value the Hub can attribute because the request is
+ * already authenticated by a secret bearer.
  */
-function trustedHeaderNames(): Array<string> {
-  const configured = process.env.HUB_TRUSTED_IP_HEADER?.trim().toLowerCase();
-  if (!configured) return [];
-  return configured
-    .split(",")
-    .map((name) => name.trim())
-    .filter((name) => name.length > 0 && name !== "x-forwarded-for" && name !== "x-real-ip");
-}
-
-/**
- * Observe hosting IP headers without trusting caller-controlled XFF.
- *
- * Stage 1A policy:
- * - Log only while `HUB_VISITOR_OBSERVATION_UNTIL` is a future timestamp.
- * - Log header presence/shape, never raw IP values.
- * - Never use `x-forwarded-for` or `x-real-ip` as a security key (spoofable).
- * - Trust a header as a key only when explicitly allowlisted via env, after
- *   production observation proves the edge injects it.
- * - Until then every caller uses the no-trusted-visitor project bucket.
- */
-export async function observeTrustedVisitor(
-  request: Request,
-): Promise<TrustedVisitor> {
-  const get = (name: string, max = 128): string | null => {
-    const value = request.headers.get(name);
-    if (!value) return null;
-    const trimmed = value.trim();
-    if (!trimmed) return null;
-    return trimmed.slice(0, max);
-  };
-
-  const observed: Record<string, string | null> = {
-    "cf-connecting-ip": get("cf-connecting-ip"),
-    "true-client-ip": get("true-client-ip"),
-    "x-vercel-forwarded-for": get("x-vercel-forwarded-for"),
-    "x-real-ip": get("x-real-ip"),
-    // Log presence/shape only; never use as a rate-limit key.
-    "x-forwarded-for": get("x-forwarded-for", 200),
-  };
-
-  // Observation-only until an operator allowlists a header via env. With none
-  // configured, all traffic falls through to leadNoTrustedVisitor / the project
-  // analytics fallback, which hold regardless of what the caller sends.
-  for (const name of trustedHeaderNames()) {
-    const value = observed[name] ?? get(name);
-    if (value) {
-      return { key: await sha256Hex(value), source: name, observed };
-    }
-  }
-
-  return { key: null, source: null, observed };
-}
-
-async function sha256Hex(value: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(value),
-  );
-  return Array.from(new Uint8Array(digest), (byte) =>
-    byte.toString(16).padStart(2, "0"),
-  ).join("");
-}
-
-export function logVisitorObservation(
-  surface: "lead" | "analytics",
-  projectId: string,
-  visitor: TrustedVisitor,
-): void {
-  const observationUntil = process.env.HUB_VISITOR_OBSERVATION_UNTIL?.trim();
-  const observationDeadline = observationUntil
-    ? Date.parse(observationUntil)
-    : Number.NaN;
-  if (!Number.isFinite(observationDeadline) || Date.now() > observationDeadline) {
-    return;
-  }
-
-  const observed = Object.fromEntries(
-    Object.entries(visitor.observed).map(([name, value]) => [
-      name,
-      describeObservedHeader(value),
-    ]),
-  );
-
-  console.log("[hub.visitor]", {
-    surface,
-    projectId,
-    trustedSource: visitor.source,
-    hasTrustedVisitor: Boolean(visitor.key),
-    observed,
-    observationUntil,
-  });
-}
-
-function describeObservedHeader(value: string | null): ObservedHeaderShape {
-  if (!value) return { present: false };
-
-  const format = value.includes(",")
-    ? "chain"
-    : /^\d{1,3}(?:\.\d{1,3}){3}$/.test(value)
-      ? "ipv4"
-      : value.includes(":")
-        ? "ipv6"
-        : "other";
-
-  return { present: true, length: value.length, format };
-}
 
 /**
  * Read the request body with a hard byte ceiling. Prefer Content-Length when

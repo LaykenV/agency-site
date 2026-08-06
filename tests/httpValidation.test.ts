@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
   MAX_BODY_BYTES,
-  observeTrustedVisitor,
   readJsonBodyWithLimit,
   validateClientEventPayload,
   validateLeadPayload,
@@ -47,7 +46,9 @@ describe("readJsonBodyWithLimit", () => {
   });
 
   test("enforces actual UTF-8 bytes when content length is absent", async () => {
-    const unicodeBody = JSON.stringify({ value: "é".repeat(MAX_BODY_BYTES / 2) });
+    const unicodeBody = JSON.stringify({
+      value: "é".repeat(MAX_BODY_BYTES / 2),
+    });
     const request = jsonRequest(unicodeBody);
     request.headers.delete("content-length");
 
@@ -111,35 +112,14 @@ describe("validateClientEventPayload", () => {
       error: "Invalid event type",
     });
     expect(
-      validateClientEventPayload({ type: "click", path: "/", meta: { target: "sms" } }),
+      validateClientEventPayload({
+        type: "click",
+        path: "/",
+        meta: { target: "sms" },
+      }),
     ).toEqual({
       ok: false,
       error: "Invalid click target",
     });
-  });
-});
-
-describe("observeTrustedVisitor", () => {
-  test("digests an explicitly trusted header before using it as a key", async () => {
-    const previous = process.env.HUB_TRUSTED_IP_HEADER;
-    process.env.HUB_TRUSTED_IP_HEADER = "cf-connecting-ip";
-
-    try {
-      const visitor = await observeTrustedVisitor(
-        new Request("https://hub.test", {
-          headers: { "cf-connecting-ip": "203.0.113.42" },
-        }),
-      );
-
-      expect(visitor.source).toEqual("cf-connecting-ip");
-      expect(visitor.key === "203.0.113.42").toEqual(false);
-      expect(visitor.key?.length).toEqual(64);
-    } finally {
-      if (previous === undefined) {
-        delete process.env.HUB_TRUSTED_IP_HEADER;
-      } else {
-        process.env.HUB_TRUSTED_IP_HEADER = previous;
-      }
-    }
   });
 });

@@ -108,6 +108,5 @@ This repo serves the Hub. Bespoke client sites POST to:
 
 - `POST /api/v2/leads` — contact form submissions (`Authorization: Bearer sk_live_…`)
 - `POST /api/v2/events` — pageviews + conversion clicks (body `pk_live_…` + Origin)
-- `POST /api/v1/analytics/pixel` — legacy pageview fallback (all live spokes use v2 events)
 
-Legacy unversioned analytics (`/api/analytics/pixel`) remains as the same fallback. Lead aliases are retired. See `ARCHITECTURE.md` § Hub ↔ Spoke contract for the full payload spec and validation rules.
+These are the only two ingest routes, and both are authenticated. The legacy lead aliases and the v1/unversioned analytics pixel are all retired; do not reintroduce an unauthenticated alias. See `ARCHITECTURE.md` § Hub ↔ Spoke contract for the full payload spec and validation rules.

@@ -12,8 +12,8 @@ Acadiana Web Design's Hub: Website-as-a-Service operations stack. Next.js 16 + C
 - Admin dashboard at `/admin`.
 - Agreement clickwrap + Stripe subscription billing + webhook automation.
 - Public Hub APIs (`/api/v2/leads` bearer auth, `/api/v2/events` publishable-key
-  pageviews/clicks, and legacy `/api/v1/analytics/pixel`) that bespoke client
-  sites POST to.
+  pageviews/clicks) that bespoke client sites POST to. Both are authenticated;
+  there is no unauthenticated Hub ingest route.
 - Remotion-based promo video generation.
 
 **`../agency-template/` is fully retired (2026-08-05).** Do not read it, patch it,
@@ -67,9 +67,10 @@ bun run video:render:all
 
 - `convex/schema.ts` — all tables: `prospects`, `projects`, `agreements`, `activity_log`, `scheduled_calls`, `edit_requests`, `client_leads`, `client_analytics`, `marketing_searches`, `scraped_leads`, plus Stripe KV tables.
 - `convex/validators.ts` — shared validators.
-- `convex/http.ts` — webhooks (Stripe, Cal.com), authenticated v2 lead ingestion, and v1/unversioned analytics aliases.
+- `convex/http.ts` — webhooks (Stripe, Cal.com), authenticated v2 lead ingestion, authenticated v2 events.
 - `convex/auth.ts` — Better Auth integration (magic link).
-- `convex/adminGuard.ts` — RBAC enforcement for admin queries/mutations.
+- `convex/adminGuard.ts` — `requireAdmin` for admin queries/mutations.
+- `convex/projectAccess.ts` — `requireProjectOwner` / `requireProjectBySlug` / `getProjectIfOwner` / `getProjectBySlugIfOwner` for **client portal** functions.
 - `convex/files.ts` — file storage helpers (logos, brand images, edit request attachments).
 - `convex/marketing/` — outbound pipeline (`workflow.ts`, `pipeline.ts`, `search.ts`, `emails.ts`, `public.ts`).
 - `convex/onboarding/agent.ts` — Groq AI agent for prospect plan generation.
@@ -124,6 +125,23 @@ export const myQuery = query({
 - Defense in depth — both layers must pass.
 - Every admin mutation appends `activity_log` with `actor: "admin"`.
 
+## Client authorization (non-negotiable)
+
+Every portal query/mutation that touches a project **must** go through
+`convex/projectAccess.ts`. Do not hand-roll `getAuthUser` → load project →
+compare `authUserId`; that pattern is what let `prospects.findLatestByEmail`
+ship as a public query leaking `resumeToken`.
+
+- `require*` throws — use for mutations.
+- `get*IfOwner` returns `null` — use for queries that render an empty state.
+- Both refuse to disclose whether a project exists, so neither can be used to
+  enumerate slugs.
+- These deliberately do **not** grant admins access to client projects. Admin
+  reads go through `requireAdmin` and separate admin functions.
+
+Never return `resumeToken` from any function a browser can call — it is the
+sole authorization check for onboarding session writes.
+
 ## Hub ↔ Spoke contract
 
 Bespoke client sites POST to:
@@ -132,13 +150,13 @@ Bespoke client sites POST to:
 - `POST /api/v2/events` — typed browser events (`pageview` | `click`) with body
   `publishableKey` (`pk_live_…`) + Origin. Click targets: `tel` | `email` |
   `directions` (honestly labeled as taps/clicks, not completed calls).
-- `POST /api/v1/analytics/pixel` — legacy page views (Origin + projectId);
-  retained as a fallback for spokes without a publishable key. All current live
-  spokes use v2 events.
 
-Analytics also keeps the unversioned `/api/analytics/pixel` alias as the same
-legacy fallback. The unauthenticated v1 and unversioned **lead** routes are
-retired.
+**Every unauthenticated Hub ingest route is retired** — the v1/unversioned lead
+routes (Stage 2) and the v1/unversioned analytics pixel (2026-08-05). Do not
+reintroduce either. The pixel in particular was not harmless: it required no
+credential and shared a rate-limit bucket with authenticated v2 events, so
+forged traffic could suppress a project's real analytics. A new spoke gets a
+publishable key before it ships (`CLIENT_LIFECYCLE.md` § 9b).
 
 Stage 3 is complete in production on the Hub and all live spokes (playground,
 All About Towing, TB Tree, Chelsea Social Co.) as of 2026-08-05. Client repos
@@ -146,7 +164,11 @@ are **siblings of this one** under `../clients/`. Each site posts pageviews and
 conversion clicks (`tel` / `email` / `directions`) via `/api/v2/events` with a
 publishable key + Origin allowlist.
 
-**Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), no trust of spoofable XFF, and SMS only on triage `allow`. **Do not set `HUB_VISITOR_OBSERVATION_UNTIL` or `HUB_TRUSTED_IP_HEADER`.** The trusted-visitor-header investigation was declined on 2026-08-05 (`UPGRADE_PLAN.md` § 5): the `leadNoTrustedVisitor` fallback is adequate, and Stage 2 moved per-visitor limiting to each client's Function where the provider header is trustworthy. The gated observation code is dormant, not a pending task. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
+**Stage 1A controls retained:** streaming 16 KB body ceiling, field/email validation with no silent truncation, fixed-window project ceilings (`leadIngestPerProject`, `leadNoTrustedVisitor`, `paidFanoutPerProject`, `smsPerProject`), and SMS only on triage `allow`. When paid fan-out is exhausted the lead is still stored as untriaged (`fanoutPaused`). Project-wide rejecting ceilings queue one deduplicated admin alert, and `hub_operational_counters` supplies bounded daily accepted/429/paused evidence.
+
+**Never key a Hub rate limit on a client-supplied IP header.** `x-forwarded-for` and friends are caller-controlled, so a rotating value mints a fresh bucket per request — worse than no key at all. The trusted-visitor observation code and its `HUB_TRUSTED_IP_HEADER` / `HUB_VISITOR_OBSERVATION_UNTIL` env vars were **deleted** on 2026-08-05, not left dormant; per-visitor limiting lives in each spoke's Vercel Function where the platform overwrites the header. Leads keep a per-visitor tier via `meta.visitorHash` from that Function (`leadPerVisitor`) — trustworthy because the request already authenticated with a secret bearer.
+
+**Unauthenticated public surfaces have their own ceilings** (added 2026-08-05): `onboardingSessionGlobal`, `onboardingPlanGlobal`, and `publicAuditGlobalDaily`. These are global keys on purpose — a per-session or per-host key is defeated by rotating the value, which is exactly how the old per-session onboarding throttle failed to cap Groq spend.
 
 **Origin:** analytics browser requests must match `deployment.liveUrl` /
 `stagingUrl`. Store these as a **bare host** (`example.com`) — the Hub builds
@@ -182,6 +204,11 @@ the Origin allowlist, publishable credential `lastUsedAt`, and
 - **Never** store raw payment details — Stripe handles all card data.
 - **Always** verify Stripe webhook signatures and use event IDs for idempotency.
 - **Always** hash terms content (SHA-256) on agreement acceptance; record `termsVersion` + `termsHash` + `userAgent`.
-- Keep the legacy analytics pixel as a harmless fallback; all live spokes already
-  use `/api/v2/events`. Lead ingestion is v2-only; never reintroduce an
-  unauthenticated lead alias.
+- **Never** reintroduce an unauthenticated ingest alias. Both leads and events
+  are v2-and-authenticated-only.
+- **Never** return `resumeToken` from a function a browser can call, and route
+  every portal function through `convex/projectAccess.ts`.
+- **Never** add an unauthenticated public mutation that spends money (Groq,
+  Firecrawl, PageSpeed, Resend, Twilio) without a **global** ceiling in
+  `convex/rateLimiter.ts`. Per-session and per-host keys do not contain spend —
+  the caller rotates the key.

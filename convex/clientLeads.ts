@@ -1,6 +1,9 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
-import { authComponent } from "./auth";
+import {
+  getProjectBySlugIfOwner,
+  requireProjectBySlug,
+} from "./projectAccess";
 import {
   triageVerdictValidator,
   triageObjectValidator,
@@ -114,20 +117,7 @@ export const markNotSpam = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // Verify user owns this project
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      throw new Error("Unauthorized");
-    }
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (q) => q.eq("projectId", args.projectId))
-      .first();
-
-    if (!project || project.authUserId !== user._id) {
-      throw new Error("Unauthorized");
-    }
+    await requireProjectBySlug(ctx, args.projectId);
 
     const lead = await ctx.db.get(args.leadId);
     if (!lead || lead.projectId !== args.projectId) {
@@ -177,18 +167,8 @@ export const listByProject = query({
     })
   ),
   handler: async (ctx, { projectId, limit, status, triageVerdict }) => {
-    // Verify user owns this project
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) return [];
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
-      .first();
-
-    if (!project || project.authUserId !== user._id) {
-      return [];
-    }
+    const project = await getProjectBySlugIfOwner(ctx, projectId);
+    if (!project) return [];
 
     let leads;
     if (triageVerdict) {
@@ -225,17 +205,8 @@ export const getLeadsSummary = query({
     total: v.number(),
   }),
   handler: async (ctx, { projectId }) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      return { thisMonth: 0, lastMonth: 0, trend: 0, total: 0 };
-    }
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
-      .first();
-
-    if (!project || project.authUserId !== user._id) {
+    const project = await getProjectBySlugIfOwner(ctx, projectId);
+    if (!project) {
       return { thisMonth: 0, lastMonth: 0, trend: 0, total: 0 };
     }
 

@@ -272,7 +272,7 @@ export const getPortalDecision = query({
         authUserId,
       }),
       user.email
-        ? ctx.runQuery(api.prospects.findLatestByEmail, {
+        ? ctx.runQuery(internal.prospects.findLatestByEmail, {
             email: user.email,
           })
         : Promise.resolve(null),

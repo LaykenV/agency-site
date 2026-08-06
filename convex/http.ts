@@ -7,10 +7,6 @@ import Stripe from "stripe";
 import { rateLimiter } from "./rateLimiter";
 import {
   jsonResponse,
-  logVisitorObservation,
-  normalizeAnalyticsPath,
-  normalizeReferrer,
-  observeTrustedVisitor,
   readJsonBodyWithLimit,
   validateClientEventPayload,
   validateLeadPayload,
@@ -495,95 +491,17 @@ http.route({
 });
 
 // ============================================================================
-// ANALYTICS PIXEL ENDPOINT
+// The legacy analytics pixel (`/api/analytics/pixel`, `/api/v1/analytics/pixel`)
+// was retired once every live spoke moved to `/api/v2/events`.
+//
+// It was not merely redundant. It needed no credential — a project slug plus an
+// `Origin` header, both trivial for a non-browser client to supply — and it
+// drew from the *same* `analyticsProjectFallback` bucket, on the same key, as
+// authenticated v2 events. Forged pixel traffic could therefore drain a
+// project's bucket and suppress that project's real analytics. Do not
+// reintroduce an unauthenticated analytics alias; a new spoke gets a
+// publishable key before it ships.
 // ============================================================================
-
-const analyticsPixelHandler = httpAction(async (ctx, request) => {
-    const origin = request.headers.get("origin");
-
-    const parsed = await readJsonBodyWithLimit(request);
-    if (!parsed.ok) {
-      return new Response(null, { status: parsed.status === 413 ? 413 : 400 });
-    }
-
-    const body = parsed.value as Record<string, unknown>;
-    const projectIdRaw = body.projectId;
-    if (typeof projectIdRaw !== "string" || !projectIdRaw.trim()) {
-      return new Response(null, { status: 400 });
-    }
-    const projectId = projectIdRaw.trim().slice(0, LEAD_FIELD_LIMITS.projectId);
-
-    const project = await ctx.runQuery(internal.projects.getByProjectIdSlug, {
-      projectId,
-    });
-
-    if (!project) {
-      return new Response(null, { status: 400 });
-    }
-
-    const corsHeaders = getCorsHeaders(
-      project.deployment?.liveUrl,
-      project.deployment?.stagingUrl,
-      origin
-    );
-
-    // Analytics requires Origin match (mandatory)
-    if (!corsHeaders["Access-Control-Allow-Origin"]) {
-      return new Response(null, { status: 403 });
-    }
-
-    const visitor = await observeTrustedVisitor(request);
-    logVisitorObservation("analytics", projectId, visitor);
-
-    // Trusted visitor key when available; stricter project fallback otherwise.
-    // Never key on spoofable XFF.
-    if (visitor.key) {
-      const { ok } = await rateLimiter.limit(ctx, "eventsPerVisitor", {
-        key: `${projectId}:${visitor.key}`,
-      });
-      if (!ok) {
-        console.log("[hub.analytics] rate_limited", {
-          kind: "eventsPerVisitor",
-          projectId,
-        });
-        return new Response(null, { status: 429, headers: corsHeaders });
-      }
-    } else {
-      const { ok } = await rateLimiter.limit(ctx, "analyticsProjectFallback", {
-        key: projectId,
-      });
-      if (!ok) {
-        console.log("[hub.analytics] rate_limited", {
-          kind: "analyticsProjectFallback",
-          projectId,
-        });
-        return new Response(null, { status: 429, headers: corsHeaders });
-      }
-    }
-
-    const path = normalizeAnalyticsPath(body.path);
-    const referrer = normalizeReferrer(body.referrer);
-
-    await ctx.runMutation(internal.clientAnalytics.recordPageView, {
-      projectId,
-      path,
-      ...(referrer ? { referrer } : {}),
-    });
-
-    return new Response(null, { status: 204, headers: corsHeaders });
-  });
-
-http.route({
-  path: "/api/analytics/pixel",
-  method: "POST",
-  handler: analyticsPixelHandler,
-});
-
-http.route({
-  path: "/api/v1/analytics/pixel",
-  method: "POST",
-  handler: analyticsPixelHandler,
-});
 
 // ============================================================================
 // EVENTS v2 — publishable key + Origin (Stage 3 / Phase 2)
@@ -700,31 +618,20 @@ const eventsV2Handler = httpAction(async (ctx, request) => {
     return new Response(null, { status: 400, headers: corsHeaders });
   }
 
-  const visitor = await observeTrustedVisitor(request);
-  logVisitorObservation("analytics", project.projectId, visitor);
-
-  if (visitor.key) {
-    const { ok } = await rateLimiter.limit(ctx, "eventsPerVisitor", {
-      key: `${project.projectId}:${visitor.key}`,
+  // Project-scoped only. There is no per-visitor tier here: the Hub sees no
+  // client IP it can trust, and browser events carry no authenticated visitor
+  // identity the way `meta.visitorHash` gives leads one.
+  const { ok: withinLimit } = await rateLimiter.limit(
+    ctx,
+    "analyticsProjectFallback",
+    { key: project.projectId },
+  );
+  if (!withinLimit) {
+    console.log("[hub.events.v2] rate_limited", {
+      kind: "analyticsProjectFallback",
+      projectId: project.projectId,
     });
-    if (!ok) {
-      console.log("[hub.events.v2] rate_limited", {
-        kind: "eventsPerVisitor",
-        projectId: project.projectId,
-      });
-      return new Response(null, { status: 429, headers: corsHeaders });
-    }
-  } else {
-    const { ok } = await rateLimiter.limit(ctx, "analyticsProjectFallback", {
-      key: project.projectId,
-    });
-    if (!ok) {
-      console.log("[hub.events.v2] rate_limited", {
-        kind: "analyticsProjectFallback",
-        projectId: project.projectId,
-      });
-      return new Response(null, { status: 429, headers: corsHeaders });
-    }
+    return new Response(null, { status: 429, headers: corsHeaders });
   }
 
   // `origin` is already proven to match the project's deployment URL above, so
@@ -786,12 +693,12 @@ http.route({
 // ============================================================================
 // Note: Preflight handlers are intentionally permissive because we cannot
 // validate the origin against project-specific URLs during OPTIONS requests
-// (the projectId is in the POST body, not the URL). The actual POST handlers
-// perform strict origin validation using getCorsHeaders() and return 403 +
+// (the credential is in the POST body, not the URL). The actual POST handler
+// performs strict origin validation using getCorsHeaders() and returns 403 +
 // empty CORS headers for invalid origins. Browsers will block the response
 // from JavaScript when CORS headers don't match, preventing data exfiltration.
-// Non-browser clients bypass CORS anyway, so server-side validation in POST
-// handlers is the real security boundary.
+// Non-browser clients bypass CORS anyway, so server-side validation in the POST
+// handler is the real security boundary.
 // ============================================================================
 
 const handleClientApiPreflight = httpAction(async (_ctx, request) => {
@@ -805,8 +712,6 @@ const handleClientApiPreflight = httpAction(async (_ctx, request) => {
   return new Response(null, { status: 204, headers });
 });
 
-http.route({ path: "/api/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
-http.route({ path: "/api/v1/analytics/pixel", method: "OPTIONS", handler: handleClientApiPreflight });
 http.route({ path: "/api/v2/events", method: "OPTIONS", handler: handleClientApiPreflight });
 
 export default http;

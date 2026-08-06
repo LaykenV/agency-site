@@ -11,14 +11,19 @@ describe("Hub public HTTP routes", () => {
     expect(httpSource).not.toContain('path: "/api/ingest-lead"');
   });
 
-  test("keeps v1 and unversioned analytics during the events migration", () => {
-    expect(httpSource).toContain('path: "/api/v1/analytics/pixel"');
-    expect(httpSource).toContain('path: "/api/analytics/pixel"');
+  test("retires the unauthenticated analytics pixel aliases", () => {
+    expect(httpSource).not.toContain('path: "/api/v1/analytics/pixel"');
+    expect(httpSource).not.toContain('path: "/api/analytics/pixel"');
   });
 
   test("exposes Stage 3 typed events endpoint", () => {
     expect(httpSource).toContain('path: "/api/v2/events"');
     expect(httpSource).toContain("getActivePublishableByKeyId");
     expect(httpSource).toContain("validateClientEventPayload");
+  });
+
+  test("keys no rate limit on a caller-supplied IP header", () => {
+    expect(httpSource).not.toContain("x-forwarded-for");
+    expect(httpSource).not.toContain("observeTrustedVisitor");
   });
 });

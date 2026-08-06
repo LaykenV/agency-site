@@ -1,91 +1,9 @@
 import { v } from "convex/values";
-import { internalMutation, query } from "./_generated/server";
-import { authComponent } from "./auth";
+import { query } from "./_generated/server";
+import { getProjectBySlugIfOwner } from "./projectAccess";
 
-function bumpTopList(
-  items: Array<{ key: string; views: number }>,
-  key: string,
-  limit = 10,
-): Array<{ key: string; views: number }> {
-  const next = [...items];
-  const idx = next.findIndex((item) => item.key === key);
-  if (idx >= 0) {
-    next[idx] = { key, views: next[idx].views + 1 };
-  } else {
-    next.push({ key, views: 1 });
-  }
-  next.sort((a, b) => b.views - a.views);
-  return next.slice(0, limit);
-}
-
-/** Normalize referrer for rollup storage (host when parseable, else truncated). */
-function referrerBucket(referrer: string): string {
-  try {
-    const url = new URL(referrer);
-    return url.host.slice(0, 200) || referrer.slice(0, 200);
-  } catch {
-    return referrer.slice(0, 200);
-  }
-}
-
-// Internal: Record a page view (called from HTTP action)
-export const recordPageView = internalMutation({
-  args: {
-    projectId: v.string(),
-    path: v.string(),
-    referrer: v.optional(v.string()),
-  },
-  returns: v.null(),
-  handler: async (ctx, { projectId, path, referrer }) => {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-
-    // Find or create today's record
-    const existing = await ctx.db
-      .query("client_analytics")
-      .withIndex("by_projectId_and_date", (q) =>
-        q.eq("projectId", projectId).eq("date", today)
-      )
-      .first();
-
-    const referrerKey = referrer ? referrerBucket(referrer) : null;
-
-    if (existing) {
-      const topPages = bumpTopList(
-        existing.topPages.map((p) => ({ key: p.path, views: p.views })),
-        path,
-      ).map((p) => ({ path: p.key, views: p.views }));
-
-      const existingReferrers = (existing.topReferrers ?? []).map((r) => ({
-        key: r.referrer,
-        views: r.views,
-      }));
-      const topReferrers = referrerKey
-        ? bumpTopList(existingReferrers, referrerKey).map((r) => ({
-            referrer: r.key,
-            views: r.views,
-          }))
-        : existing.topReferrers;
-
-      await ctx.db.patch(existing._id, {
-        pageViews: existing.pageViews + 1,
-        topPages,
-        ...(topReferrers ? { topReferrers } : {}),
-      });
-    } else {
-      await ctx.db.insert("client_analytics", {
-        projectId,
-        date: today,
-        pageViews: 1,
-        topPages: [{ path, views: 1 }],
-        ...(referrerKey
-          ? { topReferrers: [{ referrer: referrerKey, views: 1 }] }
-          : {}),
-      });
-    }
-
-    return null;
-  },
-});
+// Rollup writes live in `clientEvents.recordEvent` — this module is read-only.
+// The legacy `recordPageView` writer was removed with the v1 analytics pixel.
 
 // Query: Get analytics summary for client portal
 export const getSummary = query({
@@ -120,17 +38,8 @@ export const getSummary = query({
       trend: 0,
     };
 
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      return empty;
-    }
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
-      .first();
-
-    if (!project || project.authUserId !== user._id) {
+    const project = await getProjectBySlugIfOwner(ctx, projectId);
+    if (!project) {
       return empty;
     }
 
@@ -214,17 +123,8 @@ export const getDailyStats = query({
   },
   returns: v.array(v.object({ date: v.string(), pageViews: v.number() })),
   handler: async (ctx, { projectId, days = 30 }) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) return [];
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (q) => q.eq("projectId", projectId))
-      .first();
-
-    if (!project || project.authUserId !== user._id) {
-      return [];
-    }
+    const project = await getProjectBySlugIfOwner(ctx, projectId);
+    if (!project) return [];
 
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);

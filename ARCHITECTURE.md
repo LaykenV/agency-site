@@ -51,9 +51,7 @@ Wired in `convex.config.ts`:
 | `/api/stripe` | Stripe webhook | Signed |
 | `/api/cal-webhook` | Cal.com webhook | Signed |
 | `/api/v2/leads` | Hub: authenticated lead intake (Stage 2) | Bearer `sk_live_…` (hashed at rest); only lead route |
-| `/api/v2/events` | Hub: typed pageviews + conversion clicks (Stage 3) | Body `pk_live_…` + Origin |
-| `/api/v1/analytics/pixel` | Hub: legacy page-view pixel | Origin required; fallback only — all live spokes use v2 events |
-| `/api/analytics/pixel` | Legacy alias of v1 (config-driven clients) | Same as v1 |
+| `/api/v2/events` | Hub: typed pageviews + conversion clicks (Stage 3) | Body `pk_live_…` + Origin; only analytics route |
 
 ---
 
@@ -66,14 +64,15 @@ Bespoke client sites call the Hub for lead intake and browser telemetry. The con
 ```
 POST /api/v2/leads             (Stage 2: Bearer sk_live_<keyId>_<secret>)
 POST /api/v2/events            (Stage 3: body publishableKey pk_live_… + Origin)
-POST /api/v1/analytics/pixel   (legacy pageviews; Origin required)
-
-POST /api/analytics/pixel      (legacy unversioned alias of v1)
 ```
 
-`/api/v2/leads` is the only lead-ingestion route. TB Tree, Chelsea, and the
-playground passed authenticated production verification on 2026-08-05; the
-unauthenticated v1 and unversioned lead aliases were then retired.
+These are the only two ingest routes, and both are authenticated. TB Tree,
+Chelsea, and the playground passed authenticated production verification on
+2026-08-05; the unauthenticated v1 and unversioned lead aliases were retired
+then, and the v1/unversioned analytics pixel was retired on the same date in the
+post-Stage-3 hardening pass (`UPGRADE_PLAN.md` § 5). The pixel needed no
+credential and drew from the same rate-limit bucket as authenticated v2 events,
+so forged traffic could suppress a project's real analytics.
 Credentials live in `project_credentials` (SHA-256 of the full key only; raw key shown once in admin). Verification order: body ceiling → parse Bearer → resolve non-revoked `secret` by `keyId` → constant-time hash compare → resolve project **from the credential** (body `projectId` is optional and must match when present) → status must be `LIVE`/`IN_REVIEW` → field validation → rate limits → insert + triage.
 
 Field validation runs before rate-limit consumption so a malformed payload does not burn a project's daily ceiling. `visitorHash` is read from either the top level or `meta`; when present it keys `leadPerVisitor`, when absent the request falls back to the `leadNoTrustedVisitor` project bucket. Check `hasVisitorHash` in the `[hub.lead.v2] accepted` log line to confirm a spoke is actually supplying it.
@@ -139,16 +138,6 @@ is set.
 }
 ```
 
-### Analytics payload (legacy v1)
-
-```json
-{
-  "projectId": "PROJECT_ID_FROM_ADMIN",
-  "path": "/services",
-  "referrer": "direct"
-}
-```
-
 ### Hub validation
 
 Per request (cheapest rejections first):
@@ -161,19 +150,17 @@ Per request (cheapest rejections first):
   project, require browser `Origin` to match `deployment.liveUrl` /
   `stagingUrl`, and enforce typed `type`/`payload` pairings (no free-form
   event names or `v.any()` meta on the wire).
-- For legacy v1 analytics, look up the public project ID and require browser
-  `Origin` to match `deployment.liveUrl` (with or without `www.`) or
-  `stagingUrl`.
-- **Never key rate limits on spoofable `x-forwarded-for`.** An unproven edge header is worse than none, since an attacker rotates its value to escape the strict project bucket. `x-forwarded-for` and `x-real-ip` can never be trusted.
+- **Never key rate limits on a client-supplied IP header.** An unproven edge header is worse than none, since a caller rotates its value to escape the strict project bucket. `x-forwarded-for` and `x-real-ip` can never be trusted.
 
-  **Both `HUB_VISITOR_OBSERVATION_UNTIL` and `HUB_TRUSTED_IP_HEADER` are deliberately unset and should stay that way.** Lead spokes derive a keyed visitor digest inside their own hosting runtime. Analytics/events use the project-scoped fallback when no trusted visitor key exists.
+  The Hub has **no** client-IP code path at all. `observeTrustedVisitor` and its `HUB_VISITOR_OBSERVATION_UNTIL` / `HUB_TRUSTED_IP_HEADER` env vars were deleted on 2026-08-05 rather than left dormant — the decision is permanent, so there is nothing to enable. Lead spokes derive a keyed visitor digest inside their own hosting runtime and send it as `meta.visitorHash`; events have no per-visitor tier and use the project-scoped ceiling.
 - Project ceilings (fixed window, hold under IP spoofing). **Storage ceilings are deliberately far looser than cost ceilings** — exhausting a storage ceiling rejects a paying client's real customers, so it exists to stop database abuse, not to control spend:
   - `leadIngestPerProject` — 1000/day storage; exhausted → `429` (do not insert) **and an admin threshold alert**, because rejected leads are lost customers.
   - `leadNoTrustedVisitor` — 30/hour fallback when an authenticated spoke cannot provide `visitorHash`; exhausted → `429` + threshold alert.
   - `paidFanoutPerProject` — 50/day Groq+email+SMS; exhausted → **still store** lead as `untriaged` with `fanoutPaused`, skip fan-out, one admin threshold alert. This is the real spend cap.
   - `smsPerProject` — 20/day; SMS is **allow-verdict only**.
 - Field limits before insert: name ≤120, email ≤200 + format check, phone ≤40, message ≤4000; strip C0/C1 controls. Every over-limit field rejects the request.
-- Analytics/events use the stricter project fallback (30/min), since no trusted visitor header is configured. Worst case without a per-visitor key is an inaccurate pageview/click count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries; Stage 3 also stores coarse `referrerClass` (organic/social/direct/other).
+- Events use one project-scoped ceiling, `analyticsProjectFallback` (120/min), shared by every visitor on the project. There is no per-visitor tier, so this is sized as a burst guard rather than a cost control — a rejected event spends nothing, and the real failure mode is silently undercounting a client's busiest day. Worst case is an inaccurate pageview/click count, not a lost lead. Bounded `referrer` is rolled into daily `topReferrers`, capped at 10 entries; Stage 3 also stores coarse `referrerClass` (organic/social/direct/other).
+- **Unauthenticated public marketing surfaces carry global ceilings** (`onboardingSessionGlobal` 200/hr, `onboardingPlanGlobal` 100/day, `publicAuditGlobalDaily` 200/day). The key must be global: a per-session or per-host key is defeated by rotating the value, which is how the original per-session onboarding throttle failed to cap Groq spend.
 - Threshold alerts are claimed once per project+limit window before scheduling (`thresholdAlertPerProjectLimit`), then persist one `hub.threshold_alert` before the independent global delivery cap (`adminOpsAlertGlobal`). `hub.threshold_alert_delivered` is written only after a successful email. Daily accepted, 429-by-bucket, and paused-fan-out totals are aggregated in `hub_operational_counters` so hostile traffic cannot create unbounded event rows.
 
 Stage 2 closed the unauthenticated paid-fan-out hole by removing every
@@ -411,6 +398,35 @@ All admin mutations log to `activity_log` with `actor: "admin"` and a descriptiv
 
 - Never store raw payment details (Stripe handles all card data).
 - Log all user-facing state changes to `activity_log`.
+- **Never return `resumeToken` from a function a browser can call.** It is the
+  sole authorization check for onboarding session writes, so disclosing it
+  grants write access. `prospectPublicValidator` deliberately omits it, and
+  `prospects.ts` projects fields explicitly rather than spreading the document
+  so a future field cannot leak by accident.
+- A query keyed on an email address is not access-controlled — an email is not
+  a secret. `prospects.findLatestByEmail` is `internalQuery` for this reason.
+
+### Client access control
+
+- Every client-portal query/mutation resolves the project through
+  `convex/projectAccess.ts` — `requireProjectOwner` / `requireProjectBySlug`
+  (throw) or `getProjectIfOwner` / `getProjectBySlugIfOwner` (return `null` for
+  queries that render an empty state).
+- Ownership is a function you must call, not a pattern you retype. The hand-rolled
+  version is what allowed a public prospect query to ship without one.
+- Errors are generic, so a caller cannot distinguish "no such project" from
+  "not yours" and enumerate slugs.
+- These helpers do **not** grant admins access to client projects. Admin reads
+  go through `requireAdmin` and separate admin functions, so an admin bug
+  cannot write to client data through a portal-facing path.
+
+### Unauthenticated public surfaces
+
+- Any public mutation that spends money (Groq, Firecrawl, PageSpeed, Resend,
+  Twilio) carries a **global** ceiling in `convex/rateLimiter.ts`.
+- The key must be global. A per-session or per-host key is defeated by rotating
+  the value — the original onboarding plan throttle was per-session, and
+  `initSession` mints sessions on demand, so it capped nothing.
 
 ### Admin access control
 

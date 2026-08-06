@@ -1,6 +1,11 @@
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { authComponent } from "./auth";
+import {
+  getProjectBySlugIfOwner,
+  getProjectIfOwner,
+  requireProjectOwner,
+} from "./projectAccess";
 import { projectStatusValidator, buildDetailsValidator, deploymentValidator, calBookingValidator, pageSpeedDataValidator } from "./validators";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
@@ -307,21 +312,8 @@ export const getPortalProject = query({
     v.null(),
   ),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      return null;
-    }
-
-    const project = await ctx.db
-      .query("projects")
-      .withIndex("by_projectId", (index) => index.eq("projectId", args.projectId))
-      .first();
-
+    const project = await getProjectBySlugIfOwner(ctx, args.projectId);
     if (!project) {
-      return null;
-    }
-
-    if (project.authUserId !== user._id) {
       return null;
     }
 
@@ -402,19 +394,7 @@ export const upsertBuildDetails = mutation({
   },
   returns: v.object({ success: v.boolean() }),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      throw new Error("Authentication required");
-    }
-
-    const project = await ctx.db.get(args.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    if (project.authUserId !== user._id) {
-      throw new Error("Unauthorized");
-    }
+    const project = await requireProjectOwner(ctx, args.projectId);
 
     const now = Date.now();
     const existingBuildDetails = project.buildDetails;
@@ -509,7 +489,7 @@ export const upsertBuildDetails = mutation({
 
     console.log("[projects] build details updated", {
       projectId: args.projectId,
-      authUserId: user._id,
+      authUserId: project.authUserId,
     });
 
     return { success: true };
@@ -526,26 +506,14 @@ export const createEditRequest = mutation({
   },
   returns: v.object({ id: v.id("edit_requests") }),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      throw new Error("Authentication required");
-    }
-
-    const project = await ctx.db.get(args.projectId);
-    if (!project) {
-      throw new Error("Project not found");
-    }
-
-    if (project.authUserId !== user._id) {
-      throw new Error("Unauthorized");
-    }
+    const project = await requireProjectOwner(ctx, args.projectId);
 
     const now = Date.now();
     const priority = args.priority ?? "normal";
 
     const requestId = await ctx.db.insert("edit_requests", {
       projectId: args.projectId,
-      authUserId: user._id,
+      authUserId: project.authUserId,
       title: args.title,
       details: args.details,
       status: "open",
@@ -583,7 +551,7 @@ export const createEditRequest = mutation({
     console.log("[projects] edit request created", {
       id: requestId,
       projectId: args.projectId,
-      authUserId: user._id,
+      authUserId: project.authUserId,
     });
 
     return { id: requestId };
@@ -610,17 +578,8 @@ export const listEditRequests = query({
     attachments: v.optional(v.array(v.id("_storage"))),
   })),
   handler: async (ctx, args) => {
-    const user = await authComponent.getAuthUser(ctx);
-    if (!user?._id) {
-      return [];
-    }
-
-    const project = await ctx.db.get(args.projectId);
+    const project = await getProjectIfOwner(ctx, args.projectId);
     if (!project) {
-      return [];
-    }
-
-    if (project.authUserId !== user._id) {
       return [];
     }
 

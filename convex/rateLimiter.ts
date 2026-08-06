@@ -64,23 +64,21 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     period: DAY,
   },
 
-  /** Analytics per trusted visitor. */
-  eventsPerVisitor: {
-    kind: "token bucket",
-    rate: 60,
-    period: MINUTE,
-    capacity: 60,
-  },
-
   /**
-   * Stricter project-only analytics fallback when no trusted visitor key exists
-   * (prevents a single spoofed Origin from draining a 60/min project bucket).
+   * The only ceiling on `/api/v2/events`, shared by every visitor on a project.
+   *
+   * Sized for a busy day, not a quiet one. There is no per-visitor tier: the
+   * Hub sees no trustworthy client IP, and a spoofable header would let a
+   * caller escape this bucket by rotating it. The failure mode here is silent
+   * undercounting on exactly the day a client runs a promo, so this is set well
+   * above realistic local-business traffic and the ceiling is a burst guard
+   * rather than a cost control — a rejected event spends nothing.
    */
   analyticsProjectFallback: {
     kind: "token bucket",
-    rate: 30,
+    rate: 120,
     period: MINUTE,
-    capacity: 30,
+    capacity: 120,
   },
 
   /**
@@ -103,14 +101,51 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     period: HOUR,
   },
 
-  // --- Existing surfaces (unchanged) ---
+  // --- Unauthenticated public marketing surfaces ---
+  //
+  // These predate Stage 1A and carry the same risk its lead ceilings closed:
+  // anyone can reach them, and each accepted request spends money (Groq for
+  // onboarding plans; Firecrawl + PageSpeed + Groq for audits). Global keys are
+  // the point — a per-session or per-host key is defeated by rotating the value.
 
-  /** @deprecated Prefer leadPerVisitor / leadNoTrustedVisitor. Kept for safety during deploy. */
-  leadSubmission: { kind: "token bucket", rate: 5, period: MINUTE, capacity: 5 },
+  /**
+   * Global ceiling on new onboarding sessions. `initSession` is an
+   * unauthenticated insert, so without this a script can grow the `prospects`
+   * table without bound.
+   */
+  onboardingSessionGlobal: {
+    kind: "fixed window",
+    rate: 200,
+    period: HOUR,
+  },
 
-  /** @deprecated Prefer eventsPerVisitor / analyticsProjectFallback. */
-  analyticsPixel: { kind: "token bucket", rate: 60, period: MINUTE, capacity: 60 },
+  /**
+   * Global ceiling on onboarding plan generation (Groq).
+   *
+   * The per-session throttle in `sessions.generatePlan` is not a cost control:
+   * `initSession` mints a fresh session on demand, so a caller rotating
+   * sessions bypasses it entirely. This is the ceiling that actually holds.
+   */
+  onboardingPlanGlobal: {
+    kind: "fixed window",
+    rate: 100,
+    period: DAY,
+  },
 
   marketingAuditView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
+
+  /** Per-host and per-minute burst guard for public audits. */
   publicAuditSubmit: { kind: "token bucket", rate: 3, period: MINUTE, capacity: 3 },
+
+  /**
+   * Hard daily ceiling on public audit spend (Firecrawl + PageSpeed + Groq).
+   *
+   * `publicAuditSubmit` is a token bucket, so on its own it permits ~4,300
+   * audits/day sustained. Real QR-scan volume is single digits.
+   */
+  publicAuditGlobalDaily: {
+    kind: "fixed window",
+    rate: 200,
+    period: DAY,
+  },
 });
