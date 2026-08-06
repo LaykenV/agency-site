@@ -566,9 +566,10 @@ pixel retirement passed its cold-route gate before deployment:
 npx convex logs --prod | grep -i "analytics/pixel"
 ```
 
-Every live spoke moved to `/api/v2/events` during Stage 3, so this should be
-silent. If any project is still posting to the pixel, fix that spoke before
-deploying — the route will 404 afterward.
+Every configured spoke moved to `/api/v2/events` during Stage 3, while All About
+Towing's telemetry component is gated off entirely. The log was silent. If a
+future check finds a project posting to the retired pixel, fix that spoke before
+the next Hub deploy because the route now returns `404`.
 
 Production evidence:
 
