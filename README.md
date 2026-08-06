@@ -63,7 +63,7 @@ Required for local dev (set in `.env.local`):
 - `BETTER_AUTH_SECRET`
 - `GOOGLE_PLACES_API_KEY` (marketing pipeline + Google reviews)
 - `FIRECRAWL_API_KEY` (marketing pipeline)
-- `GROQ_API_KEY` (marketing pipeline)
+- `GROQ_API_KEY` (marketing pipeline + onboarding agent + lead triage)
 - `CAL_WEBHOOK_SECRET`
 - `ADMIN_EMAIL` (or `ADMIN_EMAILS` comma-separated)
 

@@ -50,7 +50,8 @@
     "remotion": "^4.0.409",
     "sonner": "^2.0.7",
     "stripe": "19.3.1",
-    "tailwind-merge": "^3.3.1"
+    "tailwind-merge": "^3.3.1",
+    "zod": "^4.3.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

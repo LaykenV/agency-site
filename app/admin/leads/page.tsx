@@ -60,7 +60,7 @@ const FILTERS: Array<{
   {
     id: "all",
     label: "All",
-    description: "Includes review and legacy",
+    description: "Includes legacy and pre-v2 review",
     icon: Layers3,
   },
 ];
@@ -228,9 +228,9 @@ function LeadsDashboard() {
               hint={`Untriaged total: ${formatCapped(containment.untriaged, containment.untriagedCapped)}`}
             />
             <StatChip
-              label="Allow / review (24h)"
-              value={`${formatCapped(containment.allowLast24h, containment.leadScanCapped)} / ${containment.reviewLast24h}`}
-              hint={`Spam 24h: ${containment.spamLast24h}`}
+              label="Allow / spam (24h)"
+              value={`${formatCapped(containment.allowLast24h, containment.leadScanCapped)} / ${containment.spamLast24h}`}
+              hint={`Legacy review 24h: ${containment.reviewLast24h}`}
             />
             <StatChip
               label="SMS sent / blocked (24h)"
