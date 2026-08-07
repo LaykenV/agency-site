@@ -48,6 +48,24 @@ function getMarketingEmailHeader(): string {
   `;
 }
 
+/**
+ * Opt-out notice for cold outreach. These are commercial emails to businesses
+ * that never asked for them, so the opt-out has to be visible in the body — the
+ * List-Unsubscribe header alone is a deliverability signal, not a disclosure.
+ * Reply-based opt-out is honored by hand; `replyTo` on every send reaches a
+ * monitored inbox.
+ */
+const MARKETING_OPT_OUT_TEXT =
+  'Don\'t want to hear from me? Reply "unsubscribe" and I\'ll take you off my list for good.';
+
+function getMarketingOptOutHtml(): string {
+  return `
+    <p style="margin:16px 0 0;color:${EMAIL_STYLES.textLight};font-size:12px;line-height:1.5;">
+      ${MARKETING_OPT_OUT_TEXT}
+    </p>
+  `;
+}
+
 function getMarketingEmailFooter(): string {
   const logoUrl = getBrandLogoUrl();
   return `
@@ -71,6 +89,7 @@ function getMarketingEmailFooter(): string {
       <p style="margin:16px 0 0;color:${EMAIL_STYLES.textMuted};font-size:13px;line-height:1.5;">
         Fast, modern websites for local businesses &mdash; $199/mo, everything included.
       </p>
+      ${getMarketingOptOutHtml()}
     </div>
   `;
 }
@@ -275,6 +294,8 @@ export const sendAuditEmail = internalAction({
       getFounderSignatureText(),
       "",
       "Fast, modern websites for local businesses — $199/mo, everything included.",
+      "",
+      MARKETING_OPT_OUT_TEXT,
     ]
       .filter((line) => line !== undefined && line !== null)
       .join("\n");
@@ -409,6 +430,8 @@ export const sendPortfolioEmail = internalAction({
       getFounderSignatureText(),
       "",
       "Fast, modern websites for local businesses — $199/mo, everything included.",
+      "",
+      MARKETING_OPT_OUT_TEXT,
     ]
       .filter((line) => line !== undefined && line !== null)
       .join("\n");
@@ -479,6 +502,7 @@ export const sendFollowUpEmail = internalAction({
           Either way works &mdash; just a one-word reply ("close" or "hold") and I'll do the rest. Or call/text me direct: <a href="tel:+13373063705" style="color:${EMAIL_STYLES.textMuted};">${FOUNDER_PHONE_DISPLAY}</a>.
         </p>
         ${getFounderSignatureHtml()}
+        ${getMarketingOptOutHtml()}
       </div>
     `,
       preheader,
@@ -492,6 +516,8 @@ export const sendFollowUpEmail = internalAction({
       `Either way works — just a one-word reply ("close" or "hold") and I'll do the rest. Or call/text me direct: ${FOUNDER_PHONE_DISPLAY}.`,
       "",
       getFounderSignatureText(),
+      "",
+      MARKETING_OPT_OUT_TEXT,
     ].join("\n");
 
     await resend.sendEmail(ctx, {

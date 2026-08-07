@@ -2,8 +2,8 @@ import type { TermsSection, TermsContentBlock } from "./terms";
 
 export type { TermsSection as PrivacySection, TermsContentBlock as PrivacyContentBlock };
 
-export const PRIVACY_VERSION = "2026-04-08" as const;
-export const PRIVACY_LAST_UPDATED = "2026-04-08" as const;
+export const PRIVACY_VERSION = "2026-08-06" as const;
+export const PRIVACY_LAST_UPDATED = "2026-08-06" as const;
 
 export const PRIVACY_SECTIONS: Array<TermsSection> = [
   {
@@ -17,9 +17,10 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
       {
         type: "list",
         items: [
-          "Contact information: name, email address, phone number, and business name provided during onboarding or through your client portal.",
+          "Contact information: name, email address, phone number, and business name provided when you contact us, book a call, or use your client portal.",
           "Business details: company description, current website URL, brand assets, and service preferences.",
           "Communications: messages, edit requests, and support inquiries submitted through the portal or email.",
+          "Agreement records: when you accept an agreement in the portal we record the date and time, your browser user agent, and a cryptographic hash of the exact documents shown to you, as evidence of what you accepted.",
         ],
       },
       {
@@ -29,7 +30,8 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
       {
         type: "list",
         items: [
-          "Website analytics: page views and top-performing pages collected from your client website via our analytics pixel.",
+          "Website analytics: page views, page paths, and the referring site reported by your client website to our authenticated events endpoint.",
+          "Conversion events: taps and clicks on your phone number, email address, and directions links, so your portal can show how visitors try to reach you.",
           "Lead submissions: name, email, phone number, and message content submitted through your website's contact form by your visitors.",
           "Usage data: interactions with the client portal, including login activity and feature usage.",
         ],
@@ -49,7 +51,8 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
         items: [
           "Build, host, and maintain your custom website.",
           "Deliver lead submissions to your inbox and via SMS notifications to the phone number you provide.",
-          "Provide monthly analytics reports on your website's performance.",
+          "Show website performance metrics — page views, top pages, and conversion taps — in your client portal.",
+          "Screen incoming lead submissions with an automated model so we can suppress obvious spam before notifying you.",
           "Process payments and manage your subscription.",
           "Communicate with you about your account, service updates, and support requests.",
           "Improve our services based on usage patterns and feedback.",
@@ -96,6 +99,9 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
           "Twilio — SMS lead notification delivery.",
           "Resend — transactional email delivery.",
           "Cal.com — scheduling and appointment booking.",
+          "Groq — AI processing used to screen lead submissions and to summarize public website audits.",
+          "Firecrawl — public web page content extraction used in website audits.",
+          "Google — Places and PageSpeed Insights data used in business research and website audits.",
         ],
       },
       {
@@ -110,11 +116,25 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
     blocks: [
       {
         type: "paragraph",
-        text: "When someone visits your client website, we collect anonymized analytics data (page views, device type, referral source) and any information they voluntarily submit through your contact form (name, email, phone, message).",
+        text: "When someone visits your client website, we collect page views, the page path, the referring site, and taps on your phone, email, and directions links, along with any information they voluntarily submit through your contact form (name, email, phone, message). We do not set cookies on your visitors, do not build visitor profiles, and do not track them across other websites.",
       },
       {
         type: "paragraph",
-        text: "This visitor data is used solely to provide you with lead notifications and analytics reports. We do not use your visitors' data for our own marketing, sell it, or share it with third parties beyond what is necessary to deliver the service.",
+        text: "This visitor data is used solely to deliver leads to you and to show you performance metrics in your portal. Lead content is passed to our AI provider only to screen it for spam. We do not use your visitors' data for our own marketing, sell it, or share it with third parties beyond what is necessary to deliver the service.",
+      },
+    ],
+  },
+  {
+    anchor: "business-research-and-audits",
+    title: "Business Research & Website Audits",
+    blocks: [
+      {
+        type: "paragraph",
+        text: "We research local businesses that may be a fit for our services. That research uses publicly available information — business listings, publicly published contact details, and the public pages of a business's own website — together with automated performance scores and an AI-generated summary of what we found. The result may be published as a website audit at a private, unguessable link and shared with that business by email.",
+      },
+      {
+        type: "paragraph",
+        text: "This research covers businesses, not consumers, and we do not buy personal contact lists. If you are a business owner and want your audit removed or your business excluded from future outreach, email support@acadianawebdesign.com and we will delete the record. Every outreach email also tells you how to opt out, and replying \"unsubscribe\" removes you.",
       },
     ],
   },
@@ -138,7 +158,7 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "Lead submissions and analytics data associated with your website are retained while your subscription is active. After cancellation, you may request deletion of this data by emailing support@acadianawebdesign.com.",
+        text: "Lead submissions and analytics data associated with your website are retained while your subscription is active. After it ends we keep them for at least 30 days so you can request an export or a site transfer, and we may delete them after 60 days. You may request deletion sooner by emailing support@acadianawebdesign.com.",
       },
     ],
   },
@@ -152,7 +172,7 @@ export const PRIVACY_SECTIONS: Array<TermsSection> = [
       },
       {
         type: "paragraph",
-        text: "Client websites use a lightweight analytics pixel to collect anonymized page view data. This pixel does not use cookies and does not track visitors across other websites.",
+        text: "Client websites report page views and conversion taps to an authenticated events endpoint on our platform. This reporting does not use cookies, does not store visitor identifiers, and does not track visitors across other websites.",
       },
     ],
   },

@@ -18,7 +18,7 @@ import {
   type LegalSummaryPoint,
 } from "./render";
 
-export const MSA_VERSION = "2026-08-06.2" as const;
+export const MSA_VERSION = "2026-08-06.3" as const;
 export const MSA_LAST_UPDATED = "2026-08-06" as const;
 
 /** Contracting entity. Acadiana Web Design is the customer-facing trade name. */
@@ -71,6 +71,10 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       {
         type: "paragraph",
         text: "The version of this MSA and the version of your Order Form are both recorded, hashed, and stored at the moment you accept, along with the date, time, and browser user agent of your acceptance. You may request a copy of either document at any time.",
+      },
+      {
+        type: "paragraph",
+        text: "You consent to transact with us electronically. Checking the acceptance box and submitting it in your client portal is your electronic signature and has the same legal effect as a handwritten one. This MSA, each Order Form, notices, approvals, change orders, and invoices may be delivered electronically, and an electronic record satisfies any requirement that a record be in writing or signed.",
       },
     ],
   },
@@ -244,7 +248,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       },
       {
         type: "paragraph",
-        text: `By providing your phone number during onboarding or through your client portal and affirmatively checking the separate SMS consent box, you consent to receive automated SMS lead notifications from ${TRADE_NAME}. Consent is not a condition of purchase. You may use the service without providing a phone number.`,
+        text: `By providing your phone number to us or through your client portal and affirmatively checking the separate SMS consent box, you consent to receive automated SMS lead notifications from ${TRADE_NAME}. Consent is not a condition of purchase. You may use the service without providing a phone number.`,
       },
       {
         type: "subheading",
@@ -288,6 +292,10 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       {
         type: "paragraph",
         text: "Each party is responsible for its own compliance with the laws that apply to it. Once we deliver a lead to you, how you contact and market to that person — including compliance with telemarketing, text-messaging, and email laws — is your responsibility.",
+      },
+      {
+        type: "paragraph",
+        text: "While an Order Form is active, we retain the leads and analytics associated with it and make them available to you. After that Order Form ends we will retain them for at least thirty (30) days, during which you may request an export or the transfer described above; after sixty (60) days we may delete them and have no further obligation to retain them. We may keep records we need for tax, accounting, or legal purposes, and we may keep aggregated or de-identified information that does not identify you, your business, or your customers.",
       },
     ],
   },
@@ -353,6 +361,10 @@ export const MSA_SECTIONS: Array<MsaSection> = [
         type: "paragraph",
         text: "This MSA and every Order Form under it are governed by the laws of the State of Louisiana without regard to conflict-of-law principles. The parties consent to exclusive jurisdiction in Lafayette Parish, Louisiana.",
       },
+      {
+        type: "paragraph",
+        text: "To the fullest extent permitted by law, any claim arising out of or relating to this MSA or an Order Form must be brought within one (1) year after the party bringing it first knew or reasonably should have known of the facts giving rise to it. This does not apply to a claim for amounts owed under an Order Form.",
+      },
     ],
   },
   {
@@ -379,7 +391,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       },
       {
         type: "paragraph",
-        text: "We are an independent contractor, not your employee, partner, or joint venturer. If any provision is held unenforceable, the rest remains in effect. A party's failure to enforce a provision is not a waiver of it.",
+        text: "We are an independent contractor, not your employee, partner, or joint venturer. If any provision is held unenforceable, the rest remains in effect. A party's failure to enforce a provision is not a waiver of it. This MSA creates no rights in anyone other than the parties.",
       },
       {
         type: "paragraph",

@@ -790,11 +790,54 @@ contact compliance is the client's), force majeure, notice-to-client
 effectiveness via the account email, and continued-use acceptance of MSA
 updates. The liability cap and its carve-outs now also except the client's
 indemnification obligations, and indemnification joins the survival list.
+This is not attorney work product; revisit with a
+lawyer if a counterparty redlines or an engagement's size warrants it.
+
+**MSA revision 2026-08-06.3 (same day, superseded .2 before either deployed).**
+A second review pass added what a fully-electronic clickwrap shop was still
+missing: consent to transact electronically and the statement that checking the
+box *is* the signature (ESIGN/Louisiana UETA — the document that carries the
+whole business had no clause validating its own signing method); a one-year
+contractual limitations period, which in Louisiana replaces a ten-year
+prescriptive period for contract claims; a bounded data-retention clause (retain
+≥30 days after an Order Form ends, may delete after 60), which caps an otherwise
+open-ended storage obligation and matches the export promise in *Subscription
+deliverables*; a no-third-party-beneficiaries line; and removal of the stale
+"during onboarding" phrase in the SMS consent paragraph, since `/onboarding` is
+retired.
+
+`.2` was superseded rather than edited in place. It was committed but never
+pushed or deployed, so nothing could have been signed under it — but one version
+string must never map to two document texts, or a signed agreement's `msaHash`
+becomes unrecomputable. That invariant is the entire reason `lib/legal/terms.ts`
+is archived rather than deleted; bumping costs nothing and preserves it.
+
 Because acceptance requires `orderForm.msaVersion === MSA_VERSION`
 (`convex/agreement.ts:100`), any order form issued under `2026-08-06` and not
 yet accepted must be re-issued from admin after this deploys — drafts re-stamp
-automatically at issue. This is not attorney work product; revisit with a
-lawyer if a counterparty redlines or an engagement's size warrants it.
+automatically at issue.
+
+**Privacy policy 2026-08-06 (was 2026-04-08).** The published policy had drifted
+from the system it describes, which is the kind of inaccuracy that actually
+draws regulator attention. Corrected: it described the **retired unauthenticated
+analytics pixel** (twice) rather than the authenticated v2 events endpoint;
+claimed collection of visitor **device type**, which is not collected; omitted
+**conversion click events**, which are; omitted that **lead content is sent to
+Groq** for spam triage; omitted **Groq / Firecrawl / Google** from the vendor
+list entirely; promised **monthly analytics reports** that do not exist (metrics
+live in the portal); referenced the retired `/onboarding` intake; and never
+disclosed the **outbound research and audit pipeline**, which processes other
+businesses' data and emails them. Retention language now matches the MSA's 30/60
+window, and agreement-acceptance evidence (timestamp, user agent, document
+hashes — no IP; the portal never sends one) is disclosed.
+
+**Cold outreach opt-out (CAN-SPAM).** All three outbound emails carried only a
+`List-Unsubscribe` header — a deliverability signal, not the conspicuous
+in-body opt-out the statute requires. Each now states the opt-out in both the
+HTML and plain-text bodies. **Still open:** CAN-SPAM also requires a valid
+physical postal address in every commercial email; the footer currently shows
+only "Youngsville, LA". Add a street address or PO box to
+`getMarketingEmailFooter` in `convex/marketing/emails.ts`.
 
 Pre-signature legal/business gates for the first bespoke client (these do not
 reopen Stage 4A engineering):
@@ -806,7 +849,16 @@ reopen Stage 4A engineering):
       geauxBIZ trade-name filing (ref 12276617) was **In-Process** as of
       2026-08-06 and is not final until the Secretary of State issues the
       registration. The contract binds the LLC regardless — the trade name is
-      cosmetic to validity — but confirm the filing completes.
+      cosmetic to validity — but confirm the filing completes. Also confirm the
+      LLC is in fact **Louisiana**-formed: the MSA's opening line recites
+      "a Louisiana limited liability company," and a recital naming the wrong
+      state of formation is a factual misstatement in a signed contract. If it
+      was formed elsewhere, that string needs an MSA version bump before the
+      first bespoke signature.
+- [ ] Add a physical postal address to the outbound email footer
+      (`getMarketingEmailFooter`, `convex/marketing/emails.ts`). CAN-SPAM
+      requires one in every commercial email; the in-body opt-out shipped
+      2026-08-06 but the address line still reads only "Youngsville, LA".
 
 ### Stage 0 — resolved evidence (2026-08-04)
 
