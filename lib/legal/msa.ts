@@ -18,7 +18,7 @@ import {
   type LegalSummaryPoint,
 } from "./render";
 
-export const MSA_VERSION = "2026-08-06" as const;
+export const MSA_VERSION = "2026-08-06.2" as const;
 export const MSA_LAST_UPDATED = "2026-08-06" as const;
 
 /** Contracting entity. Acadiana Web Design is the customer-facing trade name. */
@@ -190,7 +190,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       },
       {
         type: "paragraph",
-        text: "Where automatic payment applies, you must maintain a valid payment method on file. Invoices and receipts are sent by email. Amounts more than ten (10) days past due may accrue interest at the lesser of 1.5% per month or the maximum rate permitted by Louisiana law, and we may suspend services on written notice until the account is current.",
+        text: "Where automatic payment applies, you must maintain a valid payment method on file. Invoices and receipts are sent by email. Amounts more than ten (10) days past due may accrue interest at the lesser of 1.5% per month or the maximum rate permitted by Louisiana law, and we may suspend services on written notice until the account is current. If we refer a past-due balance to a collection agency or an attorney, you are additionally responsible for our reasonable costs of collection, including attorney fees, to the extent permitted by law.",
       },
       {
         type: "paragraph",
@@ -212,7 +212,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       },
       {
         type: "paragraph",
-        text: "On termination, all amounts accrued through the effective date become due. Sections covering intellectual property, fees already accrued, confidentiality, disclaimers, limitation of liability, and governing law survive termination.",
+        text: "On termination, all amounts accrued through the effective date become due. Sections covering intellectual property, fees already accrued, confidentiality, indemnification, disclaimers, limitation of liability, and governing law survive termination.",
       },
     ],
   },
@@ -278,12 +278,26 @@ export const MSA_SECTIONS: Array<MsaSection> = [
     ],
   },
   {
+    anchor: "data-handling",
+    title: "Data & Lead Handling",
+    blocks: [
+      {
+        type: "paragraph",
+        text: "Websites and applications we operate for you may collect information from your visitors and customers, such as contact-form submissions, call and click events, and page analytics. We process that information on your behalf to provide the services — delivering leads to you, rendering metrics in your portal, and sending the notifications described above. We do not sell it, and we do not use it to market to your customers.",
+      },
+      {
+        type: "paragraph",
+        text: "Each party is responsible for its own compliance with the laws that apply to it. Once we deliver a lead to you, how you contact and market to that person — including compliance with telemarketing, text-messaging, and email laws — is your responsibility.",
+      },
+    ],
+  },
+  {
     anchor: "disclaimers",
     title: "Disclaimers & Warranties",
     blocks: [
       {
         type: "paragraph",
-        text: "We warrant that the services will be performed with reasonable skill and care and that deliverables will materially conform to the acceptance criteria stated in the applicable Order Form. Your exclusive remedy for a breach of this warranty is our correction of the non-conforming deliverable.",
+        text: "We warrant that the services will be performed with reasonable skill and care and that deliverables will materially conform to the acceptance criteria stated in the applicable Order Form. Your exclusive remedy for a breach of this warranty is our correction of the non-conforming deliverable, provided you report the non-conformance in writing within thirty (30) days after the deliverable is accepted. Nothing in this paragraph limits any ongoing support, hosting, maintenance, or edits allowance that an Order Form expressly includes.",
       },
       {
         type: "paragraph",
@@ -292,6 +306,24 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       {
         type: "paragraph",
         text: "We are not responsible for outages, changes, or policy decisions of third-party platforms, or for materials you supply that violate law or a third party's rights.",
+      },
+    ],
+  },
+  {
+    anchor: "indemnification",
+    title: "Indemnification",
+    blocks: [
+      {
+        type: "paragraph",
+        text: "You will defend and indemnify us against third-party claims, and the resulting damages, penalties, and reasonable defense costs, to the extent they arise from Client Materials; from your products, services, or business practices; from your use of lead data or deliverables in violation of law or this MSA; or from content or claims you directed us to publish.",
+      },
+      {
+        type: "paragraph",
+        text: "We will defend and indemnify you against third-party claims alleging that a deliverable we created for you — as delivered, and excluding Client Materials and third-party components — directly infringes a United States copyright or misappropriates a trade secret. If such a claim is made or appears likely, we may procure your right to keep using the deliverable, or replace or modify it to be non-infringing without materially reducing its function; if neither is commercially practicable, we may terminate the affected Order Form and refund prepaid fees covering services not yet delivered. This paragraph states your exclusive remedy for third-party infringement claims.",
+      },
+      {
+        type: "paragraph",
+        text: "The indemnified party must give prompt written notice of a claim, allow the indemnifying party to control the defense and settlement, and reasonably cooperate. A settlement that imposes any obligation on the indemnified party other than the payment of money covered by the indemnifying party requires the indemnified party's consent.",
       },
     ],
   },
@@ -309,7 +341,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
       },
       {
         type: "paragraph",
-        text: "These limits do not apply to your obligation to pay amounts due, to either party's breach of the confidentiality section, or to any liability that cannot be limited or excluded under Louisiana law.",
+        text: "These limits do not apply to your obligation to pay amounts due, to your indemnification obligations, to either party's breach of the confidentiality section, or to any liability that cannot be limited or excluded under Louisiana law.",
       },
     ],
   },
@@ -329,7 +361,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
     blocks: [
       {
         type: "paragraph",
-        text: "We may publish an updated version of this MSA to reflect operational, legal, or security changes. Material updates will be emailed to active clients at least fourteen (14) days before they take effect.",
+        text: "We may publish an updated version of this MSA to reflect operational, legal, or security changes. Material updates will be emailed to active clients at least fourteen (14) days before they take effect. Continuing to use the services after an update takes effect constitutes acceptance of the updated MSA for service going forward.",
       },
       {
         type: "paragraph",
@@ -349,6 +381,10 @@ export const MSA_SECTIONS: Array<MsaSection> = [
         type: "paragraph",
         text: "We are an independent contractor, not your employee, partner, or joint venturer. If any provision is held unenforceable, the rest remains in effect. A party's failure to enforce a provision is not a waiver of it.",
       },
+      {
+        type: "paragraph",
+        text: "Neither party is liable for delay or failure to perform, other than payment obligations already accrued, caused by events beyond its reasonable control, including natural disasters, severe weather, power or internet outages, epidemics, war, civil unrest, labor disputes, or failures of third-party platforms or carriers, provided the affected party resumes performance as soon as reasonably practicable.",
+      },
     ],
   },
   {
@@ -357,7 +393,7 @@ export const MSA_SECTIONS: Array<MsaSection> = [
     blocks: [
       {
         type: "paragraph",
-        text: `Official notices must be sent by email to ${SUPPORT_EMAIL}. You are responsible for keeping your contact information current. We will send operational updates and invoices to the email attached to your account.`,
+        text: `Official notices to us must be sent by email to ${SUPPORT_EMAIL}. Official notices to you will be sent to the email attached to your account and are effective when sent unless we receive a delivery failure. You are responsible for keeping your contact information current. We will send operational updates and invoices to that same email.`,
       },
     ],
   },

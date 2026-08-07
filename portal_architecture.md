@@ -628,10 +628,13 @@ location plus restore owner in the migration log.
 - [ ] Add `waas_local_family`; rename `STRIPE_CHELSEA_PRICE_ID` to
       `STRIPE_PRICE_ID_FAMILY`; set Chelsea's project to that offering.
 - [ ] Delete `getCheckoutPriceId`'s `isChelsea` branch and `CHELSEA_BILLING_EMAIL`.
-- [ ] Split terms into the versioned MSA plus per-project order forms (§ 5.4);
-      expand `agreements` with the order-form version/hash and widen `method` to
-      include `countersigned_pdf`. Keep `termsVersion`/`termsHash` until backfill
-      is verified.
+- [x] Split terms into the versioned MSA plus per-project order forms (§ 5.4)
+      and expand `agreements` with MSA/order-form versions, hashes, and snapshot
+      URLs. Shipped as Stage 4A in `6d683c4`; keep legacy
+      `termsVersion`/`termsHash` for pre-4A evidence and compatible readers.
+- [ ] Widen `agreement.method` to include `countersigned_pdf` only when the first
+      redline-driven deal requires it. Current production acceptance remains
+      clickwrap by design.
 - [ ] Generate the `waas_local` and `waas_local_family` order forms from the
       registry; confirm the family form carries the correct $49 figure.
 - [ ] Verify in Stripe test mode: Chelsea resolves the family price and a normal
@@ -724,7 +727,8 @@ it changes only data, never structure.
   capabilities control lead intake, edit requests, and metrics visibility.
 - **Agreements:** clickwrap stays, split into a versioned MSA plus a per-project
   order form, with a `countersigned_pdf` method reserved for the first
-  redline-driven deal. No e-signature vendor.
+  redline-driven deal. Stage 4A shipped the split in `6d683c4`; the reserved
+  method remains trigger-gated. No e-signature vendor.
 - **Bespoke build pricing:** deposit/setup fee plus monthly, expressed as a
   one-time line item inside subscription Checkout. Milestone invoicing is out of
   scope until a signed deal requires it.

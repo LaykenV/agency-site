@@ -138,8 +138,10 @@ ship as a public query leaking `resumeToken`.
 - These deliberately do **not** grant admins access to client projects. Admin
   reads go through `requireAdmin` and separate admin functions.
 
-Never return `resumeToken` from any function a browser can call — it is the
-sole authorization check for onboarding session writes.
+Never return `resumeToken` from any function a browser can call. Its consumer
+(onboarding session writes) was retired with `/onboarding`, but tokens are
+still minted onto prospect rows (`admin.ts`, `cal.ts`, `publicAudits.ts`) and
+must stay secret until that field is removed with a migration.
 
 ## Agreements: MSA + order form (Stage 4A, 2026-08-06)
 

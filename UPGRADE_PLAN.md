@@ -5,8 +5,8 @@ complete.** Stage 3 is verified end to end on the playground, TB Tree, and
 Chelsea Social Co. All About Towing is live as a website but still has no Hub
 project or telemetry enabled; it sends neither v1 nor v2 events. The
 post-Stage-3 hardening pass shipped in `14bd600` and is production-smoked — see
-§ 5. Stage 4A (MSA + order form split) is implemented and locally verified,
-pending deploy — see § 5.
+§ 5. Stage 4A (MSA + order form split) shipped in production commit `6d683c4`
+and passed its production smoke on 2026-08-06 — see § 5.
 
 On 2026-08-06, the explicit admin-only intake slice of Stage 5 and the narrow
 setup-plus-recurring Checkout bridge from Stage 6 were pulled forward: public
@@ -23,7 +23,8 @@ MSA/order-form split gets strictly harder to do after a client signs, so it
 shipped; the registry, portal refactor, and billing work do not, so they wait.
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-06 (Stage 4A implemented; 4B–7 trigger-gated)
+Last reviewed: 2026-08-06 (Stage 4A deployed and production-smoked; 4B–7
+trigger-gated)
 
 Master sequencing for three interlocking workstreams. **Read this before any of
 the detail docs.**
@@ -478,7 +479,7 @@ goal.
 - Do not add `mobile_app` or `idx_website` before the Stage 5 portal module
   refactor is complete. Both are expected, which makes this rule load-bearing
   rather than theoretical: adding a second engagement type to the current
-  2,191-line portal page is what guarantees the refactor never happens.
+  2,211-line portal page is what guarantees the refactor never happens.
   `waas_local_family` is safe earlier because it changes price/terms data, not
   workflow shape.
 - An `idx_website` engagement has a non-code prerequisite: MLS/board data license
@@ -580,8 +581,8 @@ by construction. A code read replaces the staging load test.
 A review of the completed Stage 0–3 work found that the containment discipline
 applied to `/api/v2/leads` had never been applied to the **public marketing
 surfaces**, which predate Stage 1A and carry the same risk. All items below are
-implemented and locally verified. None changes the Hub ↔ Spoke contract except
-the v1 pixel retirement.
+implemented, shipped in `14bd600`, and production-verified. None changes the
+Hub ↔ Spoke contract except the v1 pixel retirement.
 
 **Authorization**
 
@@ -677,7 +678,8 @@ Rollback is `git revert` + redeploy; no schema or data migration is involved.
 
 ### Stage 4A — MSA / order form split (2026-08-06)
 
-Implemented and locally verified; not yet deployed.
+**Complete and deployed.** Production commit `6d683c4` was Ready in Vercel and
+the live smoke completed on 2026-08-06.
 
 **Documents**
 
@@ -745,24 +747,66 @@ Verification: `bun test`, `npx tsc --noEmit`,
 `npx convex codegen --typecheck enable`, `bun run lint`, `bun run build`, and
 `git diff --check` — all clean.
 
-Not yet done, and required before a bespoke client signs:
+Production exit evidence:
 
-- [ ] Deploy and smoke: create a prospect and project in admin, confirm the
-      standard draft is editable, issue it, confirm invitation gating, accept,
-      and verify both hashes and both snapshot URLs land on the agreement row.
-- [ ] Attorney review of the MSA. This is a real contract for five-figure work
-      and it has not been reviewed by a lawyer.
+- [x] Created a fresh production prospect and admin-owned project, issued the
+      seeded standard Order Form, sent and received the magic-link invitation,
+      loaded the complete Order Form and MSA, accepted the clickwrap, and
+      reached the correct Stripe Checkout.
+- [x] Returning from the unpaid Checkout landed on `/portal/subscribe` with the
+      accepted `$199/month` and 12-month terms.
+- [x] The agreement row references the issued Order Form; its Order Form hash
+      equals the issued hash, and both stored snapshot downloads hash exactly to
+      their recorded MSA and Order Form SHA-256 values.
+- [x] Directly visiting `/portal/paymentSuccess` for that Checkout-created
+      Stripe customer with no subscription created no subscription row, did not
+      change the project timestamp, and left it at `AWAITING_PAYMENT`.
+- [x] Stripe showed no subscription, payment, invoice, or payment method for the
+      abandoned Checkout customer. The success-route sync remains the canonical
+      Stripe reconciliation path; it advances only from an active or trialing
+      subscription tied to the project by server-controlled metadata.
+
+The first real paid Checkout return remains an **organic operational
+observation**, not unfinished 4A work: confirm the subscription row appears and
+the named project advances to `AWAITING_ASSETS`. Do not create a live charge
+solely to manufacture that evidence.
 
 **Deliberately not backfilled:** Chelsea and every other pre-4A signer keep the
 agreement and snapshot they actually accepted. They receive no retroactive Order
 Form. The legacy checkout fallback retains Chelsea's existing email-to-$49 Price
 mapping. Unsigned old projects may receive today's standard Order Form when they
 next enter the agreement flow; that is prospective issuance, not a backfill.
+
+**MSA revision 2026-08-06.2 (post-smoke, same day).** The owner declined
+external attorney review and accepted that risk; a substantive model-assisted
+review (Claude) was done instead and its findings were shipped as a version
+bump: indemnification (broad client indemnity plus a narrow copyright/trade-
+secret IP indemnity with replace/modify/refund remedies), collection costs and
+attorney fees on past-due balances (Louisiana follows the American rule, so
+unstated fees are unrecoverable), a 30-day written-report window on the
+deliverable-conformance warranty, a Data & Lead Handling section (we process
+lead/visitor data on the client's behalf and do not sell it; post-delivery
+contact compliance is the client's), force majeure, notice-to-client
+effectiveness via the account email, and continued-use acceptance of MSA
+updates. The liability cap and its carve-outs now also except the client's
+indemnification obligations, and indemnification joins the survival list.
+Because acceptance requires `orderForm.msaVersion === MSA_VERSION`
+(`convex/agreement.ts:100`), any order form issued under `2026-08-06` and not
+yet accepted must be re-issued from admin after this deploys — drafts re-stamp
+automatically at issue. This is not attorney work product; revisit with a
+lawyer if a counterparty redlines or an engagement's size warrants it.
+
+Pre-signature legal/business gates for the first bespoke client (these do not
+reopen Stage 4A engineering):
+
+- [x] MSA legal review — resolved as owner-accepted risk with the
+      model-assisted review above in place of attorney review (2026-08-06).
 - [ ] Confirm the contracting-entity line. The MSA names Varholdt AI LLC
       operating under the trade name Acadiana Web Design; per `BUSINESS.md` the
       geauxBIZ trade-name filing (ref 12276617) was **In-Process** as of
       2026-08-06 and is not final until the Secretary of State issues the
-      registration.
+      registration. The contract binds the LLC regardless — the trade name is
+      cosmetic to validity — but confirm the filing completes.
 
 ### Stage 0 — resolved evidence (2026-08-04)
 
@@ -856,9 +900,9 @@ Consequences:
 - `checkout.sessions.create` remains the direct Stripe writer and still lacks
   Stage 6's component/canonical `orgId` model, but now supports an optional
   one-time setup Price beside the recurring Price in subscription mode.
-- Terms are a single global `TERMS_VERSION` with `$199` in the prose
-  (`lib/legal/terms.ts:22,40,118`); `agreementValidator.method` is
-  `v.literal("clickwrap")`.
+- Terms are the versioned MSA (`lib/legal/msa.ts`) plus a per-project issued
+  Order Form; `lib/legal/terms.ts` is archived solely to recompute pre-4A
+  hashes. `agreementValidator.method` is `v.literal("clickwrap")`.
 
 ### Pipeline (recorded 2026-08-05)
 
@@ -904,7 +948,7 @@ Required operational signals and exit evidence:
 | 1A | Leads accepted, `429`s, paid fan-out paused, SMS sent, SMS blocked by verdict; one labeled post-deploy submission through each live spoke |
 | 2 | v1/v2 lead volume, credential `lastUsedAt`, auth failures (from `[hub.lead.v2] auth_failed` logs — deliberately not a counter), `hasVisitorHash: true` on live spoke traffic, duplicate triage count (must be zero) |
 | 3 | Click events by type for a live project (met on playground 2026-08-05); per-spoke: one `tel` click reaching the portal after that site's key is issued. Referrer classification is collected but hidden, so it is no longer an exit signal |
-| 4A | MSA + order-form hashes and both snapshot URLs recorded on a test agreement; admin creation seeds an editable $199 draft; invite stays disabled until issue; stale-form acceptance refused; recurring and optional setup Stripe Prices verified against the accepted row; mixed Checkout and manual-invoice paths both covered |
+| 4A | **Exited 2026-08-06:** deployed in `6d683c4`; production agreement references the issued Order Form; MSA and Order Form snapshot hashes match; live recurring Checkout uses the accepted $199 row; unpaid success-route probe leaves the project at `AWAITING_PAYMENT`; stale-form, optional setup Price, and manual-invoice paths are covered by the passing regression suite. Observe the first real paid return without manufacturing a charge |
 | 4B | Backfill report with zero unresolved rows; both price paths resolve from project data in Stripe test mode |
 | 6 | Sandbox spike outputs and Stripe object IDs; hand reconciliation of every live subscription; visible reader/writer/side-effect flag state; completed rollback drill |
 

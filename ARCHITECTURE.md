@@ -383,8 +383,18 @@ All admin mutations log to `activity_log` with `actor: "admin"` and a descriptiv
 
 ### Agreement evidence
 
-- SHA-256 hash of canonical terms content stored as `termsHash`.
-- `termsVersion` recorded per agreement.
+- New agreements record the version and server-computed SHA-256 hash of both
+  the universal MSA and the exact issued per-project Order Form accepted by the
+  client. Both immutable canonical snapshots are stored and their URLs are
+  recorded on the agreement.
+- `termsVersion` / `termsHash` remain for compatibility and carry the MSA
+  identity after Stage 4A. Pre-4A agreements retain the legacy terms evidence
+  they actually accepted; they are never retroactively given an Order Form.
+- Checkout reads the Order Form referenced by the agreement and validates its
+  saved recurring and optional setup Stripe Prices before creating the session.
+  `/portal/paymentSuccess` reconciles Stripe state but advances only the project
+  identified by an active or trialing subscription's server-controlled
+  metadata; visiting the URL is not payment evidence.
 - `userAgent` captured on submit.
 - IP capture deferred (edge-captured later; not required for MVP).
 
