@@ -23,15 +23,6 @@ const INDUSTRY_SLUGS = [
 ] as const;
 
 const nextConfig: NextConfig = {
-  // Remotion lives under video/ and must not be traced into serverless functions.
-  outputFileTracingExcludes: {
-    "*": [
-      "./video/**/*",
-      "./out/**/*",
-      "./node_modules/remotion/**/*",
-      "./node_modules/@remotion/**/*",
-    ],
-  },
   /**
    * Vercel builds crash inside webpack's WebAssembly xxhash64 implementation:
    *   TypeError: Cannot read properties of undefined (reading 'length')
