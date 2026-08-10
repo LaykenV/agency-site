@@ -14,7 +14,7 @@ For technical architecture, see `ARCHITECTURE.md`.
 - **Operating entity:** Varholdt AI LLC. Acadiana Web Design is the permanent customer-facing trade name for the local website business.
 - **Trade-name filing:** geauxBIZ reference **12276617** was paid and submitted on **2026-08-06**. It is **In-Process** and is not final until the Louisiana Secretary of State issues the acceptance alert and registration document.
 - **Original funding source:** Mercury's initial **$20** seed funding and the later **$1,000** transfer originated from Layken's **personal USAA account**. Both are owner/member contributions, not business revenue.
-- **Advertising payment source:** The initial **$15.78** of Meta advertising charges ran through the Mercury business Mastercard, but the Mercury funds used were contributed from Layken's personal USAA account. The payment rail was a business card; the economic source was personal owner funding, not earned business money.
+- **Advertising payment source:** Meta advertising charges run through the Mercury business Mastercard, but the Mercury funds used were contributed from Layken's personal USAA account. The payment rail is a business card; the economic source is personal owner funding, not earned business money. Cumulative Meta ad spend was **$15.78** at first recording and **$64.92** as of 2026-08-08; running totals are tracked in `CONTENT-PLAN.md`, not here.
 - **Filing payment source:** The **$80** geauxBIZ charge ($75 filing + $5 state fee) was charged to Layken's **personal Visa ending 5100**, not Mercury or another business account. It is an owner-paid business expense to be classified as an additional owner contribution or reimbursed by the LLC.
 - **Provenance:** The Mercury seed money, later $1,000 funding transfer, and $80 filing payment all originated from personal accounts. None came from business-originated revenue. The Meta charge used the Mercury business-card rail after personal cash was contributed; the geauxBIZ charge went directly to the personal Visa.
 
@@ -28,6 +28,7 @@ For technical architecture, see `ARCHITECTURE.md`.
 - **Built:** A real product (Next.js + Convex), client portal, admin panel, Stripe billing, end-to-end onboarding flow, automated outbound pipeline that scrapes leads → AI-scores them → generates tokenized audit report pages → sends personalized outreach emails. New bespoke client template (see `../agency-template/`) replaces the old config-driven system.
 - **Bottleneck:** Not top-of-funnel. It's the human conversion step. A month of paralysis on cold-dialing is the evidence. The 90-day plan routes around this.
 - **Active plan (90 days):** Tier 1 = referrals + in-person drop-ins + local partnerships. Tier 2 (after day 30) = Google Search Ads + retargeting + direct mail + programmatic local SEO. Cold calls demoted to follow-up tool for warm leads only.
+- **Running ahead of plan:** a Meta Messenger ad pilot launched Jul 31 (inside Days 1–30, where the plan said no paid ads). As of 2026-08-08 it has spent $64.92 and produced the first 2 inbound conversations — still 0 calls and 0 closes, so the human-conversion bottleneck above is **not yet disproven**.
 - **CAC budget:** $200–$400 per closed client (Year-1 LTV ≈ $2,388).
 
 ---
@@ -159,6 +160,7 @@ The pipeline already does what most outsourced "AI marketing agent" services do.
 |---|---|---|
 | **Google Search Ads** | Tight high-intent local terms only: `web designer lafayette`, `website for plumber louisiana`, `fix slow website`, etc. Drive to dedicated landing page, email-gate a free audit | $300–500/mo test |
 | **Facebook/IG retargeting** | Audience: visited an `/audit/{token}` page but didn't book. 3 creatives rotating. Not cold | $3–5/day |
+| **Meta Messenger ads** ⚠️ *running early — launched Jul 31, not day 30* | Cold, click-to-Messenger against local owners. Automated opener ("Do you already have a website?"), then manual qualification. First channel to produce inbound conversations. See `CONTENT-PLAN.md` | $7–12/day, ~$500 pilot ceiling |
 | **Direct mail** | Same qualified-lead list, but for prospects too far to drive to. Print audit, cover letter, business card, padded envelope | ~$3/piece |
 | **Programmatic local SEO** | `/guides/best-plumbers-lafayette-la` style roundup pages. Rank on Google + warm-intro emails to featured businesses ("you're in my roundup, no catch"). Scraper already has the data | Time only |
 
@@ -178,7 +180,20 @@ The pipeline already does what most outsourced "AI marketing agent" services do.
 - 20 in-person drop-ins with printed audits.
 - 5 partnership conversations.
 - **Target:** 2–3 signed clients, 3–5 warm follow-ups.
-- No paid ads. No new tools. No new channels.
+- No new tools. No new channels beyond the Meta pilot below.
+- **Deviation from plan — Meta Messenger ads launched Jul 31, inside Days 1–30.**
+  The original plan said no paid ads before day 30; that is no longer what is
+  happening, and the plan text is left visible rather than rewritten so the
+  deviation stays legible. The pilot is spend-gated (~$500 ceiling, decisions at
+  spend milestones, not dates) and is the first channel to produce inbound
+  conversations. Full operations live in `CONTENT-PLAN.md`.
+  - As of 2026-08-08: **$64.92 spent, 2 Messenger conversations, 1 qualified,
+    0 calls, 0 closes.** Both leads came from the "$0 down / $199 monthly"
+    existing-post ad.
+  - CAC is **not yet measurable** — it needs a close, not a conversation. Do not
+    quote a CAC for this channel until one lands.
+  - This does not replace Tier 1. Referrals, drop-ins, and partnerships are still
+    the plan of record; the ads are a parallel test that happened to fire first.
 
 **Days 31–60 — add one paid channel, measure CAC.**
 - Continue Tier 1 cadence.

@@ -50,6 +50,44 @@ not the per-browser dashboard values.
 |---|---|---|---|---|---|---|
 | 2026-08-02 | ~$14 | 0 | 0 | 0 | 0 | Ad live since Jul 31; waiting on $50 gate |
 | 2026-08-04 | $30.72 | 0 | 0 | 0 | 0 | Active; 887 impressions, 380 reach, ~2.33 frequency, 0 Meta leads. Meta shows 1 total messaging contact but 0 new messaging contacts, so do not count it as a campaign lead. |
+| 2026-08-08 | $64.92 | 2 | 1 | 0 | 0 | **First real Messenger leads — both from the $0 down / $199 existing-post ad.** $50 gate passed and executed: AI-filtering ad paused (1,321 impr / 478 reach / $44.18, 1 new messaging connection backfilled late), both new posts live as existing-post ads. $0 Down ad: $15.46 / 415 impr / 277 reach / 2 leads. Text-New-Leads ad: $5.28 / 107 impr / 70 reach / 0 leads. |
+
+## Messenger leads from paid ads
+
+Every lead below arrived through Messenger as a reply to an ad, not through the
+Hub's `/api/v2/leads` route. Mirror each one into admin as a prospect so it does
+not live only in the Facebook inbox.
+
+All leads to date came from the **Aug 3 "$0 down / $199 monthly" existing-post
+ad** — the `$4,000 check` creative. The Aug 5 text-new-leads ad has produced
+none. Both replied to the same automated opener, "Do you already have a
+website?"
+
+### 2026-08-08 — Joseph Carpenter, Carpenter's Remodeling
+
+- Replied 3:27 AM. Answered the opener: **"No, not yet."**
+- Deck and patio builder, `facebook.com/WWW.carpenter100`. 1.2K followers,
+  100% recommend across 10 reviews. Contact `joeythecarpenter@gmail.com`,
+  337-501-6013.
+- Service area spans nine parishes: Lafayette, Acadia, Iberia, St. Martin,
+  Vermilion, St. Landry, Evangeline, Calcasieu, Livingston.
+- **Qualified.** His Page links to `carpenterproguys.com`, which `whois`
+  returns "No match" for — the domain expired and fully dropped, so it is
+  unregistered and every click from his Page fails to resolve. Verified
+  2026-08-08.
+- Do **not** register that domain on his behalf. Buying a prospect's brand
+  domain mid-pitch is leverage, and it destroys trust if the deal dies. He
+  registers it, or it is registered in his name once he is a client.
+- Status: told him about the dead domain, offered a free homepage concept.
+  Awaiting reply and asset handoff (logo, job photos, service list).
+
+### 2026-08-08 — Travis Tidwell
+
+- Replied 12:52 AM. Answered the opener: **"Yes, I do."**
+- Business not yet identified. Asked for the URL to run a free speed and
+  mobile audit as the opening move.
+- Status: unqualified until the site is seen. If it audits clean, say so and
+  stop rather than forcing a rebuild pitch.
 
 The launch creative is the AI lead-filtering graphic at
 `public/social/awd-ai-lead-filtering-2026-07-31.png`. It is a native 1080×1350
