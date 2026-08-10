@@ -1,9 +1,9 @@
 # Billing Migration — Theo pattern → `@convex-dev/stripe`
 
-Status: **planned, revised after source review; not implemented**
+Status: **detailed trigger-gated plan; not implemented**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (metadata bridge added; scope trim — see `UPGRADE_PLAN.md` § 7)
+Last reviewed: 2026-08-10 (canonical trigger lives in `../ROADMAP.md`)
 Decision: **adopt conditionally after the dependency baseline and sandbox spike**
 
 Replace the hand-rolled Stripe integration (modelled on
@@ -12,7 +12,8 @@ with the Convex Stripe component. The current path is not broken. This migration
 earns its cost by giving every subscription a project identity before one client
 can own multiple projects.
 
-Related: `portal_architecture.md` §6.2 and `UPGRADE_PLAN.md`.
+This document is implementation detail, not current production architecture.
+Related: `portal-evolution.md` §6.2 and `../ROADMAP.md`.
 
 ---
 
@@ -35,7 +36,7 @@ buyer feedback later outweighs the operational clarity.
 Stripe remains the source of truth. Convex component tables are a cache and
 query layer, not an authority that may invent billing state.
 
-### 1.1 Write the attribution now, migrate later (`UPGRADE_PLAN.md` Stage 1B)
+### 1.1 Write the attribution now, migrate later (historical Stage 1B)
 
 Adopting the component is a large stage. Attributing a subscription to a project
 is not, and the two are separable. `checkout.sessions.create`
@@ -90,7 +91,8 @@ as an adoption gate, not a formality.
 
 ## 3. Dependency baseline before Stripe work
 
-Use the exact Stage 0 matrix in `UPGRADE_PLAN.md`: Convex `1.31.7`, explicit
+Use the exact Stage 0 matrix recorded in
+`../archive/migrations/upgrade-program-2026-08-06.md`: Convex `1.31.7`, explicit
 workpool `0.3.2`, workflow `0.3.4`, Better Auth component `0.10.13` with
 `better-auth 1.4.12`, and held Agent, Rate Limiter, Twilio, Resend, and Polar
 versions. This is the smallest coherent peer set: workpool `0.3.2` requires
@@ -253,7 +255,7 @@ Billing status rules:
       regression, webhook signature/replay tests, and notification smoke tests.
 - [ ] Deploy this baseline separately and verify production before proceeding.
 
-### Phase A2 — metadata bridge (`UPGRADE_PLAN.md` Stage 1B)
+### Phase A2 — metadata bridge (historical Stage 1B)
 
 Independent of everything below. Ship it before onboarding any new client.
 

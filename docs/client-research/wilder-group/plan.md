@@ -498,7 +498,7 @@ or asking RealGeeks for their preferred design partners).
 - [ ] DNS cutover to new site (keep RealGeeks running on a temp subdomain during transition)
 - [ ] Train Jennifer + agents on her new CRM (1–2 hour session)
 - [ ] Help her cancel RealGeeks (handle the 2-month buyout if applicable)
-- [ ] Update `wildergroup.md` with Per-Project Notes at end of build
+- [ ] Update this file's Per-Project Notes at end of build
 
 ### Post-launch
 - [ ] Set up monthly check-in calendar invite (15 min, 1st of each month)

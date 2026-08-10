@@ -30,7 +30,7 @@ const EMAIL_RE =
  * bucket per request. Per-visitor limiting lives in each spoke's own Vercel
  * Function, where the platform overwrites the header with the real client IP.
  * The Hub keeps project-scoped ceilings, which hold regardless of what any
- * caller sends. Decided 2026-08-05; see UPGRADE_PLAN.md § 5.
+ * caller sends. See docs/ARCHITECTURE.md § Rate limits and failure behavior.
  *
  * Leads still get a per-visitor tier, but from `meta.visitorHash` computed by
  * the spoke's Function — a value the Hub can attribute because the request is

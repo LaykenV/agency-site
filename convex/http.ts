@@ -204,7 +204,7 @@ function getCorsHeaders(
 // This is the only lead-ingestion route. The unauthenticated v1 and
 // unversioned aliases were retired after every configured production spoke
 // migrated and passed end-to-end verification.
-// Auth order per waas_upgrade.md §3.4 — cheapest rejections first.
+// Auth order: cheapest rejections first. See docs/ARCHITECTURE.md.
 // Authorization is never logged (only keyId on success/failure).
 //
 // Pre-authentication failures (missing/malformed bearer, unknown or revoked
@@ -219,7 +219,7 @@ function getCorsHeaders(
 // ============================================================================
 
 const ingestLeadV2Handler = httpAction(async (ctx, request) => {
-  // 1. Content-Type + streaming body ceiling (reuses Stage 1A validation)
+  // 1. Content-Type + streaming body ceiling. See docs/ARCHITECTURE.md.
   const parsed = await readJsonBodyWithLimit(request);
   if (!parsed.ok) {
     console.log("[hub.lead.v2] body_rejected", {

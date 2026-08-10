@@ -1,9 +1,15 @@
 # Portal Architecture — Multi-Offering Support
 
-Status: **planned, revised after architecture review; not implemented**
+Status: **detailed trigger-gated plan; not current production behavior**
 Owner: Layken
 Written: 2026-08-04
-Last reviewed: 2026-08-05 (MSA/order-form split; expected offerings confirmed — see `UPGRADE_PLAN.md` § 7)
+Last reviewed: 2026-08-10 (canonical triggers live in `../ROADMAP.md`)
+
+This document is implementation detail for future multi-offering work. It is not
+the implemented portal. Read `../ROADMAP.md` for the trigger and
+`../ARCHITECTURE.md` for current production behavior. Some precursors (Stage 4A
+Order Forms, authenticated Hub APIs) already shipped; the offering registry,
+module registry, and multi-project model have not.
 
 Plan to decouple the client portal from the single $199 website product so it
 can serve different kinds of engagements — different onboarding, different
@@ -11,9 +17,9 @@ fulfillment stages, different dashboard widgets — and so one client can hold
 more than one project.
 
 Companion docs:
-- `waas_upgrade.md` — Hub ↔ Spoke security and telemetry. Intersects at the metrics layer.
-- `billing_migration.md` — Stripe component migration. **Resolves blocker B3 below.**
-- `UPGRADE_PLAN.md` — cross-doc sequencing. Read that first.
+- `../archive/migrations/waas-upgrade-2026-08-06.md` — completed Hub ↔ Spoke security and telemetry evidence.
+- `billing-migration.md` — Stripe component migration. **Resolves blocker B3 below.**
+- `../ROADMAP.md` — current trigger and sequencing source of truth. Read that first.
 
 ---
 
@@ -151,7 +157,7 @@ different stage list. Any design that cannot express that is not done.
 
 Both are priced as **deposit/setup fee + monthly**, not flat subscription, so an
 offering needs an optional one-time price alongside its recurring one. See
-`billing_migration.md` § 5.
+`billing-migration.md` § 5.
 
 #### The IDX authorization gate
 
@@ -560,7 +566,7 @@ the user. With two projects there is no way to know which subscription pays for
 which, so billing state, dunning, and the `AWAITING_PAYMENT` gate all become
 ambiguous.
 
-**Resolved by the Stripe component migration — see `billing_migration.md`.**
+**Resolved by the Stripe component migration — see `billing-migration.md`.**
 The component's subscription records link to a `userId` *or* an `orgId`; use
 `project:<projectId>` as the immutable identity. Do not use the project slug.
 Do not call singular `getSubscriptionByOrgId` as the authority: it returns the
@@ -684,7 +690,7 @@ location plus restore owner in the migration log.
 
 ### Phase 5 — multiple projects per client
 
-**Prerequisite: `billing_migration.md` is complete through Phase E.**
+**Prerequisite: `billing-migration.md` is complete through Phase E.**
 
 - [ ] Confirm every live subscription carries `project:<projectId>` in Stripe
       metadata and component state.

@@ -133,7 +133,7 @@ export function SiteMetrics({
         bare google.com referrer cannot separate search from the Business
         Profile listing. Clients read "direct 40" as "40 people typed my URL",
         which is false. Show sources again when Stage 8's UTM work can say
-        something specific and true. See UPGRADE_PLAN.md § Stage 3.
+        something specific and true. See docs/ARCHITECTURE.md § Telemetry interpretation.
       */}
     </div>
   );

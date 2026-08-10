@@ -1,112 +1,98 @@
-# Acadiana Web Design — agency-site
+# Acadiana Web Design Hub
 
-The Hub side of the Acadiana Web Design Website-as-a-Service business. Runs the marketing site, marketing pipeline, admin portal, client portal, agreement clickwrap, Stripe billing, Cal.com integration, and the public APIs that bespoke client sites POST leads and analytics to.
+The private operations application for Acadiana Web Design. It includes the
+marketing site, outbound research pipeline, admin workspace, client portal,
+agreements, Stripe billing, scheduling, and authenticated APIs used by bespoke
+client sites.
 
-The Spoke side is built bespoke per client. `../agency-template/` is **fully retired as of 2026-08-05** and is not cloned, patched, or merged from. `../agency-playground/` is the current reference Spoke and the first site to exercise each new Hub contract.
+Client sites are built as independent projects. `../agency-playground/` is the
+reference implementation for the Hub contract. The former `agency-template`
+workflow is retired.
 
----
+## Documentation
 
-## Docs
-
-| Doc | What it covers |
+| Document | Purpose |
 |---|---|
-| [`BUSINESS.md`](./BUSINESS.md) | Business model, pricing, target, traction, 90-day marketing plan |
-| [`ARCHITECTURE.md`](./ARCHITECTURE.md) | Technical blueprint: stack, schema, auth, Stripe, webhooks, Hub-Spoke contract, admin RBAC |
-| [`CLIENT_LIFECYCLE.md`](./CLIENT_LIFECYCLE.md) | End-to-end operational lifecycle: lead discovery → sales → portal → build → deploy → ongoing ops |
-| [`CLAUDE.md`](./CLAUDE.md) | Project context for Claude Code |
+| [`docs/BUSINESS.md`](./docs/BUSINESS.md) | Offer, customers, pricing, traction, and current priorities |
+| [`docs/GROWTH.md`](./docs/GROWTH.md) | Active acquisition channels, content, ads, scripts, and scorecard |
+| [`docs/OPERATIONS.md`](./docs/OPERATIONS.md) | Lead-to-live client lifecycle and recurring operations |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | Implemented technical architecture and security boundaries |
+| [`docs/ROADMAP.md`](./docs/ROADMAP.md) | Trigger-gated product work and unresolved operational gates |
+| [`docs/plans/`](./docs/plans/) | Detailed plans that are not current production behavior |
+| [`docs/client-research/`](./docs/client-research/) | Client- or prospect-specific research |
+| [`docs/archive/`](./docs/archive/) | Dated historical evidence; never the current source of truth |
 
----
+`CLAUDE.md` contains repository-specific rules for coding agents. It links back
+to the canonical documents instead of duplicating them.
 
-## Stack at a glance
+## Stack
 
-- Next.js 16 (App Router) + React 19 + TypeScript 5
-- Convex (DB + functions + file storage)
-- Better Auth (magic link only)
-- Stripe (subscriptions)
-- Resend (email)
-- Cal.com (scheduling)
-- Remotion (promo video generation)
-- Vercel (hosting)
+- Next.js 15.5.9, React 19, and TypeScript 5
+- Convex for data, functions, file storage, workflows, and HTTP routes
+- Better Auth magic links
+- Stripe subscriptions and Checkout
+- Resend, Twilio, Cal.com, Google Places, Firecrawl, PageSpeed, and Groq
+- Vercel hosting
 
----
+The exact package versions in `package.json` and `bun.lock` are authoritative.
 
 ## Local development
 
 ```bash
 bun install
-
-# Dev (Next.js + Convex in parallel)
 bun run dev
 
 # Individual services
 bun run dev:frontend
 bun run dev:backend
 
-# Build & lint
-bun run build
+# Verification
+bun test
+npx convex codegen --typecheck enable
+npx tsc --noEmit
 bun run lint
-
-# Promo videos
-bun run video:preview
-bun run video:render:all
+bun run build
 ```
 
----
+## Environment
 
-## Environment variables
+Local variables belong in `.env.local`; Convex deployment variables belong in
+the intended Convex deployment. Common integrations use:
 
-Required for local dev (set in `.env.local`):
-
-- Convex deployment URL (set by `npx convex dev`)
 - `RESEND_API_KEY`
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET`
 - `BETTER_AUTH_SECRET`
-- `GOOGLE_PLACES_API_KEY` (marketing pipeline + Google reviews)
-- `FIRECRAWL_API_KEY` (marketing pipeline)
-- `GROQ_API_KEY` (marketing pipeline + onboarding agent + lead triage)
+- `GOOGLE_PLACES_API_KEY`
+- `FIRECRAWL_API_KEY`
+- `GROQ_API_KEY`
 - `CAL_WEBHOOK_SECRET`
-- `ADMIN_EMAIL` (or `ADMIN_EMAILS` comma-separated)
+- `ADMIN_EMAIL` or `ADMIN_EMAILS`
 
-See `ARCHITECTURE.md` for what each integration does and where the keys are used in code.
+Never commit secret values. Search the code before adding an environment
+variable; retired integrations and variables should not be resurrected from an
+archived plan.
 
----
+## Repository map
 
-## Repository layout
-
-```
-app/
-├── (marketing site routes)
-├── admin/              Admin dashboard (server-gated)
-├── portal/             Client portal (magic-link gated)
-├── audit/[token]/      Public tokenized audit pages
-├── onboarding/         Prospect intake flow
-└── api/                Webhooks (Stripe, Cal.com) + Hub APIs
-
-convex/
-├── schema.ts           All tables
-├── validators.ts       Shared validators
-├── http.ts             HTTP routes (webhooks, hub APIs, v1 + legacy)
-├── auth.ts             Better Auth integration
-├── adminGuard.ts       Convex RBAC
-├── files.ts            File storage helpers
-├── marketing/          Outbound pipeline (workflow, search, pipeline, emails, public)
-└── onboarding/         Prospect intake + Groq agent
-
-components/
-├── ui/                 Primitives (button, input, etc.)
-└── ...                 Feature components
-
-lib/                    Client utilities, auth helpers, hooks
-video/                  Remotion compositions
+```text
+app/                 Next.js pages, route handlers, admin, and portal
+components/          Feature and UI components
+convex/              Schema, functions, workflows, webhooks, and Hub APIs
+lib/                 Auth, legal, SEO, and application utilities
+public/              Static public assets and preview assets
+tests/               Bun tests
+docs/                Canonical documentation, plans, research, and archives
 ```
 
----
+## Hub contract
 
-## Hub ↔ Spoke
+Bespoke client sites use two ingest routes:
 
-This repo serves the Hub. Bespoke client sites POST to:
+- `POST /api/v2/leads` with a server-held `sk_live_...` bearer credential.
+- `POST /api/v2/events` with a browser-safe `pk_live_...` key and an allowed
+  browser Origin.
 
-- `POST /api/v2/leads` — contact form submissions (`Authorization: Bearer sk_live_…`)
-- `POST /api/v2/events` — pageviews + conversion clicks (body `pk_live_…` + Origin)
+The unauthenticated v1 and unversioned aliases are retired. See
+[`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md#hub-spoke-contract) before
+changing either contract.
 
-These are the only two ingest routes, and both are authenticated. The legacy lead aliases and the v1/unversioned analytics pixel are all retired; do not reintroduce an unauthenticated alias. See `ARCHITECTURE.md` § Hub ↔ Spoke contract for the full payload spec and validation rules.
