@@ -59,32 +59,34 @@ export function ConceptPreviewFrame({
   }, [recomputeScale]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
+    <div className="min-w-0 space-y-3">
+      <div className="grid min-w-0 grid-cols-3 gap-1.5 sm:flex sm:flex-wrap sm:items-center sm:gap-2">
         {WIDTHS.map((entry) => (
           <button
             key={entry.id}
             type="button"
             onClick={() => setWidthId(entry.id)}
             className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+              "min-w-0 rounded-full px-1.5 py-1 text-[11px] font-medium transition-colors sm:px-3 sm:text-xs",
               entry.id === widthId
                 ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                 : "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
             )}
           >
             {entry.label}
-            <span className="ml-1 opacity-60">{entry.width}px</span>
+            <span className="hidden opacity-60 min-[430px]:ml-1 min-[430px]:inline">
+              {entry.width}px
+            </span>
           </button>
         ))}
-        <span className="text-xs text-[var(--muted-foreground)]">
+        <span className="col-span-3 text-center text-[11px] text-[var(--muted-foreground)] sm:col-auto sm:text-left sm:text-xs">
           {Math.round(scale * 100)}%
         </span>
       </div>
 
       <div
         ref={containerRef}
-        className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)]"
+        className="min-w-0 w-full overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)]"
         // The scaled frame is absolutely sized, so the wrapper needs the
         // post-scale height or the panel below it would overlap.
         style={{ height: device.height * scale }}

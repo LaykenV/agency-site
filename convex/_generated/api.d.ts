@@ -25,6 +25,7 @@ import type * as concepts_admin from "../concepts/admin.js";
 import type * as concepts_enrich from "../concepts/enrich.js";
 import type * as concepts_generate from "../concepts/generate.js";
 import type * as concepts_harvest from "../concepts/harvest.js";
+import type * as concepts_imageImport from "../concepts/imageImport.js";
 import type * as concepts_internal from "../concepts/internal.js";
 import type * as concepts_migrations from "../concepts/migrations.js";
 import type * as concepts_public from "../concepts/public.js";
@@ -77,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "concepts/enrich": typeof concepts_enrich;
   "concepts/generate": typeof concepts_generate;
   "concepts/harvest": typeof concepts_harvest;
+  "concepts/imageImport": typeof concepts_imageImport;
   "concepts/internal": typeof concepts_internal;
   "concepts/migrations": typeof concepts_migrations;
   "concepts/public": typeof concepts_public;

@@ -287,7 +287,8 @@ hold. The fields it clears remain declared as deprecated optionals in
 against both deployments; contracting them is the follow-up step.
 
 Google photos and review text never become preview imagery. Preview imagery is
-limited to owner-supplied uploads.
+limited to owner-supplied uploads and individually approved copies from the
+business's own website harvest.
 
 ### Structured website harvest
 
@@ -309,8 +310,14 @@ credentials, guarantees, prices, years, statistics, emergency claims, and
 testimonials; sensitive items are approved individually. The server rebuilds
 `approvedWebsiteContent` from candidate IDs in the current snapshot, then the
 primary **Approve and regenerate** action sends only that approved subset to the
-prompt. Skipping is explicit. Remote image URLs still cannot reach a generated
-page; safe image import is the next phase.
+prompt. Skipping is explicit.
+
+Image candidates are staged by a Node action that reads the current candidate
+from the database, validates HTTPS, exact/reviewed host, public DNS, manual
+redirects, an 8 MiB cap, MIME, and magic bytes, then stores JPEG/PNG/WebP in
+Convex. The admin sees only the Convex preview URL. Choosing **Logo** or
+**Photo** attaches that storage ID to the generator allowlist with source
+provenance; the original remote URL never renders in the browser or concept.
 
 Matching and baseline research never generate automatically. They stop at
 `draft`, leaving time to harvest, upload assets, edit notes, or deliberately

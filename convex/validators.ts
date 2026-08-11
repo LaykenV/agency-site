@@ -640,6 +640,25 @@ export const conceptHarvestImageCandidateValidator = v.object({
   sourceUrl: v.string(),
   roleHint: v.union(v.literal("logo"), v.literal("photo")),
   alt: v.optional(v.string()),
+  previewStorageId: v.optional(v.id("_storage")),
+  stageStatus: v.optional(
+    v.union(
+      v.literal("staging"),
+      v.literal("ready"),
+      v.literal("failed"),
+      v.literal("rejected"),
+    ),
+  ),
+  importError: v.optional(v.string()),
+  approvedKind: v.optional(v.union(v.literal("logo"), v.literal("photo"))),
+});
+
+export const conceptImportedWebsiteAssetValidator = v.object({
+  candidateId: v.string(),
+  storageId: v.id("_storage"),
+  kind: v.union(v.literal("logo"), v.literal("photo")),
+  sourceUrl: v.string(),
+  importedAt: v.number(),
 });
 
 export const conceptHarvestReviewStateValidator = v.union(
@@ -699,6 +718,9 @@ export const websiteConceptDocValidator = v.object({
   harvestReviewedAt: v.optional(v.number()),
   approvedHarvestCandidateIds: v.optional(v.array(v.string())),
   approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
+  importedWebsiteAssets: v.optional(
+    v.array(conceptImportedWebsiteAssetValidator),
+  ),
 
   researchBrief: v.optional(conceptBriefValidator),
   generatedHtml: v.optional(v.string()),

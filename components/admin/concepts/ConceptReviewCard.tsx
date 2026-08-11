@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ConceptPreviewFrame } from "./ConceptPreviewFrame";
 import { ConceptHarvestReview } from "./ConceptHarvestReview";
+import { ConceptHarvestImages } from "./ConceptHarvestImages";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
 import {
   buildMessengerDraft,
@@ -120,6 +121,15 @@ export function ConceptReviewCard({
   const approveHarvestReview = useMutation(
     api.concepts.admin.approveHarvestReview,
   );
+  const stageHarvestImages = useMutation(
+    api.concepts.admin.stageHarvestImages,
+  );
+  const approveHarvestImage = useMutation(
+    api.concepts.admin.approveHarvestImage,
+  );
+  const rejectHarvestImage = useMutation(
+    api.concepts.admin.rejectHarvestImage,
+  );
   const generate = useMutation(api.concepts.admin.generate);
   const publish = useMutation(api.concepts.admin.publish);
   const unpublish = useMutation(api.concepts.admin.unpublish);
@@ -210,6 +220,25 @@ export function ConceptReviewCard({
     };
   }, [conceptId, isMatching, listPlaceCandidates]);
 
+  const unstagedImageKey = (concept?.harvestImageCandidates ?? [])
+    .filter(
+      (candidate) =>
+        candidate.stageStatus === undefined && !candidate.previewStorageId,
+    )
+    .map((candidate) => candidate.id)
+    .join("\0");
+
+  useEffect(() => {
+    if (!unstagedImageKey) return;
+    stageHarvestImages({ conceptId }).catch((error: unknown) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Website image previews could not start.",
+      );
+    });
+  }, [conceptId, stageHarvestImages, unstagedImageKey]);
+
   if (data === undefined) {
     return (
       <div className="flex items-center justify-center rounded-xl border border-[var(--border)] p-10">
@@ -239,6 +268,12 @@ export function ConceptReviewCard({
   const sensitiveCount = (concept.harvestCandidates ?? []).filter(
     (candidate) => candidate.risk === "sensitive",
   ).length;
+  const harvestImagePreviewUrls = Object.fromEntries(
+    data.harvestImagePreviews.map((preview) => [
+      preview.candidateId,
+      preview.url,
+    ]),
+  );
 
   const runAction = async (
     action: () => Promise<unknown>,
@@ -314,7 +349,7 @@ export function ConceptReviewCard({
   };
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       {/* --- Header --- */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -524,7 +559,7 @@ export function ConceptReviewCard({
       {harvestSourceUrl || concept.harvestReviewState ? (
         <div
           className={cn(
-            "rounded-xl border p-4",
+            "min-w-0 overflow-hidden rounded-xl border p-3 sm:p-4",
             harvestPending
               ? "border-amber-500/30 bg-amber-500/5"
               : "border-[var(--border)] bg-[var(--card)]",
@@ -569,37 +604,75 @@ export function ConceptReviewCard({
             guarantees, prices, years, statistics, emergency claims, and
             testimonials that require individual approval.
           </p>
-          {(concept.harvestImageCandidates?.length ?? 0) > 0 ? (
-            <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">
-              Harvested images are not imported yet. Use Upload or Paste below
-              for any logo or photo you approve.
-            </p>
+          {concept.harvestedPages?.length ? (
+            <details className="mt-3 min-w-0 text-xs">
+              <summary className="cursor-pointer font-medium text-[var(--muted-foreground)]">
+                {concept.harvestedPages.length} source page
+                {concept.harvestedPages.length === 1 ? "" : "s"}
+              </summary>
+              <ul className="mt-2 min-w-0 space-y-1.5">
+                {concept.harvestedPages.map((page) => (
+                  <li key={page.url} className="min-w-0">
+                    <a
+                      href={page.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block min-w-0 truncate text-[var(--muted-foreground)] underline underline-offset-2"
+                    >
+                      {page.title ?? page.url}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </details>
           ) : null}
 
-          {concept.harvestedPages?.length ? (
-            <ul className="mt-3 space-y-1 text-xs">
-              {concept.harvestedPages.map((page) => (
-                <li key={page.url}>
-                  <a
-                    href={page.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-[var(--muted-foreground)] underline underline-offset-2"
-                  >
-                    {page.title ?? page.url}
-                  </a>
+          {concept.harvestWarnings?.length ? (
+            <ul className="mt-3 min-w-0 list-disc space-y-1 pl-4 text-xs text-[var(--muted-foreground)]">
+              {concept.harvestWarnings.map((warning) => (
+                <li key={warning} className="break-words [overflow-wrap:anywhere]">
+                  {warning}
                 </li>
               ))}
             </ul>
           ) : null}
 
-          {concept.harvestWarnings?.length ? (
-            <ul className="mt-3 list-disc space-y-1 pl-4 text-xs text-[var(--muted-foreground)]">
-              {concept.harvestWarnings.map((warning) => (
-                <li key={warning}>{warning}</li>
-              ))}
-            </ul>
-          ) : null}
+          <ConceptHarvestImages
+            candidates={concept.harvestImageCandidates ?? []}
+            previewUrls={harvestImagePreviewUrls}
+            isBusy={isBusy || isWorking}
+            canRegenerate={!harvestPending && Boolean(concept.researchBrief)}
+            onRetry={(candidateId) =>
+              runAction(
+                () => stageHarvestImages({ conceptId, candidateId }),
+                "Retrying that website image...",
+              )
+            }
+            onApprove={(candidateId, kind) =>
+              runAction(
+                () => approveHarvestImage({ conceptId, candidateId, kind }),
+                kind === "logo"
+                  ? "Website logo selected."
+                  : "Website photo selected.",
+              )
+            }
+            onReject={(candidateId) =>
+              runAction(
+                () => rejectHarvestImage({ conceptId, candidateId }),
+                "Website image rejected.",
+              )
+            }
+            onRegenerate={() =>
+              runAction(
+                () =>
+                  generate({
+                    conceptId,
+                    structureId: structureId || undefined,
+                  }),
+                "Generating with the selected images...",
+              )
+            }
+          />
 
           {harvestPending || harvestApproved ? (
             <ConceptHarvestReview
@@ -1001,7 +1074,7 @@ export function ConceptReviewCard({
 
       {/* --- Review and publish --- */}
       {concept.generatedHtml ? (
-        <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+        <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
           <div>
             <h3 className="text-sm font-semibold">Review</h3>
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
@@ -1017,10 +1090,11 @@ export function ConceptReviewCard({
             businessName={concept.businessName}
           />
 
-          <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+          <div className="grid grid-cols-1 gap-2 border-t border-[var(--border)] pt-4 min-[430px]:grid-cols-2">
             {concept.status === "published" ? (
               <Button
                 size="sm"
+                className="w-full"
                 variant="outline"
                 disabled={isBusy}
                 onClick={() =>
@@ -1035,6 +1109,7 @@ export function ConceptReviewCard({
             ) : (
               <Button
                 size="sm"
+                className="w-full"
                 disabled={isBusy}
                 onClick={() =>
                   runAction(() => publish({ conceptId }), "Published.")
@@ -1049,6 +1124,7 @@ export function ConceptReviewCard({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="w-full"
                   onClick={() => copyText(previewUrl, "Link copied.")}
                 >
                   <Copy className="h-3.5 w-3.5" />
@@ -1057,6 +1133,7 @@ export function ConceptReviewCard({
                 <Button
                   size="sm"
                   variant="outline"
+                  className="w-full"
                   onClick={() =>
                     copyText(
                       buildMessengerDraft({
@@ -1070,7 +1147,7 @@ export function ConceptReviewCard({
                   <Copy className="h-3.5 w-3.5" />
                   Copy Messenger draft
                 </Button>
-                <Button size="sm" variant="ghost" asChild>
+                <Button size="sm" variant="ghost" className="w-full" asChild>
                   {/* notrack keeps Layken's own checks out of the open count. */}
                   <a
                     href={`${previewUrl}?notrack=1`}
@@ -1084,6 +1161,7 @@ export function ConceptReviewCard({
                 <Button
                   size="sm"
                   variant="ghost"
+                  className="w-full"
                   disabled={isBusy}
                   onClick={() =>
                     runAction(

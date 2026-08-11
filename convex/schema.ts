@@ -33,6 +33,7 @@ import {
   conceptHarvestImageCandidateValidator,
   conceptHarvestReviewStateValidator,
   conceptApprovedWebsiteContentValidator,
+  conceptImportedWebsiteAssetValidator,
   conceptStatusValidator,
 } from "./validators";
 
@@ -438,6 +439,9 @@ export default defineSchema({
     harvestReviewedAt: v.optional(v.number()),
     approvedHarvestCandidateIds: v.optional(v.array(v.string())),
     approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
+    importedWebsiteAssets: v.optional(
+      v.array(conceptImportedWebsiteAssetValidator),
+    ),
 
     researchBrief: v.optional(conceptBriefValidator),
     generatedHtml: v.optional(v.string()),

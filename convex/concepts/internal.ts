@@ -394,6 +394,26 @@ export const queueHarvest = internalMutation({
       );
     }
 
+    const attached = new Set([
+      ...concept.assetStorageIds,
+      ...(concept.logoStorageId ? [concept.logoStorageId] : []),
+    ]);
+    for (const candidate of concept.harvestImageCandidates ?? []) {
+      if (
+        candidate.previewStorageId &&
+        !attached.has(candidate.previewStorageId)
+      ) {
+        try {
+          await ctx.storage.delete(candidate.previewStorageId);
+        } catch (error) {
+          console.warn("[concepts] staged image cleanup failed", {
+            storageId: candidate.previewStorageId,
+            error,
+          });
+        }
+      }
+    }
+
     const harvestRequestId = crypto.randomUUID();
     await ctx.db.patch(args.conceptId, {
       harvestRequestId,
@@ -507,6 +527,12 @@ export const saveHarvest = internalMutation({
     const reviewable =
       args.candidates.length > 0 || args.imageCandidates.length > 0;
     const now = Date.now();
+    const retainedImages = new Map(
+      (concept.importedWebsiteAssets ?? []).map((asset) => [
+        asset.candidateId,
+        asset,
+      ]),
+    );
 
     await ctx.db.patch(args.conceptId, {
       harvestRequestId: undefined,
@@ -514,7 +540,16 @@ export const saveHarvest = internalMutation({
       harvestSourceUrl: args.sourceUrl,
       harvestedPages: args.pages,
       harvestCandidates: args.candidates,
-      harvestImageCandidates: args.imageCandidates,
+      harvestImageCandidates: args.imageCandidates.map((candidate) => ({
+        ...candidate,
+        ...(retainedImages.has(candidate.id)
+          ? {
+              previewStorageId: retainedImages.get(candidate.id)!.storageId,
+              stageStatus: "ready" as const,
+              approvedKind: retainedImages.get(candidate.id)!.kind,
+            }
+          : { stageStatus: "staging" as const }),
+      })),
       harvestWarnings: args.warnings.length > 0 ? args.warnings : undefined,
       harvestReviewState: reviewable ? "pending" : "skipped",
       harvestReviewedAt: reviewable ? undefined : now,
@@ -550,7 +585,57 @@ export const saveHarvest = internalMutation({
         warningCount: args.warnings.length,
       },
     });
+    if (args.imageCandidates.length > 0) {
+      await ctx.scheduler.runAfter(
+        0,
+        internal.concepts.imageImport.stageHarvestImages,
+        {
+          conceptId: args.conceptId,
+          expectedHarvestedAt: now,
+        },
+      );
+    }
     return null;
+  },
+});
+
+/** Save one staged preview only if it still belongs to the active snapshot. */
+export const saveHarvestImageStage = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    expectedHarvestedAt: v.number(),
+    candidateId: v.string(),
+    storageId: v.optional(v.id("_storage")),
+    error: v.optional(v.string()),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept || concept.harvestedAt !== args.expectedHarvestedAt) {
+      return false;
+    }
+
+    const candidates = [...(concept.harvestImageCandidates ?? [])];
+    const index = candidates.findIndex(
+      (candidate) => candidate.id === args.candidateId,
+    );
+    if (index < 0 || candidates[index].stageStatus === "rejected") return false;
+    if (args.storageId && candidates[index].previewStorageId) return false;
+
+    candidates[index] = {
+      ...candidates[index],
+      previewStorageId: args.storageId,
+      stageStatus: args.storageId ? "ready" : "failed",
+      importError: args.storageId
+        ? undefined
+        : (args.error ?? "Image staging failed.").slice(0, 240),
+    };
+
+    await ctx.db.patch(args.conceptId, {
+      harvestImageCandidates: candidates,
+      updatedAt: Date.now(),
+    });
+    return true;
   },
 });
 

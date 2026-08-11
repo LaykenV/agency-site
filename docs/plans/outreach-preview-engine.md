@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Core generator live; structured harvesting B0-B2 shipped; B3-B4 and destructive cutover remain gated**
+Status: **Core generator live; structured harvesting B0-B3 shipped; B4 and destructive cutover remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -21,11 +21,12 @@ Last reviewed: 2026-08-11
   test, including the real-iPhone check.
 - **Step 4 — done.** `GROWTH.md`, `ARCHITECTURE.md`, `OPERATIONS.md`,
   `BUSINESS.md`, `ROADMAP.md`, and `CLAUDE.md` updated.
-- **Structured harvesting — B0 through B2 shipped 2026-08-11.** Google is identity
+- **Structured harvesting — B0 through B3 shipped 2026-08-11.** Google is identity
   only, the bounded source-backed harvest is live, and generation/publication
   stay gated while a harvest is running or awaiting review. Approved facts now
-  reach regeneration through a mobile review gate. B3-B4 remain in
-  this document under **Structured content harvesting plan**.
+  reach regeneration through a mobile review gate, and source-observed website
+  images are safely staged into Convex for explicit logo/photo approval. B4
+  remains in this document under **Structured content harvesting plan**.
 
 The 2026-08-11 review blockers are fixed:
 
@@ -39,7 +40,7 @@ The 2026-08-11 review blockers are fixed:
 - the cutover runbook now uses supported Convex deployment syntax, explicit row
   counts, archive integrity testing, and export/count reconciliation
 
-Local exit checks pass: Convex codegen, TypeScript, 181 tests, lint, production
+Local exit checks pass: Convex codegen, TypeScript, 188 tests, lint, production
 build (172 routes), and `git diff --check`. The implementation is done; live
 OpenRouter generation is now verified, while full production and
 physical-device verification remain operational gates.
@@ -194,12 +195,12 @@ Phase B0 tightened this boundary and is implemented: Places is used for live
 identity matching and the exempt place ID only. Review text, ratings, review
 counts, opening hours, and street addresses are neither persisted nor passed to
 generation, and match candidates are fetched live rather than stored. Preview
-images remain manual/pasted assets; individually approved website-source
-candidates copied into Convex storage arrive with B3.
+images can be manual/pasted assets or individually approved website-source
+candidates copied into Convex storage.
 
 ## Structured content harvesting plan
 
-Status: **B0 through B2 implemented on 2026-08-11; B3–B4 not implemented**
+Status: **B0 through B3 implemented on 2026-08-11; B4 not implemented**
 
 What is live: the corrected Google source boundary, the pure harvest core in
 `lib/concepts/harvest.ts`, the additive schema fields, the `content_review`
@@ -207,9 +208,9 @@ status and its generation/publication gate, the `conceptHarvestGlobalDaily`
 limiter, the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`, and the
 mobile factual approval-to-regeneration path.
 
-What is not: remote image staging/import and the three-site canary. Harvested
-image URLs still cannot reach a generated page; approved text can. Facebook-only
-content capture remains a separate decision after this website path is proven.
+What is not: the full three-site canary. Remote image URLs still cannot reach a
+generated page directly; approved Convex copies can. Facebook-only content
+capture remains a separate decision after this website path is proven.
 
 The first successful production concepts showed that model output is no longer
 the main bottleneck. Collecting trustworthy services, about copy, logos, and
@@ -499,11 +500,11 @@ officially supports fetching a Blob and storing it from an action. Failed
 imports remain per-candidate warnings. A single broken image never fails the
 text harvest.
 
-DNS validation followed by a normal hostname fetch can still have a
-check-versus-use gap. B3 does not ship until the destination enforcement is
-tested in Convex's Node runtime. If that cannot be made defensible, restrict
-imports to reviewed site-builder CDN hosts and exact verified-site hosts; keep
-everything else in the existing manual paste/upload path.
+DNS and URL validation run before every fetch and redirect. Imports are limited
+to the exact bare/www business host plus a short exact-host list for Wix,
+Squarespace, and Webflow assets; generic wildcard CDNs are rejected. The Node
+worker still uses the platform resolver for the final HTTPS fetch, so the
+remaining DNS check-versus-use limitation is documented rather than hidden.
 
 Staged preview files are temporary. Approving one attaches the same storage ID
 to `logoStorageId` or `assetStorageIds` and records its provenance. Rejecting,
@@ -631,8 +632,8 @@ for this release.
   `lib/concepts/harvest.ts` and focused harvest tests. Remote JSON is parsed and
   capped at runtime; duplicate evidence moves with its actual source URL and ID.
 - ~~Add optional schema fields and validators on `website_concepts`.~~ The
-  harvest block only. `approvedWebsiteContent` and `importedWebsiteAssets` are
-  deliberately deferred to B2 and B3 rather than declared unused.
+  harvest block first; B2 added `approvedWebsiteContent` and B3 added
+  `importedWebsiteAssets` additively.
 - ~~Split structured harvesting into `convex/concepts/harvest.ts`.~~ Network
   work there, database writes in `concepts/internal.ts` with the rest of the
   transactional surface, admin surface in `concepts/admin.ts`.
@@ -677,13 +678,19 @@ source evidence, and makes **Approve and regenerate** the primary next action;
 Exit: only approved website facts reach the prompt, and a skipped harvest is
 explicit rather than accidental.
 
-#### B3 — safe image staging and approval
+#### B3 — safe image staging and approval — **implemented 2026-08-11**
 
-- Add the Node-runtime remote-image action, DNS/redirect/type/size validation,
-  storage cleanup, and provenance records.
-- Add staged image previews and logo/photo approval controls.
-- Verify imported storage URLs remain the only new image URLs admitted by the
-  existing HTML validator.
+- ~~Add the Node-runtime remote-image action, DNS/redirect/type/size validation,
+  storage cleanup, and provenance records.~~
+- ~~Add staged image previews and logo/photo approval controls.~~ The mobile
+  interface uses a swipeable strip rather than stacking twelve full-width cards.
+- ~~Verify imported storage URLs remain the only new image URLs admitted by the
+  existing HTML validator.~~ Remote URLs never render in the admin browser.
+
+The TB Tree Service canary found one real response-negotiation issue: its
+Next.js optimizer returns AVIF when requested. The staging worker deliberately
+does not admit AVIF; it requests WebP/JPEG/PNG only. All 12 current candidates
+returned valid WebP magic bytes and remained below the 8 MiB per-file cap.
 
 Exit: a source-observed logo and photos can be reviewed and attached without a
 manual download/upload cycle or remote hotlink.

@@ -107,6 +107,42 @@ async function logConceptActivity(
   });
 }
 
+/** Remove staged and approved website files when their source stops applying. */
+async function deleteWebsiteHarvestAssets(
+  ctx: MutationCtx,
+  concept: Doc<"website_concepts">,
+) {
+  const importedIds = new Set(
+    (concept.importedWebsiteAssets ?? []).map((asset) => asset.storageId),
+  );
+  const storageIds = new Set([
+    ...importedIds,
+    ...(concept.harvestImageCandidates ?? [])
+      .map((candidate) => candidate.previewStorageId)
+      .filter((id): id is Id<"_storage"> => id !== undefined),
+  ]);
+  for (const storageId of storageIds) {
+    try {
+      await ctx.storage.delete(storageId);
+    } catch (error) {
+      console.warn("[concepts] website image cleanup failed", {
+        storageId,
+        error,
+      });
+    }
+  }
+  return {
+    logoStorageId:
+      concept.logoStorageId && importedIds.has(concept.logoStorageId)
+        ? undefined
+        : concept.logoStorageId,
+    assetStorageIds: concept.assetStorageIds.filter(
+      (storageId) => !importedIds.has(storageId),
+    ),
+    importedWebsiteAssets: undefined,
+  } as const;
+}
+
 /**
  * Create a concept from manual intake and start enrichment.
  *
@@ -220,6 +256,9 @@ export const update = mutation({
     const identityOrSiteChanged =
       next.businessName !== concept.businessName ||
       next.submittedWebsiteUrl !== concept.submittedWebsiteUrl;
+    const clearedWebsiteAssets = identityOrSiteChanged
+      ? await deleteWebsiteHarvestAssets(ctx, concept)
+      : undefined;
 
     await ctx.db.patch(args.conceptId, {
       ...next,
@@ -265,6 +304,7 @@ export const update = mutation({
       // candidates describe something else. Keeping them would offer Layken
       // another company's services to approve.
       ...(identityOrSiteChanged ? clearedHarvest() : {}),
+      ...(clearedWebsiteAssets ?? {}),
       error: undefined,
       updatedAt: Date.now(),
     });
@@ -287,6 +327,7 @@ function clearedHarvest() {
     harvestReviewedAt: undefined,
     approvedHarvestCandidateIds: undefined,
     approvedWebsiteContent: undefined,
+    importedWebsiteAssets: undefined,
   } as const;
 }
 
@@ -318,13 +359,30 @@ export const attachAsset = mutation({
     const now = Date.now();
 
     if (args.kind === "logo") {
-      // One logo per concept. Replacing it deletes the previous file rather
-      // than orphaning it in storage.
+      let harvestImageCandidates = concept.harvestImageCandidates;
+      let importedWebsiteAssets = concept.importedWebsiteAssets;
       if (concept.logoStorageId && concept.logoStorageId !== args.storageId) {
-        await ctx.storage.delete(concept.logoStorageId);
+        const stagedIndex = (harvestImageCandidates ?? []).findIndex(
+          (candidate) =>
+            candidate.previewStorageId === concept.logoStorageId,
+        );
+        if (stagedIndex >= 0 && harvestImageCandidates) {
+          harvestImageCandidates = [...harvestImageCandidates];
+          harvestImageCandidates[stagedIndex] = {
+            ...harvestImageCandidates[stagedIndex],
+            approvedKind: undefined,
+          };
+        } else {
+          await ctx.storage.delete(concept.logoStorageId);
+        }
+        importedWebsiteAssets = (importedWebsiteAssets ?? []).filter(
+          (asset) => asset.storageId !== concept.logoStorageId,
+        );
       }
       await ctx.db.patch(args.conceptId, {
         logoStorageId: args.storageId,
+        harvestImageCandidates,
+        importedWebsiteAssets,
         generatedHtml: undefined,
         structureId: undefined,
         validationViolations: undefined,
@@ -384,10 +442,26 @@ export const removeAsset = mutation({
       throw new Error("Asset does not belong to this concept.");
     }
 
+    const harvestImageCandidates = concept.harvestImageCandidates?.map(
+      (candidate) =>
+        candidate.previewStorageId === args.storageId
+          ? {
+              ...candidate,
+              previewStorageId: undefined,
+              stageStatus: "rejected" as const,
+              approvedKind: undefined,
+            }
+          : candidate,
+    );
+
     await ctx.db.patch(args.conceptId, {
       logoStorageId: isLogo ? undefined : concept.logoStorageId,
       assetStorageIds: concept.assetStorageIds.filter(
         (storageId) => storageId !== args.storageId,
+      ),
+      harvestImageCandidates,
+      importedWebsiteAssets: (concept.importedWebsiteAssets ?? []).filter(
+        (asset) => asset.storageId !== args.storageId,
       ),
       generatedHtml: undefined,
       structureId: undefined,
@@ -426,6 +500,7 @@ export const reEnrich = mutation({
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
     const concept = await loadConcept(ctx, args.conceptId);
+    const clearedWebsiteAssets = await deleteWebsiteHarvestAssets(ctx, concept);
 
     await ctx.db.patch(args.conceptId, {
       placeMatchResolved: false,
@@ -434,6 +509,7 @@ export const reEnrich = mutation({
       placeCandidates: undefined,
       verifiedWebsiteUrl: undefined,
       ...clearedHarvest(),
+      ...clearedWebsiteAssets,
       approvedQuotes: concept.approvedQuotes.filter(
         (quote) => quote.sourceKind !== "website",
       ),
@@ -482,6 +558,216 @@ export const harvestWebsiteContent = mutation({
       conceptId: args.conceptId,
       bypassCache: args.refresh ?? false,
     });
+    return null;
+  },
+});
+
+/** Stage source-observed image candidates without exposing remote URLs to the browser. */
+export const stageHarvestImages = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    candidateId: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    if (!concept.harvestedAt || !concept.harvestSourceUrl) {
+      throw new Error("This concept has no active website image harvest.");
+    }
+
+    let queued = false;
+    const candidates = (concept.harvestImageCandidates ?? []).map(
+      (candidate) => {
+        const targeted =
+          args.candidateId === undefined || candidate.id === args.candidateId;
+        if (
+          !targeted ||
+          candidate.previewStorageId ||
+          candidate.stageStatus === "rejected"
+        ) {
+          return candidate;
+        }
+        queued = true;
+        return {
+          ...candidate,
+          stageStatus: "staging" as const,
+          importError: undefined,
+        };
+      },
+    );
+
+    if (!queued) return null;
+    await ctx.db.patch(args.conceptId, {
+      harvestImageCandidates: candidates,
+      updatedAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(
+      0,
+      internal.concepts.imageImport.stageHarvestImages,
+      {
+        conceptId: args.conceptId,
+        expectedHarvestedAt: concept.harvestedAt,
+      },
+    );
+    return null;
+  },
+});
+
+/** Attach one staged website image to the generation allowlist. */
+export const approveHarvestImage = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    candidateId: v.string(),
+    kind: v.union(v.literal("logo"), v.literal("photo")),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    const candidates = [...(concept.harvestImageCandidates ?? [])];
+    const index = candidates.findIndex(
+      (candidate) => candidate.id === args.candidateId,
+    );
+    const candidate = index >= 0 ? candidates[index] : undefined;
+    if (!candidate?.previewStorageId || candidate.stageStatus !== "ready") {
+      throw new Error("That website image is not ready to use.");
+    }
+
+    const storageId = candidate.previewStorageId;
+    let logoStorageId = concept.logoStorageId;
+    let assetStorageIds = concept.assetStorageIds.filter(
+      (id) => id !== storageId,
+    );
+    if (logoStorageId === storageId) logoStorageId = undefined;
+
+    let importedWebsiteAssets = (concept.importedWebsiteAssets ?? []).filter(
+      (asset) => asset.candidateId !== candidate.id,
+    );
+
+    if (args.kind === "logo") {
+      const replacedLogo = logoStorageId;
+      logoStorageId = storageId;
+      if (replacedLogo && replacedLogo !== storageId) {
+        importedWebsiteAssets = importedWebsiteAssets.filter(
+          (asset) => asset.storageId !== replacedLogo,
+        );
+        const replacedCandidateIndex = candidates.findIndex(
+          (item) => item.previewStorageId === replacedLogo,
+        );
+        if (replacedCandidateIndex >= 0) {
+          candidates[replacedCandidateIndex] = {
+            ...candidates[replacedCandidateIndex],
+            approvedKind: undefined,
+          };
+        } else if (!assetStorageIds.includes(replacedLogo)) {
+          await ctx.storage.delete(replacedLogo);
+        }
+      }
+    } else {
+      assetStorageIds = [...assetStorageIds, storageId];
+    }
+
+    candidates[index] = { ...candidate, approvedKind: args.kind };
+    importedWebsiteAssets.push({
+      candidateId: candidate.id,
+      storageId,
+      kind: args.kind,
+      sourceUrl: candidate.sourceUrl,
+      importedAt: Date.now(),
+    });
+
+    await ctx.db.patch(args.conceptId, {
+      logoStorageId,
+      assetStorageIds,
+      importedWebsiteAssets,
+      harvestImageCandidates: candidates,
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
+      status: statusAfterGenerationInputChange({
+        placeMatchResolved: concept.placeMatchResolved,
+        currentStatus: concept.status,
+        harvestReviewState: concept.harvestReviewState,
+        harvestInFlight: Boolean(concept.harvestRequestId),
+      }),
+      error: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await logConceptActivity(ctx, "concept.website_asset_imported", {
+      conceptId: args.conceptId,
+      businessName: concept.businessName,
+      candidateId: candidate.id,
+      kind: args.kind,
+      sourceHost: new URL(candidate.sourceUrl).hostname,
+    });
+    return null;
+  },
+});
+
+/** Reject a staged candidate, removing its file and any prior attachment. */
+export const rejectHarvestImage = mutation({
+  args: { conceptId: v.id("website_concepts"), candidateId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    const candidates = [...(concept.harvestImageCandidates ?? [])];
+    const index = candidates.findIndex(
+      (candidate) => candidate.id === args.candidateId,
+    );
+    if (index < 0) throw new Error("Website image candidate not found.");
+
+    const candidate = candidates[index];
+    const storageId = candidate.previewStorageId;
+    const wasApproved = Boolean(candidate.approvedKind);
+    candidates[index] = {
+      ...candidate,
+      previewStorageId: undefined,
+      stageStatus: "rejected",
+      importError: undefined,
+      approvedKind: undefined,
+    };
+
+    const patch = {
+      harvestImageCandidates: candidates,
+      logoStorageId:
+        storageId && concept.logoStorageId === storageId
+          ? undefined
+          : concept.logoStorageId,
+      assetStorageIds: storageId
+        ? concept.assetStorageIds.filter((id) => id !== storageId)
+        : concept.assetStorageIds,
+      importedWebsiteAssets: (concept.importedWebsiteAssets ?? []).filter(
+        (asset) => asset.candidateId !== candidate.id,
+      ),
+      ...(wasApproved
+        ? {
+            generatedHtml: undefined,
+            structureId: undefined,
+            validationViolations: undefined,
+            model: undefined,
+            promptVersion: undefined,
+            generationRequestId: undefined,
+            publishedAt: undefined,
+            status: statusAfterGenerationInputChange({
+              placeMatchResolved: concept.placeMatchResolved,
+              currentStatus: concept.status,
+              harvestReviewState: concept.harvestReviewState,
+              harvestInFlight: Boolean(concept.harvestRequestId),
+            }),
+          }
+        : {}),
+      error: undefined,
+      updatedAt: Date.now(),
+    };
+    await ctx.db.patch(args.conceptId, patch);
+    if (storageId) await ctx.storage.delete(storageId);
     return null;
   },
 });
@@ -798,10 +1084,14 @@ export const remove = mutation({
     await requireAdmin(ctx);
     const concept = await loadConcept(ctx, args.conceptId);
 
-    for (const storageId of [
+    const storageIds = new Set([
       ...concept.assetStorageIds,
       ...(concept.logoStorageId ? [concept.logoStorageId] : []),
-    ]) {
+      ...(concept.harvestImageCandidates ?? [])
+        .map((candidate) => candidate.previewStorageId)
+        .filter((id): id is Id<"_storage"> => id !== undefined),
+    ]);
+    for (const storageId of storageIds) {
       try {
         await ctx.storage.delete(storageId);
       } catch (error) {
@@ -866,6 +1156,12 @@ export const get = query({
       photos: v.array(
         v.object({ storageId: v.id("_storage"), url: v.string() }),
       ),
+      harvestImagePreviews: v.array(
+        v.object({
+          candidateId: v.string(),
+          url: v.union(v.string(), v.null()),
+        }),
+      ),
     }),
     v.null(),
   ),
@@ -880,12 +1176,26 @@ export const get = query({
       if (url) photos.push({ storageId, url });
     }
 
+    const harvestImagePreviews: Array<{
+      candidateId: string;
+      url: string | null;
+    }> = [];
+    for (const candidate of concept.harvestImageCandidates ?? []) {
+      harvestImagePreviews.push({
+        candidateId: candidate.id,
+        url: candidate.previewStorageId
+          ? await ctx.storage.getUrl(candidate.previewStorageId)
+          : null,
+      });
+    }
+
     return {
       concept,
       logoUrl: concept.logoStorageId
         ? await ctx.storage.getUrl(concept.logoStorageId)
         : null,
       photos,
+      harvestImagePreviews,
     };
   },
 });

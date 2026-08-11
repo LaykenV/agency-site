@@ -68,13 +68,15 @@ function CandidateRow({
   return (
     <li
       className={cn(
-        "rounded-lg border p-3",
+        "min-w-0 overflow-hidden rounded-lg border p-3",
         checked
           ? "border-emerald-500/40 bg-emerald-500/5"
           : "border-[var(--border)] bg-[var(--background)]",
       )}
     >
-      <label className={cn("flex gap-3", approvable && "cursor-pointer")}>
+      <label
+        className={cn("flex min-w-0 gap-3", approvable && "cursor-pointer")}
+      >
         <input
           type="checkbox"
           className="mt-1 h-4 w-4 flex-none accent-emerald-600"
@@ -93,11 +95,11 @@ function CandidateRow({
               </span>
             ) : null}
           </span>
-          <span className="mt-1 block text-sm font-medium leading-snug">
+          <span className="mt-1 block break-words text-sm font-medium leading-snug [overflow-wrap:anywhere]">
             {candidate.value}
           </span>
           {candidate.detail ? (
-            <span className="mt-1 block text-xs text-[var(--muted-foreground)]">
+            <span className="mt-1 block break-words text-xs text-[var(--muted-foreground)] [overflow-wrap:anywhere]">
               {candidate.detail}
             </span>
           ) : null}
@@ -111,19 +113,21 @@ function CandidateRow({
         </span>
       </label>
 
-      <details className="mt-2 pl-7 text-[11px] text-[var(--muted-foreground)]">
+      <details className="mt-2 min-w-0 pl-7 text-[11px] text-[var(--muted-foreground)]">
         <summary className="cursor-pointer select-none">
           Check source evidence
         </summary>
-        <p className="mt-1 leading-relaxed">{candidate.evidence}</p>
+        <p className="mt-1 break-words leading-relaxed [overflow-wrap:anywhere]">
+          {candidate.evidence}
+        </p>
         <a
           href={candidate.sourceUrl}
           target="_blank"
           rel="noreferrer"
-          className="mt-1 inline-flex items-center gap-1 underline underline-offset-2"
+          className="mt-1 inline-flex max-w-full items-center gap-1 underline underline-offset-2"
         >
-          {sourceLabel(candidate.sourceUrl)}
-          <ExternalLink className="h-3 w-3" />
+          <span className="truncate">{sourceLabel(candidate.sourceUrl)}</span>
+          <ExternalLink className="h-3 w-3 flex-none" />
         </a>
       </details>
     </li>
@@ -218,7 +222,7 @@ export function ConceptHarvestReview({
   };
 
   return (
-    <div className="mt-4 space-y-4 border-t border-[var(--border)] pt-4">
+    <div className="mt-4 min-w-0 space-y-4 border-t border-[var(--border)] pt-4">
       <div>
         <h4 className="text-sm font-semibold">
           Choose what the new page may say
@@ -230,18 +234,16 @@ export function ConceptHarvestReview({
         </p>
       </div>
 
-      <details
-        open={reviewState === "pending"}
-        className="rounded-lg border border-[var(--border)] p-3"
-      >
+      <details className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           Standard facts ({standard.length})
         </summary>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 grid gap-2 min-[430px]:grid-cols-2">
           <Button
             type="button"
             size="sm"
             variant="outline"
+            className="w-full"
             disabled={isBusy || standardApprovableIds.length === 0}
             onClick={selectStandard}
           >
@@ -252,6 +254,7 @@ export function ConceptHarvestReview({
             type="button"
             size="sm"
             variant="ghost"
+            className="w-full"
             disabled={isBusy || selected.size === 0}
             onClick={() => setSelected(new Set())}
           >
@@ -271,10 +274,7 @@ export function ConceptHarvestReview({
         </ul>
       </details>
 
-      <details
-        open={reviewState === "pending"}
-        className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3"
-      >
+      <details className="min-w-0 overflow-hidden rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
         <summary className="cursor-pointer text-sm font-semibold text-amber-800 dark:text-amber-200">
           Needs care ({sensitive.length})
         </summary>
@@ -297,7 +297,7 @@ export function ConceptHarvestReview({
 
       <div className="rounded-lg border border-[var(--border)] p-3">
         <h4 className="text-sm font-semibold">Generation brief</h4>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="mt-2 grid grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:grid-cols-3">
           {completeness.map((row) => (
             <div
               key={row.key}
@@ -324,7 +324,7 @@ export function ConceptHarvestReview({
         </div>
       </div>
 
-      <div className="sticky bottom-3 z-10 space-y-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 shadow-lg">
+      <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 shadow-sm sm:sticky sm:bottom-3 sm:z-10 sm:shadow-lg">
         <Button
           type="button"
           className="w-full"
