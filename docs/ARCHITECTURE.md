@@ -20,7 +20,7 @@ This repository is the Hub for Acadiana Web Design:
 - Stripe Checkout and subscription synchronization
 - Cal.com scheduling
 - cross-client leads, events, and metrics
-- outbound research and audit workflows
+- the website-concept generator and its unlisted preview pages
 
 Client websites are independent Spokes. They do not share a template repository
 or Git history with the Hub.
@@ -46,8 +46,8 @@ The package manifest is authoritative:
 | Surface | Route |
 |---|---|
 | Marketing | `/`, city/industry SEO routes, `/blog` |
-| Public audits | `/audit`, `/audit/[token]`, `/audit/[token]/print` |
-| Qualified previews | `/preview/[slug]` |
+| Public audits | `/audit`, `/audit/request/[token]` |
+| Concept previews | `/preview/[token]` |
 | Legal | `/legal/terms`, `/legal/privacy`, `/sms-consent` |
 | Client entry | `/portal`, `/portal/verify`, `/portal/autherror` |
 | Agreement and billing | `/portal/agreement`, `/portal/subscribe`, `/portal/paymentSuccess` |
@@ -55,8 +55,12 @@ The package manifest is authoritative:
 | Admin | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/marketing`, `/admin/content` |
 | Better Auth handler | `/api/auth/[...all]` |
 
-`/onboarding` permanently redirects to the Cal.com sales call. The old
-`/demo/[token]` path redirects to `/audit/[token]`.
+`/onboarding` permanently redirects to the Cal.com sales call.
+
+`/audit` and `/audit/request/[token]` are the self-service audit reached by
+direct or QR traffic. They are unrelated to the retired outbound system: the
+outbound `/audit/[token]` report, its print view, and the `/demo/[token]`
+redirect were removed with it.
 
 ## Convex layout
 
@@ -69,7 +73,11 @@ The package manifest is authoritative:
 - `convex/stripeActions.ts` and `convex/stripeHelpers.ts` — current Stripe integration
 - `convex/projectCredentials.ts` — hashed Spoke credentials
 - `convex/clientEvents.ts` and `convex/clientAnalytics.ts` — metrics
-- `convex/marketing/` — search, analysis, audit, and outreach workflow
+- `convex/concepts/` — website-concept intake, enrichment, generation, and the
+  unauthenticated preview surface
+- `convex/publicAudits.ts` — the self-service audit
+- `lib/concepts/` — runtime-agnostic concept core: the brief shape, the
+  generation prompt and page shapes, the HTML validator, and the Messenger draft
 
 ## Data model
 
@@ -99,12 +107,15 @@ There is no `stripe_customers` or `stripe_subscription_cache` table.
 - `client_analytics`
 - `hub_operational_counters`
 
-### Marketing
+### Acquisition
 
-- `marketing_searches`
-- `scraped_leads`
+- `website_concepts`
 - `public_audits`
-- `preview_views`
+
+`marketing_searches`, `scraped_leads`, and `preview_views` still exist as schema
+definitions but are retired: no code reads or writes them, and they are removed
+once the destructive production cutover in
+`plans/outreach-preview-engine.md` deletes their rows.
 
 ## Authentication and authorization
 
@@ -221,8 +232,12 @@ All v1 and unversioned lead and analytics aliases are retired.
 - Project storage ceilings reject abusive volume.
 - Paid-fanout exhaustion stores the lead as untriaged and skips paid services.
 - SMS sends only for an allow verdict.
-- Public operations that can call Firecrawl, PageSpeed, Groq, Resend, or Twilio
-  require a global spend ceiling.
+- Public operations that can call Firecrawl, PageSpeed, Groq, OpenRouter,
+  Resend, or Twilio require a global spend ceiling.
+- Concept generation is admin-authenticated, so `conceptGenerateGlobalDaily` is
+  a runaway guard against a retry loop rather than an abuse control.
+- `conceptViewGlobal` is keyed globally, not per token: the token is the value
+  the caller controls, so a per-token key would not hold.
 
 ## Telemetry interpretation
 
@@ -233,20 +248,57 @@ All v1 and unversioned lead and analytics aliases are retired.
   “direct” and bare Google referrers cannot support precise attribution.
 - The portal reads aggregates rather than scanning raw events.
 
-## Marketing workflow
+## Website concept generator
 
-`convex/marketing/` orchestrates:
+`convex/concepts/` turns one manually-captured Facebook lead into one bespoke
+homepage concept:
 
-1. Google Places search
-2. website and contact research through Firecrawl
-3. PageSpeed analysis
-4. Groq fit scoring and audit content
-5. tokenized public audit generation
-6. Resend outreach
-7. view and follow-up signals
+1. manual intake — no discovery, no Facebook scraping, no automated messaging
+2. a single Google Places lookup, whose match a human must confirm before
+   anything is generated
+3. Firecrawl and PageSpeed against the confirmed website, if there is one
+4. bespoke HTML and inline CSS from a configurable OpenRouter model
+5. deterministic safety and factual validation
+6. human review, then publication at an unlisted `/preview/<token>`
 
-Workflow parallelism is bounded so one search does not overrun provider quotas.
-One lead failure should not fail the entire batch.
+Google photos and review text are research signals only. Preview imagery is
+limited to owner-supplied uploads.
+
+### Rendering and security boundary
+
+Model-generated HTML is never injected into the React tree with
+`dangerouslySetInnerHTML`. Both `/preview/[token]` and the admin review card
+render it in an iframe using `srcDoc` and the shared sandbox in
+`lib/concepts/sandbox.ts`, which withholds `allow-scripts`, `allow-forms`,
+`allow-same-origin`, and `allow-popups`. The generated document therefore cannot
+reach the application DOM, authentication cookies, storage, or any network API.
+
+`allow-top-navigation-by-user-activation` is the one token granted, because
+without it a `tel:` link inside the frame silently fails and tapping to call is
+the only conversion path these pages have. It requires a real gesture, and every
+`href` has already been restricted by the validator to `tel:`, a `#` fragment,
+or one allowlisted maps URL.
+
+The trusted parent owns the concept notice, the page title, robots metadata,
+Open Graph tags, and view counting. Views are recorded from the browser rather
+than the server so Facebook's link-preview crawler does not register as the
+prospect's first open.
+
+`docs/plans/outreach-preview-engine.md` records the named fallback if nested
+iframe scrolling proves unacceptable on iOS: serve the document as the top-level
+response under a strict Content-Security-Policy, and move the concept notice
+into the generated HTML.
+
+### Validation
+
+`lib/concepts/validateConceptHtml.ts` rejects scripts, inline event handlers,
+embedded and form elements, external requests, `target` attributes, unverified
+`mailto:` links, assets outside the approved allowlist, placeholder text, any
+phone number other than the verified one, and testimonial markup when no quotes
+were approved. It cannot judge whether a claim is true — credentials, years in
+business, insurance, service areas, and superlatives are checked by a human
+before publication, and `publish` re-runs validation server-side regardless of
+the stored status.
 
 ## Content dashboard
 

@@ -28,13 +28,6 @@ preserved under `archive/migrations/`.
   Louisiana limited liability company; a different formation state requires a
   factual correction and MSA version bump before the next signature.
 
-### Commercial-email address
-
-`convex/marketing/emails.ts` currently renders only “Youngsville, LA” in the
-commercial outreach footer. Add a valid physical postal address or PO box before
-the next commercial campaign. The in-body opt-out already exists; the physical
-address remains open.
-
 ### First natural paid return
 
 Stage 4A's agreement and unpaid-checkout paths were production-smoked. On the

@@ -96,9 +96,9 @@ milestone.
 - Stripe Checkout and subscription synchronization
 - Build-details intake, file uploads, edit requests, calls, leads, and analytics
 - Authenticated Hub APIs used by bespoke client sites
-- Google Places, Firecrawl, PageSpeed, Groq, Resend, and workflow-based outbound
-  research and audit generation
-- Public tokenized audit reports and qualified preview pages
+- A website-concept generator: manual Facebook lead in, one bespoke reviewed
+  homepage out, published at an unlisted preview link with open tracking
+- Self-service tokenized audit reports reached by direct or QR traffic
 
 Client sites are bespoke. The old `agency-template` inheritance workflow is
 retired; `../agency-playground/` is the reference for Hub-facing plumbing.

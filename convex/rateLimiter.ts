@@ -106,8 +106,6 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
   // Public audits spend Firecrawl + PageSpeed + Groq. Global keys are the
   // point — a per-session or per-host key is defeated by rotating the value.
 
-  marketingAuditView: { kind: "token bucket", rate: 10, period: MINUTE, capacity: 10 },
-
   /** Per-host and per-minute burst guard for public audits. */
   publicAuditSubmit: { kind: "token bucket", rate: 3, period: MINUTE, capacity: 3 },
 
@@ -123,17 +121,33 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     period: DAY,
   },
 
+  // --- Website concepts ---
+
   /**
-   * Global ceiling on preview-open recording.
+   * Global ceiling on concept-open recording.
    *
-   * `previewViews.recordView` spends no money, but it is an unauthenticated
-   * write reachable by anyone with a demo slug. A per-slug key would not hold
-   * — the slug is the thing the caller controls. Real volume is a handful of
-   * opens per demo, so this is generous by orders of magnitude.
+   * `concepts/public.recordView` spends no money, but it is an unauthenticated
+   * write reachable by anyone holding a preview token. A per-token key would not
+   * hold — the token is the thing the caller controls — so the ceiling is
+   * global. Real volume is a handful of opens per concept.
    */
-  previewViewGlobal: {
+  conceptViewGlobal: {
     kind: "fixed window",
     rate: 500,
     period: HOUR,
+  },
+
+  /**
+   * Runaway guard on concept generation (OpenRouter + Firecrawl + PageSpeed).
+   *
+   * Generation is admin-authenticated, so this is not an abuse control — it is
+   * insurance against a UI or retry bug looping regenerate. Layken produces a
+   * handful of concepts a week by hand, so this is generous by two orders of
+   * magnitude and should never be reached in normal use.
+   */
+  conceptGenerateGlobalDaily: {
+    kind: "fixed window",
+    rate: 100,
+    period: DAY,
   },
 });

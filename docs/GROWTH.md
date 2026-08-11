@@ -36,7 +36,6 @@ signed Order Form.
 2. Selective local Facebook group outreach
 3. Meta click-to-Messenger pilot
 4. Local partnerships and in-person opportunities
-5. Audit email and warm follow-up for genuinely qualified prospects
 
 ### Add only after current execution is reliable
 
@@ -48,10 +47,17 @@ signed Order Form.
 ### Defer
 
 - Mass cold dialing
+- Cold email of any kind, bulk or sequenced
+- City-and-industry batch prospect searches
 - Generic social-content treadmill
 - Broad national web-design SEO
 - LinkedIn advertising
 - Another CRM, sequencer, or outsourced AI prospecting service
+
+Cold outreach email was removed from the application on 2026-08-10 along with
+the batch search pipeline. It produced volume, not conversations. Facebook and
+Messenger are the acquisition channel; the concept generator is the artifact
+that moves a conversation forward.
 
 ## Scorecard
 
@@ -145,10 +151,30 @@ Active need:
 
 Preview handoff:
 
-> I put together a website concept using your logo, services, and approved
-> photos: [preview URL]. Take a look when you have a minute. If you like the
-> direction, we can customize the wording and photos and talk through getting it
-> live.
+> I put together the website concept we talked about using the information and
+> photos I had for [business]: [preview URL]
+>
+> Take a look when you have a minute. If you like the direction, we can adjust
+> anything you want and talk about getting it live.
+
+`/admin/marketing` produces this draft with the link already filled in — the
+Copy Messenger Draft action. It is always pasted and sent by hand; nothing in
+the application messages anyone.
+
+## Building a concept
+
+Concepts are built in `/admin/marketing` after explicit interest, not
+speculatively. The path is: enter the business, confirm the Google match,
+upload whatever logo and photos exist, generate, review every factual claim
+against the brief, publish, copy the link.
+
+Two rules that matter commercially:
+
+- The generator will not invent testimonials, credentials, or photography. If
+  the owner has not sent photos, the concept is typographic. That is preferable
+  to sending someone a page with stock imagery of a business that is not theirs.
+- The open count on the concept card is the qualification signal worth watching.
+  Sent and never opened after a follow-up means stop.
 
 ## Referrals and partnerships
 

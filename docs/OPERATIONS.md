@@ -38,8 +38,9 @@ archive model is planned but not implemented.
 
 ## 1. Qualify the lead
 
-Leads can come from referrals, Messenger, Cal.com, public audits, admin research,
-or the outbound marketing pipeline.
+Leads can come from referrals, Messenger, Cal.com, public audits, or admin
+research. Facebook and Messenger are where discovery and outreach happen; the
+application never crawls Facebook or sends a message.
 
 Before creating a project:
 
@@ -51,6 +52,30 @@ Before creating a project:
 
 Messenger and other off-platform leads must be mirrored into admin so they do
 not exist only in an inbox.
+
+### Building a website concept
+
+For a Facebook lead who has shown interest but is not yet a prospect, build a
+concept in `/admin/marketing` before creating anything in the project lifecycle:
+
+1. Enter the business name, Facebook Page URL, service area, and any notes on
+   services, slogan, and the CTA they want. Notes carry the most weight on the
+   finished page.
+2. Confirm the Google Places match, or record that there is no listing.
+   Generation is blocked until identity is settled, because attaching the wrong
+   listing puts another company's facts on the page.
+3. Upload the logo and photos if you have them. Ask the owner for a few
+   favourites if you do not. Google photos are never used, and the generator
+   produces a typographic concept rather than inventing imagery.
+4. Generate, then read the page against the brief. The automatic checks catch
+   unsafe markup, wrong phone numbers, hotlinked images, and fabricated
+   testimonials. They cannot judge truth: check credentials, licences,
+   insurance, years in business, service areas, and superlatives yourself.
+5. Publish, then use Copy Messenger Draft and send it by hand.
+6. Watch the open count. Sent and never opened after one follow-up means stop.
+
+A concept is not a prospect. Create the prospect and project by hand only after
+the conversation becomes a real opportunity.
 
 ## 2. Create the prospect and project
 

@@ -36,6 +36,26 @@ git diff --check
   admin creates the prospect and project.
 - Only `POST /api/v2/leads` and `POST /api/v2/events` ingest Spoke data.
   Never restore a v1 or unauthenticated alias.
+- Outbound cold email, batch city-and-industry prospect search, and the
+  hard-coded `/preview/<slug>` demos are deleted. Do not restore them.
+  `/admin/marketing` is the website-concept generator.
+
+## Website concepts
+
+- Model-generated HTML is untrusted. Never render it with
+  `dangerouslySetInnerHTML`; use an iframe with `srcDoc` and the shared sandbox
+  in `lib/concepts/sandbox.ts`. Never add `allow-scripts`, `allow-forms`, or
+  `allow-same-origin`.
+- Generated pages must stay scriptless and self-contained: no JavaScript, no
+  external fonts, stylesheets, embeds, or trackers, and images only from the
+  approved allowlist.
+- Every generation runs `validateConceptHtml`, and `publish` re-validates
+  server-side. Do not add a path that publishes without validating.
+- The concept notice, page metadata, and view tracking belong to the trusted
+  parent page, never to the generated document.
+- Never present Google photos or Google review text as concept assets. Only
+  owner-supplied uploads and hand-approved quotes reach a page.
+- The generator must not state a fact absent from the verified brief.
 
 ## Convex rules
 

@@ -1,4 +1,5 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
+import type { ConceptBrief } from "../lib/concepts/brief";
 
 export const prospectDetailsStoredValidator = v.object({
   contactName: v.string(),
@@ -466,49 +467,6 @@ export const aiLeadAnalysisValidator = v.object({
   analyzedAt: v.number(),
 });
 
-export const marketingSearchDocValidator = v.object({
-  _id: v.id("marketing_searches"),
-  _creationTime: v.number(),
-  city: v.string(),
-  state: v.string(),
-  industry: v.string(),
-  searchQuery: v.string(),
-  status: marketingSearchStatusValidator,
-  totalFound: v.number(),
-  totalScraped: v.number(),
-  totalQualified: v.number(),
-  workflowId: v.optional(v.string()),
-  error: v.optional(v.string()),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-});
-
-export const scrapedLeadDocValidator = v.object({
-  _id: v.id("scraped_leads"),
-  _creationTime: v.number(),
-  searchId: v.id("marketing_searches"),
-  placeId: v.string(),
-  googleData: googleDataValidator,
-  websiteData: v.optional(websiteDataValidator),
-  pageSpeedData: v.optional(pageSpeedDataValidator),
-  aiAnalysis: v.optional(aiLeadAnalysisValidator),
-  status: scrapedLeadStatusValidator,
-  demoToken: v.optional(v.string()),
-  demoScreenshotUrl: v.optional(v.string()),
-  demoViewedAt: v.optional(v.number()),
-  contactEmail: v.optional(v.string()),
-  physicalPresence: v.optional(physicalPresenceValidator),
-  emailSentAt: v.optional(v.number()),
-  calledAt: v.optional(v.number()),
-  followUpAt: v.optional(v.number()),
-  convertedToProspectId: v.optional(v.id("prospects")),
-  adminNotes: v.optional(v.string()),
-  contactAttempts: v.number(),
-  error: v.optional(v.string()),
-  createdAt: v.number(),
-  updatedAt: v.number(),
-});
-
 export const publicAuditStatusValidator = v.union(
   v.literal("queued"),
   v.literal("running"),
@@ -532,6 +490,159 @@ export const publicAuditDocValidator = v.object({
   error: v.optional(v.string()),
   createdAt: v.number(),
   updatedAt: v.number(),
+});
+
+// --- Website concepts (Facebook lead -> bespoke homepage concept) ---
+
+export const conceptApprovedQuoteValidator = v.object({
+  author: v.string(),
+  text: v.string(),
+  rating: v.optional(v.number()),
+});
+
+/**
+ * The verified generation brief. Mirrors `ConceptBrief` in
+ * `lib/concepts/brief.ts`; the two are proved equivalent below.
+ */
+export const conceptBriefValidator = v.object({
+  businessName: v.string(),
+  category: v.optional(v.string()),
+  address: v.optional(v.string()),
+  locality: v.optional(v.string()),
+  serviceArea: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  googleRating: v.optional(v.number()),
+  googleReviewCount: v.optional(v.number()),
+  hours: v.optional(v.array(v.string())),
+  googleMapsUrl: v.optional(v.string()),
+  existingWebsiteUrl: v.optional(v.string()),
+  existingTechnology: v.optional(v.string()),
+  existingPerformanceScore: v.optional(v.number()),
+  existingPrimaryColor: v.optional(v.string()),
+  existingSiteSummary: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  facebookPageUrl: v.optional(v.string()),
+  logoUrl: v.optional(v.string()),
+  photoUrls: v.array(v.string()),
+  approvedQuotes: v.array(conceptApprovedQuoteValidator),
+  googleReviewSummary: v.optional(v.string()),
+});
+
+/**
+ * Compile-time proof that the stored validator and the shared TypeScript type
+ * cannot drift apart. Either direction failing is a `tsc --noEmit` error, which
+ * matters because the prompt builder and the HTML validator both read the
+ * TypeScript type while Convex enforces the validator.
+ */
+type MutuallyAssignable<A extends B, B> = true;
+export type ConceptBriefValidatorMatchesType = MutuallyAssignable<
+  Infer<typeof conceptBriefValidator>,
+  ConceptBrief
+>;
+export type ConceptBriefTypeMatchesValidator = MutuallyAssignable<
+  ConceptBrief,
+  Infer<typeof conceptBriefValidator>
+>;
+
+/**
+ * A Google Places match candidate awaiting human confirmation.
+ *
+ * Attaching the wrong business silently is the failure that matters here — a
+ * concept built for the wrong "Landry's" wastes the lead — so candidates are
+ * stored and confirmed explicitly rather than auto-selected.
+ */
+export const conceptPlaceCandidateValidator = v.object({
+  placeId: v.string(),
+  businessName: v.string(),
+  formattedAddress: v.string(),
+  phone: v.optional(v.string()),
+  websiteUrl: v.optional(v.string()),
+  googleMapsUrl: v.optional(v.string()),
+  rating: v.optional(v.number()),
+  reviewCount: v.optional(v.number()),
+  primaryType: v.optional(v.string()),
+  businessStatus: v.optional(v.string()),
+});
+
+export const conceptStatusValidator = v.union(
+  v.literal("draft"),
+  v.literal("enriching"),
+  /** Places returned candidates; a human must confirm identity. */
+  v.literal("matching"),
+  v.literal("generating"),
+  v.literal("review"),
+  v.literal("published"),
+  v.literal("failed"),
+);
+
+export const websiteConceptDocValidator = v.object({
+  _id: v.id("website_concepts"),
+  _creationTime: v.number(),
+  token: v.string(),
+  businessName: v.string(),
+  facebookPageUrl: v.optional(v.string()),
+  submittedWebsiteUrl: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  serviceArea: v.optional(v.string()),
+  notes: v.optional(v.string()),
+  matchedGooglePlaceId: v.optional(v.string()),
+  matchedGoogleMapsUrl: v.optional(v.string()),
+  verifiedWebsiteUrl: v.optional(v.string()),
+  placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
+  placeMatchResolved: v.boolean(),
+  logoStorageId: v.optional(v.id("_storage")),
+  assetStorageIds: v.array(v.id("_storage")),
+  approvedQuotes: v.array(conceptApprovedQuoteValidator),
+  researchBrief: v.optional(conceptBriefValidator),
+  generatedHtml: v.optional(v.string()),
+  structureId: v.optional(v.string()),
+  validationViolations: v.optional(v.array(v.string())),
+  generationRequestId: v.optional(v.string()),
+  status: conceptStatusValidator,
+  model: v.optional(v.string()),
+  promptVersion: v.optional(v.string()),
+  error: v.optional(v.string()),
+  sentAt: v.optional(v.number()),
+  firstViewedAt: v.optional(v.number()),
+  lastViewedAt: v.optional(v.number()),
+  viewCount: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  publishedAt: v.optional(v.number()),
+});
+
+/**
+ * List projection for the admin index.
+ *
+ * `generatedHtml` is deliberately absent: a published concept is tens of
+ * kilobytes of HTML, and shipping every row's document to the browser to render
+ * a list of business names is wasteful. The review card fetches one full
+ * concept by id.
+ */
+export const websiteConceptSummaryValidator = v.object({
+  _id: v.id("website_concepts"),
+  _creationTime: v.number(),
+  token: v.string(),
+  businessName: v.string(),
+  facebookPageUrl: v.optional(v.string()),
+  status: conceptStatusValidator,
+  structureId: v.optional(v.string()),
+  hasGeneratedHtml: v.boolean(),
+  validationViolations: v.optional(v.array(v.string())),
+  placeMatchResolved: v.boolean(),
+  matchedGooglePlaceId: v.optional(v.string()),
+  candidateCount: v.number(),
+  assetCount: v.number(),
+  model: v.optional(v.string()),
+  promptVersion: v.optional(v.string()),
+  error: v.optional(v.string()),
+  sentAt: v.optional(v.number()),
+  firstViewedAt: v.optional(v.number()),
+  lastViewedAt: v.optional(v.number()),
+  viewCount: v.number(),
+  createdAt: v.number(),
+  updatedAt: v.number(),
+  publishedAt: v.optional(v.number()),
 });
 
 export const PLAN_GENERATION_THROTTLE_MS = 15_000;

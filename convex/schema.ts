@@ -26,6 +26,10 @@ import {
   clientEventTypeValidator,
   clientEventPayloadValidator,
   referrerClassValidator,
+  conceptBriefValidator,
+  conceptPlaceCandidateValidator,
+  conceptApprovedQuoteValidator,
+  conceptStatusValidator,
 } from "./validators";
 
 export default defineSchema({
@@ -248,6 +252,20 @@ export default defineSchema({
       "createdAt",
     ]),
 
+  /**
+   * RETIRED — awaiting the destructive production cutover.
+   *
+   * `marketing_searches`, `scraped_leads`, and `preview_views` below belong to
+   * the deleted outbound search, cold-email, and hard-coded-demo system. No
+   * application code reads or writes them any more and there is no UI or
+   * callable endpoint that reaches them.
+   *
+   * They stay defined only so the additive `website_concepts` deployment can
+   * validate against production while their rows still exist. Delete the rows
+   * first, verify the tables are empty, then remove these three definitions and
+   * the validators only they still require. See
+   * `docs/plans/outreach-preview-engine.md` § Production data reset.
+   */
   marketing_searches: defineTable({
     city: v.string(),
     state: v.string(),
@@ -317,12 +335,10 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"]),
 
   /**
-   * Opens of an unlisted `/preview/<slug>` concept sent to an outbound lead.
+   * RETIRED — awaiting the destructive production cutover.
    *
-   * Unlike `public_audits.viewedAt`, this counts repeat opens on purpose: a
-   * lead re-opening the concept after a follow-up is the signal worth acting
-   * on, and a one-shot timestamp throws it away. Slugs come from
-   * `lib/lead-demos.ts`, so there is one row per demo, not per recipient.
+   * Opens of the hard-coded `/preview/<slug>` demos. Superseded by the view
+   * counters on `website_concepts`.
    */
   preview_views: defineTable({
     slug: v.string(),
@@ -330,6 +346,72 @@ export default defineSchema({
     lastViewedAt: v.number(),
     viewCount: v.number(),
   }).index("by_slug", ["slug"]),
+
+  /**
+   * One bespoke homepage concept generated for one manually-captured Facebook
+   * lead, and the record of whether the recipient opened it.
+   *
+   * `token` is high-entropy and unlisted; it is the only credential on
+   * `/preview/<token>`, which is acceptable because the page contains nothing
+   * but public facts about the business it was built for and carries a visible
+   * notice that it is not their live site.
+   *
+   * Regeneration overwrites `generatedHtml` rather than versioning it. There is
+   * deliberately no revision-history table: this is a tool for producing one
+   * page a prospect either likes or does not, not a document product.
+   *
+   * Opens are counted rather than collapsed to a first-view timestamp, because a
+   * lead re-opening the concept after a follow-up is the signal worth acting on.
+   */
+  website_concepts: defineTable({
+    token: v.string(),
+    businessName: v.string(),
+    facebookPageUrl: v.optional(v.string()),
+    submittedWebsiteUrl: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    serviceArea: v.optional(v.string()),
+    notes: v.optional(v.string()),
+
+    // Google Places identity, human-confirmed. `placeMatchResolved` is true
+    // once Layken has either picked a candidate or declared there is no match,
+    // which is what gates generation.
+    matchedGooglePlaceId: v.optional(v.string()),
+    matchedGoogleMapsUrl: v.optional(v.string()),
+    verifiedWebsiteUrl: v.optional(v.string()),
+    placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
+    placeMatchResolved: v.boolean(),
+
+    // Approved assets. Only owner/business uploads reach the page; Google
+    // photos are research signals and never become preview imagery.
+    logoStorageId: v.optional(v.id("_storage")),
+    assetStorageIds: v.array(v.id("_storage")),
+    approvedQuotes: v.array(conceptApprovedQuoteValidator),
+
+    researchBrief: v.optional(conceptBriefValidator),
+    generatedHtml: v.optional(v.string()),
+    /** Which named page shape produced this draft, for admin visibility. */
+    structureId: v.optional(v.string()),
+    /** Deterministic validator output from the last generation attempt. */
+    validationViolations: v.optional(v.array(v.string())),
+    /** Identifies the only in-flight generation allowed to save its result. */
+    generationRequestId: v.optional(v.string()),
+
+    status: conceptStatusValidator,
+    model: v.optional(v.string()),
+    promptVersion: v.optional(v.string()),
+    error: v.optional(v.string()),
+
+    sentAt: v.optional(v.number()),
+    firstViewedAt: v.optional(v.number()),
+    lastViewedAt: v.optional(v.number()),
+    viewCount: v.number(),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    publishedAt: v.optional(v.number()),
+  })
+    .index("by_token", ["token"])
+    .index("by_status_and_updatedAt", ["status", "updatedAt"])
+    .index("by_updatedAt", ["updatedAt"]),
 
   //errorReports - future
 });

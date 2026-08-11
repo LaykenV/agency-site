@@ -99,7 +99,7 @@ export default function AdminPage() {
                   href="/admin/marketing"
                   className="inline-flex items-center rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
-                  Marketing Pipeline
+                  Website Concepts
                 </Link>
               </div>
             </div>

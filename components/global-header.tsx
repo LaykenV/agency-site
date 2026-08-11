@@ -14,11 +14,14 @@ import { Logo } from "@/components/logo";
 export function GlobalHeader() {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
-  // The tokenized audit reports render their own chrome (AuditBanner pinned
-  // bottom + dark theme), so we suppress the global header there. The public
-  // intake page at /audit is a marketing page and keeps the header.
+  // The self-service audit report at /audit/request/<token> renders its own
+  // chrome (AuditBanner pinned bottom + dark theme), so we suppress the global
+  // header there. The public intake page at /audit is a marketing page and
+  // keeps the header.
   const isAuditReport =
     pathname.startsWith("/audit/") && pathname !== "/audit/request";
+  // Concept previews are pages about someone else's business; our nav has no
+  // business sitting above one.
   const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
   // Pages with gradient backgrounds where header needs light text
