@@ -30,6 +30,19 @@ export type ConceptApprovedQuote = {
   author: string;
   text: string;
   rating?: number;
+  /** Present when the quote was approved from the business's own website. */
+  sourceUrl?: string;
+  sourceKind?: "website";
+};
+
+export type ConceptApprovedWebsiteContent = {
+  tagline?: string;
+  about?: string;
+  services: Array<{ name: string; description?: string }>;
+  serviceAreas: Array<string>;
+  differentiators: Array<string>;
+  sensitiveClaims: Array<string>;
+  hours: Array<string>;
 };
 
 export type ConceptBrief = {
@@ -66,6 +79,9 @@ export type ConceptBrief = {
   existingPrimaryColor?: string;
   /** Condensed copy from the current site: what they actually say they do. */
   existingSiteSummary?: string;
+
+  /** Website facts explicitly approved from the source-backed harvest. */
+  approvedWebsiteContent?: ConceptApprovedWebsiteContent;
 
   // --- Human-supplied context ---
   /** Services, slogan, differentiators, desired CTA — typed by Layken. */
@@ -118,6 +134,7 @@ export function refreshConceptBrief(input: {
   logoUrl?: string;
   photoUrls: Array<string>;
   approvedQuotes: Array<ConceptApprovedQuote>;
+  approvedWebsiteContent?: ConceptApprovedWebsiteContent;
 }): ConceptBrief {
   return {
     ...input.research,
@@ -131,5 +148,6 @@ export function refreshConceptBrief(input: {
     logoUrl: input.logoUrl,
     photoUrls: input.photoUrls,
     approvedQuotes: input.approvedQuotes,
+    approvedWebsiteContent: input.approvedWebsiteContent,
   };
 }

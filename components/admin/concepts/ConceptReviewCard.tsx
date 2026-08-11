@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ConceptPreviewFrame } from "./ConceptPreviewFrame";
+import { ConceptHarvestReview } from "./ConceptHarvestReview";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
 import {
   buildMessengerDraft,
@@ -116,6 +117,9 @@ export function ConceptReviewCard({
     api.concepts.admin.harvestWebsiteContent,
   );
   const skipHarvestReview = useMutation(api.concepts.admin.skipHarvestReview);
+  const approveHarvestReview = useMutation(
+    api.concepts.admin.approveHarvestReview,
+  );
   const generate = useMutation(api.concepts.admin.generate);
   const publish = useMutation(api.concepts.admin.publish);
   const unpublish = useMutation(api.concepts.admin.unpublish);
@@ -230,12 +234,16 @@ export function ConceptReviewCard({
   const needsMatch = isMatching;
   const harvestSourceUrl = concept.harvestSourceUrl;
   const harvestPending = concept.harvestReviewState === "pending";
+  const harvestApproved = concept.harvestReviewState === "approved";
   const harvestInFlight = Boolean(concept.harvestRequestId);
   const sensitiveCount = (concept.harvestCandidates ?? []).filter(
     (candidate) => candidate.risk === "sensitive",
   ).length;
 
-  const runAction = async (action: () => Promise<unknown>, success?: string) => {
+  const runAction = async (
+    action: () => Promise<unknown>,
+    success?: string,
+  ) => {
     setIsBusy(true);
     try {
       await action();
@@ -266,10 +274,7 @@ export function ConceptReviewCard({
     await attachAsset({ conceptId, storageId, kind });
   };
 
-  const handleFiles = async (
-    files: Array<File>,
-    kind: "logo" | "photo",
-  ) => {
+  const handleFiles = async (files: Array<File>, kind: "logo" | "photo") => {
     const selected = kind === "logo" ? files.slice(0, 1) : files;
     if (selected.length === 0) return;
 
@@ -351,7 +356,7 @@ export function ConceptReviewCard({
           </div>
         </dl>
 
-        {concept.structureId || concept.model ? (
+        {concept.generatedHtml && (concept.structureId || concept.model) ? (
           <p className="mt-3 border-t border-[var(--border)] pt-3 text-[11px] text-[var(--muted-foreground)]">
             {concept.structureId ? (
               <>
@@ -364,7 +369,9 @@ export function ConceptReviewCard({
               </>
             ) : null}
             {concept.model ? <>Model: {concept.model} · </> : null}
-            {concept.promptVersion ? <>Prompt: {concept.promptVersion}</> : null}
+            {concept.promptVersion ? (
+              <>Prompt: {concept.promptVersion}</>
+            ) : null}
           </p>
         ) : null}
       </div>
@@ -391,8 +398,8 @@ export function ConceptReviewCard({
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
           <h3 className="text-sm font-semibold">Which business is this?</h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Attaching the wrong listing would put another company&apos;s facts on
-            the page, so this needs your confirmation before anything is
+            Attaching the wrong listing would put another company&apos;s facts
+            on the page, so this needs your confirmation before anything is
             generated.
           </p>
 
@@ -455,9 +462,8 @@ export function ConceptReviewCard({
                         confirmPlaceMatch({
                           conceptId,
                           placeId: candidate.placeId,
-                          thenGenerate: true,
                         }),
-                      "Match confirmed. Researching and generating...",
+                      "Match confirmed. Preparing the draft...",
                     )
                   }
                 >
@@ -470,7 +476,9 @@ export function ConceptReviewCard({
 
           {/* Exact text attribution is permitted for this compact mobile panel. */}
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
-            <p>Live results for identification only. Only the place ID is kept.</p>
+            <p>
+              Live results for identification only. Only the place ID is kept.
+            </p>
             <span
               translate="no"
               aria-label="Google Maps"
@@ -491,9 +499,8 @@ export function ConceptReviewCard({
                     confirmPlaceMatch({
                       conceptId,
                       placeId: null,
-                      thenGenerate: true,
                     }),
-                  "Building from your notes alone.",
+                  "Identity confirmed. Preparing the draft...",
                 )
               }
             >
@@ -513,10 +520,7 @@ export function ConceptReviewCard({
         </div>
       ) : null}
 
-      {/* --- Harvested website content ---
-          B1 ships the harvest itself. Approving individual facts, quotes, and
-          images is B2; until then this shows what was found and offers the two
-          decisions that exist: run it again, or skip it. */}
+      {/* --- Harvested website content and factual approval --- */}
       {harvestSourceUrl || concept.harvestReviewState ? (
         <div
           className={cn(
@@ -528,8 +532,11 @@ export function ConceptReviewCard({
         >
           <h3 className="text-sm font-semibold">Harvested website content</h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Found on their website. Nothing here reaches the page yet — this is
-            what was collected, not what was approved.
+            {harvestApproved
+              ? `${concept.approvedHarvestCandidateIds?.length ?? 0} source-backed item(s) are approved for the next generation.`
+              : concept.harvestReviewState === "skipped"
+                ? "This harvest is being ignored. Regeneration will use only your notes, verified phone, and uploaded assets."
+                : "Found on their website. Review the actual content below, then regenerate with the approved subset."}
           </p>
 
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -557,6 +564,18 @@ export function ConceptReviewCard({
             </div>
           </dl>
 
+          <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
+            “Needs care” is included in the facts total; it marks credentials,
+            guarantees, prices, years, statistics, emergency claims, and
+            testimonials that require individual approval.
+          </p>
+          {(concept.harvestImageCandidates?.length ?? 0) > 0 ? (
+            <p className="mt-1 text-[11px] text-[var(--muted-foreground)]">
+              Harvested images are not imported yet. Use Upload or Paste below
+              for any logo or photo you approve.
+            </p>
+          ) : null}
+
           {concept.harvestedPages?.length ? (
             <ul className="mt-3 space-y-1 text-xs">
               {concept.harvestedPages.map((page) => (
@@ -582,36 +601,85 @@ export function ConceptReviewCard({
             </ul>
           ) : null}
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isBusy}
-              onClick={() =>
+          {harvestPending || harvestApproved ? (
+            <ConceptHarvestReview
+              candidates={concept.harvestCandidates ?? []}
+              approvedCandidateIds={concept.approvedHarvestCandidateIds ?? []}
+              reviewState={harvestApproved ? "approved" : "pending"}
+              snapshotKey={concept.harvestedAt ?? 0}
+              isBusy={isBusy || isWorking}
+              placeMatchResolved={concept.placeMatchResolved}
+              hasPhone={Boolean(concept.phone)}
+              hasLogo={Boolean(data.logoUrl)}
+              photoCount={data.photos.length}
+              manualQuoteCount={
+                concept.approvedQuotes.filter(
+                  (quote) => quote.sourceKind !== "website",
+                ).length
+              }
+              onApproveAndGenerate={(candidateIds) =>
+                runAction(async () => {
+                  await approveHarvestReview({
+                    conceptId,
+                    approvedCandidateIds: candidateIds,
+                  });
+                  await generate({
+                    conceptId,
+                    structureId: structureId || undefined,
+                  });
+                }, "Approved content saved. Generating a new concept...")
+              }
+              onSkipAndGenerate={() =>
+                runAction(async () => {
+                  await skipHarvestReview({ conceptId });
+                  await generate({
+                    conceptId,
+                    structureId: structureId || undefined,
+                  });
+                }, "Website content ignored. Generating from the brief...")
+              }
+              onRefresh={() =>
                 runAction(
                   () => harvestWebsiteContent({ conceptId, refresh: true }),
-                  "Re-reading their website...",
+                  "Re-scanning their website...",
                 )
               }
-            >
-              Refresh website content
-            </Button>
-            {harvestPending ? (
+            />
+          ) : (
+            <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
               <Button
                 size="sm"
-                variant="ghost"
-                disabled={isBusy}
+                disabled={isBusy || isWorking}
                 onClick={() =>
                   runAction(
-                    () => skipHarvestReview({ conceptId }),
-                    "Skipped. Generating from your notes and uploads.",
+                    () =>
+                      generate({
+                        conceptId,
+                        structureId: structureId || undefined,
+                      }),
+                    "Generating from your notes and uploads...",
                   )
                 }
               >
-                Skip harvested content
+                {concept.generatedHtml
+                  ? "Regenerate without harvest"
+                  : "Generate without harvest"}
               </Button>
-            ) : null}
-          </div>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={isBusy || isWorking}
+                onClick={() =>
+                  runAction(
+                    () => harvestWebsiteContent({ conceptId, refresh: true }),
+                    "Re-scanning their website...",
+                  )
+                }
+              >
+                Re-scan website
+              </Button>
+            </div>
+          )}
         </div>
       ) : concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
@@ -823,7 +891,10 @@ export function ConceptReviewCard({
                 id="edit-website"
                 value={draft.submittedWebsiteUrl}
                 onChange={(event) =>
-                  setDraft({ ...draft, submittedWebsiteUrl: event.target.value })
+                  setDraft({
+                    ...draft,
+                    submittedWebsiteUrl: event.target.value,
+                  })
                 }
               />
             </div>
@@ -1100,26 +1171,29 @@ function AssetThumb({
 }
 
 /**
- * Approved quotes are typed by hand and nothing else.
+ * Approved quotes are typed by hand or individually approved from the
+ * business's own website harvest.
  *
  * Google review text is licensed to Google and written by customers who never
- * agreed to appear in a mock-up, so it cannot be lifted into a testimonial. When
- * this list is empty the validator rejects any testimonial-shaped markup, which
- * is the desired default.
+ * agreed to appear in a mock-up, so it cannot be lifted into a testimonial.
+ * When this list is empty the validator rejects testimonial-shaped markup.
  */
 function QuotesEditor({
   quotes,
   onChange,
 }: {
   quotes: Array<{ author: string; text: string; rating?: number }>;
-  onChange: (next: Array<{ author: string; text: string; rating?: number }>) => void;
+  onChange: (
+    next: Array<{ author: string; text: string; rating?: number }>,
+  ) => void;
 }) {
   return (
     <div className="space-y-2">
       <Label>Approved quotes</Label>
       <p className="text-[11px] text-[var(--muted-foreground)]">
-        Only add a quote the owner supplied for this concept. Leave this empty
-        and the page will carry no testimonials at all.
+        Only use owner-supplied quotes or testimonials you individually approved
+        from their own website. Leave this empty and the page will carry no
+        testimonials.
       </p>
 
       {quotes.map((quote, index) => (

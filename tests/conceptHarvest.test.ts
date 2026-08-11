@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  buildApprovedHarvestSelection,
   HARVEST_MAX_CANDIDATES,
   HARVEST_MAX_IMAGE_CANDIDATES,
   HARVEST_MAX_PAGES,
@@ -130,9 +131,9 @@ describe("selectHarvestPages", () => {
       mapResults: [],
       businessName: "Bayou Fence",
     });
-    expect(warnings.some((warning) => warning.includes("Only the homepage"))).toBe(
-      true,
-    );
+    expect(
+      warnings.some((warning) => warning.includes("Only the homepage")),
+    ).toBe(true);
   });
 
   test("reports an unusable site URL instead of throwing", () => {
@@ -215,9 +216,9 @@ describe("classifyHarvestRisk", () => {
   }
 
   test("leaves an ordinary service standard", () => {
-    expect(classifyHarvestRisk("service", "Wood privacy fence installation")).toBe(
-      "standard",
-    );
+    expect(
+      classifyHarvestRisk("service", "Wood privacy fence installation"),
+    ).toBe("standard");
   });
 
   test("treats every quote as sensitive regardless of wording", () => {
@@ -255,9 +256,17 @@ describe("harvestCandidateId", () => {
 
   test("separates the same value on different pages", () => {
     expect(
-      harvestCandidateId({ kind: "service", value: "Gates", sourceUrl: `${SITE}/a` }),
+      harvestCandidateId({
+        kind: "service",
+        value: "Gates",
+        sourceUrl: `${SITE}/a`,
+      }),
     ).not.toBe(
-      harvestCandidateId({ kind: "service", value: "Gates", sourceUrl: `${SITE}/b` }),
+      harvestCandidateId({
+        kind: "service",
+        value: "Gates",
+        sourceUrl: `${SITE}/b`,
+      }),
     );
   });
 });
@@ -285,7 +294,9 @@ describe("buildHarvestSnapshot", () => {
     });
     expect(snapshot.candidates.map((c) => c.value)).toEqual(["Chain link"]);
     expect(
-      snapshot.warnings.some((warning) => warning.includes("no source excerpt")),
+      snapshot.warnings.some((warning) =>
+        warning.includes("no source excerpt"),
+      ),
     ).toBe(true);
   });
 
@@ -336,7 +347,10 @@ describe("buildHarvestSnapshot", () => {
         pageFor({
           sourceUrl: `${SITE}/gallery`,
           services: [
-            { name: "gates", evidence: "Custom driveway gates in wood or steel." },
+            {
+              name: "gates",
+              evidence: "Custom driveway gates in wood or steel.",
+            },
           ],
         }),
       ],
@@ -385,7 +399,9 @@ describe("buildHarvestSnapshot", () => {
       submittedPhone: "(337) 555-0100",
       pages: [
         pageFor({
-          phones: [{ value: "(337) 555-0199", evidence: "Call (337) 555-0199" }],
+          phones: [
+            { value: "(337) 555-0199", evidence: "Call (337) 555-0199" },
+          ],
         }),
       ],
     });
@@ -398,11 +414,15 @@ describe("buildHarvestSnapshot", () => {
       submittedPhone: "(337) 555-0100",
       pages: [
         pageFor({
-          phones: [{ value: "+1 337-555-0100", evidence: "Call +1 337-555-0100" }],
+          phones: [
+            { value: "+1 337-555-0100", evidence: "Call +1 337-555-0100" },
+          ],
         }),
       ],
     });
-    expect(snapshot.warnings.some((w) => w.includes("differ from"))).toBe(false);
+    expect(snapshot.warnings.some((w) => w.includes("differ from"))).toBe(
+      false,
+    );
   });
 });
 
@@ -498,5 +518,95 @@ describe("harvestCompleteness", () => {
       approvedQuoteCount: 0,
     });
     expect(rows.find((row) => row.key === "photos")?.met).toBe(true);
+  });
+});
+
+describe("buildApprovedHarvestSelection", () => {
+  test("materializes only the explicitly selected source-backed facts", () => {
+    const candidates = [
+      {
+        id: "service",
+        kind: "service" as const,
+        value: "Tree removal",
+        detail: "Safe removal for hazardous trees.",
+        evidence: "Tree removal and hazardous tree service",
+        sourceUrl: `${SITE}/services`,
+        risk: "standard" as const,
+      },
+      {
+        id: "claim",
+        kind: "sensitiveClaim" as const,
+        value: "Licensed and insured",
+        evidence: "Our licensed and insured crew",
+        sourceUrl: `${SITE}/about`,
+        risk: "sensitive" as const,
+      },
+      {
+        id: "unselected",
+        kind: "serviceArea" as const,
+        value: "Central Louisiana",
+        evidence: "Serving Central Louisiana",
+        sourceUrl: `${SITE}/areas`,
+        risk: "standard" as const,
+      },
+    ];
+
+    const selection = buildApprovedHarvestSelection({
+      candidates,
+      selectedIds: ["service", "claim"],
+    });
+
+    expect(selection.candidateIds).toEqual(["service", "claim"]);
+    expect(selection.content.services).toEqual([
+      {
+        name: "Tree removal",
+        description: "Safe removal for hazardous trees.",
+      },
+    ]);
+    expect(selection.content.sensitiveClaims).toEqual(["Licensed and insured"]);
+    expect(selection.content.serviceAreas).toEqual([]);
+  });
+
+  test("keeps harvested phones out and requires attribution for testimonials", () => {
+    const selection = buildApprovedHarvestSelection({
+      candidates: [
+        {
+          id: "phone",
+          kind: "phone",
+          value: "337-555-0199",
+          evidence: "Call 337-555-0199",
+          sourceUrl: `${SITE}/contact`,
+          risk: "standard",
+        },
+        {
+          id: "anonymous-quote",
+          kind: "quote",
+          value: "Excellent work.",
+          evidence: "Excellent work.",
+          sourceUrl: `${SITE}/`,
+          risk: "sensitive",
+        },
+        {
+          id: "quote",
+          kind: "quote",
+          value: "They left the yard spotless.",
+          detail: "Jamie R.",
+          evidence: "They left the yard spotless. — Jamie R.",
+          sourceUrl: `${SITE}/testimonials`,
+          risk: "sensitive",
+        },
+      ],
+      selectedIds: ["phone", "anonymous-quote", "quote", "unknown"],
+    });
+
+    expect(selection.candidateIds).toEqual(["quote"]);
+    expect(selection.websiteQuotes).toEqual([
+      {
+        text: "They left the yard spotless.",
+        author: "Jamie R.",
+        sourceUrl: `${SITE}/testimonials`,
+        sourceKind: "website",
+      },
+    ]);
   });
 });

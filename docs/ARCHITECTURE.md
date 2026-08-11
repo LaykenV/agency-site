@@ -43,17 +43,17 @@ The package manifest is authoritative:
 
 ## Application routes
 
-| Surface | Route |
-|---|---|
-| Marketing | `/`, city/industry SEO routes, `/blog` |
-| Public audits | `/audit`, `/audit/request/[token]` |
-| Concept previews | `/preview/[token]` |
-| Legal | `/legal/terms`, `/legal/privacy`, `/sms-consent` |
-| Client entry | `/portal`, `/portal/verify`, `/portal/autherror` |
-| Agreement and billing | `/portal/agreement`, `/portal/subscribe`, `/portal/paymentSuccess` |
-| Client project | `/portal/[projectId]` |
-| Admin | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/marketing`, `/admin/content` |
-| Better Auth handler | `/api/auth/[...all]` |
+| Surface               | Route                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------- |
+| Marketing             | `/`, city/industry SEO routes, `/blog`                                             |
+| Public audits         | `/audit`, `/audit/request/[token]`                                                 |
+| Concept previews      | `/preview/[token]`                                                                 |
+| Legal                 | `/legal/terms`, `/legal/privacy`, `/sms-consent`                                   |
+| Client entry          | `/portal`, `/portal/verify`, `/portal/autherror`                                   |
+| Agreement and billing | `/portal/agreement`, `/portal/subscribe`, `/portal/paymentSuccess`                 |
+| Client project        | `/portal/[projectId]`                                                              |
+| Admin                 | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/marketing`, `/admin/content` |
+| Better Auth handler   | `/api/auth/[...all]`                                                               |
 
 `/onboarding` permanently redirects to the Cal.com sales call.
 
@@ -211,9 +211,9 @@ soft integrity boundary, not secret authentication.
 
 Store Spoke hosts on the project as bare hostnames, not full URLs:
 
-| Field | Example | Origin match |
-|---|---|---|
-| `deployment.liveUrl` | `example.com` | `https://example.com` or `https://www.example.com` |
+| Field                   | Example              | Origin match                                              |
+| ----------------------- | -------------------- | --------------------------------------------------------- |
+| `deployment.liveUrl`    | `example.com`        | `https://example.com` or `https://www.example.com`        |
 | `deployment.stagingUrl` | `example.vercel.app` | `https://example.vercel.app` (or the exact Origin string) |
 
 Do not store `https://` or a trailing path in either field. Event CORS and
@@ -254,8 +254,8 @@ All v1 and unversioned lead and analytics aliases are retired.
 homepage concept:
 
 1. manual intake — no discovery, no Facebook scraping, no automated messaging
-2. a single Google Places lookup, whose match a human must confirm before
-   anything is generated
+2. a single Google Places lookup, whose match is automatically confirmed only
+   when uniquely corroborated; otherwise a human confirms it
 3. Firecrawl and PageSpeed against the confirmed website, if there is one
 4. optionally, a bounded structured harvest of that website
 5. bespoke HTML and inline CSS from a configurable OpenRouter model
@@ -302,12 +302,20 @@ The snapshot lives on `website_concepts` rather than in a content or crawler
 table. It stores candidates with a source URL and an evidence excerpt, never raw
 markdown, whole Firecrawl responses, or image bytes.
 
-Nothing harvested is a fact. A snapshot with reviewable candidates parks the
-concept in `content_review`, which blocks generation and publication until it is
-approved or explicitly skipped. Individual approval and the prompt integration
-are not yet implemented; today the only resolutions are **Refresh website
-content** and **Skip harvested content**, so no harvested text or remote image
-URL can currently reach a generated page.
+Nothing harvested is a fact until the admin selects it. A snapshot with
+reviewable candidates parks the concept in `content_review`, which blocks
+generation and publication. The mobile review separates standard facts from
+credentials, guarantees, prices, years, statistics, emergency claims, and
+testimonials; sensitive items are approved individually. The server rebuilds
+`approvedWebsiteContent` from candidate IDs in the current snapshot, then the
+primary **Approve and regenerate** action sends only that approved subset to the
+prompt. Skipping is explicit. Remote image URLs still cannot reach a generated
+page; safe image import is the next phase.
+
+Matching and baseline research never generate automatically. They stop at
+`draft`, leaving time to harvest, upload assets, edit notes, or deliberately
+generate from the sparse brief. Every paid generation starts from an explicit
+admin button.
 
 ### Rendering and security boundary
 

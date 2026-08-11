@@ -10,6 +10,10 @@ import {
   statusAfterGenerationInputChange,
 } from "../../lib/concepts/lifecycle";
 import {
+  buildApprovedHarvestSelection,
+  isHarvestCandidateApprovable,
+} from "../../lib/concepts/harvest";
+import {
   conceptApprovedQuoteValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
@@ -219,6 +223,9 @@ export const update = mutation({
 
     await ctx.db.patch(args.conceptId, {
       ...next,
+      approvedQuotes: identityOrSiteChanged
+        ? next.approvedQuotes.filter((quote) => quote.sourceKind !== "website")
+        : next.approvedQuotes,
       // Any generation input change revokes the old artifact immediately. A
       // removed quote or replaced logo must not remain live until somebody
       // happens to regenerate.
@@ -278,6 +285,8 @@ function clearedHarvest() {
     harvestWarnings: undefined,
     harvestReviewState: undefined,
     harvestReviewedAt: undefined,
+    approvedHarvestCandidateIds: undefined,
+    approvedWebsiteContent: undefined,
   } as const;
 }
 
@@ -323,10 +332,9 @@ export const attachAsset = mutation({
         promptVersion: undefined,
         generationRequestId: undefined,
         publishedAt: undefined,
-        status:
-          concept.harvestRequestId
-            ? "harvesting"
-            : concept.harvestReviewState === "pending"
+        status: concept.harvestRequestId
+          ? "harvesting"
+          : concept.harvestReviewState === "pending"
             ? "content_review"
             : concept.placeMatchResolved
               ? "draft"
@@ -347,10 +355,9 @@ export const attachAsset = mutation({
       promptVersion: undefined,
       generationRequestId: undefined,
       publishedAt: undefined,
-      status:
-        concept.harvestRequestId
-          ? "harvesting"
-          : concept.harvestReviewState === "pending"
+      status: concept.harvestRequestId
+        ? "harvesting"
+        : concept.harvestReviewState === "pending"
           ? "content_review"
           : concept.placeMatchResolved
             ? "draft"
@@ -389,10 +396,9 @@ export const removeAsset = mutation({
       promptVersion: undefined,
       generationRequestId: undefined,
       publishedAt: undefined,
-      status:
-        concept.harvestRequestId
-          ? "harvesting"
-          : concept.harvestReviewState === "pending"
+      status: concept.harvestRequestId
+        ? "harvesting"
+        : concept.harvestReviewState === "pending"
           ? "content_review"
           : concept.placeMatchResolved
             ? "draft"
@@ -419,7 +425,7 @@ export const reEnrich = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await loadConcept(ctx, args.conceptId);
+    const concept = await loadConcept(ctx, args.conceptId);
 
     await ctx.db.patch(args.conceptId, {
       placeMatchResolved: false,
@@ -428,6 +434,9 @@ export const reEnrich = mutation({
       placeCandidates: undefined,
       verifiedWebsiteUrl: undefined,
       ...clearedHarvest(),
+      approvedQuotes: concept.approvedQuotes.filter(
+        (quote) => quote.sourceKind !== "website",
+      ),
       researchBrief: undefined,
       generatedHtml: undefined,
       structureId: undefined,
@@ -452,9 +461,9 @@ export const reEnrich = mutation({
 /**
  * Harvest the business's own website into reviewable candidates.
  *
- * Explicit rather than automatic. Until the review card ships in B2 this is the
- * only way a harvest starts, which is what keeps a concept from parking itself
- * in `content_review` with nothing on screen to resolve it.
+ * Explicit rather than automatic. Matching and baseline research stop at Draft;
+ * the admin decides whether this website is worth scanning before Firecrawl is
+ * called or the concept can enter `content_review`.
  *
  * `refresh` bypasses Firecrawl's cache — the case where the owner has just
  * updated their site during the conversation.
@@ -485,8 +494,8 @@ export const harvestWebsiteContent = mutation({
  * a recorded decision rather than a silent one, so a concept generated without
  * website content shows that it was a choice.
  *
- * Approving individual candidates is B2. This is deliberately the only way out
- * of the gate for now.
+ * The sibling approval mutation is the other way out: it materializes the
+ * selected source-backed subset before generation.
  */
 export const skipHarvestReview = mutation({
   args: { conceptId: v.id("website_concepts") },
@@ -495,13 +504,28 @@ export const skipHarvestReview = mutation({
     await requireAdmin(ctx);
     const concept = await loadConcept(ctx, args.conceptId);
 
-    if (concept.harvestReviewState !== "pending") {
+    if (
+      concept.harvestReviewState !== "pending" &&
+      concept.harvestReviewState !== "approved"
+    ) {
       throw new Error("This concept has no harvest waiting for review.");
     }
 
     await ctx.db.patch(args.conceptId, {
       harvestReviewState: "skipped",
       harvestReviewedAt: Date.now(),
+      approvedHarvestCandidateIds: undefined,
+      approvedWebsiteContent: undefined,
+      approvedQuotes: concept.approvedQuotes.filter(
+        (quote) => quote.sourceKind !== "website",
+      ),
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
       status: concept.placeMatchResolved ? "draft" : concept.status,
       error: undefined,
       updatedAt: Date.now(),
@@ -512,6 +536,98 @@ export const skipHarvestReview = mutation({
       businessName: concept.businessName,
       candidateCount: concept.harvestCandidates?.length ?? 0,
       imageCandidateCount: concept.harvestImageCandidates?.length ?? 0,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Resolve the review gate with an explicit source-backed subset.
+ *
+ * Standard facts may be selected in bulk by the UI; sensitive claims and
+ * testimonials still arrive as individual IDs. The server rebuilds the
+ * approved object from the current snapshot so a crafted client cannot inject
+ * text that Firecrawl never returned.
+ */
+export const approveHarvestReview = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    approvedCandidateIds: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+
+    if (
+      concept.harvestReviewState !== "pending" &&
+      concept.harvestReviewState !== "approved"
+    ) {
+      throw new Error("This concept has no harvested content to approve.");
+    }
+
+    const candidates = concept.harvestCandidates ?? [];
+    const byId = new Map(
+      candidates.map((candidate) => [candidate.id, candidate]),
+    );
+    const uniqueIds = [...new Set(args.approvedCandidateIds)];
+    if (uniqueIds.length > candidates.length) {
+      throw new Error("Too many harvested content selections.");
+    }
+    for (const id of uniqueIds) {
+      const candidate = byId.get(id);
+      if (!candidate) {
+        throw new Error(
+          "A selected fact is no longer part of this harvest. Refresh the review.",
+        );
+      }
+      if (!isHarvestCandidateApprovable(candidate)) {
+        throw new Error(
+          candidate.kind === "phone"
+            ? "Change the concept phone in the brief instead of approving a harvested phone."
+            : "A testimonial needs visible attribution before it can be approved.",
+        );
+      }
+    }
+
+    const selection = buildApprovedHarvestSelection({
+      candidates,
+      selectedIds: uniqueIds,
+    });
+    const manualQuotes = concept.approvedQuotes.filter(
+      (quote) => quote.sourceKind !== "website",
+    );
+    const now = Date.now();
+
+    await ctx.db.patch(args.conceptId, {
+      approvedHarvestCandidateIds: selection.candidateIds,
+      approvedWebsiteContent: selection.content,
+      approvedQuotes: [...manualQuotes, ...selection.websiteQuotes],
+      harvestReviewState: "approved",
+      harvestReviewedAt: now,
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
+      status: concept.placeMatchResolved ? "draft" : concept.status,
+      error: undefined,
+      updatedAt: now,
+    });
+
+    await logConceptActivity(ctx, "concept.harvest_reviewed", {
+      conceptId: args.conceptId,
+      businessName: concept.businessName,
+      approvedCount: selection.candidateIds.length,
+      sensitiveCount: candidates.filter(
+        (candidate) =>
+          selection.candidateIds.includes(candidate.id) &&
+          candidate.risk === "sensitive",
+      ).length,
+      quoteCount: selection.websiteQuotes.length,
     });
 
     return null;

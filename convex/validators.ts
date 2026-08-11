@@ -498,6 +498,20 @@ export const conceptApprovedQuoteValidator = v.object({
   author: v.string(),
   text: v.string(),
   rating: v.optional(v.number()),
+  sourceUrl: v.optional(v.string()),
+  sourceKind: v.optional(v.literal("website")),
+});
+
+export const conceptApprovedWebsiteContentValidator = v.object({
+  tagline: v.optional(v.string()),
+  about: v.optional(v.string()),
+  services: v.array(
+    v.object({ name: v.string(), description: v.optional(v.string()) }),
+  ),
+  serviceAreas: v.array(v.string()),
+  differentiators: v.array(v.string()),
+  sensitiveClaims: v.array(v.string()),
+  hours: v.array(v.string()),
 });
 
 /**
@@ -526,6 +540,7 @@ export const conceptBriefValidator = v.object({
   existingPerformanceScore: v.optional(v.number()),
   existingPrimaryColor: v.optional(v.string()),
   existingSiteSummary: v.optional(v.string()),
+  approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
   notes: v.optional(v.string()),
   facebookPageUrl: v.optional(v.string()),
   logoUrl: v.optional(v.string()),
@@ -682,6 +697,8 @@ export const websiteConceptDocValidator = v.object({
   harvestWarnings: v.optional(v.array(v.string())),
   harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
   harvestReviewedAt: v.optional(v.number()),
+  approvedHarvestCandidateIds: v.optional(v.array(v.string())),
+  approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
 
   researchBrief: v.optional(conceptBriefValidator),
   generatedHtml: v.optional(v.string()),

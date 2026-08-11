@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Core generator live; structured harvesting B0-B1 shipped; B2-B4 and destructive cutover remain gated**
+Status: **Core generator live; structured harvesting B0-B2 shipped; B3-B4 and destructive cutover remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -21,9 +21,10 @@ Last reviewed: 2026-08-11
   test, including the real-iPhone check.
 - **Step 4 — done.** `GROWTH.md`, `ARCHITECTURE.md`, `OPERATIONS.md`,
   `BUSINESS.md`, `ROADMAP.md`, and `CLAUDE.md` updated.
-- **Structured harvesting — B0 and B1 shipped 2026-08-11.** Google is identity
+- **Structured harvesting — B0 through B2 shipped 2026-08-11.** Google is identity
   only, the bounded source-backed harvest is live, and generation/publication
-  stay gated while a harvest is running or awaiting review. B2-B4 remain in
+  stay gated while a harvest is running or awaiting review. Approved facts now
+  reach regeneration through a mobile review gate. B3-B4 remain in
   this document under **Structured content harvesting plan**.
 
 The 2026-08-11 review blockers are fixed:
@@ -38,7 +39,7 @@ The 2026-08-11 review blockers are fixed:
 - the cutover runbook now uses supported Convex deployment syntax, explicit row
   counts, archive integrity testing, and export/count reconciliation
 
-Local exit checks pass: Convex codegen, TypeScript, 176 tests, lint, production
+Local exit checks pass: Convex codegen, TypeScript, 181 tests, lint, production
 build (172 routes), and `git diff --check`. The implementation is done; live
 OpenRouter generation is now verified, while full production and
 physical-device verification remain operational gates.
@@ -84,22 +85,22 @@ or general marketing automation product.
 
 ## Locked decisions
 
-| Question | Decision |
-|---|---|
-| Primary acquisition channel | Facebook and Messenger |
-| Lead discovery | Manual; outside the application |
-| Facebook scraping | None |
-| Automated Messenger sending | None |
-| Admin route | Replace `/admin/marketing` in place |
-| Legacy route or legacy UI | None |
-| Historical marketing-data migration | None |
-| Preview hosting | Existing application at `/preview/<token>` |
-| Preview subdomain | None |
-| Concept format | Fully custom self-contained HTML and CSS |
-| Default concept scope | One substantial homepage |
-| Model | Configurable OpenRouter model, initially `deepseek/deepseek-v4-flash-0731` |
-| Public cold email | Removed |
-| Human review | Required before publishing |
+| Question                            | Decision                                                                   |
+| ----------------------------------- | -------------------------------------------------------------------------- |
+| Primary acquisition channel         | Facebook and Messenger                                                     |
+| Lead discovery                      | Manual; outside the application                                            |
+| Facebook scraping                   | None                                                                       |
+| Automated Messenger sending         | None                                                                       |
+| Admin route                         | Replace `/admin/marketing` in place                                        |
+| Legacy route or legacy UI           | None                                                                       |
+| Historical marketing-data migration | None                                                                       |
+| Preview hosting                     | Existing application at `/preview/<token>`                                 |
+| Preview subdomain                   | None                                                                       |
+| Concept format                      | Fully custom self-contained HTML and CSS                                   |
+| Default concept scope               | One substantial homepage                                                   |
+| Model                               | Configurable OpenRouter model, initially `deepseek/deepseek-v4-flash-0731` |
+| Public cold email                   | Removed                                                                    |
+| Human review                        | Required before publishing                                                 |
 
 ## Scope
 
@@ -198,17 +199,17 @@ candidates copied into Convex storage arrive with B3.
 
 ## Structured content harvesting plan
 
-Status: **B0 and B1 implemented on 2026-08-11; B2–B4 not implemented**
+Status: **B0 through B2 implemented on 2026-08-11; B3–B4 not implemented**
 
 What is live: the corrected Google source boundary, the pure harvest core in
 `lib/concepts/harvest.ts`, the additive schema fields, the `content_review`
 status and its generation/publication gate, the `conceptHarvestGlobalDaily`
-limiter, and the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`.
+limiter, the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`, and the
+mobile factual approval-to-regeneration path.
 
-What is not: individual approval, `approvedWebsiteContent`, the prompt
-integration, and remote image staging. No harvested text or image URL can reach
-a generated page today — the only resolutions to the review gate are refresh and
-skip. Verification of the deployment sequence below is also still outstanding.
+What is not: remote image staging/import and the three-site canary. Harvested
+image URLs still cannot reach a generated page; approved text can. Facebook-only
+content capture remains a separate decision after this website path is proven.
 
 The first successful production concepts showed that model output is no longer
 the main bottleneck. Collecting trustworthy services, about copy, logos, and
@@ -419,6 +420,7 @@ harvestImageCandidates[]:
 harvestWarnings[]
 harvestReviewState?: pending | approved | skipped
 harvestReviewedAt?
+approvedHarvestCandidateIds[]
 approvedWebsiteContent?:
   tagline?
   about?
@@ -658,13 +660,19 @@ which shape this account actually returns.
 
 Exit: met in code and unit tests. The three-site canary has not been run.
 
-#### B2 — factual approval and prompt integration
+#### B2 — factual approval and prompt integration — **implemented 2026-08-11**
 
-- Build `ConceptHarvestReview.tsx` and admin review/skip/refresh mutations.
-- Materialize `approvedWebsiteContent` and wire it through `ConceptBrief`,
-  prompt construction, lifecycle gating, and publication invalidation.
-- Remove factual use of `existingSiteSummary`.
-- Add the completeness checklist.
+- ~~Build `ConceptHarvestReview.tsx` and admin review/skip/refresh mutations.~~
+- ~~Materialize `approvedWebsiteContent` and wire it through `ConceptBrief`,
+  prompt construction, lifecycle gating, and publication invalidation.~~
+- ~~Remove factual use of `existingSiteSummary`.~~
+- ~~Add the completeness checklist.~~
+
+The production canary changed one workflow decision: matching and baseline
+research now always stop at `draft`. Generation is explicit only. The review
+panel shows every harvested fact, separates the sensitive subset, links the
+source evidence, and makes **Approve and regenerate** the primary next action;
+**Re-scan website** is secondary and replaces the current snapshot.
 
 Exit: only approved website facts reach the prompt, and a skipped harvest is
 explicit rather than accidental.

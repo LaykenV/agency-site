@@ -29,7 +29,7 @@
 import type { ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-10.1";
+export const CONCEPT_PROMPT_VERSION = "2026-08-11.2";
 
 export type ConceptStructure = {
   id: string;
@@ -88,7 +88,8 @@ NOTE: utilitarian on purpose. No soft shadows, no rounded cards, no gradients. I
   {
     id: "warm-editorial",
     name: "Warm Editorial",
-    fitsWhen: "Consumer services where trust and care matter: cleaning, salons, childcare, senior care.",
+    fitsWhen:
+      "Consumer services where trust and care matter: cleaning, salons, childcare, senior care.",
     spec: `PAPER: soft warm blush-neutral (#f7f2ee). Text is a soft near-black (#2b2724).
 TYPE: display "Didot", "Palatino", "New York", ui-serif, Georgia, serif — large, light, with generous leading (1.15) and a hint of italic on one pull-line only. Body: "Optima", "Avenir Next", system-ui, sans-serif at 1.0625rem, line-height 1.7.
 ACCENT: muted terracotta (#a8624c) or sage (#6d7f6a), used on small rules and the phone CTA.
@@ -100,7 +101,8 @@ NOTE: restraint is the design. No borders around anything, no cards, at most one
   {
     id: "placard",
     name: "Placard",
-    fitsWhen: "Very little verified content — name, category, city, phone and little else.",
+    fitsWhen:
+      "Very little verified content — name, category, city, phone and little else.",
     spec: `PAPER: a single saturated but dark ground (#1b2a2e, #23202b, or #2b211c — pick from the brand colour if one is known). Text is off-white.
 TYPE: display "Futura", "Avenir Next", "Gill Sans", system-ui, sans-serif at very large scale, weight 500, letter-spacing -0.01em. Body: same stack at 400.
 ACCENT: a single light tint of the paper hue used for one rule and the phone CTA border.
@@ -112,7 +114,8 @@ NOTE: this shape exists for the case where inventing content would be the only w
   {
     id: "estimate-sheet",
     name: "Estimate Sheet",
-    fitsWhen: "Notes describe a process, quoting approach, or pricing structure.",
+    fitsWhen:
+      "Notes describe a process, quoting approach, or pricing structure.",
     spec: `PAPER: cool white (#fcfcfd) with one inset panel in pale grey (#f1f2f4). Text near-black.
 TYPE: display "Superclarendon", "Charter", "Iowan Old Style", ui-serif, Georgia, serif at medium-large, weight 600. Body: system-ui, -apple-system, sans-serif. Numerals in "ui-monospace", "SFMono-Regular", Menlo, monospace wherever a figure or step number appears.
 ACCENT: slate blue (#3d5a80) on step numerals, rules, and the phone CTA.
@@ -144,14 +147,30 @@ export function pickConceptStructure(
     if (chosen) return chosen;
   }
 
-  const haystack = [brief.category, brief.notes, brief.existingSiteSummary]
+  const approved = brief.approvedWebsiteContent;
+  const approvedText = approved
+    ? [
+        approved.tagline,
+        approved.about,
+        ...approved.services.flatMap((service) => [
+          service.name,
+          service.description,
+        ]),
+        ...approved.serviceAreas,
+        ...approved.differentiators,
+        ...approved.sensitiveClaims,
+        ...approved.hours,
+      ]
+        .filter(Boolean)
+        .join(" ")
+    : "";
+  const haystack = [brief.category, brief.notes, approvedText]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
   const photoCount = brief.photoUrls.length;
-  const contentRichness =
-    (brief.notes?.length ?? 0) + (brief.existingSiteSummary?.length ?? 0);
+  const contentRichness = (brief.notes?.length ?? 0) + approvedText.length;
 
   const has = (...words: Array<string>) =>
     words.some((word) => haystack.includes(word));
@@ -417,12 +436,44 @@ export function buildConceptUserPrompt(
     lines.push(brief.notes);
   }
 
-  if (brief.existingSiteSummary) {
+  const approvedWebsite = brief.approvedWebsiteContent;
+  if (approvedWebsite) {
+    lines.push("");
+    lines.push("## APPROVED WEBSITE CONTENT");
     lines.push("");
     lines.push(
-      "Copy from their current website, for what they say they do and how they say it. Do not reproduce it verbatim; use it to get the services and tone right:",
+      "Every item below was selected by the reviewer from source-backed website evidence. You may use these facts. Do not add adjacent services, credentials, locations, hours, prices, or guarantees that are not listed.",
     );
-    lines.push(brief.existingSiteSummary);
+    if (approvedWebsite.tagline) {
+      lines.push(`Tagline: ${approvedWebsite.tagline}`);
+    }
+    if (approvedWebsite.about) {
+      lines.push(`About: ${approvedWebsite.about}`);
+    }
+    if (approvedWebsite.services.length > 0) {
+      lines.push("Services:");
+      for (const service of approvedWebsite.services) {
+        lines.push(
+          `- ${service.name}${service.description ? ` — ${service.description}` : ""}`,
+        );
+      }
+    }
+    if (approvedWebsite.serviceAreas.length > 0) {
+      lines.push(`Service areas: ${approvedWebsite.serviceAreas.join("; ")}`);
+    }
+    if (approvedWebsite.differentiators.length > 0) {
+      lines.push(
+        `Differentiators: ${approvedWebsite.differentiators.join("; ")}`,
+      );
+    }
+    if (approvedWebsite.sensitiveClaims.length > 0) {
+      lines.push(
+        `Individually approved claims: ${approvedWebsite.sensitiveClaims.join("; ")}`,
+      );
+    }
+    if (approvedWebsite.hours.length > 0) {
+      lines.push(`Hours: ${approvedWebsite.hours.join("; ")}`);
+    }
   }
 
   if (brief.existingPrimaryColor) {

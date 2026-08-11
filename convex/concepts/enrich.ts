@@ -220,10 +220,7 @@ export const listPlaceCandidates = action({
   returns: v.array(conceptPlaceCandidateValidator),
   // Annotated because this action reads its own module's API through
   // `internal`, which TypeScript cannot resolve without a fixed point.
-  handler: async (
-    ctx,
-    args,
-  ): Promise<Array<PlaceCandidate>> => {
+  handler: async (ctx, args): Promise<Array<PlaceCandidate>> => {
     await ctx.runQuery(internal.concepts.internal.assertAdmin, {});
 
     const concept: Doc<"website_concepts"> | null = await ctx.runQuery(
@@ -249,7 +246,7 @@ export const confirmPlaceMatch = action({
   args: {
     conceptId: v.id("website_concepts"),
     placeId: v.union(v.string(), v.null()),
-    /** Generate immediately after research finishes. */
+    /** Deprecated compatibility input. Generation is now always explicit. */
     thenGenerate: v.optional(v.boolean()),
   },
   returns: v.null(),
@@ -277,7 +274,7 @@ export const confirmPlaceMatch = action({
     await ctx.runMutation(internal.concepts.internal.savePlaceMatchConfirmed, {
       conceptId: args.conceptId,
       placeId: args.placeId ?? undefined,
-      thenGenerate: args.thenGenerate ?? true,
+      thenGenerate: false,
     });
 
     return null;
@@ -377,7 +374,7 @@ async function runFirecrawlScrape(url: string): Promise<SiteScrape> {
 
 /**
  * Phase B: research the confirmed business and build the machine half of the
- * brief, then hand off to generation.
+ * brief, then stop at Draft for content preparation and explicit generation.
  *
  * Firecrawl and PageSpeed failures are recorded but not fatal. A business with
  * no website — the best kind of lead here — has nothing to scrape, and a
@@ -386,7 +383,8 @@ async function runFirecrawlScrape(url: string): Promise<SiteScrape> {
 export const runSiteResearch = internalAction({
   args: {
     conceptId: v.id("website_concepts"),
-    thenGenerate: v.boolean(),
+    /** Deprecated compatibility input. Ignored intentionally. */
+    thenGenerate: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -462,18 +460,10 @@ export const runSiteResearch = internalAction({
         verifiedWebsiteUrl: websiteUrl,
       });
 
-      if (args.thenGenerate) {
-        await ctx.scheduler.runAfter(
-          0,
-          internal.concepts.internal.queueGeneration,
-          { conceptId: args.conceptId },
-        );
-      } else {
-        await ctx.runMutation(internal.concepts.internal.setStatus, {
-          conceptId: args.conceptId,
-          status: "draft",
-        });
-      }
+      await ctx.runMutation(internal.concepts.internal.setStatus, {
+        conceptId: args.conceptId,
+        status: "draft",
+      });
     } catch (error) {
       await ctx.runMutation(internal.concepts.internal.setStatus, {
         conceptId: args.conceptId,

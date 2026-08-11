@@ -22,6 +22,11 @@
  * plan for the research this implements.
  */
 
+import type {
+  ConceptApprovedQuote,
+  ConceptApprovedWebsiteContent,
+} from "./brief";
+
 // --- Bounds ---------------------------------------------------------------
 
 export const HARVEST_MAX_MAP_URLS = 40;
@@ -132,6 +137,74 @@ export type HarvestSnapshot = {
   imageCandidates: Array<HarvestImageCandidate>;
   warnings: Array<string>;
 };
+
+export type ApprovedHarvestSelection = {
+  candidateIds: Array<string>;
+  content: ConceptApprovedWebsiteContent;
+  websiteQuotes: Array<ConceptApprovedQuote>;
+};
+
+/** Phone candidates change the CTA and therefore stay in the editable brief. */
+export function isHarvestCandidateApprovable(
+  candidate: Pick<HarvestCandidate, "kind" | "detail">,
+): boolean {
+  if (candidate.kind === "phone") return false;
+  // A testimonial without visible attribution cannot become an approved quote.
+  if (candidate.kind === "quote" && !candidate.detail?.trim()) return false;
+  return true;
+}
+
+/**
+ * Convert an explicitly selected subset into the only website content the
+ * generation prompt may see. Unknown IDs and non-approvable candidates are
+ * ignored here and rejected at the Convex mutation boundary.
+ */
+export function buildApprovedHarvestSelection(input: {
+  candidates: Array<HarvestCandidate>;
+  selectedIds: Array<string>;
+}): ApprovedHarvestSelection {
+  const requested = new Set(input.selectedIds);
+  const selected = input.candidates.filter(
+    (candidate) =>
+      requested.has(candidate.id) && isHarvestCandidateApprovable(candidate),
+  );
+
+  const first = (kind: HarvestCandidateKind) =>
+    selected.find((candidate) => candidate.kind === kind)?.value;
+  const values = (kind: HarvestCandidateKind) =>
+    selected
+      .filter((candidate) => candidate.kind === kind)
+      .map((candidate) => candidate.value);
+
+  return {
+    candidateIds: selected.map((candidate) => candidate.id),
+    content: {
+      tagline: first("tagline"),
+      about:
+        values("about").join("\n\n").slice(0, HARVEST_ABOUT_MAX) || undefined,
+      services: selected
+        .filter((candidate) => candidate.kind === "service")
+        .map((candidate) => ({
+          name: candidate.value,
+          description: candidate.detail,
+        })),
+      serviceAreas: values("serviceArea"),
+      differentiators: values("differentiator"),
+      sensitiveClaims: values("sensitiveClaim"),
+      hours: values("hours"),
+    },
+    websiteQuotes: selected
+      .filter(
+        (candidate) => candidate.kind === "quote" && candidate.detail?.trim(),
+      )
+      .map((candidate) => ({
+        text: candidate.value,
+        author: candidate.detail!.trim(),
+        sourceUrl: candidate.sourceUrl,
+        sourceKind: "website" as const,
+      })),
+  };
+}
 
 const HARVEST_MAX_ITEMS_PER_EXTRACTED_FIELD = HARVEST_MAX_CANDIDATES;
 
@@ -269,9 +342,7 @@ function stableHash(value: string): string {
     low = Math.imul(low ^ code, 0x01000193) >>> 0;
     high = Math.imul(high ^ (code + index), 0x85ebca6b) >>> 0;
   }
-  return (
-    low.toString(16).padStart(8, "0") + high.toString(16).padStart(8, "0")
-  );
+  return low.toString(16).padStart(8, "0") + high.toString(16).padStart(8, "0");
 }
 
 /** Deterministic across reruns of the same site: kind, value, and page. */
@@ -340,9 +411,18 @@ const EXCLUDED_PATH_PATTERNS: Array<RegExp> = [
 
 const PAGE_TYPE_RULES: Array<{ type: HarvestPageType; pattern: RegExp }> = [
   { type: "services", pattern: /(service|product|what-we-do|offerings|menu)/i },
-  { type: "about", pattern: /(about|our-story|story|team|staff|company|who-we-are)/i },
-  { type: "gallery", pattern: /(gallery|portfolio|project|work|photos|showcase)/i },
-  { type: "contact", pattern: /(contact|location|areas?-served|service-area|coverage)/i },
+  {
+    type: "about",
+    pattern: /(about|our-story|story|team|staff|company|who-we-are)/i,
+  },
+  {
+    type: "gallery",
+    pattern: /(gallery|portfolio|project|work|photos|showcase)/i,
+  },
+  {
+    type: "contact",
+    pattern: /(contact|location|areas?-served|service-area|coverage)/i,
+  },
   { type: "faq", pattern: /(faq|questions|process|how-it-works)/i },
 ];
 
@@ -388,7 +468,9 @@ export function isSameHarvestHost(left: string, right: string): boolean {
   const leftUrl = canonicalizeHarvestUrl(left);
   const rightUrl = canonicalizeHarvestUrl(right);
   if (!leftUrl || !rightUrl) return false;
-  return bareHost(new URL(leftUrl).hostname) === bareHost(new URL(rightUrl).hostname);
+  return (
+    bareHost(new URL(leftUrl).hostname) === bareHost(new URL(rightUrl).hostname)
+  );
 }
 
 function pageTypeFor(url: string, title?: string): HarvestPageType {
@@ -441,11 +523,17 @@ export function selectHarvestPages(input: {
       offSite += 1;
       continue;
     }
-    if (/\.(pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)$/i.test(parsed.pathname)) {
+    if (
+      /\.(pdf|jpe?g|png|gif|webp|svg|zip|docx?|xlsx?|mp4|mp3)$/i.test(
+        parsed.pathname,
+      )
+    ) {
       excluded += 1;
       continue;
     }
-    if (EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(parsed.pathname))) {
+    if (
+      EXCLUDED_PATH_PATTERNS.some((pattern) => pattern.test(parsed.pathname))
+    ) {
       excluded += 1;
       continue;
     }
@@ -457,10 +545,11 @@ export function selectHarvestPages(input: {
       title,
       pageType: pageTypeFor(url, `${title ?? ""} ${result.description ?? ""}`),
       depth: parsed.pathname.split("/").filter(Boolean).length,
-      named: nameNeedle.length > 0 &&
-        normalizeForMatch(`${title ?? ""} ${result.description ?? ""}`).includes(
-          nameNeedle,
-        ),
+      named:
+        nameNeedle.length > 0 &&
+        normalizeForMatch(
+          `${title ?? ""} ${result.description ?? ""}`,
+        ).includes(nameNeedle),
     });
   }
 
@@ -475,18 +564,22 @@ export function selectHarvestPages(input: {
 
   const pages: Array<SelectedPage> = [
     { url: home, pageType: "home" },
-    ...scored.slice(0, HARVEST_MAX_PAGES - 1).map(({ url, title, pageType }) => ({
-      url,
-      title,
-      pageType,
-    })),
+    ...scored
+      .slice(0, HARVEST_MAX_PAGES - 1)
+      .map(({ url, title, pageType }) => ({
+        url,
+        title,
+        pageType,
+      })),
   ];
 
   if (offSite > 0) {
     warnings.push(`Ignored ${offSite} URL(s) outside ${siteHost}.`);
   }
   if (excluded > 0) {
-    warnings.push(`Skipped ${excluded} URL(s) with no useful business content.`);
+    warnings.push(
+      `Skipped ${excluded} URL(s) with no useful business content.`,
+    );
   }
   if (pages.length === 1) {
     warnings.push(
@@ -537,10 +630,20 @@ function draftsFor(page: PageExtraction): Array<DraftCandidate> {
   const at = page.sourceUrl;
 
   for (const tagline of page.taglines ?? []) {
-    drafts.push({ kind: "tagline", value: tagline, sourceUrl: at, selfEvident: true });
+    drafts.push({
+      kind: "tagline",
+      value: tagline,
+      sourceUrl: at,
+      selfEvident: true,
+    });
   }
   for (const about of page.aboutSections ?? []) {
-    drafts.push({ kind: "about", value: about, sourceUrl: at, selfEvident: true });
+    drafts.push({
+      kind: "about",
+      value: about,
+      sourceUrl: at,
+      selfEvident: true,
+    });
   }
   for (const service of page.services ?? []) {
     drafts.push({
@@ -706,7 +809,12 @@ export function buildHarvestSnapshot(input: {
   }
 
   const kept = candidates.slice(0, HARVEST_MAX_CANDIDATES);
-  warnings.push(...detectHarvestConflicts({ candidates: kept, submittedPhone: input.submittedPhone }));
+  warnings.push(
+    ...detectHarvestConflicts({
+      candidates: kept,
+      submittedPhone: input.submittedPhone,
+    }),
+  );
 
   return {
     candidates: kept,

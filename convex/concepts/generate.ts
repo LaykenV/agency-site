@@ -233,6 +233,7 @@ export const runGeneration = internalAction({
         logoUrl,
         photoUrls,
         approvedQuotes: concept.approvedQuotes,
+        approvedWebsiteContent: concept.approvedWebsiteContent,
       });
 
       const structure = pickConceptStructure(brief, args.structureId);

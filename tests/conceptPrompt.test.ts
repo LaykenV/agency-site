@@ -40,7 +40,8 @@ describe("pickConceptStructure — fit", () => {
       briefFor({
         businessName: "Shay's Cleaning Services",
         category: "cleaning service",
-        notes: "Residential and move-out cleaning. Deep cleans, recurring visits.",
+        notes:
+          "Residential and move-out cleaning. Deep cleans, recurring visits.",
       }),
     );
     expect(structure.id).toBe("warm-editorial");
@@ -100,13 +101,19 @@ describe("pickConceptStructure — determinism and variety", () => {
   });
 
   test("honours an explicit override", () => {
-    const brief = briefFor({ businessName: "Bayou Towing", notes: "24/7 towing" });
+    const brief = briefFor({
+      businessName: "Bayou Towing",
+      notes: "24/7 towing",
+    });
     expect(pickConceptStructure(brief).id).toBe("dispatch");
     expect(pickConceptStructure(brief, "placard").id).toBe("placard");
   });
 
   test("ignores an unknown override rather than throwing", () => {
-    const brief = briefFor({ businessName: "Bayou Towing", notes: "24/7 towing" });
+    const brief = briefFor({
+      businessName: "Bayou Towing",
+      notes: "24/7 towing",
+    });
     expect(pickConceptStructure(brief, "does-not-exist").id).toBe("dispatch");
   });
 
@@ -118,7 +125,11 @@ describe("pickConceptStructure — determinism and variety", () => {
    */
   test("spreads a realistic corpus across several shapes", () => {
     const corpus: Array<Partial<ConceptBrief>> = [
-      { businessName: "Bayou Towing", category: "towing service", notes: "24/7 emergency towing." },
+      {
+        businessName: "Bayou Towing",
+        category: "towing service",
+        notes: "24/7 emergency towing.",
+      },
       {
         businessName: "Shay's Cleaning Services",
         category: "cleaning service",
@@ -139,7 +150,8 @@ describe("pickConceptStructure — determinism and variety", () => {
       {
         businessName: "Teche Home Inspections",
         category: "home inspector",
-        notes: "Our process: schedule, walk the property, deliver a written estimate.",
+        notes:
+          "Our process: schedule, walk the property, deliver a written estimate.",
       },
     ];
 
@@ -198,7 +210,10 @@ describe("buildConceptUserPrompt", () => {
 
   test("lists logo and photos verbatim", () => {
     const prompt = buildConceptUserPrompt(
-      briefFor({ logoUrl: "https://d.convex.cloud/api/storage/logo", photoUrls: [PHOTOS[0]] }),
+      briefFor({
+        logoUrl: "https://d.convex.cloud/api/storage/logo",
+        photoUrls: [PHOTOS[0]],
+      }),
       CONCEPT_STRUCTURES[0],
     );
     expect(prompt).toContain("Logo: https://d.convex.cloud/api/storage/logo");
@@ -217,7 +232,9 @@ describe("buildConceptUserPrompt", () => {
     );
     const imageSection = prompt.slice(prompt.indexOf("## APPROVED IMAGE URLS"));
     expect(imageSection).not.toContain(mapsUrl);
-    expect(prompt).toContain(`Google Maps URL (the only permitted external link): ${mapsUrl}`);
+    expect(prompt).toContain(
+      `Google Maps URL (the only permitted external link): ${mapsUrl}`,
+    );
   });
 
   test("states when no phone number is verified", () => {
@@ -233,7 +250,9 @@ describe("buildConceptUserPrompt", () => {
   test("reproduces approved quotes with attribution", () => {
     const prompt = buildConceptUserPrompt(
       briefFor({
-        approvedQuotes: [{ author: "Dana R.", text: "Spotless every time.", rating: 5 }],
+        approvedQuotes: [
+          { author: "Dana R.", text: "Spotless every time.", rating: 5 },
+        ],
       }),
       CONCEPT_STRUCTURES[0],
     );
@@ -257,6 +276,30 @@ describe("buildConceptUserPrompt", () => {
     expect(buildConceptSystemPrompt()).toContain(
       "unless an APPROVED QUOTE carries a rating",
     );
+  });
+
+  test("uses only the approved structured website subset", () => {
+    const prompt = buildConceptUserPrompt(
+      briefFor({
+        existingSiteSummary: "UNREVIEWED stump grinding and crane rentals",
+        approvedWebsiteContent: {
+          tagline: "Rooted in reliable service",
+          services: [
+            { name: "Tree removal", description: "Hazardous tree removal." },
+          ],
+          serviceAreas: ["Central Louisiana"],
+          differentiators: ["Locally operated"],
+          sensitiveClaims: ["Licensed and insured"],
+          hours: ["Monday-Friday, 7 AM-5 PM"],
+        },
+      }),
+      CONCEPT_STRUCTURES[0],
+    );
+
+    expect(prompt).toContain("## APPROVED WEBSITE CONTENT");
+    expect(prompt).toContain("Tree removal — Hazardous tree removal.");
+    expect(prompt).toContain("Licensed and insured");
+    expect(prompt).not.toContain("UNREVIEWED");
   });
 
   test("embeds the assigned structure spec", () => {

@@ -211,7 +211,7 @@ export const savePlaceMatchResult = internalMutation({
 
     await ctx.scheduler.runAfter(0, internal.concepts.enrich.runSiteResearch, {
       conceptId: args.conceptId,
-      thenGenerate: true,
+      thenGenerate: false,
     });
     return null;
   },
@@ -228,7 +228,9 @@ export const savePlaceMatchConfirmed = internalMutation({
   args: {
     conceptId: v.id("website_concepts"),
     placeId: v.optional(v.string()),
-    thenGenerate: v.boolean(),
+    // Deprecated compatibility input. Matching now always stops at Draft so
+    // the admin can review content before spending a generation.
+    thenGenerate: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -266,7 +268,7 @@ export const savePlaceMatchConfirmed = internalMutation({
 
     await ctx.scheduler.runAfter(0, internal.concepts.enrich.runSiteResearch, {
       conceptId: args.conceptId,
-      thenGenerate: args.thenGenerate,
+      thenGenerate: false,
     });
     return null;
   },
@@ -403,6 +405,21 @@ export const queueHarvest = internalMutation({
       harvestWarnings: undefined,
       harvestReviewState: undefined,
       harvestReviewedAt: undefined,
+      approvedHarvestCandidateIds: undefined,
+      approvedWebsiteContent: undefined,
+      approvedQuotes: concept.approvedQuotes.filter(
+        (quote) => quote.sourceKind !== "website",
+      ),
+      // Refreshing invalidates both the approved subset and any page generated
+      // from it. A failed refresh returns to Draft instead of reviving stale
+      // claims that are no longer approved.
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
       status: "harvesting",
       error: undefined,
       updatedAt: Date.now(),
@@ -457,7 +474,9 @@ function statusAfterHarvestWithoutReview(concept: {
     return "failed" as const;
   }
   if (concept.generatedHtml) return "review" as const;
-  return concept.placeMatchResolved ? ("draft" as const) : ("matching" as const);
+  return concept.placeMatchResolved
+    ? ("draft" as const)
+    : ("matching" as const);
 }
 
 /**
@@ -499,9 +518,18 @@ export const saveHarvest = internalMutation({
       harvestWarnings: args.warnings.length > 0 ? args.warnings : undefined,
       harvestReviewState: reviewable ? "pending" : "skipped",
       harvestReviewedAt: reviewable ? undefined : now,
+      approvedHarvestCandidateIds: undefined,
+      approvedWebsiteContent: undefined,
       // A pending review revokes any generated artifact: the page in front of
       // Layken was built without content he is about to approve.
       generatedHtml: reviewable ? undefined : concept.generatedHtml,
+      structureId: reviewable ? undefined : concept.structureId,
+      validationViolations: reviewable
+        ? undefined
+        : concept.validationViolations,
+      model: reviewable ? undefined : concept.model,
+      promptVersion: reviewable ? undefined : concept.promptVersion,
+      generationRequestId: reviewable ? undefined : concept.generationRequestId,
       publishedAt: reviewable ? undefined : concept.publishedAt,
       status: reviewable
         ? "content_review"

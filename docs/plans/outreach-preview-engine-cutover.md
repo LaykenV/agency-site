@@ -21,7 +21,7 @@ The production OpenRouter request and completion are verified. The rest of the
 step-6 checklist, including the physical-iPhone path, is still pending unless
 Layken records it as passed below.
 
-Structured content harvesting B0-B1 shipped additively on 2026-08-11. Its
+Structured content harvesting B0-B2 shipped additively on 2026-08-11. Its
 source-boundary cleanup used its own verified exports and migration; it did not
 execute this runbook's legacy-table deletion or schema contraction. B2-B4 and
 the separate Firecrawl canary remain in `outreach-preview-engine.md` under
