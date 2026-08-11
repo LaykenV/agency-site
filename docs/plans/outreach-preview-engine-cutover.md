@@ -186,6 +186,17 @@ Do this on production, with real credentials, before the irreversible step.
 9. Unpublish. Confirm the URL returns 404 again.
 10. Confirm `/audit` and `/audit/request/<token>` still work end to end.
 
+Expected provider behavior during this smoke test:
+
+- A PageSpeed `500` with `reason: lighthouseError` is a non-fatal warning. The
+  concept continues without a performance score; do not treat that warning by
+  itself as a failed generation.
+- `Invalid arguments for fetch: invalid char for header` was traced on
+  2026-08-11 to a typographic em dash in OpenRouter's optional `X-Title` header
+  and fixed by making all attribution-header values printable ASCII. If that
+  exact error appears after this change, the latest Convex functions are not the
+  ones running; redeploy before investigating the API key or model.
+
 **The real-device check.** Open a published concept on your iPhone, in Safari
 and then from a Messenger message to yourself. Verify:
 

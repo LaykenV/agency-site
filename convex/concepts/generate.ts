@@ -10,6 +10,7 @@ import {
 } from "../../lib/concepts/prompt";
 import { validateConceptHtml } from "../../lib/concepts/validateConceptHtml";
 import { isCurrentGeneration } from "../../lib/concepts/lifecycle";
+import { OPENROUTER_ATTRIBUTION_HEADERS } from "../../lib/concepts/openRouter";
 
 /**
  * Concept generation via OpenRouter.
@@ -94,8 +95,7 @@ async function callOpenRouter(
       "Content-Type": "application/json",
       // OpenRouter attribution headers. Optional, but they make spend on the
       // dashboard traceable to this feature.
-      "HTTP-Referer": "https://acadianawebdesign.com",
-      "X-Title": "Acadiana Web Design — concept generator",
+      ...OPENROUTER_ATTRIBUTION_HEADERS,
     },
     body: JSON.stringify({
       model,
