@@ -10,7 +10,11 @@ import {
 } from "../../lib/concepts/prompt";
 import { validateConceptHtml } from "../../lib/concepts/validateConceptHtml";
 import { isCurrentGeneration } from "../../lib/concepts/lifecycle";
-import { OPENROUTER_ATTRIBUTION_HEADERS } from "../../lib/concepts/openRouter";
+import {
+  extractOpenRouterText,
+  OPENROUTER_ATTRIBUTION_HEADERS,
+  type OpenRouterMessageContent,
+} from "../../lib/concepts/openRouter";
 
 /**
  * Concept generation via OpenRouter.
@@ -101,6 +105,11 @@ async function callOpenRouter(
       model,
       temperature: TEMPERATURE,
       max_tokens: MAX_OUTPUT_TOKENS,
+      // DeepSeek V4 Flash defaults to high reasoning. For a constrained HTML
+      // generation task that can consume the output budget and return no final
+      // document, while also making a cheap draft take several minutes. Low is
+      // ample for following the brief and leaves most tokens for the page.
+      reasoning: { effort: "low", exclude: true },
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -116,8 +125,21 @@ async function callOpenRouter(
   }
 
   const json = (await response.json()) as {
-    choices?: Array<{ message?: { content?: string }; finish_reason?: string }>;
+    id?: string;
+    model?: string;
+    provider?: string;
+    choices?: Array<{
+      message?: {
+        content?: OpenRouterMessageContent;
+        reasoning?: string | null;
+      };
+      finish_reason?: string | null;
+    }>;
     error?: { message?: string };
+    usage?: {
+      completion_tokens?: number;
+      completion_tokens_details?: { reasoning_tokens?: number };
+    };
   };
 
   if (json.error?.message) {
@@ -125,16 +147,34 @@ async function callOpenRouter(
   }
 
   const choice = json.choices?.[0];
-  const content = choice?.message?.content;
-  if (!content || !content.trim()) {
-    throw new Error("OpenRouter returned an empty completion.");
-  }
 
   // A truncated document is never valid HTML, and saying so plainly beats a
   // pile of confusing validation violations.
   if (choice?.finish_reason === "length") {
     throw new Error(
       `Model hit the ${MAX_OUTPUT_TOKENS}-token output cap before finishing the document.`,
+    );
+  }
+
+  if (choice?.finish_reason === "error") {
+    throw new Error("OpenRouter provider ended the completion with an error.");
+  }
+
+  const content = extractOpenRouterText(choice?.message?.content);
+  if (!content) {
+    const diagnostics = {
+      requestId: json.id ?? "unknown",
+      model: json.model ?? model,
+      provider: json.provider ?? "unknown",
+      finishReason: choice?.finish_reason ?? "missing",
+      completionTokens: json.usage?.completion_tokens ?? "unknown",
+      reasoningTokens:
+        json.usage?.completion_tokens_details?.reasoning_tokens ?? "unknown",
+      reasoningChars: choice?.message?.reasoning?.length ?? 0,
+    };
+    console.warn("[concepts] OpenRouter returned no final HTML", diagnostics);
+    throw new Error(
+      `OpenRouter returned no final HTML (${JSON.stringify(diagnostics)}).`,
     );
   }
 

@@ -196,6 +196,12 @@ Expected provider behavior during this smoke test:
   and fixed by making all attribution-header values printable ASCII. If that
   exact error appears after this change, the latest Convex functions are not the
   ones running; redeploy before investigating the API key or model.
+- `OpenRouter returned an empty completion` was observed with DeepSeek V4 Flash
+  after a roughly six-minute request. The model defaults to high reasoning; the
+  request now explicitly uses low reasoning and excludes the reasoning trace so
+  the output budget is reserved for final HTML. Empty results now record only
+  safe request/model/provider/finish/token diagnostics, never prompts or model
+  reasoning.
 
 **The real-device check.** Open a published concept on your iPhone, in Safari
 and then from a Messenger message to yourself. Verify:

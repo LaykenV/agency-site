@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  extractOpenRouterText,
   hasOnlyAsciiHeaderValues,
   OPENROUTER_ATTRIBUTION_HEADERS,
 } from "../lib/concepts/openRouter";
@@ -13,5 +14,16 @@ describe("OpenRouter request headers", () => {
     expect(hasOnlyAsciiHeaderValues({ "X-Title": "Agency — concepts" })).toBe(
       false,
     );
+  });
+
+  test("extracts final text from string and text-part responses", () => {
+    expect(extractOpenRouterText("  <html></html>  ")).toBe("<html></html>");
+    expect(
+      extractOpenRouterText([
+        { type: "text", text: "<html>" },
+        { type: "text", text: "</html>" },
+      ]),
+    ).toBe("<html></html>");
+    expect(extractOpenRouterText(null)).toBe("");
   });
 });
