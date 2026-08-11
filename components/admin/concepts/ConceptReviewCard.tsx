@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   Check,
+  ClipboardPaste,
   Copy,
   ExternalLink,
   Loader2,
@@ -172,27 +173,65 @@ export function ConceptReviewCard({
     }
   };
 
-  const handleUpload = async (file: File, kind: "logo" | "photo") => {
+  const uploadFile = async (file: File, kind: "logo" | "photo") => {
+    if (!file.type.startsWith("image/")) {
+      throw new Error(`${file.name || "Clipboard item"} is not an image.`);
+    }
+
+    const uploadUrl = await generateUploadUrl();
+    const response = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file,
+    });
+    if (!response.ok) throw new Error("Upload failed.");
+
+    const { storageId } = (await response.json()) as {
+      storageId: Id<"_storage">;
+    };
+    await attachAsset({ conceptId, storageId, kind });
+  };
+
+  const handleFiles = async (
+    files: Array<File>,
+    kind: "logo" | "photo",
+  ) => {
+    const selected = kind === "logo" ? files.slice(0, 1) : files;
+    if (selected.length === 0) return;
+
     setIsUploading(true);
     try {
-      const uploadUrl = await generateUploadUrl();
-      const response = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!response.ok) throw new Error("Upload failed.");
-
-      const { storageId } = (await response.json()) as {
-        storageId: Id<"_storage">;
-      };
-      await attachAsset({ conceptId, storageId, kind });
-      toast.success(kind === "logo" ? "Logo attached." : "Photo attached.");
+      for (const file of selected) {
+        await uploadFile(file, kind);
+      }
+      toast.success(
+        kind === "logo"
+          ? "Logo attached."
+          : `${selected.length} photo${selected.length === 1 ? "" : "s"} attached.`,
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Upload failed.");
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handlePaste = (
+    event: React.ClipboardEvent<HTMLElement>,
+    kind: "logo" | "photo",
+  ) => {
+    const files = Array.from(event.clipboardData.items)
+      .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+      .map((item) => item.getAsFile())
+      .filter((file): file is File => file !== null);
+
+    if (files.length === 0) {
+      toast.error("The clipboard does not contain an image.");
+      return;
+    }
+
+    event.preventDefault();
+    void handleFiles(files, kind);
   };
 
   return (
@@ -376,7 +415,7 @@ export function ConceptReviewCard({
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = "";
-              if (file) void handleUpload(file, "logo");
+              if (file) void handleFiles([file], "logo");
             }}
           />
           <input
@@ -388,9 +427,7 @@ export function ConceptReviewCard({
             onChange={async (event) => {
               const files = Array.from(event.target.files ?? []);
               event.target.value = "";
-              for (const file of files) {
-                await handleUpload(file, "photo");
-              }
+              await handleFiles(files, "photo");
             }}
           />
           <Button
@@ -411,6 +448,28 @@ export function ConceptReviewCard({
             <Upload className="h-3.5 w-3.5" />
             Add photos
           </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isUploading}
+            onPaste={(event) => handlePaste(event, "logo")}
+            onClick={() => toast.info("Now press Command-V to paste the logo.")}
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Paste logo
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={isUploading}
+            onPaste={(event) => handlePaste(event, "photo")}
+            onClick={() =>
+              toast.info("Now press Command-V to paste one or more photos.")
+            }
+          >
+            <ClipboardPaste className="h-3.5 w-3.5" />
+            Paste photos
+          </Button>
           {isUploading ? (
             <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -418,6 +477,11 @@ export function ConceptReviewCard({
             </span>
           ) : null}
         </div>
+
+        <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
+          For clipboard images, click the matching Paste button and press ⌘V.
+          Screenshots and copied image files work; a copied image URL does not.
+        </p>
 
         {data.logoUrl || data.photos.length > 0 ? (
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">

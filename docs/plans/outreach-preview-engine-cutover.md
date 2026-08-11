@@ -1,12 +1,12 @@
 # Concept generator — production cutover runbook
 
-Status: **approved to execute through production smoke testing; destructive steps remain gated**
+Status: **production smoke in progress; destructive steps remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
 
 Steps 1, 2, and 4 of `outreach-preview-engine.md` are implemented and verified
-locally. The implementation passed Convex codegen, TypeScript, 116 tests, lint,
+locally. The implementation passed Convex codegen, TypeScript, 125 tests, lint,
 the 172-route production build, and `git diff --check` on 2026-08-11.
 
 This file is the remaining Step 3. It has two gates:
@@ -17,8 +17,9 @@ This file is the remaining Step 3. It has two gates:
   schema only after every step-6 check passes, including the real-iPhone
   Safari/Messenger test and a real OpenRouter completion.
 
-Feature implementation is complete. Production/provider/device verification is
-still pending and must not be described as complete until those checks run.
+The production OpenRouter request and completion are verified. The rest of the
+step-6 checklist, including the physical-iPhone path, is still pending unless
+Layken records it as passed below.
 
 It is written to be executed top to bottom at a terminal. Every command names
 its target explicitly, because the single failure that matters here is running a
@@ -174,8 +175,10 @@ Do this on production, with real credentials, before the irreversible step.
    and confirm you are redirected away.
 2. Create a concept for a business you know. Use **Shay's Cleaning Services** or
    **Gator Constructors**; their inputs were the original test cases.
-3. Confirm the Google match step appears and requires your confirmation.
-4. Upload a logo and a photo. Confirm the thumbnails render.
+3. Confirm a uniquely corroborated Google match proceeds automatically, while
+   an uncertain or ambiguous result shows the candidate confirmation step.
+4. Upload a logo and a photo, then paste another image with the Paste photos
+   control. Confirm all thumbnails render.
 5. Generate. Confirm the page appears in the review frame at all three widths.
 6. **Do not publish yet.** Open `/preview/<token>` in a private window and
    confirm it returns 404 while unpublished.

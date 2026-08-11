@@ -3,6 +3,7 @@ import { internalAction } from "../_generated/server";
 import { internal } from "../_generated/api";
 import { runPageSpeed } from "../lib/pagespeed";
 import type { ConceptBrief } from "../../lib/concepts/brief";
+import { findHighConfidencePlaceMatch } from "../../lib/concepts/placeMatch";
 
 /**
  * Single-business enrichment for one website concept.
@@ -15,9 +16,9 @@ import type { ConceptBrief } from "../../lib/concepts/brief";
  * `fetch`, so there is nothing to gain from the heavier runtime.
  *
  * Google photos and review text are research signals only. Neither becomes a
- * preview asset — photos are licensed to Google, review text is written by
- * customers who did not agree to appear on a mock-up, and the concept must be
- * something Layken can defend line by line.
+ * preview asset: Places content has storage and attribution requirements,
+ * review text is written by customers who did not agree to appear on a mock-up,
+ * and the concept must be something Layken can defend line by line.
  */
 
 const PLACES_SEARCH_ENDPOINT =
@@ -195,7 +196,8 @@ function toCandidate(place: PlaceResult): PlaceCandidate | null {
 /**
  * Phase A: find the business on Google.
  *
- * Stores every candidate and always waits for a human identity decision.
+ * A unique candidate can proceed automatically only when its name and an
+ * independent clue agree. Everything else parks in `matching` for a human.
  */
 export const runPlacesMatch = internalAction({
   args: { conceptId: v.id("website_concepts") },
@@ -217,9 +219,19 @@ export const runPlacesMatch = internalAction({
         .filter((candidate): candidate is PlaceCandidate => candidate !== null)
         .slice(0, MAX_CANDIDATES);
 
+      const autoMatch = findHighConfidencePlaceMatch({
+        businessName: concept.businessName,
+        phone: concept.phone,
+        submittedWebsiteUrl: concept.submittedWebsiteUrl,
+        serviceArea: concept.serviceArea,
+        candidates,
+      });
+
       await ctx.runMutation(internal.concepts.internal.savePlaceCandidates, {
         conceptId: args.conceptId,
         candidates,
+        autoMatchedPlaceId: autoMatch?.placeId,
+        autoMatchReasons: autoMatch?.reasons,
       });
     } catch (error) {
       await ctx.runMutation(internal.concepts.internal.setStatus, {

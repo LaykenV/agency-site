@@ -129,14 +129,16 @@ export const queueGeneration = internalMutation({
 /**
  * Record the Places candidates found for a concept.
  *
- * Every result parks in `matching` until a human picks. A single exact-name
- * result is still not identity proof: local businesses reuse names, listings
- * move, and provider ranking is not owner confirmation.
+ * A unique result may proceed automatically when the matching action found
+ * independent corroboration. Provider ranking or a name alone is never enough.
+ * All ambiguous results park in `matching` until a human picks.
  */
 export const savePlaceCandidates = internalMutation({
   args: {
     conceptId: v.id("website_concepts"),
     candidates: v.array(conceptPlaceCandidateValidator),
+    autoMatchedPlaceId: v.optional(v.string()),
+    autoMatchReasons: v.optional(v.array(v.string())),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -144,6 +146,48 @@ export const savePlaceCandidates = internalMutation({
     if (!concept) return null;
 
     const now = Date.now();
+    const autoMatchedCandidate = args.autoMatchedPlaceId
+      ? args.candidates.find(
+          (candidate) => candidate.placeId === args.autoMatchedPlaceId,
+        )
+      : undefined;
+
+    if (args.autoMatchedPlaceId && !autoMatchedCandidate) {
+      throw new Error("Automatic Places match is not in the candidate list.");
+    }
+
+    if (autoMatchedCandidate) {
+      await ctx.db.patch(args.conceptId, {
+        placeCandidates: args.candidates,
+        placeMatchResolved: true,
+        matchedGooglePlaceId: autoMatchedCandidate.placeId,
+        matchedGoogleMapsUrl: autoMatchedCandidate.googleMapsUrl,
+        verifiedWebsiteUrl:
+          concept.submittedWebsiteUrl ?? autoMatchedCandidate.websiteUrl,
+        status: "enriching",
+        error: undefined,
+        updatedAt: now,
+      });
+
+      await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+        actor: "system",
+        kind: "concept.place_match_auto_confirmed",
+        payload: {
+          conceptId: args.conceptId,
+          businessName: concept.businessName,
+          placeId: autoMatchedCandidate.placeId,
+          matchedName: autoMatchedCandidate.businessName,
+          reasons: args.autoMatchReasons ?? [],
+        },
+      });
+
+      await ctx.scheduler.runAfter(
+        0,
+        internal.concepts.enrich.runSiteResearch,
+        { conceptId: args.conceptId, thenGenerate: true },
+      );
+      return null;
+    }
 
     await ctx.db.patch(args.conceptId, {
       placeCandidates: args.candidates,

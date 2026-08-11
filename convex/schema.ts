@@ -372,9 +372,9 @@ export default defineSchema({
     serviceArea: v.optional(v.string()),
     notes: v.optional(v.string()),
 
-    // Google Places identity, human-confirmed. `placeMatchResolved` is true
-    // once Layken has either picked a candidate or declared there is no match,
-    // which is what gates generation.
+    // Google Places identity. `placeMatchResolved` is true once a uniquely
+    // corroborated candidate was auto-confirmed, Layken picked a candidate, or
+    // Layken declared there is no match. It gates generation.
     matchedGooglePlaceId: v.optional(v.string()),
     matchedGoogleMapsUrl: v.optional(v.string()),
     verifiedWebsiteUrl: v.optional(v.string()),

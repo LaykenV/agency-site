@@ -545,11 +545,11 @@ export type ConceptBriefTypeMatchesValidator = MutuallyAssignable<
 >;
 
 /**
- * A Google Places match candidate awaiting human confirmation.
+ * A Google Places match candidate used for automatic or human confirmation.
  *
- * Attaching the wrong business silently is the failure that matters here — a
- * concept built for the wrong "Landry's" wastes the lead — so candidates are
- * stored and confirmed explicitly rather than auto-selected.
+ * Attaching the wrong business silently is the failure that matters here. Only
+ * a unique, independently corroborated match is auto-selected; the candidate
+ * list is retained so every uncertain identity can be confirmed explicitly.
  */
 export const conceptPlaceCandidateValidator = v.object({
   placeId: v.string(),
@@ -567,7 +567,7 @@ export const conceptPlaceCandidateValidator = v.object({
 export const conceptStatusValidator = v.union(
   v.literal("draft"),
   v.literal("enriching"),
-  /** Places returned candidates; a human must confirm identity. */
+  /** Places returned candidates but none met the automatic match threshold. */
   v.literal("matching"),
   v.literal("generating"),
   v.literal("review"),

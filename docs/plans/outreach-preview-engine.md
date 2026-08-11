@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Implementation complete; approved for additive production deploy and smoke test**
+Status: **Production smoke in progress; content-collection enhancements ready to deploy**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -13,9 +13,9 @@ Last reviewed: 2026-08-11
 - **Step 2 — done.** The old outbound UI, functions, validators, rate limits,
   demo assets, and routes are deleted. The three legacy table definitions
   remain in `convex/schema.ts` as planned.
-- **Step 3 — ready to begin, not yet executed.** The implementation is approved
-  for the additive production deployment, production OpenRouter key, and live
-  smoke test in
+- **Step 3 — in progress.** The additive production deployment and real
+  OpenRouter completion have been exercised. The remaining production and
+  real-iPhone checks are tracked in
   [`outreach-preview-engine-cutover.md`](outreach-preview-engine-cutover.md).
   The legacy-row deletion and schema contraction remain gated on that smoke
   test, including the real-iPhone check.
@@ -24,7 +24,8 @@ Last reviewed: 2026-08-11
 
 The 2026-08-11 review blockers are fixed:
 
-- every Places candidate now requires human confirmation
+- Places auto-confirmation requires one unique, independently corroborated
+  candidate; uncertain and ambiguous matches still require human confirmation
 - every paid generation path passes through one daily limiter
 - brief, quote, phone, website, name, and asset changes revoke stale output
 - generation and publication require a confirmed match and current research
@@ -33,16 +34,17 @@ The 2026-08-11 review blockers are fixed:
 - the cutover runbook now uses supported Convex deployment syntax, explicit row
   counts, archive integrity testing, and export/count reconciliation
 
-Local exit checks pass: Convex codegen, TypeScript, 116 tests, lint, production
+Local exit checks pass: Convex codegen, TypeScript, 125 tests, lint, production
 build (172 routes), and `git diff --check`. The implementation is done; live
-provider, production, and physical-device verification are operational gates,
-not remaining feature work.
+OpenRouter generation is now verified, while full production and
+physical-device verification remain operational gates.
 
 Three decisions were taken during implementation that this plan did not specify:
 
 1. **A `matching` status was added.** The plan's status list had no state for
-   "Places returned candidates, awaiting human confirmation", which the
-   requirement to never silently attach the wrong business needs.
+   "Places returned candidates, but none met the automatic confidence
+   threshold", which the requirement to never silently attach the wrong
+   business needs.
 2. **The sandbox grants `allow-top-navigation-by-user-activation`.** Without it
    a `tel:` link inside the frame silently fails in several browsers, and
    tapping to call is the only conversion path these pages have. Scripts,
@@ -104,7 +106,8 @@ or general marketing automation product.
 - Manual lead intake.
 - Google Places matching.
 - Existing-website enrichment with Firecrawl and PageSpeed.
-- Logo and image uploads through existing Convex file storage patterns.
+- Logo and image uploads or clipboard paste through existing Convex file storage
+  patterns.
 - AI-generated bespoke HTML and CSS.
 - Basic deterministic safety and factual validation.
 - Sandboxed mobile and desktop review.
@@ -157,7 +160,7 @@ Facebook Page extraction is not a server dependency. An arbitrary Page cannot
 be reliably or safely scraped. If the Page contains the only available logo,
 photos, services, or copy, Layken either:
 
-1. uploads those assets during the supervised research session, or
+1. uploads or pastes those assets during the supervised research session, or
 2. asks the interested owner to send the logo and several favorite photos.
 
 The generator must still work without photography by using typography, color,
@@ -168,12 +171,15 @@ layout, and only the facts it has.
 After submission, one Convex action:
 
 1. searches Google Places for the named business and location clues;
-2. presents the best match when identity is uncertain rather than silently
-   attaching the wrong business;
-3. records verified public facts needed for the concept;
-4. uses the submitted website or matched Places website when present;
-5. runs Firecrawl and PageSpeed against that website; and
-6. produces a concise generation brief.
+2. auto-confirms only one uniquely corroborated match: equivalent business name
+   plus matching phone, website, or submitted city; a phone-and-website match
+   may also resolve a name variant;
+3. presents all candidates when evidence is missing, conflicting, closed, or
+   ambiguous rather than silently attaching the wrong business;
+4. records verified public facts needed for the concept;
+5. uses the submitted website or matched Places website when present;
+6. runs Firecrawl and PageSpeed against that website; and
+7. produces a concise generation brief.
 
 Reuse the existing Places, Firecrawl, and PageSpeed implementation where it is
 useful, but extract only the single-business functions. Do not preserve the
@@ -182,6 +188,59 @@ batch-search workflow merely to reuse those functions.
 Google photos and review text are internal research signals only. They do not
 become preview assets. Preview images must be uploaded owner/business assets,
 approved licensed assets, or clearly identified generated concept imagery.
+
+## Content collection automation (next implementation phase)
+
+The first successful production generation showed that model output is no
+longer the main bottleneck. Collecting trustworthy business content is. The
+next phase is an enrichment-and-approval workflow, not more prompt work.
+
+### Phase A — shipped with the current implementation
+
+- Auto-confirm a Google listing only when the match is uniquely corroborated.
+- Keep uncertain, ambiguous, and closed listings behind the manual match gate.
+- Accept pasted logo and photo image data as well as file uploads.
+- Keep every pasted or uploaded image in the existing approved Convex asset
+  allowlist; pasting does not bypass validation.
+
+### Phase B — build next: business-owned website extraction
+
+Expand the existing Firecrawl request to return structured candidate content
+from the business's own site:
+
+- business description and about copy;
+- services and service areas;
+- slogan, phone, hours, and social links;
+- logo candidates; and
+- business-owned image candidates with their source page and source URL.
+
+These results land in a review queue. Layken approves, edits, or rejects facts
+and assets before they enter the generation brief. Approved remote images are
+copied into Convex storage rather than hotlinked, and their source URL is kept
+for provenance. Generation never consumes an unapproved candidate.
+
+### Phase C — add a content completeness gate
+
+Show a small checklist before generation: identity, phone/CTA, services, about,
+logo, three useful photos, and approved proof. Missing items should produce a
+specific collection prompt instead of forcing Layken to inspect the draft to
+discover the gap. A typographic concept remains allowed when photography is
+unavailable.
+
+### Phase D — only if still necessary: Facebook-assisted capture
+
+Do not make arbitrary Facebook scraping a production backend dependency. If
+manual Facebook capture is still the bottleneck after ten real concepts, build
+a supervised browser helper that uses Layken's signed-in session to send
+selected text and downloaded or copied images into the concept review queue.
+Nothing is auto-published, messages are never sent, and source provenance stays
+visible.
+
+Google Places remains an identity and public-facts source, not a permanent
+content library. Google photos and reviews have storage, attribution, author,
+and source-link requirements, so they must not be silently copied into the
+generated prospect page. Review themes may inform internal research, but review
+text is not a testimonial unless it is separately approved for concept use.
 
 ### 4. Generate
 
