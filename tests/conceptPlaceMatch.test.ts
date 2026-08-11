@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { findHighConfidencePlaceMatch } from "../lib/concepts/placeMatch";
+import {
+  findHighConfidencePlaceMatch,
+  isCurrentPlaceCandidate,
+  PLACE_MATCH_FIELD_MASK,
+} from "../lib/concepts/placeMatch";
 
 const baseCandidate = {
   placeId: "place-1",
@@ -11,6 +15,19 @@ const baseCandidate = {
 };
 
 describe("high-confidence Google Places matching", () => {
+  test("requests no rating, review, photo, or hours fields", () => {
+    const mask = PLACE_MATCH_FIELD_MASK.join(",");
+    for (const forbidden of ["rating", "review", "photo", "openingHours"]) {
+      expect(mask).not.toContain(forbidden);
+    }
+  });
+
+  test("manual confirmation must belong to the current live results", () => {
+    expect(isCurrentPlaceCandidate("place-1", [baseCandidate])).toBe(true);
+    expect(isCurrentPlaceCandidate("another-place", [baseCandidate])).toBe(
+      false,
+    );
+  });
   test("auto-matches an equivalent name with an exact location", () => {
     expect(
       findHighConfidencePlaceMatch({

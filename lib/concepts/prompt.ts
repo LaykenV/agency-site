@@ -80,9 +80,9 @@ NOTE: with no photos, the typography and the rules do all the work. Set the serv
     spec: `PAPER: flat mid-grey structural bands (#e8e8e6 and #ffffff) alternating. Text near-black.
 TYPE: display system-ui, -apple-system, "Helvetica Neue", sans-serif at heavy weight (800), tight and condensed-feeling via letter-spacing -0.02em. Body: same stack at 400.
 ACCENT: one high-visibility tone (#c2341d or #1c5f2c) used on the phone band and status chips.
-RHYTHM: phone-number-first. A full-width accent band at the very top carrying the phone as the largest text on the page. Then: what we do (three to five short ruled lines, not cards), service area, hours table, then a second phone band. Short page — no long prose.
+RHYTHM: phone-number-first. A full-width accent band at the very top carrying the phone as the largest text on the page. Then: what we do (three to five short ruled lines, not cards), service area, then a second phone band. Short page — no long prose.
 HEADER: the phone band IS the header. Wordmark sits beneath it, small.
-FOOTER: hours and service area in a compact two-row definition list, then the phone once more.
+FOOTER: service area and the trade in a compact two-row definition list, then the phone once more.
 NOTE: utilitarian on purpose. No soft shadows, no rounded cards, no gradients. Information density is the aesthetic.`,
   },
   {
@@ -116,9 +116,9 @@ NOTE: this shape exists for the case where inventing content would be the only w
     spec: `PAPER: cool white (#fcfcfd) with one inset panel in pale grey (#f1f2f4). Text near-black.
 TYPE: display "Superclarendon", "Charter", "Iowan Old Style", ui-serif, Georgia, serif at medium-large, weight 600. Body: system-ui, -apple-system, sans-serif. Numerals in "ui-monospace", "SFMono-Regular", Menlo, monospace wherever a figure or step number appears.
 ACCENT: slate blue (#3d5a80) on step numerals, rules, and the phone CTA.
-RHYTHM: the process IS the spine. A numbered sequence of steps down the page, each step a monospace numeral, a short heading, and two lines of body. One inset panel partway down holds the service area and hours as a definition list. Photos, if any, sit small and inline beside a step rather than full-bleed.
+RHYTHM: the process IS the spine. A numbered sequence of steps down the page, each step a monospace numeral, a short heading, and two lines of body. One inset panel partway down holds the service area and category as a definition list. Photos, if any, sit small and inline beside a step rather than full-bleed.
 HEADER: wordmark left with a monospace category label beneath it. Hairline rule. No nav.
-FOOTER: a compact definition list — service area, hours, phone.
+FOOTER: a compact definition list — service area, category, phone.
 NOTE: the monospace numerals and the definition lists are the fingerprint. Use them consistently; do not mix in rounded cards.`,
   },
 ];
@@ -144,21 +144,14 @@ export function pickConceptStructure(
     if (chosen) return chosen;
   }
 
-  const haystack = [
-    brief.category,
-    brief.notes,
-    brief.existingSiteSummary,
-    brief.googleReviewSummary,
-  ]
+  const haystack = [brief.category, brief.notes, brief.existingSiteSummary]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 
   const photoCount = brief.photoUrls.length;
   const contentRichness =
-    (brief.notes?.length ?? 0) +
-    (brief.existingSiteSummary?.length ?? 0) +
-    (brief.hours?.length ?? 0) * 20;
+    (brief.notes?.length ?? 0) + (brief.existingSiteSummary?.length ?? 0);
 
   const has = (...words: Array<string>) =>
     words.some((word) => haystack.includes(word));
@@ -316,10 +309,10 @@ These are enforced by an automatic validator. Violating any one causes the whole
 
 The BRIEF below is the complete set of facts you may state. It is not a starting point to embellish.
 
-- Do NOT invent services, credentials, licence or insurance claims, years in business, awards, staff counts, prices, guarantees, addresses, or statistics.
+- Do NOT invent services, credentials, licence or insurance claims, years in business, awards, staff counts, prices, guarantees, addresses, opening hours, or statistics.
 - Do NOT invent testimonials or reviews. If APPROVED QUOTES is empty, the page contains no quoted customer language, no \`<blockquote>\`, and no review section.
 - Do NOT write any phone number other than the verified one. If no phone is given, the page shows no phone number.
-- Do NOT use star glyphs (★ ☆ ⭐) unless a verified Google rating is in the brief.
+- Do NOT use star glyphs (★ ☆ ⭐) unless an APPROVED QUOTE carries a rating. There is no rating in this brief otherwise, and a star with nothing behind it is invented social proof.
 - Do NOT invent metrics. No "500+ happy customers", no "20 years of experience", no "98% satisfaction" unless the brief states it.
 - Never write placeholder text. No \`lorem ipsum\`, no \`TODO\`, no \`[Business Name]\`, no \`example.com\`, no "Your Business Here".
 - If you do not have enough verified content to fill a section, remove the section. A shorter honest page beats a longer padded one.
@@ -406,22 +399,15 @@ export function buildConceptUserPrompt(
 
   fact("Category", brief.category);
   fact("City / area", brief.locality);
-  fact("Street address", brief.address);
   fact("Service area", brief.serviceArea);
   fact(
     "Verified phone (the ONLY number that may appear)",
     brief.phone ?? "none — the page must show no phone number",
   );
-  fact("Google rating", brief.googleRating);
-  fact("Google review count", brief.googleReviewCount);
-  fact("Google Maps URL (the only permitted external link)", brief.googleMapsUrl);
-
-  if (brief.hours && brief.hours.length > 0) {
-    lines.push("Business hours:");
-    for (const line of brief.hours) {
-      lines.push(`  - ${line}`);
-    }
-  }
+  fact(
+    "Google Maps URL (the only permitted external link)",
+    brief.googleMapsUrl,
+  );
 
   if (brief.notes) {
     lines.push("");
@@ -444,14 +430,6 @@ export function buildConceptUserPrompt(
     lines.push(
       `Their current brand colour is ${brief.existingPrimaryColor}. Work with it if it suits the assigned STRUCTURE's paper; otherwise use the STRUCTURE's accent.`,
     );
-  }
-
-  if (brief.googleReviewSummary) {
-    lines.push("");
-    lines.push(
-      "RESEARCH ONLY — themes from their Google reviews. Use these to understand what customers value. You may NOT quote, paraphrase closely, or present any of this as a testimonial on the page:",
-    );
-    lines.push(brief.googleReviewSummary);
   }
 
   lines.push("");

@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Production smoke in progress; content-collection enhancements ready to deploy**
+Status: **Core generator live; structured harvesting B0-B1 shipped; B2-B4 and destructive cutover remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -21,6 +21,10 @@ Last reviewed: 2026-08-11
   test, including the real-iPhone check.
 - **Step 4 — done.** `GROWTH.md`, `ARCHITECTURE.md`, `OPERATIONS.md`,
   `BUSINESS.md`, `ROADMAP.md`, and `CLAUDE.md` updated.
+- **Structured harvesting — B0 and B1 shipped 2026-08-11.** Google is identity
+  only, the bounded source-backed harvest is live, and generation/publication
+  stay gated while a harvest is running or awaiting review. B2-B4 remain in
+  this document under **Structured content harvesting plan**.
 
 The 2026-08-11 review blockers are fixed:
 
@@ -34,7 +38,7 @@ The 2026-08-11 review blockers are fixed:
 - the cutover runbook now uses supported Convex deployment syntax, explicit row
   counts, archive integrity testing, and export/count reconciliation
 
-Local exit checks pass: Convex codegen, TypeScript, 125 tests, lint, production
+Local exit checks pass: Convex codegen, TypeScript, 176 tests, lint, production
 build (172 routes), and `git diff --check`. The implementation is done; live
 OpenRouter generation is now verified, while full production and
 physical-device verification remain operational gates.
@@ -185,62 +189,590 @@ Reuse the existing Places, Firecrawl, and PageSpeed implementation where it is
 useful, but extract only the single-business functions. Do not preserve the
 batch-search workflow merely to reuse those functions.
 
-Google photos and review text are internal research signals only. They do not
-become preview assets. Preview images must be uploaded owner/business assets,
-approved licensed assets, or clearly identified generated concept imagery.
+Phase B0 tightened this boundary and is implemented: Places is used for live
+identity matching and the exempt place ID only. Review text, ratings, review
+counts, opening hours, and street addresses are neither persisted nor passed to
+generation, and match candidates are fetched live rather than stored. Preview
+images remain manual/pasted assets; individually approved website-source
+candidates copied into Convex storage arrive with B3.
 
-## Content collection automation (next implementation phase)
+## Structured content harvesting plan
 
-The first successful production generation showed that model output is no
-longer the main bottleneck. Collecting trustworthy business content is. The
-next phase is an enrichment-and-approval workflow, not more prompt work.
+Status: **B0 and B1 implemented on 2026-08-11; B2–B4 not implemented**
 
-### Phase A — shipped with the current implementation
+What is live: the corrected Google source boundary, the pure harvest core in
+`lib/concepts/harvest.ts`, the additive schema fields, the `content_review`
+status and its generation/publication gate, the `conceptHarvestGlobalDaily`
+limiter, and the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`.
 
-- Auto-confirm a Google listing only when the match is uniquely corroborated.
-- Keep uncertain, ambiguous, and closed listings behind the manual match gate.
-- Accept pasted logo and photo image data as well as file uploads.
-- Keep every pasted or uploaded image in the existing approved Convex asset
-  allowlist; pasting does not bypass validation.
+What is not: individual approval, `approvedWebsiteContent`, the prompt
+integration, and remote image staging. No harvested text or image URL can reach
+a generated page today — the only resolutions to the review gate are refresh and
+skip. Verification of the deployment sequence below is also still outstanding.
 
-### Phase B — build next: business-owned website extraction
+The first successful production concepts showed that model output is no longer
+the main bottleneck. Collecting trustworthy services, about copy, logos, and
+photos is. This phase adds a bounded enrichment-and-approval workflow. It does
+not add lead discovery, a general crawler, or automatic publishing.
 
-Expand the existing Firecrawl request to return structured candidate content
-from the business's own site:
+### Outcome and exit condition
 
-- business description and about copy;
-- services and service areas;
-- slogan, phone, hours, and social links;
-- logo candidates; and
-- business-owned image candidates with their source page and source URL.
+For a prospect with an existing website, the application should:
 
-These results land in a review queue. Layken approves, edits, or rejects facts
-and assets before they enter the generation brief. Approved remote images are
-copied into Convex storage rather than hotlinked, and their source URL is kept
-for provenance. Generation never consumes an unapproved candidate.
+1. find the few pages most likely to contain useful business content;
+2. extract source-backed fact, quote, logo, and photo candidates;
+3. stop before generation for a short human review;
+4. copy approved images into Convex storage;
+5. build the generation brief only from approved facts and assets; and
+6. show exactly what is still missing.
 
-### Phase C — add a content completeness gate
+The phase succeeds when a normal small-business website can reach a reviewed
+generation brief in under five minutes, without copying Google or Facebook
+content into the prospect page and without Layken manually transcribing the
+site.
 
-Show a small checklist before generation: identity, phone/CTA, services, about,
-logo, three useful photos, and approved proof. Missing items should produce a
-specific collection prompt instead of forcing Layken to inspect the draft to
-discover the gap. A typographic concept remains allowed when photography is
-unavailable.
+### Research findings and locked decisions
 
-### Phase D — only if still necessary: Facebook-assisted capture
+#### Use Firecrawl Map plus targeted Scrape, not an open crawl
 
-Do not make arbitrary Facebook scraping a production backend dependency. If
-manual Facebook capture is still the bottleneck after ten real concepts, build
-a supervised browser helper that uses Layken's signed-in session to send
-selected text and downloaded or copied images into the concept review queue.
-Nothing is auto-published, messages are never sent, and source provenance stays
-visible.
+The current implementation scrapes only the homepage. That misses services,
+about, gallery, FAQ, and contact pages on many small-business sites.
 
-Google Places remains an identity and public-facts source, not a permanent
-content library. Google photos and reviews have storage, attribution, author,
-and source-link requirements, so they must not be silently copied into the
-generated prospect page. Review themes may inform internal research, but review
-text is not a testimonial unless it is separately approved for concept use.
+Firecrawl's `/v2/map` endpoint discovers URLs without scraping every page and
+can cap results, ignore query parameters, and exclude subdomains. Its
+`/v2/scrape` endpoint can return markdown, structured JSON, raw image URLs, and
+branding/logo data. The implementation will therefore:
+
+1. map at most 40 same-site URLs;
+2. rank them locally using path, title, and description clues;
+3. select the homepage plus at most five pages covering services, about,
+   gallery/projects, contact, and FAQ; and
+4. scrape those pages with a fixed schema.
+
+Do not use Firecrawl Agent for this flow. It is autonomous, asynchronous, and
+dynamically priced; the exact domain is already known. Do not use an unbounded
+`/crawl` job either. Map plus a maximum of six synchronous page scrapes is
+cheaper, easier to retry, and easier to explain from logs.
+
+Normal enrichment may use Firecrawl's cache. An explicit **Refresh website
+content** action bypasses the map/scrape cache. Retry `429` and transient `5xx`
+responses with capped exponential backoff; permanent page failures are warnings
+and do not discard successful pages.
+
+#### Google Places is identity matching, not the content library
+
+Google's current Places policy restricts storing Places content beyond named
+exceptions; the place ID is explicitly exempt. Photos and reviews also carry
+author attribution and direct-source requirements. The safest design is:
+
+- use Places live to identify the business and show its current site as a
+  recognition clue only;
+- retain the confirmed `placeId` and the human/automatic match decision;
+- do not persist review text or review-derived snippets;
+- do not import Google photos;
+- do not feed Google rating, review count, hours, address, or review themes into
+  generated concepts unless a separate approved source supplies the same fact;
+- clear candidate details after a match, and fetch uncertain candidates live
+  when the admin match panel opens; and
+- label the live candidate panel as Google Maps content with the required
+  attribution and source links.
+
+Before building the harvesting UI, remove `googleReviewSummary` from the
+persistent brief and stop treating the current truncated review snippets as a
+summary. Existing concept rows should retain the matched place ID but have
+persisted Google candidate/detail content cleared by an explicit, separately
+verified migration.
+
+#### Facebook remains supervised capture
+
+Meta's Page Public Content Access feature is required to read public content
+from Pages the app does not manage, and it requires App Review for live access.
+These prospects have not connected their Pages or granted the agency Page
+permissions. Therefore Facebook is not a reliable backend enrichment source for
+this workflow.
+
+Keep upload and clipboard paste as the current fallback. After ten real
+concepts, if Facebook-only content is still the dominant bottleneck, consider a
+separate supervised browser helper that uses Layken's signed-in session to send
+selected text and images into the same review queue. Do not add Graph API app
+review, Page tokens, group scraping, or automated messaging to Phase B.
+
+#### A public website is evidence, not proof of reuse rights
+
+Website text and photographs can be copyrightable, and a business may itself be
+using photographer, vendor, franchise, or stock-library assets under a limited
+licence. Every harvested item is therefore labelled **Found on business
+website**, not **business-owned**. Source URL and source page remain visible.
+Layken explicitly approves an item for concept use; extraction alone never does.
+This is a provenance and review control, not a legal ownership determination.
+
+### Bounded harvesting workflow
+
+```text
+confirmed business identity
+  -> resolve the verified website
+  -> map up to 40 same-site URLs
+  -> rank and scrape no more than 6 pages
+  -> normalize and deduplicate candidates
+  -> save one bounded harvest snapshot
+  -> status: content_review
+  -> Layken approves, edits, rejects, or skips
+  -> approved images become Convex storage assets
+  -> materialize the approved website-content brief
+  -> generate
+```
+
+If there is no website, Firecrawl is blocked, or no usable candidates are
+found, the concept stays buildable from Layken's notes and uploaded assets. Show
+the failure or gap, but do not convert it into a terminal pipeline failure.
+
+Generation behavior changes in one important way: when a harvest snapshot has
+reviewable candidates, automatic generation pauses at `content_review`.
+Generating before approval would spend an OpenRouter call on a page that is
+immediately stale. A visible **Skip harvested content** control resolves the
+gate when the extraction is irrelevant.
+
+### URL selection rules
+
+Always include the verified homepage. Rank remaining same-site pages in this
+order:
+
+1. services or products;
+2. about, story, team, or company;
+3. gallery, portfolio, projects, work, or menu;
+4. contact, locations, or service area; and
+5. FAQ or process.
+
+Exclude login, account, cart, checkout, search, tag/category archives, privacy,
+terms, accessibility, feeds, calendars, individual blog posts, duplicate query
+variants, and files other than an explicitly selected PDF. Keep
+`includeSubdomains: false` and `ignoreQueryParameters: true`. Canonicalize URLs
+before deduplication and never leave the verified site's registrable domain.
+
+When several URLs rank equally, prefer shorter paths and Map results whose
+title or description contains the business name. Persist the selected page URL
+and title, not the raw map response.
+
+### Firecrawl extraction contract
+
+The homepage request uses `onlyMainContent: false` so navigation, logo, social
+links, and footer contact details remain visible. Other selected pages use
+`onlyMainContent: true`. Request `markdown`, `images`, and structured `json` on
+each page; request `branding` on the homepage only.
+
+The JSON schema returns candidates, not an already-approved company profile:
+
+```text
+pageType: home | services | about | gallery | contact | faq | other
+taglines[]
+aboutSections[]
+services[]: name, description?, evidence
+serviceAreas[]: value, evidence
+differentiators[]: value, evidence
+sensitiveClaims[]: value, type, evidence
+phones[]: value, evidence
+hours[]: value, evidence
+socialLinks[]: platform, url
+quotes[]: text, author?, rating?, evidence
+imageSelections[]: url, roleHint, alt?
+```
+
+Every factual candidate must carry a short source excerpt in `evidence`. The
+server attaches the scraped page URL; it never trusts a model-supplied source
+URL. `imageSelections[].url` is accepted only when it exactly matches an URL in
+Firecrawl's raw `images` result or homepage branding result, preventing a
+structured extractor from inventing a remote asset.
+
+Normalize all output before storage:
+
+- collapse whitespace and strip markup;
+- cap any candidate value at 500 characters and evidence at 400;
+- cap about copy at 1,200 characters;
+- keep at most 60 factual candidates and 12 image candidates total;
+- deduplicate services and claims by normalized text while preserving the best
+  evidence;
+- normalize phones and URLs for comparison, not display;
+- flag conflicts with the submitted phone, Google identity, or another page;
+  and
+- discard a candidate with no evidence instead of asking Layken to trust it.
+
+Credentials, insured/bonded/licensed claims, years in business, awards,
+guarantees, prices, financing, statistics, and 24/7 or emergency availability
+are `sensitiveClaims`. Each requires individual approval. They are never part
+of a bulk **Approve standard facts** action.
+
+### Data model: keep it on `website_concepts`
+
+Do not add generalized content, crawler, or asset-manifest tables. The snapshot
+is small, belongs to one concept, and has no life outside that concept. Add
+optional fields to `website_concepts`:
+
+```text
+harvestRequestId?
+harvestedAt?
+harvestSourceUrl?
+harvestedPages[]: url, title?
+harvestCandidates[]:
+  id, kind, value, detail?, evidence, sourceUrl, risk
+harvestImageCandidates[]:
+  id, remoteUrl, sourceUrl, roleHint, alt?, previewStorageId?, importError?
+harvestWarnings[]
+harvestReviewState?: pending | approved | skipped
+harvestReviewedAt?
+approvedWebsiteContent?:
+  tagline?
+  about?
+  services[]: name, description?
+  serviceAreas[]
+  differentiators[]
+  sensitiveClaims[]
+importedWebsiteAssets[]:
+  candidateId, storageId, kind, sourceUrl, importedAt
+```
+
+Candidate IDs are deterministic hashes of kind, normalized value, and source
+page, so rerunning the same site produces stable review keys. The request ID
+works like the existing generation request ID: a late scrape cannot overwrite
+a newer refresh or an edited website URL.
+
+Keep the snapshot well below Convex's 1 MiB document limit through the hard
+caps above. Do not store raw markdown, raw HTML, complete Firecrawl responses,
+or image bytes in the document. Files live in Convex storage.
+
+Add one status, `content_review`. Add one daily fixed-window limiter,
+`conceptHarvestGlobalDaily`, covering map, page scrapes, and refreshes. The
+existing generation limiter does not protect enrichment because enrichment
+runs before `queueGeneration`.
+
+### Approved brief contract
+
+Add structured `approvedWebsiteContent` to `ConceptBrief`. The prompt renders
+it under **APPROVED WEBSITE CONTENT**, with services, about, service areas, and
+claims as distinct fields. `refreshConceptBrief` overlays the latest approved
+snapshot just as it currently overlays notes and assets.
+
+Stop using `existingSiteSummary` as factual input. It currently gives the model
+unreviewed homepage copy while simultaneously claiming the brief is the
+complete approved fact set. Keep technology, performance, and brand colour as
+research signals, but only approved structured candidates may supply services,
+about copy, differentiators, or claims.
+
+Website testimonials may become `approvedQuotes` only after individual review.
+Preserve their source URL and source kind on the quote record. Google reviews
+never enter this path. A quote without visible text and an attribution is not
+approvable.
+
+### Image staging, safety, and provenance
+
+Generated concepts continue to use only Convex storage URLs. Never hotlink a
+harvested remote image in generated HTML.
+
+Remote thumbnails also should not be loaded directly in the admin browser: it
+leaks the admin's request to the remote host and exposes the browser to
+untrusted formats. Stage a capped preview through a dedicated Node-runtime
+action:
+
+1. the admin mutation validates that the candidate belongs to the current
+   harvest and schedules an internal import action;
+2. the action reads the remote URL from the database, never from action
+   arguments supplied by the browser;
+3. fetch only from the verified website's exact host or a narrow reviewed list
+   of site-builder CDN hosts; do not allow generic wildcard CDNs;
+4. leave an unrecognized cross-origin candidate as a URL-only item with a
+   manual paste/upload fallback rather than fetching it server-side;
+5. allow HTTPS only; reject credentials, custom ports, IP-literal hosts,
+   localhost, and local/internal hostnames;
+6. resolve DNS and reject loopback, private, link-local, multicast, and reserved
+   IPv4/IPv6 ranges;
+7. disable automatic redirects, follow at most three manually, and repeat host,
+   URL, and DNS validation for every hop;
+8. cap each response at 8 MiB and each concept at 12 staged candidates;
+9. allow JPEG, PNG, and WebP only; reject SVG, HTML, GIF, and unknown types;
+10. verify magic bytes instead of trusting the response `Content-Type`; and
+11. store the Blob with `ctx.storage.store()`, then save the storage ID through
+    an internal mutation.
+
+The Node action has more memory than the default Convex runtime and Convex
+officially supports fetching a Blob and storing it from an action. Failed
+imports remain per-candidate warnings. A single broken image never fails the
+text harvest.
+
+DNS validation followed by a normal hostname fetch can still have a
+check-versus-use gap. B3 does not ship until the destination enforcement is
+tested in Convex's Node runtime. If that cannot be made defensible, restrict
+imports to reviewed site-builder CDN hosts and exact verified-site hosts; keep
+everything else in the existing manual paste/upload path.
+
+Staged preview files are temporary. Approving one attaches the same storage ID
+to `logoStorageId` or `assetStorageIds` and records its provenance. Rejecting,
+refreshing, or deleting the concept removes any staged file not attached as an
+approved asset. Replacing an imported logo removes both its storage file and
+provenance entry.
+
+Approval means **use this source-observed item in this concept**. The UI must
+not label it owned, licensed, or verified unless Layken supplies that evidence.
+
+### Admin review interface
+
+Insert a **Harvested website content** card between Google matching and
+approved images. It contains:
+
+- source website and selected page links;
+- extraction warnings and conflicts;
+- editable tagline and about candidates;
+- checkbox lists for services, service areas, and differentiators;
+- a separate caution block for sensitive claims and testimonials;
+- a staged logo/photo grid with **Use as logo**, **Add photo**, and **Reject**;
+- **Approve selected**, **Reject remaining**, **Skip harvested content**, and
+  **Refresh website content** actions; and
+- a source link and evidence excerpt beside every fact.
+
+Nothing is selected by default. A convenience action may select standard facts,
+but never sensitive claims, quotes, or images. Edits are stored as the approved
+value while retaining the original candidate and evidence for comparison.
+
+The concept list shows **Content review** when this gate is pending. The review
+card shows a compact completeness checklist:
+
+```text
+Identity       required, already resolved
+Phone / CTA    recommended
+Services       at least one recommended
+About          recommended
+Logo           optional
+Photos         three useful images recommended
+Proof          optional; never fabricate it
+```
+
+Only a pending harvest review blocks generation. Missing photography, about
+copy, or proof remains advisory; typographic concepts and sparse honest pages
+are valid outcomes.
+
+### Lifecycle and invalidation rules
+
+- A business-name or website change clears research, harvest, approval, staged
+  images, generated HTML, and publication.
+- A new harvest request clears the old pending review immediately and carries a
+  request ID so stale results cannot save.
+- Refreshing the same source blocks generation while the new snapshot is
+  pending but may retain already approved images; approving the new snapshot
+  replaces the prior approved text profile.
+- Changing to a different website source removes the prior site's approved
+  content, imported assets, provenance, and unattached staged previews.
+- Approving, editing, rejecting, skipping, or importing an asset revokes any
+  generated/published artifact until regeneration.
+- Notes, manual uploads, and pasted assets continue to outrank harvested data.
+- A submitted website outranks a website discovered during Places matching.
+- Partial page failures persist as warnings and preserve successful candidates.
+- A Firecrawl-wide failure leaves the concept in `draft` with a retry action;
+  it does not erase manual inputs or the confirmed place ID.
+- Deleting a concept removes manual assets, imported assets, and unattached
+  staged previews.
+- Activity log events record harvest started, completed, reviewed, skipped,
+  refreshed, and website asset imported. Logs contain counts and source hosts,
+  never raw page copy or image bytes.
+
+### Implementation sequence
+
+#### B0 — correct source boundaries first — **implemented 2026-08-11**
+
+- ~~Remove persistent Google review snippets and Google-derived generation
+  facts.~~ `address`, `googleRating`, `googleReviewCount`, `hours`, and
+  `googleReviewSummary` are gone from `ConceptBrief`, the prompt, and the
+  structure picker. The Places field masks no longer request reviews, ratings,
+  or opening hours at all.
+- ~~Refactor unresolved candidate display to fetch live Places details and add
+  Google Maps attribution.~~ `concepts/enrich.listPlaceCandidates` is an admin
+  action the review card calls when the match panel opens; the panel carries the
+  attribution and a per-candidate Maps link.
+- ~~Retain only confirmed place IDs after matching.~~ Candidates are never
+  persisted. `confirmPlaceMatch` moved to an action and re-runs the current
+  concept search before accepting the selected place ID. Google-returned phone,
+  category, locality, website, matched name, ratings, and review counts are not
+  stored or passed to generation.
+- ~~Retire persisted `matchedGoogleMapsUrl`.~~ `lib/concepts/googleMaps.ts`
+  rebuilds the link from the place ID. It is deterministic because
+  `validateConceptHtml` allowlists the exact string at publish time.
+- ~~Write, dry-run, and execute the explicit cleanup migration.~~
+  `convex/concepts/migrations.ts`, dry-run by default. Development contained no
+  concept rows. Production scanned one concept, cleared its old candidate,
+  Maps URL, and deprecated brief content plus four match-log payloads, retained
+  its place ID, and then returned `cleared: 0` and `activityLogsCleared: 0` on
+  the verification dry run.
+
+Exit: met in code and deployed data. Google is an identity provider, not an
+undocumented content database.
+
+#### B0 deployment sequence
+
+The removed brief fields stay declared as deprecated optionals so pre-migration
+rows still validate. The 2026-08-11 additive deployment and migration completed
+steps 1-4:
+
+1. Deploy. Existing rows keep their stale Google fields; nothing reads them.
+2. `npx convex run concepts/migrations:clearPersistedGoogleContent '{"dryRun": true}'`
+   and record the concept, Google-discovered website, and activity-log counts.
+3. Re-run with `"dryRun": false`, then dry-run again — `cleared: 0` is the proof
+   it finished.
+4. Repeat both against `--prod`.
+5. Only then contract: delete the DEPRECATED blocks in `convex/schema.ts` and
+   `convex/validators.ts`, and delete `convex/concepts/migrations.ts`.
+
+Step 5 remains a separate cleanup change. Convex validates the whole table at
+deploy time; keeping contraction separate preserves the verified rollback path
+for this release.
+
+#### B1 — harvest core — **implemented 2026-08-11**
+
+- ~~Add runtime-agnostic harvest types, normalizers, URL ranking, deduplication,
+  conflict detection, completeness calculation, and focused tests.~~
+  `lib/concepts/harvest.ts` and focused harvest tests. Remote JSON is parsed and
+  capped at runtime; duplicate evidence moves with its actual source URL and ID.
+- ~~Add optional schema fields and validators on `website_concepts`.~~ The
+  harvest block only. `approvedWebsiteContent` and `importedWebsiteAssets` are
+  deliberately deferred to B2 and B3 rather than declared unused.
+- ~~Split structured harvesting into `convex/concepts/harvest.ts`.~~ Network
+  work there, database writes in `concepts/internal.ts` with the rest of the
+  transactional surface, admin surface in `concepts/admin.ts`.
+- ~~Implement Map plus at-most-six Scrape requests, request IDs,
+  partial-failure warnings, the harvest limiter, and `content_review`.~~
+
+Two additions the sequence did not name but B1 needs to stand on its own:
+
+- Harvesting is triggered explicitly by `concepts/admin.harvestWebsiteContent`,
+  not automatically after research. Automatic harvesting before the B2 review
+  card exists would park concepts in `content_review` with nothing on screen to
+  resolve them.
+- `concepts/admin.skipHarvestReview` is the escape hatch from that gate. The
+  plan puts skip in B2; without it in B1 the gate is a trap.
+- `harvesting` plus `harvestRequestId` block generation and publication before
+  candidates exist. An empty or failed refresh restores a deterministic
+  draft/review/published state rather than leaving a skipped concept parked in
+  `content_review`.
+
+Firecrawl's Map and Scrape response shapes are parsed defensively — links as
+objects or bare strings, images as strings or objects, branding logo under
+several keys, and model JSON through a capped runtime parser. Returned metadata
+URLs must remain on the selected bare/`www` host. The canary is what confirms
+which shape this account actually returns.
+
+Exit: met in code and unit tests. The three-site canary has not been run.
+
+#### B2 — factual approval and prompt integration
+
+- Build `ConceptHarvestReview.tsx` and admin review/skip/refresh mutations.
+- Materialize `approvedWebsiteContent` and wire it through `ConceptBrief`,
+  prompt construction, lifecycle gating, and publication invalidation.
+- Remove factual use of `existingSiteSummary`.
+- Add the completeness checklist.
+
+Exit: only approved website facts reach the prompt, and a skipped harvest is
+explicit rather than accidental.
+
+#### B3 — safe image staging and approval
+
+- Add the Node-runtime remote-image action, DNS/redirect/type/size validation,
+  storage cleanup, and provenance records.
+- Add staged image previews and logo/photo approval controls.
+- Verify imported storage URLs remain the only new image URLs admitted by the
+  existing HTML validator.
+
+Exit: a source-observed logo and photos can be reviewed and attached without a
+manual download/upload cycle or remote hotlink.
+
+#### B4 — canary and documentation
+
+- Update architecture and operations docs only after the behavior ships.
+- Run a development canary against one Wix/Squarespace-style CDN site, one
+  multi-page WordPress/custom site, and one no-site or blocked-site lead.
+- Deploy additively, then production-test one unsent concept before using the
+  workflow in outreach.
+- Inspect Firecrawl credits and logs after each canary; do not infer cost from a
+  successful response.
+
+Exit: all three fallback shapes work and no unapproved fact or remote URL reaches
+a generated page.
+
+### Verification matrix
+
+Automated tests must cover:
+
+- page ranking, same-site enforcement, query deduplication, and excluded paths;
+- malformed/oversized Firecrawl JSON and missing evidence;
+- candidate caps, stable IDs, deduplication, and conflicting phone/service data;
+- sensitive-claim classification;
+- stale harvest request rejection;
+- generation blocked while review is pending and allowed after approve/skip;
+- approval or asset changes revoking generated and published output;
+- remote URL, DNS, redirect, MIME, magic-byte, size, and candidate-membership
+  checks;
+- staged-file cleanup without deleting an attached approved asset;
+- generated HTML accepting imported Convex URLs and rejecting original remote
+  URLs; and
+- old rows with no harvest fields remaining valid after the additive deploy.
+
+Manual verification must confirm:
+
+1. the selected source pages are the pages a human would choose;
+2. evidence links and excerpts make every approval defensible;
+3. sensitive claims and quotes are never bulk-selected;
+4. admin thumbnails are served from Convex, not the source host;
+5. Refresh cannot let an older request overwrite a newer one;
+6. Firecrawl/PageSpeed/image failures remain isolated;
+7. one approved image can be removed without orphaning storage; and
+8. the final prompt contains only manual inputs and approved website content.
+
+Then rerun Convex codegen/typecheck, TypeScript, the full test suite, lint, the
+production build, and `git diff --check`.
+
+### Rollout and stop rule
+
+This is an additive feature release, separate from the legacy-table destructive
+cutover. Do not combine its first production canary with row deletion or schema
+contraction.
+
+Record these values for the first ten real concepts:
+
+- pages selected and successfully scraped;
+- standard candidates accepted/rejected;
+- sensitive candidates accepted/rejected;
+- useful images staged/approved;
+- Firecrawl credits used;
+- minutes from confirmed match to generation; and
+- which missing content still required Facebook or owner follow-up.
+
+Continue only if the median review-to-generation time is under five minutes and
+the accepted candidates materially improve the page. If most extracted content
+is rejected, simplify the schema or lower the page cap before adding another
+source. Build a Facebook helper only if Facebook-only content remains the
+largest measured bottleneck after those ten concepts.
+
+### Explicit non-goals
+
+- No web-wide search, business discovery, or competitor research.
+- No arbitrary domain crawl and no background recrawl schedule.
+- No automatic claim, quote, logo, or photo approval.
+- No Google photo/review ingestion.
+- No Facebook Graph API integration, Page token collection, or group scraping.
+- No asset licensing determination.
+- No generated image fallback in this phase.
+- No new generalized content or asset tables.
+- No automatic generation while harvest review is pending.
+
+### Primary references checked for this plan
+
+- [Firecrawl Scrape v2](https://docs.firecrawl.dev/api-reference/endpoint/scrape)
+- [Firecrawl Map v2](https://docs.firecrawl.dev/api-reference/endpoint/map)
+- [Firecrawl extractor selection](https://docs.firecrawl.dev/developer-guides/usage-guides/choosing-the-data-extractor)
+- [Convex actions](https://docs.convex.dev/functions/actions)
+- [Convex action file storage](https://docs.convex.dev/file-storage/store-files)
+- [Convex limits](https://docs.convex.dev/production/state/limits)
+- [Google Places policies and attribution](https://developers.google.com/maps/documentation/places/web-service/policies)
+- [Meta Page Public Content Access](https://developers.facebook.com/docs/features-reference/page-public-content-access/)
+- [OWASP SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html)
+- [OWASP file upload guidance](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html)
+- [U.S. Copyright Office: websites and website content](https://www.copyright.gov/circs/circ66.pdf)
+- [U.S. Copyright Office: photographs](https://www.copyright.gov/engage/photographers/)
 
 ### 4. Generate
 

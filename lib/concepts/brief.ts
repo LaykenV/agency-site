@@ -2,20 +2,24 @@
  * The verified generation brief for one website concept.
  *
  * This is the only thing the model is allowed to build a page from. Everything
- * in here is either a public fact confirmed against Google Places, a signal
- * scraped from the business's own existing website, or something Layken typed
- * or uploaded during a supervised research session.
+ * in here is either a signal scraped from the business's own existing website
+ * or something Layken typed or uploaded during a supervised research session.
  *
- * Two fields carry a deliberate asymmetry worth understanding before editing:
+ * Google Places is an identity provider here, not a content library. It tells
+ * us *which* business this is and where its current site lives; it does not
+ * supply facts the page may state. Rating, review count, review text, opening
+ * hours, and street address were all removed from this type deliberately —
+ * Google's Places policy restricts retaining that content, and the review text
+ * in particular was written by customers who never agreed to appear on a
+ * mock-up. A separate approved source may reintroduce any of those facts; a
+ * Places response may not. See `docs/plans/outreach-preview-engine.md`
+ * § Google Places is identity matching, not the content library.
  *
- * - `googleReviewSummary` is research context. Google review text is licensed
- *   to Google, not to us, so it informs tone and service inference but must
- *   never be reproduced on the concept page.
- * - `approvedQuotes` is the only source of testimonial text the page may show,
- *   and it is populated by hand. When it is empty the deterministic validator
- *   rejects any testimonial-shaped markup outright, because a model asked to
- *   design a trustworthy local-business homepage will invent five-star reviews
- *   unless something stops it.
+ * `approvedQuotes` is the only source of testimonial text the page may show,
+ * and it is populated by hand. When it is empty the deterministic validator
+ * rejects any testimonial-shaped markup outright, because a model asked to
+ * design a trustworthy local-business homepage will invent five-star reviews
+ * unless something stops it.
  *
  * `lib/concepts/validateConceptHtml.ts` enforces the factual half of this
  * contract; `convex/validators.ts` mirrors the shape as a Convex validator and
@@ -32,11 +36,9 @@ export type ConceptBrief = {
   /** Exact business name as it should appear on the page. */
   businessName: string;
 
-  // --- Verified public identity (Google Places, human-confirmed) ---
+  // --- Verified public identity (human-confirmed) ---
   /** Humanized category, e.g. "cleaning service", "general contractor". */
   category?: string;
-  /** Formatted street address, only when the business publishes one. */
-  address?: string;
   /** City/parish/region line safe to show, e.g. "Youngsville, LA". */
   locality?: string;
   /** Free-text service area supplied by Layken, e.g. "Lafayette Parish". */
@@ -46,12 +48,12 @@ export type ConceptBrief = {
    * other phone-shaped string in the output, so this is a whitelist of one.
    */
   phone?: string;
-  /** Google star rating, shown only as a rating, never as invented review text. */
-  googleRating?: number;
-  googleReviewCount?: number;
-  /** Google's `weekdayDescriptions`, already human-readable. */
-  hours?: Array<string>;
-  /** Directions CTA target. Allowlisted as the one permitted external href. */
+  /**
+   * Directions CTA target. Allowlisted as the one permitted external href.
+   *
+   * Built from the confirmed place ID — the one Places field Google's policy
+   * exempts from its retention limits — not from a stored `googleMapsUri`.
+   */
   googleMapsUrl?: string;
 
   // --- Existing website signals (research only, never quoted verbatim) ---
@@ -79,12 +81,6 @@ export type ConceptBrief = {
 
   /** The only testimonial text the page may render. Usually empty. */
   approvedQuotes: Array<ConceptApprovedQuote>;
-
-  /**
-   * Google review text, condensed. Research signal for tone and service
-   * inference. Must not appear on the page — see the module comment.
-   */
-  googleReviewSummary?: string;
 };
 
 /**

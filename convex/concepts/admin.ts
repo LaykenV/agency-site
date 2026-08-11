@@ -6,7 +6,7 @@ import { internal } from "../_generated/api";
 import { requireAdmin } from "../adminGuard";
 import { validateConceptHtml } from "../../lib/concepts/validateConceptHtml";
 import {
-  canGenerateConcept,
+  generationBlockedReason,
   statusAfterGenerationInputChange,
 } from "../../lib/concepts/lifecycle";
 import {
@@ -63,7 +63,10 @@ function toSummary(concept: Doc<"website_concepts">) {
     validationViolations: concept.validationViolations,
     placeMatchResolved: concept.placeMatchResolved,
     matchedGooglePlaceId: concept.matchedGooglePlaceId,
-    candidateCount: concept.placeCandidates?.length ?? 0,
+    harvestReviewState: concept.harvestReviewState,
+    harvestCandidateCount:
+      (concept.harvestCandidates?.length ?? 0) +
+      (concept.harvestImageCandidates?.length ?? 0),
     assetCount:
       concept.assetStorageIds.length + (concept.logoStorageId ? 1 : 0),
     model: concept.model,
@@ -231,6 +234,8 @@ export const update = mutation({
         : statusAfterGenerationInputChange({
             placeMatchResolved: concept.placeMatchResolved,
             currentStatus: concept.status,
+            harvestReviewState: concept.harvestReviewState,
+            harvestInFlight: Boolean(concept.harvestRequestId),
           }),
       // Name or website changes invalidate machine research as well as the
       // rendered page. Re-enrichment is required before generation resumes.
@@ -239,14 +244,9 @@ export const update = mutation({
         next.businessName !== concept.businessName
           ? undefined
           : concept.matchedGooglePlaceId,
-      matchedGoogleMapsUrl:
-        next.businessName !== concept.businessName
-          ? undefined
-          : concept.matchedGoogleMapsUrl,
-      placeCandidates:
-        next.businessName !== concept.businessName
-          ? undefined
-          : concept.placeCandidates,
+      // Deprecated Places content: cleared on any edit, never rewritten.
+      matchedGoogleMapsUrl: undefined,
+      placeCandidates: undefined,
       placeMatchResolved:
         next.businessName !== concept.businessName
           ? false
@@ -254,6 +254,10 @@ export const update = mutation({
       verifiedWebsiteUrl: identityOrSiteChanged
         ? undefined
         : concept.verifiedWebsiteUrl,
+      // A different business or a different website means the harvested
+      // candidates describe something else. Keeping them would offer Layken
+      // another company's services to approve.
+      ...(identityOrSiteChanged ? clearedHarvest() : {}),
       error: undefined,
       updatedAt: Date.now(),
     });
@@ -261,6 +265,21 @@ export const update = mutation({
     return null;
   },
 });
+
+/** Every harvest field, blanked. Used wherever the source stops applying. */
+function clearedHarvest() {
+  return {
+    harvestRequestId: undefined,
+    harvestedAt: undefined,
+    harvestSourceUrl: undefined,
+    harvestedPages: undefined,
+    harvestCandidates: undefined,
+    harvestImageCandidates: undefined,
+    harvestWarnings: undefined,
+    harvestReviewState: undefined,
+    harvestReviewedAt: undefined,
+  } as const;
+}
 
 /**
  * Upload URL for concept assets.
@@ -304,7 +323,14 @@ export const attachAsset = mutation({
         promptVersion: undefined,
         generationRequestId: undefined,
         publishedAt: undefined,
-        status: concept.placeMatchResolved ? "draft" : concept.status,
+        status:
+          concept.harvestRequestId
+            ? "harvesting"
+            : concept.harvestReviewState === "pending"
+            ? "content_review"
+            : concept.placeMatchResolved
+              ? "draft"
+              : concept.status,
         updatedAt: now,
       });
       return null;
@@ -321,7 +347,14 @@ export const attachAsset = mutation({
       promptVersion: undefined,
       generationRequestId: undefined,
       publishedAt: undefined,
-      status: concept.placeMatchResolved ? "draft" : concept.status,
+      status:
+        concept.harvestRequestId
+          ? "harvesting"
+          : concept.harvestReviewState === "pending"
+          ? "content_review"
+          : concept.placeMatchResolved
+            ? "draft"
+            : concept.status,
       updatedAt: now,
     });
     return null;
@@ -356,7 +389,14 @@ export const removeAsset = mutation({
       promptVersion: undefined,
       generationRequestId: undefined,
       publishedAt: undefined,
-      status: concept.placeMatchResolved ? "draft" : concept.status,
+      status:
+        concept.harvestRequestId
+          ? "harvesting"
+          : concept.harvestReviewState === "pending"
+          ? "content_review"
+          : concept.placeMatchResolved
+            ? "draft"
+            : concept.status,
       updatedAt: Date.now(),
     });
 
@@ -366,68 +406,12 @@ export const removeAsset = mutation({
 });
 
 /**
- * Confirm which Google business this concept is for, or declare there is none.
+ * Confirming a Google match lives in `concepts/enrich.confirmPlaceMatch`.
  *
- * Passing `placeId: null` is the "no Google match" path: plenty of real Facebook
- * leads have no listing at all, and the concept must still be buildable from
- * Layken's notes.
+ * It has to be an action: candidates are no longer stored, so the place ID
+ * arriving from the browser is verified against a live Places lookup before
+ * anything is written.
  */
-export const confirmPlaceMatch = mutation({
-  args: {
-    conceptId: v.id("website_concepts"),
-    placeId: v.union(v.string(), v.null()),
-    /** Generate immediately after research finishes. */
-    thenGenerate: v.optional(v.boolean()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const concept = await loadConcept(ctx, args.conceptId);
-
-    const candidate =
-      args.placeId === null
-        ? undefined
-        : concept.placeCandidates?.find(
-            (entry) => entry.placeId === args.placeId,
-          );
-
-    if (args.placeId !== null && !candidate) {
-      throw new Error("That Places candidate is not attached to this concept.");
-    }
-
-    await ctx.db.patch(args.conceptId, {
-      placeMatchResolved: true,
-      matchedGooglePlaceId: candidate?.placeId,
-      matchedGoogleMapsUrl: candidate?.googleMapsUrl,
-      verifiedWebsiteUrl: concept.submittedWebsiteUrl ?? candidate?.websiteUrl,
-      researchBrief: undefined,
-      generatedHtml: undefined,
-      structureId: undefined,
-      validationViolations: undefined,
-      model: undefined,
-      promptVersion: undefined,
-      generationRequestId: undefined,
-      publishedAt: undefined,
-      status: "enriching",
-      error: undefined,
-      updatedAt: Date.now(),
-    });
-
-    await logConceptActivity(ctx, "concept.place_match_confirmed", {
-      conceptId: args.conceptId,
-      businessName: concept.businessName,
-      placeId: args.placeId,
-      matchedName: candidate?.businessName ?? null,
-    });
-
-    await ctx.scheduler.runAfter(0, internal.concepts.enrich.runSiteResearch, {
-      conceptId: args.conceptId,
-      thenGenerate: args.thenGenerate ?? true,
-    });
-
-    return null;
-  },
-});
 
 /** Re-run the Places lookup from scratch, e.g. after correcting the name. */
 export const reEnrich = mutation({
@@ -443,6 +427,7 @@ export const reEnrich = mutation({
       matchedGoogleMapsUrl: undefined,
       placeCandidates: undefined,
       verifiedWebsiteUrl: undefined,
+      ...clearedHarvest(),
       researchBrief: undefined,
       generatedHtml: undefined,
       structureId: undefined,
@@ -458,6 +443,75 @@ export const reEnrich = mutation({
 
     await ctx.scheduler.runAfter(0, internal.concepts.enrich.runPlacesMatch, {
       conceptId: args.conceptId,
+    });
+
+    return null;
+  },
+});
+
+/**
+ * Harvest the business's own website into reviewable candidates.
+ *
+ * Explicit rather than automatic. Until the review card ships in B2 this is the
+ * only way a harvest starts, which is what keeps a concept from parking itself
+ * in `content_review` with nothing on screen to resolve it.
+ *
+ * `refresh` bypasses Firecrawl's cache — the case where the owner has just
+ * updated their site during the conversation.
+ */
+export const harvestWebsiteContent = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    refresh: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await loadConcept(ctx, args.conceptId);
+
+    await ctx.runMutation(internal.concepts.internal.queueHarvest, {
+      conceptId: args.conceptId,
+      bypassCache: args.refresh ?? false,
+    });
+    return null;
+  },
+});
+
+/**
+ * Resolve the content-review gate without approving anything.
+ *
+ * The harvest is often simply irrelevant — a placeholder site, a page about a
+ * different business, an extraction that found nothing worth using. Skipping is
+ * a recorded decision rather than a silent one, so a concept generated without
+ * website content shows that it was a choice.
+ *
+ * Approving individual candidates is B2. This is deliberately the only way out
+ * of the gate for now.
+ */
+export const skipHarvestReview = mutation({
+  args: { conceptId: v.id("website_concepts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+
+    if (concept.harvestReviewState !== "pending") {
+      throw new Error("This concept has no harvest waiting for review.");
+    }
+
+    await ctx.db.patch(args.conceptId, {
+      harvestReviewState: "skipped",
+      harvestReviewedAt: Date.now(),
+      status: concept.placeMatchResolved ? "draft" : concept.status,
+      error: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await logConceptActivity(ctx, "concept.harvest_skipped", {
+      conceptId: args.conceptId,
+      businessName: concept.businessName,
+      candidateCount: concept.harvestCandidates?.length ?? 0,
+      imageCandidateCount: concept.harvestImageCandidates?.length ?? 0,
     });
 
     return null;
@@ -481,16 +535,13 @@ export const generate = mutation({
     await requireAdmin(ctx);
     const concept = await loadConcept(ctx, args.conceptId);
 
-    if (
-      !canGenerateConcept({
-        placeMatchResolved: concept.placeMatchResolved,
-        hasResearchBrief: Boolean(concept.researchBrief),
-      })
-    ) {
-      throw new Error(
-        "This concept has no research brief yet. Confirm the Google match first.",
-      );
-    }
+    const blocked = generationBlockedReason({
+      placeMatchResolved: concept.placeMatchResolved,
+      hasResearchBrief: Boolean(concept.researchBrief),
+      harvestReviewState: concept.harvestReviewState,
+      harvestInFlight: Boolean(concept.harvestRequestId),
+    });
+    if (blocked) throw new Error(blocked);
 
     await ctx.scheduler.runAfter(
       0,
@@ -530,6 +581,14 @@ export const publish = mutation({
     }
     if (!concept.placeMatchResolved) {
       throw new Error("Cannot publish until the Google match is confirmed.");
+    }
+    if (concept.harvestReviewState === "pending") {
+      throw new Error(
+        "Cannot publish while harvested website content is still unreviewed.",
+      );
+    }
+    if (concept.harvestRequestId) {
+      throw new Error("Cannot publish while the website harvest is running.");
     }
     if (concept.status !== "review") {
       throw new Error(

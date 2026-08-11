@@ -21,6 +21,25 @@ export type HighConfidencePlaceMatch = {
   reasons: Array<"name" | "phone" | "website" | "location">;
 };
 
+/** Live-only fields needed to identify and corroborate a Places candidate. */
+export const PLACE_MATCH_FIELD_MASK = [
+  "places.id",
+  "places.displayName",
+  "places.formattedAddress",
+  "places.nationalPhoneNumber",
+  "places.websiteUri",
+  "places.googleMapsUri",
+  "places.primaryType",
+  "places.businessStatus",
+] as const;
+
+export function isCurrentPlaceCandidate(
+  placeId: string,
+  candidates: Array<Pick<PlaceMatchCandidate, "placeId">>,
+): boolean {
+  return candidates.some((candidate) => candidate.placeId === placeId);
+}
+
 const LEGAL_SUFFIXES = new Set([
   "co",
   "company",

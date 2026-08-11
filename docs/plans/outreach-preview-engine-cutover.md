@@ -6,7 +6,7 @@ Written: 2026-08-10
 Last reviewed: 2026-08-11
 
 Steps 1, 2, and 4 of `outreach-preview-engine.md` are implemented and verified
-locally. The implementation passed Convex codegen, TypeScript, 125 tests, lint,
+locally. The implementation passed Convex codegen, TypeScript, 176 tests, lint,
 the 172-route production build, and `git diff --check` on 2026-08-11.
 
 This file is the remaining Step 3. It has two gates:
@@ -20,6 +20,12 @@ This file is the remaining Step 3. It has two gates:
 The production OpenRouter request and completion are verified. The rest of the
 step-6 checklist, including the physical-iPhone path, is still pending unless
 Layken records it as passed below.
+
+Structured content harvesting B0-B1 shipped additively on 2026-08-11. Its
+source-boundary cleanup used its own verified exports and migration; it did not
+execute this runbook's legacy-table deletion or schema contraction. B2-B4 and
+the separate Firecrawl canary remain in `outreach-preview-engine.md` under
+**Structured content harvesting plan**.
 
 It is written to be executed top to bottom at a terminal. Every command names
 its target explicitly, because the single failure that matters here is running a

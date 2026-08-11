@@ -29,6 +29,9 @@ import {
   conceptBriefValidator,
   conceptPlaceCandidateValidator,
   conceptApprovedQuoteValidator,
+  conceptHarvestCandidateValidator,
+  conceptHarvestImageCandidateValidator,
+  conceptHarvestReviewStateValidator,
   conceptStatusValidator,
 } from "./validators";
 
@@ -87,6 +90,7 @@ export default defineSchema({
   activity_log: defineTable(activityLogValidator)
     .index("by_projectId", ["projectId"])
     .index("by_prospectId", ["prospectId"])
+    .index("by_kind", ["kind"])
     .index("by_createdAt", ["createdAt"]),
 
   hub_operational_counters: defineTable({
@@ -372,20 +376,65 @@ export default defineSchema({
     serviceArea: v.optional(v.string()),
     notes: v.optional(v.string()),
 
-    // Google Places identity. `placeMatchResolved` is true once a uniquely
-    // corroborated candidate was auto-confirmed, Layken picked a candidate, or
-    // Layken declared there is no match. It gates generation.
+    // Google Places identity, and only identity. `placeMatchResolved` is true
+    // once a uniquely corroborated candidate was auto-confirmed, Layken picked
+    // a candidate, or Layken declared there is no match. It gates generation.
+    //
+    // The place ID is the one Places field Google's policy exempts from its
+    // retention limits, so it is the only one kept. Candidates are fetched live
+    // when the match panel opens and the directions link is rebuilt from the
+    // place ID on demand.
     matchedGooglePlaceId: v.optional(v.string()),
-    matchedGoogleMapsUrl: v.optional(v.string()),
     verifiedWebsiteUrl: v.optional(v.string()),
-    placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
     placeMatchResolved: v.boolean(),
+
+    /**
+     * DEPRECATED — persisted Places content awaiting contraction.
+     *
+     * Nothing writes these. `concepts/migrations.ts` clears them from existing
+     * rows; once it has run against production and development, delete both
+     * fields here and in `websiteConceptDocValidator`, along with
+     * `conceptPlaceCandidateValidator`'s use in this file.
+     */
+    matchedGoogleMapsUrl: v.optional(v.string()),
+    placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
 
     // Approved assets. Only owner/business uploads reach the page; Google
     // photos are research signals and never become preview imagery.
     logoStorageId: v.optional(v.id("_storage")),
     assetStorageIds: v.array(v.id("_storage")),
     approvedQuotes: v.array(conceptApprovedQuoteValidator),
+
+    /**
+     * One bounded snapshot of what the business's own website says.
+     *
+     * Deliberately stored on the concept rather than in a content or crawler
+     * table: it is small, it belongs to exactly one concept, and it has no life
+     * after that concept is deleted. The caps in `lib/concepts/harvest.ts` —
+     * six pages, 60 candidates, 12 images, 500 characters a value — are what
+     * keep this document far below Convex's 1 MiB limit. Raw markdown, raw
+     * HTML, whole Firecrawl responses, and image bytes are never stored here.
+     *
+     * These are candidates, not facts. Nothing in this block may reach a
+     * generation prompt; B2 adds the approved subset that can.
+     *
+     * `harvestRequestId` works like `generationRequestId`: a slow scrape that
+     * lands after a refresh, or after the website URL changed, is discarded
+     * rather than overwriting the newer snapshot.
+     */
+    harvestRequestId: v.optional(v.string()),
+    harvestedAt: v.optional(v.number()),
+    harvestSourceUrl: v.optional(v.string()),
+    harvestedPages: v.optional(
+      v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+    ),
+    harvestCandidates: v.optional(v.array(conceptHarvestCandidateValidator)),
+    harvestImageCandidates: v.optional(
+      v.array(conceptHarvestImageCandidateValidator),
+    ),
+    harvestWarnings: v.optional(v.array(v.string())),
+    harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
+    harvestReviewedAt: v.optional(v.number()),
 
     researchBrief: v.optional(conceptBriefValidator),
     generatedHtml: v.optional(v.string()),

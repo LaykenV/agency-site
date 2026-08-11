@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 const STATUS_FILTERS = [
   { id: "all", label: "All" },
   { id: "matching", label: "Needs match" },
+  { id: "content_review", label: "Content review" },
   { id: "review", label: "To review" },
   { id: "published", label: "Published" },
   { id: "failed", label: "Failed" },
@@ -35,7 +36,9 @@ type StatusFilter = (typeof STATUS_FILTERS)[number]["id"];
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   enriching: "Enriching",
+  harvesting: "Harvesting",
   matching: "Needs match",
+  content_review: "Content review",
   generating: "Generating",
   review: "To review",
   published: "Published",
@@ -49,10 +52,12 @@ function statusDot(status: string): string {
     case "review":
       return "bg-blue-500";
     case "matching":
+    case "content_review":
       return "bg-amber-500";
     case "failed":
       return "bg-red-500";
     case "enriching":
+    case "harvesting":
     case "generating":
       return "bg-violet-500";
     default:

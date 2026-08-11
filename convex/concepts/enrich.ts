@@ -1,9 +1,16 @@
 import { v } from "convex/values";
-import { internalAction } from "../_generated/server";
+import { action, internalAction } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { runPageSpeed } from "../lib/pagespeed";
 import type { ConceptBrief } from "../../lib/concepts/brief";
-import { findHighConfidencePlaceMatch } from "../../lib/concepts/placeMatch";
+import {
+  findHighConfidencePlaceMatch,
+  isCurrentPlaceCandidate,
+  PLACE_MATCH_FIELD_MASK,
+} from "../../lib/concepts/placeMatch";
+import { conceptGoogleMapsUrl } from "../../lib/concepts/googleMaps";
+import { conceptPlaceCandidateValidator } from "../validators";
 
 /**
  * Single-business enrichment for one website concept.
@@ -15,10 +22,12 @@ import { findHighConfidencePlaceMatch } from "../../lib/concepts/placeMatch";
  * Runs in the default Convex runtime rather than Node: everything here is
  * `fetch`, so there is nothing to gain from the heavier runtime.
  *
- * Google photos and review text are research signals only. Neither becomes a
- * preview asset: Places content has storage and attribution requirements,
- * review text is written by customers who did not agree to appear on a mock-up,
- * and the concept must be something Layken can defend line by line.
+ * Google Places answers one persisted question: which business is this. Live
+ * candidate details help a human recognize the listing but are never written
+ * or passed to generation — Places content carries retention and attribution requirements,
+ * review text was written by customers who did not agree to appear on a
+ * mock-up, and the concept must be something Layken can defend line by line.
+ * The confirmed place ID is retained because Google's policy exempts it.
  */
 
 const PLACES_SEARCH_ENDPOINT =
@@ -37,18 +46,9 @@ type PlaceResult = {
   formattedAddress?: string;
   nationalPhoneNumber?: string;
   websiteUri?: string;
-  rating?: number;
-  userRatingCount?: number;
   googleMapsUri?: string;
   primaryType?: string;
   businessStatus?: string;
-  addressComponents?: Array<{
-    longText?: string;
-    shortText?: string;
-    types?: Array<string>;
-  }>;
-  regularOpeningHours?: { weekdayDescriptions?: Array<string> };
-  reviews?: Array<{ text?: { text?: string }; rating?: number }>;
 };
 
 type PlaceCandidate = {
@@ -58,8 +58,6 @@ type PlaceCandidate = {
   phone?: string;
   websiteUrl?: string;
   googleMapsUrl?: string;
-  rating?: number;
-  reviewCount?: number;
   primaryType?: string;
   businessStatus?: string;
 };
@@ -74,45 +72,6 @@ function getFirecrawlApiKey(): string {
   const key = process.env.FIRECRAWL_API_KEY;
   if (!key) throw new Error("FIRECRAWL_API_KEY is required");
   return key;
-}
-
-function humanizeCategory(primaryType?: string): string | undefined {
-  if (!primaryType) return undefined;
-  return primaryType.replace(/_/g, " ");
-}
-
-/** City and state from Places address components, for the page's locality line. */
-function extractLocality(place: PlaceResult): string | undefined {
-  const components = place.addressComponents ?? [];
-  const find = (type: string) =>
-    components.find((component) => component.types?.includes(type));
-
-  const city =
-    find("locality")?.longText ??
-    find("sublocality")?.longText ??
-    find("administrative_area_level_3")?.longText;
-  const state = find("administrative_area_level_1")?.shortText;
-
-  if (city && state) return `${city}, ${state}`;
-  return city ?? undefined;
-}
-
-/**
- * Condense review text into themes without reproducing it.
- *
- * The output is labelled RESEARCH ONLY in the prompt and must never reach the
- * page. Truncating each review hard also keeps the prompt from becoming a
- * copy-paste source the model can lift a "testimonial" from verbatim.
- */
-function summarizeReviews(place: PlaceResult): string | undefined {
-  const snippets = (place.reviews ?? [])
-    .map((review) => review.text?.text?.trim())
-    .filter((text): text is string => Boolean(text))
-    .slice(0, 4)
-    .map((text) => text.replace(/\s+/g, " ").slice(0, 160));
-
-  if (snippets.length === 0) return undefined;
-  return snippets.map((snippet) => `- ${snippet}`).join("\n");
 }
 
 function normalizeWebsiteUrl(value: string | undefined): string | undefined {
@@ -140,21 +99,7 @@ async function runPlacesTextSearch(
     headers: {
       "Content-Type": "application/json",
       "X-Goog-Api-Key": getPlacesApiKey(),
-      "X-Goog-FieldMask": [
-        "places.id",
-        "places.displayName",
-        "places.formattedAddress",
-        "places.nationalPhoneNumber",
-        "places.websiteUri",
-        "places.rating",
-        "places.userRatingCount",
-        "places.googleMapsUri",
-        "places.primaryType",
-        "places.businessStatus",
-        "places.addressComponents",
-        "places.regularOpeningHours",
-        "places.reviews",
-      ].join(","),
+      "X-Goog-FieldMask": PLACE_MATCH_FIELD_MASK.join(","),
     },
     // One page only. This is a single-business lookup, not a harvest.
     body: JSON.stringify({ textQuery, pageSize: MAX_CANDIDATES }),
@@ -183,21 +128,37 @@ function toCandidate(place: PlaceResult): PlaceCandidate | null {
     phone: place.nationalPhoneNumber,
     websiteUrl: normalizeWebsiteUrl(place.websiteUri),
     googleMapsUrl: place.googleMapsUri,
-    rating: typeof place.rating === "number" ? place.rating : undefined,
-    reviewCount:
-      typeof place.userRatingCount === "number"
-        ? place.userRatingCount
-        : undefined,
     primaryType: place.primaryType,
     businessStatus: place.businessStatus,
   };
 }
 
 /**
+ * The single query shape used for both automatic matching and the live match
+ * panel, so what a human is asked to choose between is exactly what the
+ * automatic pass considered and rejected.
+ */
+async function searchCandidatesFor(concept: {
+  businessName: string;
+  serviceArea?: string;
+}): Promise<Array<PlaceCandidate>> {
+  const region = concept.serviceArea?.trim() || "Acadiana, Louisiana";
+  const places = await runPlacesTextSearch(`${concept.businessName} ${region}`);
+
+  return places
+    .map(toCandidate)
+    .filter((candidate): candidate is PlaceCandidate => candidate !== null)
+    .slice(0, MAX_CANDIDATES);
+}
+
+/**
  * Phase A: find the business on Google.
  *
  * A unique candidate can proceed automatically only when its name and an
- * independent clue agree. Everything else parks in `matching` for a human.
+ * independent clue agree. Everything else parks in `matching` for a human, and
+ * the candidate list is deliberately dropped rather than saved: an unresolved
+ * concept keeps no Places content at all, and `listPlaceCandidates` re-runs
+ * this same search when the match panel actually opens.
  */
 export const runPlacesMatch = internalAction({
   args: { conceptId: v.id("website_concepts") },
@@ -209,15 +170,7 @@ export const runPlacesMatch = internalAction({
     if (!concept) return null;
 
     try {
-      const region = concept.serviceArea?.trim() || "Acadiana, Louisiana";
-      const places = await runPlacesTextSearch(
-        `${concept.businessName} ${region}`,
-      );
-
-      const candidates = places
-        .map(toCandidate)
-        .filter((candidate): candidate is PlaceCandidate => candidate !== null)
-        .slice(0, MAX_CANDIDATES);
+      const candidates = await searchCandidatesFor(concept);
 
       const autoMatch = findHighConfidencePlaceMatch({
         businessName: concept.businessName,
@@ -227,11 +180,21 @@ export const runPlacesMatch = internalAction({
         candidates,
       });
 
-      await ctx.runMutation(internal.concepts.internal.savePlaceCandidates, {
+      const matched = autoMatch
+        ? candidates.find(
+            (candidate) => candidate.placeId === autoMatch.placeId,
+          )
+        : undefined;
+
+      await ctx.runMutation(internal.concepts.internal.savePlaceMatchResult, {
         conceptId: args.conceptId,
-        candidates,
-        autoMatchedPlaceId: autoMatch?.placeId,
-        autoMatchReasons: autoMatch?.reasons,
+        candidateCount: candidates.length,
+        autoMatch: matched
+          ? {
+              placeId: matched.placeId,
+              reasons: autoMatch?.reasons ?? [],
+            }
+          : undefined,
       });
     } catch (error) {
       await ctx.runMutation(internal.concepts.internal.setStatus, {
@@ -240,6 +203,82 @@ export const runPlacesMatch = internalAction({
         error: error instanceof Error ? error.message : "Places lookup failed",
       });
     }
+
+    return null;
+  },
+});
+
+/**
+ * Candidates for the admin match panel, fetched live and never stored.
+ *
+ * Google requires Places content to be shown with attribution and not retained,
+ * so this is an action rather than a query: it reaches Google when the panel
+ * opens and the response lives only as long as the page that displays it.
+ */
+export const listPlaceCandidates = action({
+  args: { conceptId: v.id("website_concepts") },
+  returns: v.array(conceptPlaceCandidateValidator),
+  // Annotated because this action reads its own module's API through
+  // `internal`, which TypeScript cannot resolve without a fixed point.
+  handler: async (
+    ctx,
+    args,
+  ): Promise<Array<PlaceCandidate>> => {
+    await ctx.runQuery(internal.concepts.internal.assertAdmin, {});
+
+    const concept: Doc<"website_concepts"> | null = await ctx.runQuery(
+      internal.concepts.internal.getById,
+      { conceptId: args.conceptId },
+    );
+    if (!concept) throw new Error("Concept not found");
+
+    return await searchCandidatesFor(concept);
+  },
+});
+
+/**
+ * Confirm which Google business this concept is for, or declare there is none.
+ *
+ * An action rather than a mutation because the candidate list is no longer
+ * stored: the place ID arriving from the browser must still belong to a fresh
+ * Places lookup for the current concept. Passing `placeId: null`
+ * is the "no Google match" path — plenty of real Facebook leads have no listing
+ * at all, and the concept must still be buildable from Layken's notes.
+ */
+export const confirmPlaceMatch = action({
+  args: {
+    conceptId: v.id("website_concepts"),
+    placeId: v.union(v.string(), v.null()),
+    /** Generate immediately after research finishes. */
+    thenGenerate: v.optional(v.boolean()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    await ctx.runQuery(internal.concepts.internal.assertAdmin, {});
+
+    if (args.placeId !== null) {
+      const concept: Doc<"website_concepts"> | null = await ctx.runQuery(
+        internal.concepts.internal.getById,
+        { conceptId: args.conceptId },
+      );
+      if (!concept) throw new Error("Concept not found");
+
+      // Proving that a place ID exists does not prove it belongs to this
+      // concept. Bind the click to a fresh copy of the search that populated
+      // the panel, so stale or crafted IDs cannot attach another business.
+      const candidates = await searchCandidatesFor(concept);
+      if (!isCurrentPlaceCandidate(args.placeId, candidates)) {
+        throw new Error(
+          "That listing is no longer a candidate for this business. Re-open the match panel and pick again.",
+        );
+      }
+    }
+
+    await ctx.runMutation(internal.concepts.internal.savePlaceMatchConfirmed, {
+      conceptId: args.conceptId,
+      placeId: args.placeId ?? undefined,
+      thenGenerate: args.thenGenerate ?? true,
+    });
 
     return null;
   },
@@ -357,13 +396,9 @@ export const runSiteResearch = internalAction({
     if (!concept) return null;
 
     try {
-      const matched = concept.placeCandidates?.find(
-        (candidate) => candidate.placeId === concept.matchedGooglePlaceId,
-      );
-
       const websiteUrl =
         normalizeWebsiteUrl(concept.submittedWebsiteUrl) ??
-        normalizeWebsiteUrl(matched?.websiteUrl);
+        normalizeWebsiteUrl(concept.verifiedWebsiteUrl);
 
       let scrape: SiteScrape = {};
       let performanceScore: number | undefined;
@@ -393,41 +428,22 @@ export const runSiteResearch = internalAction({
         }
       }
 
-      // Re-fetch the raw Places record for the fields a candidate row does not
-      // carry: locality components, opening hours, and review themes.
-      let locality: string | undefined;
-      let hours: Array<string> | undefined;
-      let googleReviewSummary: string | undefined;
-
-      if (concept.matchedGooglePlaceId) {
-        try {
-          const detail = await fetchPlaceDetail(concept.matchedGooglePlaceId);
-          if (detail) {
-            locality = extractLocality(detail);
-            hours = detail.regularOpeningHours?.weekdayDescriptions;
-            googleReviewSummary = summarizeReviews(detail);
-          }
-        } catch (error) {
-          console.warn("[concepts] Places detail failed", {
-            conceptId: args.conceptId,
-            error,
-          });
-        }
-      }
-
       // The machine half of the brief. Human-owned fields (assets, notes,
       // quotes) are laid over this at generation time.
+      //
+      // Nothing Google-specific survives except the directions link, which is
+      // rebuilt from the exempt place ID. Rating, review count, opening hours,
+      // street address, and review themes are gone on purpose; a fact the page
+      // states has to come from Layken or, from B2 onward, from approved
+      // website content.
       const researchBrief: ConceptBrief = {
         businessName: concept.businessName,
-        category: humanizeCategory(matched?.primaryType),
-        address: matched?.formattedAddress,
-        locality,
         serviceArea: concept.serviceArea,
-        phone: concept.phone ?? matched?.phone,
-        googleRating: matched?.rating,
-        googleReviewCount: matched?.reviewCount,
-        hours,
-        googleMapsUrl: concept.matchedGoogleMapsUrl ?? matched?.googleMapsUrl,
+        phone: concept.phone,
+        googleMapsUrl: conceptGoogleMapsUrl({
+          placeId: concept.matchedGooglePlaceId,
+          businessName: concept.businessName,
+        }),
         existingWebsiteUrl: websiteUrl,
         existingTechnology: scrape.technology,
         existingPerformanceScore: performanceScore,
@@ -438,7 +454,6 @@ export const runSiteResearch = internalAction({
         logoUrl: undefined,
         photoUrls: [],
         approvedQuotes: concept.approvedQuotes,
-        googleReviewSummary,
       };
 
       await ctx.runMutation(internal.concepts.internal.saveResearch, {
@@ -470,20 +485,3 @@ export const runSiteResearch = internalAction({
     return null;
   },
 });
-
-async function fetchPlaceDetail(placeId: string): Promise<PlaceResult | null> {
-  const response = await fetch(
-    `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
-    {
-      method: "GET",
-      headers: {
-        "X-Goog-Api-Key": getPlacesApiKey(),
-        "X-Goog-FieldMask":
-          "addressComponents,regularOpeningHours,reviews,primaryType",
-      },
-    },
-  );
-
-  if (!response.ok) return null;
-  return (await response.json()) as PlaceResult;
-}

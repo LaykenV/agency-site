@@ -65,7 +65,6 @@ describe("pickConceptStructure — fit", () => {
         category: "accounting",
         notes:
           "We offer bookkeeping, payroll, tax preparation, and business advisory services for small local businesses across the region.",
-        hours: ["Monday: 8 AM – 5 PM", "Tuesday: 8 AM – 5 PM"],
       }),
     );
     expect(structure.id).toBe("service-ledger");
@@ -241,14 +240,23 @@ describe("buildConceptUserPrompt", () => {
     expect(prompt).toContain('"Spotless every time." — Dana R. (5 stars)');
   });
 
-  /** Google review text informs tone but must never be reproduced. */
-  test("labels Google review themes as research only", () => {
+  /**
+   * Google is an identity provider, not a content library. No Places-derived
+   * fact reaches the prompt any more, so the star rule now hangs off approved
+   * quotes and the brief carries no rating, review count, hours, or address.
+   */
+  test("states no Google rating, review, hours, or address fact", () => {
     const prompt = buildConceptUserPrompt(
-      briefFor({ googleReviewSummary: "Customers praise punctuality." }),
+      briefFor({ locality: "Youngsville, LA" }),
       CONCEPT_STRUCTURES[0],
     );
-    expect(prompt).toContain("RESEARCH ONLY");
-    expect(prompt).toContain("may NOT quote");
+    expect(prompt).not.toContain("Google rating");
+    expect(prompt).not.toContain("Google review count");
+    expect(prompt).not.toContain("Business hours:");
+    expect(prompt).not.toContain("Street address");
+    expect(buildConceptSystemPrompt()).toContain(
+      "unless an APPROVED QUOTE carries a rating",
+    );
   });
 
   test("embeds the assigned structure spec", () => {

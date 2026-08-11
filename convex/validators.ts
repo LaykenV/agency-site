@@ -503,17 +503,23 @@ export const conceptApprovedQuoteValidator = v.object({
 /**
  * The verified generation brief. Mirrors `ConceptBrief` in
  * `lib/concepts/brief.ts`; the two are proved equivalent below.
+ *
+ * The five fields under DEPRECATED are Google Places content that nothing
+ * writes or reads any more — they were removed from `ConceptBrief` when Google
+ * became an identity provider rather than a content library. They stay declared
+ * so briefs written before `concepts/migrations.ts` ran still satisfy the
+ * schema; the migration clears them, and the contract step below removes them.
+ *
+ * Because every deprecated field is optional, the equivalence proof still holds
+ * in both directions. That is convenient but it is also the reason to delete
+ * them promptly: the proof cannot tell you a dead field came back.
  */
 export const conceptBriefValidator = v.object({
   businessName: v.string(),
   category: v.optional(v.string()),
-  address: v.optional(v.string()),
   locality: v.optional(v.string()),
   serviceArea: v.optional(v.string()),
   phone: v.optional(v.string()),
-  googleRating: v.optional(v.number()),
-  googleReviewCount: v.optional(v.number()),
-  hours: v.optional(v.array(v.string())),
   googleMapsUrl: v.optional(v.string()),
   existingWebsiteUrl: v.optional(v.string()),
   existingTechnology: v.optional(v.string()),
@@ -525,6 +531,12 @@ export const conceptBriefValidator = v.object({
   logoUrl: v.optional(v.string()),
   photoUrls: v.array(v.string()),
   approvedQuotes: v.array(conceptApprovedQuoteValidator),
+
+  // --- DEPRECATED: pre-migration Google Places content. Do not read or write. ---
+  address: v.optional(v.string()),
+  googleRating: v.optional(v.number()),
+  googleReviewCount: v.optional(v.number()),
+  hours: v.optional(v.array(v.string())),
   googleReviewSummary: v.optional(v.string()),
 });
 
@@ -547,9 +559,11 @@ export type ConceptBriefTypeMatchesValidator = MutuallyAssignable<
 /**
  * A Google Places match candidate used for automatic or human confirmation.
  *
- * Attaching the wrong business silently is the failure that matters here. Only
- * a unique, independently corroborated match is auto-selected; the candidate
- * list is retained so every uncertain identity can be confirmed explicitly.
+ * Attaching the wrong business silently is the failure that matters here, so an
+ * uncertain match still goes in front of a human. What changed is where the
+ * list lives: candidates are fetched live when the match panel opens and are
+ * never written to the database, because they are Places content and the only
+ * part of them we are entitled to keep is the confirmed place ID.
  */
 export const conceptPlaceCandidateValidator = v.object({
   placeId: v.string(),
@@ -558,17 +572,76 @@ export const conceptPlaceCandidateValidator = v.object({
   phone: v.optional(v.string()),
   websiteUrl: v.optional(v.string()),
   googleMapsUrl: v.optional(v.string()),
+  // DEPRECATED: accepted only so pre-migration candidate rows validate during
+  // the additive deploy. Live searches no longer request or return these.
   rating: v.optional(v.number()),
   reviewCount: v.optional(v.number()),
   primaryType: v.optional(v.string()),
   businessStatus: v.optional(v.string()),
 });
 
+/**
+ * One source-backed candidate harvested from the prospect's own website.
+ *
+ * `evidence` is a short excerpt from the page the candidate came from and
+ * `sourceUrl` is the page the server actually scraped, never a URL a model
+ * claimed. Together they are what makes an approval defensible; a candidate
+ * that cannot carry both is discarded during normalization rather than shown.
+ *
+ * `risk: "sensitive"` marks claims a business can be held to — licences,
+ * guarantees, prices, years, 24/7 availability — and every testimonial. Those
+ * are approved individually and are never included in a bulk approve action.
+ */
+export const conceptHarvestCandidateValidator = v.object({
+  id: v.string(),
+  kind: v.union(
+    v.literal("tagline"),
+    v.literal("about"),
+    v.literal("service"),
+    v.literal("serviceArea"),
+    v.literal("differentiator"),
+    v.literal("sensitiveClaim"),
+    v.literal("phone"),
+    v.literal("hours"),
+    v.literal("quote"),
+  ),
+  value: v.string(),
+  detail: v.optional(v.string()),
+  evidence: v.string(),
+  sourceUrl: v.string(),
+  risk: v.union(v.literal("standard"), v.literal("sensitive")),
+});
+
+/**
+ * A remote image seen on the business's own website.
+ *
+ * `remoteUrl` is recorded, not fetched: nothing renders it and no generated
+ * page may reference it. B3 adds the guarded import that copies an approved
+ * candidate into Convex storage, which is the only way one reaches a concept.
+ */
+export const conceptHarvestImageCandidateValidator = v.object({
+  id: v.string(),
+  remoteUrl: v.string(),
+  sourceUrl: v.string(),
+  roleHint: v.union(v.literal("logo"), v.literal("photo")),
+  alt: v.optional(v.string()),
+});
+
+export const conceptHarvestReviewStateValidator = v.union(
+  v.literal("pending"),
+  v.literal("approved"),
+  v.literal("skipped"),
+);
+
 export const conceptStatusValidator = v.union(
   v.literal("draft"),
   v.literal("enriching"),
+  /** A bounded Firecrawl request is currently running. */
+  v.literal("harvesting"),
   /** Places returned candidates but none met the automatic match threshold. */
   v.literal("matching"),
+  /** A harvest produced reviewable candidates and is waiting on a human. */
+  v.literal("content_review"),
   v.literal("generating"),
   v.literal("review"),
   v.literal("published"),
@@ -586,13 +659,30 @@ export const websiteConceptDocValidator = v.object({
   serviceArea: v.optional(v.string()),
   notes: v.optional(v.string()),
   matchedGooglePlaceId: v.optional(v.string()),
-  matchedGoogleMapsUrl: v.optional(v.string()),
   verifiedWebsiteUrl: v.optional(v.string()),
-  placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
   placeMatchResolved: v.boolean(),
+  // DEPRECATED: persisted Places content, cleared by `concepts/migrations.ts`.
+  matchedGoogleMapsUrl: v.optional(v.string()),
+  placeCandidates: v.optional(v.array(conceptPlaceCandidateValidator)),
   logoStorageId: v.optional(v.id("_storage")),
   assetStorageIds: v.array(v.id("_storage")),
   approvedQuotes: v.array(conceptApprovedQuoteValidator),
+
+  // Structured website harvest. Present only after a harvest has run.
+  harvestRequestId: v.optional(v.string()),
+  harvestedAt: v.optional(v.number()),
+  harvestSourceUrl: v.optional(v.string()),
+  harvestedPages: v.optional(
+    v.array(v.object({ url: v.string(), title: v.optional(v.string()) })),
+  ),
+  harvestCandidates: v.optional(v.array(conceptHarvestCandidateValidator)),
+  harvestImageCandidates: v.optional(
+    v.array(conceptHarvestImageCandidateValidator),
+  ),
+  harvestWarnings: v.optional(v.array(v.string())),
+  harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
+  harvestReviewedAt: v.optional(v.number()),
+
   researchBrief: v.optional(conceptBriefValidator),
   generatedHtml: v.optional(v.string()),
   structureId: v.optional(v.string()),
@@ -631,7 +721,8 @@ export const websiteConceptSummaryValidator = v.object({
   validationViolations: v.optional(v.array(v.string())),
   placeMatchResolved: v.boolean(),
   matchedGooglePlaceId: v.optional(v.string()),
-  candidateCount: v.number(),
+  harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
+  harvestCandidateCount: v.number(),
   assetCount: v.number(),
   model: v.optional(v.string()),
   promptVersion: v.optional(v.string()),

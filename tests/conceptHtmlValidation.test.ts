@@ -12,8 +12,6 @@ const brief: ConceptBrief = {
   category: "cleaning service",
   locality: "Youngsville, LA",
   phone: "(337) 384-2911",
-  googleRating: 5,
-  googleReviewCount: 12,
   logoUrl: LOGO_URL,
   photoUrls: [PHOTO_URL],
   approvedQuotes: [],
@@ -282,18 +280,37 @@ describe("validateConceptHtml — factual claims", () => {
     ).toEqual([]);
   });
 
-  test("rejects star glyphs when the brief has no rating", () => {
+  test("rejects star glyphs when no approved quote carries a rating", () => {
     const html = validDocument("<main><p>★★★★★ Rated by our customers</p></main>");
+    expect(violationsFor(html).some((v) => v.includes("star glyphs"))).toBe(
+      true,
+    );
+  });
+
+  // Google ratings no longer reach the brief at all, so the only thing that can
+  // put a star on the page is a testimonial Layken approved by hand.
+  test("rejects star glyphs when an approved quote has no rating", () => {
+    const quote = "Shay and her team left our home absolutely spotless.";
+    const html = validDocument(
+      `<main><p>★★★★★</p><p>“${quote}”</p></main>`,
+    );
     expect(
-      violationsFor(html, { googleRating: undefined }).some((v) =>
-        v.includes("star glyphs"),
-      ),
+      violationsFor(html, {
+        approvedQuotes: [{ author: "Dana R.", text: quote }],
+      }).some((v) => v.includes("star glyphs")),
     ).toBe(true);
   });
 
-  test("accepts star glyphs when the rating is verified", () => {
-    const html = validDocument("<main><p>★★★★★ 5.0 on Google</p></main>");
-    expect(violationsFor(html)).toEqual([]);
+  test("accepts star glyphs when an approved quote carries a rating", () => {
+    const quote = "Shay and her team left our home absolutely spotless.";
+    const html = validDocument(
+      `<main><p>★★★★★</p><p>“${quote}”</p></main>`,
+    );
+    expect(
+      violationsFor(html, {
+        approvedQuotes: [{ author: "Dana R.", text: quote, rating: 5 }],
+      }),
+    ).toEqual([]);
   });
 
   test("rejects a page for the wrong business", () => {
@@ -410,8 +427,8 @@ img{display:block;width:100%;height:auto}
   <img src="${PHOTO_URL}" alt="Kitchen after a deep clean" width="1200" height="800">
 </figure>
 <section class="band wrap">
-  <h2>Rated 5.0 on Google</h2>
-  <p>★★★★★ from 12 reviews.</p>
+  <h2>How it works</h2>
+  <p>A walkthrough, a written quote, then a standing slot on the calendar.</p>
   <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">
     <path d="M4 12h16" stroke="currentColor" stroke-width="2" fill="none"/>
   </svg>

@@ -150,4 +150,19 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     rate: 100,
     period: DAY,
   },
+
+  /**
+   * Runaway guard on structured website harvesting.
+   *
+   * Separate from the generation ceiling because harvesting runs *before*
+   * `queueGeneration` and would otherwise be unprotected: one harvest costs one
+   * Firecrawl map plus up to six scrapes, and a retry loop could spend a
+   * month's credits without ever reaching a paid model call. One unit is
+   * reserved per harvest request, refresh included.
+   */
+  conceptHarvestGlobalDaily: {
+    kind: "fixed window",
+    rate: 60,
+    period: DAY,
+  },
 });

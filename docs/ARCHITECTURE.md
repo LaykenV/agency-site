@@ -257,12 +257,57 @@ homepage concept:
 2. a single Google Places lookup, whose match a human must confirm before
    anything is generated
 3. Firecrawl and PageSpeed against the confirmed website, if there is one
-4. bespoke HTML and inline CSS from a configurable OpenRouter model
-5. deterministic safety and factual validation
-6. human review, then publication at an unlisted `/preview/<token>`
+4. optionally, a bounded structured harvest of that website
+5. bespoke HTML and inline CSS from a configurable OpenRouter model
+6. deterministic safety and factual validation
+7. human review, then publication at an unlisted `/preview/<token>`
 
-Google photos and review text are research signals only. Preview imagery is
+### Google Places is identity, not content
+
+Places answers one persisted question: which business is this. Candidate
+address, phone, category, and website details are displayed live only to help
+recognize the listing; none becomes a stored fact or generation input.
+
+- The confirmed `placeId` is the only Places value retained. Google's policy
+  exempts it from the retention limits that cover the rest of a response.
+- Candidates for an unresolved match are fetched live when the admin match panel
+  opens, shown with exact Google Maps attribution, and never written to the
+  database. Confirmation re-runs the current search so an arbitrary valid place
+  ID cannot be attached.
+- The directions link on a concept is rebuilt from the place ID rather than
+  stored from a search response.
+- Rating, review count, review text, opening hours, and street address do not
+  reach `ConceptBrief`. A separate approved source may reintroduce any of those
+  facts; Places may not.
+- Star glyphs on a generated page require an approved quote carrying a rating.
+
+`convex/concepts/migrations.ts` clears the Places content that older rows still
+hold. The fields it clears remain declared as deprecated optionals in
+`convex/schema.ts` and `convex/validators.ts` until that migration has run
+against both deployments; contracting them is the follow-up step.
+
+Google photos and review text never become preview imagery. Preview imagery is
 limited to owner-supplied uploads.
+
+### Structured website harvest
+
+`convex/concepts/harvest.ts` reads the business's own website into reviewable
+candidates: one Firecrawl Map call capped at 40 URLs, then at most six targeted
+Scrape calls against the pages a human would have opened. `lib/concepts/harvest.ts`
+holds every rule — URL ranking, same-host enforcement, normalization, caps,
+deduplication, sensitive-claim classification, and conflict detection — and is
+pure so it can be tested without a network.
+
+The snapshot lives on `website_concepts` rather than in a content or crawler
+table. It stores candidates with a source URL and an evidence excerpt, never raw
+markdown, whole Firecrawl responses, or image bytes.
+
+Nothing harvested is a fact. A snapshot with reviewable candidates parks the
+concept in `content_review`, which blocks generation and publication until it is
+approved or explicitly skipped. Individual approval and the prompt integration
+are not yet implemented; today the only resolutions are **Refresh website
+content** and **Skip harvested content**, so no harvested text or remote image
+URL can currently reach a generated page.
 
 ### Rendering and security boundary
 

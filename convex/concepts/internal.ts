@@ -3,13 +3,15 @@ import { internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import {
   conceptBriefValidator,
-  conceptPlaceCandidateValidator,
+  conceptHarvestCandidateValidator,
+  conceptHarvestImageCandidateValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
 } from "../validators";
+import { requireAdmin } from "../adminGuard";
 import { rateLimiter } from "../rateLimiter";
 import {
-  canGenerateConcept,
+  generationBlockedReason,
   isCurrentGeneration,
 } from "../../lib/concepts/lifecycle";
 
@@ -40,6 +42,7 @@ export const setStatus = internalMutation({
   handler: async (ctx, args) => {
     const concept = await ctx.db.get(args.conceptId);
     if (!concept) return null;
+
     if (
       args.expectedGenerationRequestId !== undefined &&
       !isCurrentGeneration(concept, args.expectedGenerationRequestId)
@@ -78,17 +81,23 @@ export const queueGeneration = internalMutation({
     const concept = await ctx.db.get(args.conceptId);
     if (!concept) return null;
 
-    if (
-      !canGenerateConcept({
-        placeMatchResolved: concept.placeMatchResolved,
-        hasResearchBrief: Boolean(concept.researchBrief),
-      })
-    ) {
+    const blocked = generationBlockedReason({
+      placeMatchResolved: concept.placeMatchResolved,
+      hasResearchBrief: Boolean(concept.researchBrief),
+      harvestReviewState: concept.harvestReviewState,
+      harvestInFlight: Boolean(concept.harvestRequestId),
+    });
+    if (blocked) {
       await ctx.db.patch(args.conceptId, {
-        status: "failed",
+        // A pending review is a waiting state, not a failure: the concept is
+        // fine, it just has unreviewed content sitting in front of it.
+        status: concept.harvestRequestId
+          ? "harvesting"
+          : concept.harvestReviewState === "pending"
+            ? "content_review"
+            : "failed",
         generationRequestId: undefined,
-        error:
-          "Cannot generate until the Google match is confirmed and research is complete.",
+        error: blocked,
         updatedAt: Date.now(),
       });
       return null;
@@ -127,18 +136,41 @@ export const queueGeneration = internalMutation({
 });
 
 /**
- * Record the Places candidates found for a concept.
+ * Admin guard usable from an action.
+ *
+ * Actions cannot read `ctx.db`, and `requireAdmin` needs a query context to
+ * resolve the Better Auth user. Auth identity carries across `ctx.runQuery`, so
+ * an action calls this first and gets the same check the mutations use.
+ */
+export const assertAdmin = internalQuery({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    return null;
+  },
+});
+
+/**
+ * Record the outcome of the automatic Places pass.
  *
  * A unique result may proceed automatically when the matching action found
  * independent corroboration. Provider ranking or a name alone is never enough.
- * All ambiguous results park in `matching` until a human picks.
+ * All ambiguous results park in `matching` until a human picks — and the
+ * candidate list itself is not stored, only how many there were, because an
+ * unresolved concept is entitled to keep no Places content at all.
  */
-export const savePlaceCandidates = internalMutation({
+export const savePlaceMatchResult = internalMutation({
   args: {
     conceptId: v.id("website_concepts"),
-    candidates: v.array(conceptPlaceCandidateValidator),
-    autoMatchedPlaceId: v.optional(v.string()),
-    autoMatchReasons: v.optional(v.array(v.string())),
+    /** For the activity log only: how many candidates the pass considered. */
+    candidateCount: v.number(),
+    autoMatch: v.optional(
+      v.object({
+        placeId: v.string(),
+        reasons: v.array(v.string()),
+      }),
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -146,54 +178,95 @@ export const savePlaceCandidates = internalMutation({
     if (!concept) return null;
 
     const now = Date.now();
-    const autoMatchedCandidate = args.autoMatchedPlaceId
-      ? args.candidates.find(
-          (candidate) => candidate.placeId === args.autoMatchedPlaceId,
-        )
-      : undefined;
 
-    if (args.autoMatchedPlaceId && !autoMatchedCandidate) {
-      throw new Error("Automatic Places match is not in the candidate list.");
-    }
-
-    if (autoMatchedCandidate) {
+    if (!args.autoMatch) {
       await ctx.db.patch(args.conceptId, {
-        placeCandidates: args.candidates,
-        placeMatchResolved: true,
-        matchedGooglePlaceId: autoMatchedCandidate.placeId,
-        matchedGoogleMapsUrl: autoMatchedCandidate.googleMapsUrl,
-        verifiedWebsiteUrl:
-          concept.submittedWebsiteUrl ?? autoMatchedCandidate.websiteUrl,
-        status: "enriching",
-        error: undefined,
+        placeMatchResolved: false,
+        status: "matching",
         updatedAt: now,
       });
-
-      await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
-        actor: "system",
-        kind: "concept.place_match_auto_confirmed",
-        payload: {
-          conceptId: args.conceptId,
-          businessName: concept.businessName,
-          placeId: autoMatchedCandidate.placeId,
-          matchedName: autoMatchedCandidate.businessName,
-          reasons: args.autoMatchReasons ?? [],
-        },
-      });
-
-      await ctx.scheduler.runAfter(
-        0,
-        internal.concepts.enrich.runSiteResearch,
-        { conceptId: args.conceptId, thenGenerate: true },
-      );
       return null;
     }
 
     await ctx.db.patch(args.conceptId, {
-      placeCandidates: args.candidates,
-      placeMatchResolved: false,
-      status: "matching",
+      placeMatchResolved: true,
+      matchedGooglePlaceId: args.autoMatch.placeId,
+      verifiedWebsiteUrl: concept.submittedWebsiteUrl,
+      status: "enriching",
+      error: undefined,
       updatedAt: now,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "system",
+      kind: "concept.place_match_auto_confirmed",
+      payload: {
+        conceptId: args.conceptId,
+        businessName: concept.businessName,
+        placeId: args.autoMatch.placeId,
+        candidateCount: args.candidateCount,
+        reasons: args.autoMatch.reasons,
+      },
+    });
+
+    await ctx.scheduler.runAfter(0, internal.concepts.enrich.runSiteResearch, {
+      conceptId: args.conceptId,
+      thenGenerate: true,
+    });
+    return null;
+  },
+});
+
+/**
+ * Attach the identity a human confirmed in the match panel.
+ *
+ * The caller is `concepts/enrich.confirmPlaceMatch`, which has already proved
+ * the place ID still belongs to a fresh search for this concept. This mutation
+ * only writes and schedules; it deliberately keeps no candidate detail.
+ */
+export const savePlaceMatchConfirmed = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    placeId: v.optional(v.string()),
+    thenGenerate: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) throw new Error("Concept not found");
+
+    await ctx.db.patch(args.conceptId, {
+      placeMatchResolved: true,
+      matchedGooglePlaceId: args.placeId,
+      matchedGoogleMapsUrl: undefined,
+      placeCandidates: undefined,
+      verifiedWebsiteUrl: concept.submittedWebsiteUrl,
+      researchBrief: undefined,
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
+      status: "enriching",
+      error: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "admin",
+      kind: "concept.place_match_confirmed",
+      payload: {
+        conceptId: args.conceptId,
+        businessName: concept.businessName,
+        placeId: args.placeId ?? null,
+      },
+    });
+
+    await ctx.scheduler.runAfter(0, internal.concepts.enrich.runSiteResearch, {
+      conceptId: args.conceptId,
+      thenGenerate: args.thenGenerate,
     });
     return null;
   },
@@ -268,6 +341,217 @@ export const saveGeneration = internalMutation({
       error: ok
         ? undefined
         : `Generated HTML failed ${args.violations.length} validation check(s).`,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+// --- Structured website harvest -------------------------------------------
+
+/**
+ * Start one harvest and take the daily ceiling.
+ *
+ * The ceiling is reserved here rather than in the action because a mutation is
+ * transactional: two clicks on Refresh cannot both pass the limiter and then
+ * both spend a map plus six scrapes.
+ *
+ * Clearing the previous snapshot immediately is deliberate. A stale candidate
+ * list shown beside a running refresh is worse than an empty one — it invites
+ * approving a fact that the new scrape is about to contradict.
+ */
+export const queueHarvest = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    bypassCache: v.boolean(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+
+    if (!concept.placeMatchResolved || !concept.researchBrief) {
+      throw new Error(
+        "Finish business matching and enrichment before harvesting the website.",
+      );
+    }
+
+    const siteUrl = concept.verifiedWebsiteUrl ?? concept.submittedWebsiteUrl;
+    if (!siteUrl) {
+      throw new Error(
+        "This concept has no website to harvest. Add one, or build from your notes.",
+      );
+    }
+
+    const { ok } = await rateLimiter.limit(ctx, "conceptHarvestGlobalDaily", {
+      key: "global",
+    });
+    if (!ok) {
+      throw new Error(
+        "Daily website-harvest ceiling reached. Something is probably retrying in a loop.",
+      );
+    }
+
+    const harvestRequestId = crypto.randomUUID();
+    await ctx.db.patch(args.conceptId, {
+      harvestRequestId,
+      harvestedAt: undefined,
+      harvestSourceUrl: undefined,
+      harvestedPages: undefined,
+      harvestCandidates: undefined,
+      harvestImageCandidates: undefined,
+      harvestWarnings: undefined,
+      harvestReviewState: undefined,
+      harvestReviewedAt: undefined,
+      status: "harvesting",
+      error: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(0, internal.concepts.harvest.runHarvest, {
+      conceptId: args.conceptId,
+      harvestRequestId,
+      bypassCache: args.bypassCache,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "admin",
+      kind: "concept.harvest_started",
+      payload: {
+        conceptId: args.conceptId,
+        businessName: concept.businessName,
+        sourceHost: hostOf(siteUrl),
+        refresh: args.bypassCache,
+      },
+    });
+    return null;
+  },
+});
+
+/** Source hosts are loggable; page copy and image bytes are not. */
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/** True when this result belongs to the harvest currently in flight. */
+function isCurrentHarvest(
+  concept: { harvestRequestId?: string },
+  harvestRequestId: string,
+): boolean {
+  return concept.harvestRequestId === harvestRequestId;
+}
+
+/** Restore the useful pre-harvest state without trusting a stale saved status. */
+function statusAfterHarvestWithoutReview(concept: {
+  placeMatchResolved: boolean;
+  generatedHtml?: string;
+  publishedAt?: number;
+  validationViolations?: Array<string>;
+}) {
+  if (concept.generatedHtml && concept.publishedAt) return "published" as const;
+  if (concept.generatedHtml && concept.validationViolations?.length) {
+    return "failed" as const;
+  }
+  if (concept.generatedHtml) return "review" as const;
+  return concept.placeMatchResolved ? ("draft" as const) : ("matching" as const);
+}
+
+/**
+ * Store one bounded snapshot and park the concept for review.
+ *
+ * A snapshot with no candidates at all resolves itself as `skipped` rather than
+ * asking Layken to review an empty list — there is nothing to approve, and a
+ * gate with no content behind it is just an extra click.
+ */
+export const saveHarvest = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    harvestRequestId: v.string(),
+    sourceUrl: v.string(),
+    pages: v.array(
+      v.object({ url: v.string(), title: v.optional(v.string()) }),
+    ),
+    candidates: v.array(conceptHarvestCandidateValidator),
+    imageCandidates: v.array(conceptHarvestImageCandidateValidator),
+    warnings: v.array(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+    if (!isCurrentHarvest(concept, args.harvestRequestId)) return null;
+
+    const reviewable =
+      args.candidates.length > 0 || args.imageCandidates.length > 0;
+    const now = Date.now();
+
+    await ctx.db.patch(args.conceptId, {
+      harvestRequestId: undefined,
+      harvestedAt: now,
+      harvestSourceUrl: args.sourceUrl,
+      harvestedPages: args.pages,
+      harvestCandidates: args.candidates,
+      harvestImageCandidates: args.imageCandidates,
+      harvestWarnings: args.warnings.length > 0 ? args.warnings : undefined,
+      harvestReviewState: reviewable ? "pending" : "skipped",
+      harvestReviewedAt: reviewable ? undefined : now,
+      // A pending review revokes any generated artifact: the page in front of
+      // Layken was built without content he is about to approve.
+      generatedHtml: reviewable ? undefined : concept.generatedHtml,
+      publishedAt: reviewable ? undefined : concept.publishedAt,
+      status: reviewable
+        ? "content_review"
+        : statusAfterHarvestWithoutReview(concept),
+      error: undefined,
+      updatedAt: now,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "system",
+      kind: "concept.harvest_completed",
+      payload: {
+        conceptId: args.conceptId,
+        sourceHost: hostOf(args.sourceUrl),
+        pageCount: args.pages.length,
+        candidateCount: args.candidates.length,
+        imageCandidateCount: args.imageCandidates.length,
+        warningCount: args.warnings.length,
+      },
+    });
+    return null;
+  },
+});
+
+/**
+ * Record a harvest that produced nothing usable.
+ *
+ * Not a concept failure. A business with a broken, blocked, or JavaScript-only
+ * site is still a lead worth building for, so this clears the in-flight request
+ * and leaves the concept exactly as buildable as it was from notes and uploads.
+ */
+export const failHarvest = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    harvestRequestId: v.string(),
+    error: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+    if (!isCurrentHarvest(concept, args.harvestRequestId)) return null;
+
+    await ctx.db.patch(args.conceptId, {
+      harvestRequestId: undefined,
+      harvestReviewState: "skipped",
+      harvestReviewedAt: Date.now(),
+      harvestWarnings: [args.error.slice(0, 300)],
+      status: statusAfterHarvestWithoutReview(concept),
+      error: undefined,
       updatedAt: Date.now(),
     });
     return null;

@@ -468,10 +468,15 @@ export function validateConceptHtml(
   }
 
   // A rating is a fact. Star glyphs without one are decoration standing in for
-  // social proof the business has not been shown to have.
-  if (STAR_GLYPHS.test(text) && typeof brief.googleRating !== "number") {
+  // social proof the business has not been shown to have. Google ratings no
+  // longer reach the brief, so an individually approved quote carrying a rating
+  // is now the only thing that earns a star.
+  const hasApprovedRating = brief.approvedQuotes.some(
+    (quote) => typeof quote.rating === "number",
+  );
+  if (STAR_GLYPHS.test(text) && !hasApprovedRating) {
     violations.push(
-      "Renders star glyphs but the brief has no verified Google rating.",
+      "Renders star glyphs but no approved quote carries a rating.",
     );
   }
 

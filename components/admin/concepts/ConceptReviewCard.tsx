@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
@@ -42,7 +42,9 @@ import { cn } from "@/lib/utils";
 const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   enriching: "Enriching",
+  harvesting: "Harvesting website",
   matching: "Needs Google match",
+  content_review: "Needs content review",
   generating: "Generating",
   review: "Ready to review",
   published: "Published",
@@ -56,10 +58,12 @@ function statusClass(status: string): string {
     case "review":
       return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
     case "matching":
+    case "content_review":
       return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
     case "failed":
       return "bg-red-500/15 text-red-700 dark:text-red-300";
     case "enriching":
+    case "harvesting":
     case "generating":
       return "bg-violet-500/15 text-violet-700 dark:text-violet-300";
     default:
@@ -71,6 +75,18 @@ function formatDate(timestamp?: number): string {
   if (!timestamp) return "—";
   return new Date(timestamp).toLocaleString();
 }
+
+/** One live Google Maps result, held in component state only. */
+type PlaceCandidate = {
+  placeId: string;
+  businessName: string;
+  formattedAddress: string;
+  phone?: string;
+  websiteUrl?: string;
+  googleMapsUrl?: string;
+  primaryType?: string;
+  businessStatus?: string;
+};
 
 async function copyText(value: string, successMessage: string) {
   try {
@@ -91,8 +107,15 @@ export function ConceptReviewCard({
   const data = useQuery(api.concepts.admin.get, { conceptId });
 
   const updateConcept = useMutation(api.concepts.admin.update);
-  const confirmPlaceMatch = useMutation(api.concepts.admin.confirmPlaceMatch);
+  const confirmPlaceMatch = useAction(api.concepts.enrich.confirmPlaceMatch);
+  const listPlaceCandidates = useAction(
+    api.concepts.enrich.listPlaceCandidates,
+  );
   const reEnrich = useMutation(api.concepts.admin.reEnrich);
+  const harvestWebsiteContent = useMutation(
+    api.concepts.admin.harvestWebsiteContent,
+  );
+  const skipHarvestReview = useMutation(api.concepts.admin.skipHarvestReview);
   const generate = useMutation(api.concepts.admin.generate);
   const publish = useMutation(api.concepts.admin.publish);
   const unpublish = useMutation(api.concepts.admin.unpublish);
@@ -122,6 +145,14 @@ export function ConceptReviewCard({
     Array<{ author: string; text: string; rating?: number }>
   >([]);
 
+  // Places candidates are Google Maps content: fetched live for as long as this
+  // panel is open, shown with attribution, and never written to our database.
+  const [candidates, setCandidates] = useState<Array<PlaceCandidate>>([]);
+  const [candidatesStatus, setCandidatesStatus] = useState<
+    "idle" | "loading" | "loaded" | "error"
+  >("idle");
+  const [candidatesError, setCandidatesError] = useState<string | null>(null);
+
   const concept = data?.concept;
 
   useEffect(() => {
@@ -137,6 +168,43 @@ export function ConceptReviewCard({
     setQuotes(concept.approvedQuotes);
     setStructureId(concept.structureId ?? "");
   }, [concept?._id, concept?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch the candidate list only when the match panel is actually on screen.
+  // `cancelled` matters because switching concepts mid-request would otherwise
+  // paint one business's listings under another's name.
+  const isMatching = concept?.status === "matching";
+
+  useEffect(() => {
+    if (!isMatching) {
+      setCandidates([]);
+      setCandidatesStatus("idle");
+      setCandidatesError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setCandidatesStatus("loading");
+    setCandidatesError(null);
+
+    listPlaceCandidates({ conceptId })
+      .then((result) => {
+        if (cancelled) return;
+        setCandidates(result);
+        setCandidatesStatus("loaded");
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setCandidates([]);
+        setCandidatesStatus("error");
+        setCandidatesError(
+          error instanceof Error ? error.message : "Google lookup failed.",
+        );
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [conceptId, isMatching, listPlaceCandidates]);
 
   if (data === undefined) {
     return (
@@ -156,10 +224,16 @@ export function ConceptReviewCard({
 
   const previewUrl = conceptPreviewUrl(concept.token);
   const isWorking =
-    concept.status === "enriching" || concept.status === "generating";
-  const needsMatch =
-    concept.status === "matching" ||
-    (!concept.placeMatchResolved && (concept.placeCandidates?.length ?? 0) > 0);
+    concept.status === "enriching" ||
+    concept.status === "harvesting" ||
+    concept.status === "generating";
+  const needsMatch = isMatching;
+  const harvestSourceUrl = concept.harvestSourceUrl;
+  const harvestPending = concept.harvestReviewState === "pending";
+  const harvestInFlight = Boolean(concept.harvestRequestId);
+  const sensitiveCount = (concept.harvestCandidates ?? []).filter(
+    (candidate) => candidate.risk === "sensitive",
+  ).length;
 
   const runAction = async (action: () => Promise<unknown>, success?: string) => {
     setIsBusy(true);
@@ -323,7 +397,29 @@ export function ConceptReviewCard({
           </p>
 
           <div className="mt-3 space-y-2">
-            {(concept.placeCandidates ?? []).map((candidate) => (
+            {candidatesStatus === "loading" ? (
+              <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs text-[var(--muted-foreground)]">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Looking these up on Google...
+              </div>
+            ) : null}
+
+            {candidatesStatus === "error" ? (
+              <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-700 dark:text-red-300">
+                {candidatesError ?? "Google lookup failed."} You can still build
+                this concept from your notes with{" "}
+                <strong>No Google listing</strong>.
+              </div>
+            ) : null}
+
+            {candidatesStatus === "loaded" && candidates.length === 0 ? (
+              <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs text-[var(--muted-foreground)]">
+                Google returned nothing for this name and area. Correct the name
+                above and search again, or build from your notes.
+              </div>
+            ) : null}
+
+            {candidates.map((candidate) => (
               <div
                 key={candidate.placeId}
                 className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 sm:flex-row sm:items-center sm:justify-between"
@@ -335,11 +431,19 @@ export function ConceptReviewCard({
                   </p>
                   <p className="mt-0.5 text-[var(--muted-foreground)]">
                     {candidate.phone ?? "No phone"}
-                    {candidate.rating
-                      ? ` · ${candidate.rating}★ (${candidate.reviewCount ?? 0})`
-                      : ""}
                     {candidate.websiteUrl ? ` · ${candidate.websiteUrl}` : ""}
                   </p>
+                  {candidate.googleMapsUrl ? (
+                    <a
+                      href={candidate.googleMapsUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-0.5 inline-flex items-center gap-1 text-[var(--muted-foreground)] underline underline-offset-2"
+                    >
+                      View on Google Maps
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : null}
                 </div>
                 <Button
                   size="sm"
@@ -362,6 +466,18 @@ export function ConceptReviewCard({
                 </Button>
               </div>
             ))}
+          </div>
+
+          {/* Exact text attribution is permitted for this compact mobile panel. */}
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
+            <p>Live results for identification only. Only the place ID is kept.</p>
+            <span
+              translate="no"
+              aria-label="Google Maps"
+              className="whitespace-nowrap font-normal tracking-normal text-[#5e5e5e] dark:text-white"
+            >
+              Google Maps
+            </span>
           </div>
 
           <div className="mt-3 flex flex-wrap gap-2">
@@ -394,6 +510,134 @@ export function ConceptReviewCard({
               Search again
             </Button>
           </div>
+        </div>
+      ) : null}
+
+      {/* --- Harvested website content ---
+          B1 ships the harvest itself. Approving individual facts, quotes, and
+          images is B2; until then this shows what was found and offers the two
+          decisions that exist: run it again, or skip it. */}
+      {harvestSourceUrl || concept.harvestReviewState ? (
+        <div
+          className={cn(
+            "rounded-xl border p-4",
+            harvestPending
+              ? "border-amber-500/30 bg-amber-500/5"
+              : "border-[var(--border)] bg-[var(--card)]",
+          )}
+        >
+          <h3 className="text-sm font-semibold">Harvested website content</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            Found on their website. Nothing here reaches the page yet — this is
+            what was collected, not what was approved.
+          </p>
+
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Pages read</dt>
+              <dd className="font-medium">
+                {concept.harvestedPages?.length ?? 0}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Facts</dt>
+              <dd className="font-medium">
+                {concept.harvestCandidates?.length ?? 0}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Needs care</dt>
+              <dd className="font-medium">{sensitiveCount}</dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Images</dt>
+              <dd className="font-medium">
+                {concept.harvestImageCandidates?.length ?? 0}
+              </dd>
+            </div>
+          </dl>
+
+          {concept.harvestedPages?.length ? (
+            <ul className="mt-3 space-y-1 text-xs">
+              {concept.harvestedPages.map((page) => (
+                <li key={page.url}>
+                  <a
+                    href={page.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[var(--muted-foreground)] underline underline-offset-2"
+                  >
+                    {page.title ?? page.url}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {concept.harvestWarnings?.length ? (
+            <ul className="mt-3 list-disc space-y-1 pl-4 text-xs text-[var(--muted-foreground)]">
+              {concept.harvestWarnings.map((warning) => (
+                <li key={warning}>{warning}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={isBusy}
+              onClick={() =>
+                runAction(
+                  () => harvestWebsiteContent({ conceptId, refresh: true }),
+                  "Re-reading their website...",
+                )
+              }
+            >
+              Refresh website content
+            </Button>
+            {harvestPending ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={isBusy}
+                onClick={() =>
+                  runAction(
+                    () => skipHarvestReview({ conceptId }),
+                    "Skipped. Generating from your notes and uploads.",
+                  )
+                }
+              >
+                Skip harvested content
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      ) : concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <h3 className="text-sm font-semibold">Harvested website content</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            {harvestInFlight
+              ? "Reading and normalizing their website now..."
+              : "Read their current site for services, about copy, and images instead of retyping it. Costs one Firecrawl map plus up to six page reads."}
+          </p>
+          <Button
+            size="sm"
+            variant="outline"
+            className="mt-3"
+            disabled={isBusy || isWorking}
+            onClick={() =>
+              runAction(
+                () => harvestWebsiteContent({ conceptId }),
+                "Reading their website...",
+              )
+            }
+          >
+            {harvestInFlight ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : null}
+            {harvestInFlight ? "Harvesting..." : "Harvest website content"}
+          </Button>
         </div>
       ) : null}
 
@@ -656,7 +900,13 @@ export function ConceptReviewCard({
             </select>
           </div>
           <Button
-            disabled={isBusy || isWorking || !concept.researchBrief}
+            disabled={
+              isBusy ||
+              isWorking ||
+              harvestPending ||
+              harvestInFlight ||
+              !concept.researchBrief
+            }
             onClick={() =>
               runAction(
                 () =>
