@@ -27,7 +27,6 @@ import { ConceptHarvestImages } from "./ConceptHarvestImages";
 import { ConceptFacebookPack } from "./ConceptFacebookPack";
 import { ConceptPackSummary } from "./ConceptPackSummary";
 import { ConceptEvidenceReport } from "./ConceptEvidenceReport";
-import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
 import {
   conceptDraftPassedValidation,
   generationBlockedReason,
@@ -166,7 +165,6 @@ export function ConceptReviewCard({
   const attachAsset = useMutation(api.concepts.admin.attachAsset);
   const removeAsset = useMutation(api.concepts.admin.removeAsset);
 
-  const [structureId, setStructureId] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [pane, setPane] = useState<WorkspacePane>("now");
@@ -208,7 +206,6 @@ export function ConceptReviewCard({
       notes: concept.notes ?? "",
     });
     setQuotes(concept.approvedQuotes);
-    setStructureId(concept.structureId ?? "");
   }, [concept?._id, concept?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -750,17 +747,11 @@ export function ConceptReviewCard({
           generationBlocked={generationBlocked}
           packItemCount={packItems.length}
           isBusy={isBusy}
-          structureId={structureId}
-          onStructureId={setStructureId}
           onOpenPack={() => setPane("pack")}
           onOpenPreview={() => setPane("preview")}
           onGenerate={() =>
             runAction(
-              () =>
-                generate({
-                  conceptId,
-                  structureId: structureId || undefined,
-                }),
+              () => generate({ conceptId }),
               "Generating...",
             )
           }
@@ -965,10 +956,7 @@ export function ConceptReviewCard({
               onRegenerate={() =>
                 runAction(
                   () =>
-                    generate({
-                      conceptId,
-                      structureId: structureId || undefined,
-                    }),
+                    generate({ conceptId }),
                   "Generating with the selected images...",
                 )
               }
@@ -997,19 +985,13 @@ export function ConceptReviewCard({
                     conceptId,
                     approvedCandidateIds: candidateIds,
                   });
-                  await generate({
-                    conceptId,
-                    structureId: structureId || undefined,
-                  });
+                  await generate({ conceptId });
                 }, "Approved content saved. Generating a new concept...")
               }
               onSkipAndGenerate={() =>
                 runAction(async () => {
                   await skipHarvestReview({ conceptId });
-                  await generate({
-                    conceptId,
-                    structureId: structureId || undefined,
-                  });
+                  await generate({ conceptId });
                 }, "Website content ignored. Generating from the brief...")
               }
               onRefresh={() =>
@@ -1398,16 +1380,6 @@ export function ConceptReviewCard({
 
       {pane === "preview" && concept.generatedHtml ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 text-[11px] text-[var(--muted-foreground)]">
-          {concept.structureId ? (
-            <>
-              Shape:{" "}
-              <span className="font-medium text-[var(--foreground)]">
-                {CONCEPT_STRUCTURES.find((s) => s.id === concept.structureId)
-                  ?.name ?? concept.structureId}
-              </span>
-              {" · "}
-            </>
-          ) : null}
           {concept.model ? <>Model: {concept.model} · </> : null}
           {concept.promptVersion ? <>Prompt: {concept.promptVersion}</> : null}
           <span className="mt-1 block">
@@ -1434,11 +1406,7 @@ export function ConceptReviewCard({
         isBusy={isBusy || isWorking || isUploading}
         onGenerate={() =>
           runAction(
-            () =>
-              generate({
-                conceptId,
-                structureId: structureId || undefined,
-              }),
+            () => generate({ conceptId }),
             "Generating...",
           )
         }
@@ -1470,8 +1438,6 @@ function NowPane({
   generationBlocked,
   packItemCount,
   isBusy,
-  structureId,
-  onStructureId,
   onOpenPack,
   onOpenPreview,
   onGenerate,
@@ -1495,8 +1461,6 @@ function NowPane({
   generationBlocked: string | null;
   packItemCount: number;
   isBusy: boolean;
-  structureId: string;
-  onStructureId: (value: string) => void;
   onOpenPack: () => void;
   onOpenPreview: () => void;
   onGenerate: () => Promise<boolean>;
@@ -1633,20 +1597,6 @@ function NowPane({
         </Button>
       ) : null}
       <div className="mt-3 space-y-2">
-        <Label htmlFor="structure-select">Page shape</Label>
-        <select
-          id="structure-select"
-          value={structureId}
-          onChange={(event) => onStructureId(event.target.value)}
-          className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm"
-        >
-          <option value="">Pick automatically from the brief</option>
-          {CONCEPT_STRUCTURES.map((structure) => (
-            <option key={structure.id} value={structure.id}>
-              {structure.name} — {structure.fitsWhen}
-            </option>
-          ))}
-        </select>
         <Button
           className="w-full sm:w-auto"
           disabled={isBusy || generationBlocked !== null}

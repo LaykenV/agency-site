@@ -578,6 +578,10 @@ export const conceptBriefValidator = v.object({
         url: v.string(),
         role: v.optional(conceptPackImageRoleValidator),
         alt: v.optional(v.string()),
+        width: v.optional(v.number()),
+        height: v.optional(v.number()),
+        /** Whether the model received this file as pixels, not just as a URL. */
+        seen: v.optional(v.boolean()),
       }),
     ),
   ),
@@ -982,7 +986,6 @@ export const websiteConceptSummaryValidator = v.object({
   businessName: v.string(),
   facebookPageUrl: v.optional(v.string()),
   status: conceptStatusValidator,
-  structureId: v.optional(v.string()),
   hasGeneratedHtml: v.boolean(),
   validationViolations: v.optional(v.array(v.string())),
   placeMatchResolved: v.boolean(),

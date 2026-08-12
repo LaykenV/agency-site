@@ -72,7 +72,6 @@ function toSummary(concept: Doc<"website_concepts">) {
     businessName: concept.businessName,
     facebookPageUrl: concept.facebookPageUrl,
     status: concept.status,
-    structureId: concept.structureId,
     hasGeneratedHtml: Boolean(concept.generatedHtml),
     validationViolations: concept.validationViolations,
     placeMatchResolved: concept.placeMatchResolved,
@@ -1173,7 +1172,6 @@ export const approveHarvestReview = mutation({
 export const generate = mutation({
   args: {
     conceptId: v.id("website_concepts"),
-    structureId: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -1194,10 +1192,7 @@ export const generate = mutation({
     await ctx.scheduler.runAfter(
       0,
       internal.concepts.internal.queueGeneration,
-      {
-        conceptId: args.conceptId,
-        structureId: args.structureId,
-      },
+      { conceptId: args.conceptId },
     );
 
     return null;
@@ -1292,7 +1287,6 @@ export const publish = mutation({
       token: concept.token,
       model: concept.model,
       promptVersion: concept.promptVersion,
-      structureId: concept.structureId,
     });
 
     return null;

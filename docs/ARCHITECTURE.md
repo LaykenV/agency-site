@@ -77,7 +77,7 @@ redirect were removed with it.
   unauthenticated preview surface
 - `convex/publicAudits.ts` — the self-service audit
 - `lib/concepts/` — runtime-agnostic concept core: the brief shape, the
-  generation prompt and page shapes, the HTML validator, and the Messenger draft
+  generation prompt, the HTML validator, and the Messenger draft
 
 ## Data model
 
@@ -262,7 +262,12 @@ homepage concept:
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
 6. bespoke HTML and inline CSS from Muse Spark 1.2 (`meta/muse-spark-1.2`) at
-   medium reasoning
+   medium reasoning. The request includes the approved logo and photographs as
+   vision input plus their pixel sizes, each attachment labelled with the exact
+   allowlisted URL to use for it. Muse invents the visual system; there is no
+   assigned page shape. Mobile is not part of what it invents — the prompt
+   carries hard 360px-first requirements, and the validator rejects
+   `overflow-x: hidden`.
 7. deterministic safety and HTML validation
 8. human review of the finished page, then publication at `/preview/<token>`
 
@@ -299,11 +304,26 @@ none; they do advertise `reasoning`. Reasoning tokens are billed against
 ### Google Places is identity, not content
 
 Places answers one persisted question: which business is this. Candidate
-address, phone, category, and website details are displayed live only to help
-recognize the listing; none becomes a stored fact or generation input.
+address, phone, category, and website details are displayed live to help
+recognize the listing.
 
-- The confirmed `placeId` is the only Places value retained. Google's policy
+- The confirmed `placeId` is the only raw Places value retained. Google's policy
   exempts it from the retention limits that cover the rest of a response.
+- At research time a two-field lookup on that place ID
+  (`PLACE_IDENTITY_FIELD_MASK`) may write two identity labels onto the brief: a
+  humanized `primaryType` (`general contractor`) and a city/region locality
+  (`Youngsville, LA`). Street address, unit, and postal code are stripped. The
+  lookup addresses the confirmed ID directly rather than re-running the ranked
+  name search, so a listing does not lose its labels when search results drift.
+- Those two labels are derived from Places content and are stored on
+  `researchBrief`, which is a deliberate narrowing of the earlier "nothing but
+  the place ID survives" rule rather than an exception to Google's retention
+  terms. They are cheap to re-derive: re-running research rewrites both. If
+  retention becomes a question, deleting them and regenerating is the answer,
+  not a migration.
+- `clearPersistedGoogleContent` strips these two fields by default and must be
+  run before this behaviour deploys, or run with `keepIdentityLabels: true`
+  afterward. See the comment at the top of `convex/concepts/migrations.ts`.
 - Candidates for an unresolved match are fetched live when the admin match panel
   opens, shown with exact Google Maps attribution, and never written to the
   database. Confirmation re-runs the current search so an arbitrary valid place
@@ -387,7 +407,8 @@ page. Source priority for the generation prompt is:
 1. manual business information
 2. Facebook Pack evidence admitted from an exact excerpt
 3. website evidence admitted from an exact excerpt
-4. Google Places identity only
+4. Google Places identity only (name, directions link, optional trade label
+   and city/region)
 
 Image candidates are staged by a Node action that validates HTTPS, exact or
 reviewed host, public DNS, manual redirects, an 8 MiB cap, MIME, and magic bytes,

@@ -91,7 +91,6 @@ export const setStatus = internalMutation({
 export const queueGeneration = internalMutation({
   args: {
     conceptId: v.id("website_concepts"),
-    structureId: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -157,7 +156,6 @@ export const queueGeneration = internalMutation({
 
     await ctx.scheduler.runAfter(0, internal.concepts.generate.runGeneration, {
       conceptId: args.conceptId,
-      structureId: args.structureId,
       generationRequestId,
     });
     return null;
@@ -364,7 +362,6 @@ export const saveGeneration = internalMutation({
     conceptId: v.id("website_concepts"),
     brief: conceptBriefValidator,
     generatedHtml: v.string(),
-    structureId: v.string(),
     model: v.string(),
     promptVersion: v.string(),
     violations: v.array(v.string()),
@@ -385,7 +382,9 @@ export const saveGeneration = internalMutation({
     await ctx.db.patch(args.conceptId, {
       researchBrief: args.brief,
       generatedHtml: args.generatedHtml,
-      structureId: args.structureId,
+      // Clears the legacy page shape off any row regenerated after the picker
+      // was removed. The column stays in the schema for rows not yet redone.
+      structureId: undefined,
       model: args.model,
       promptVersion: args.promptVersion,
       validationViolations: ok ? undefined : args.violations,
@@ -928,7 +927,9 @@ export const saveHarvest = internalMutation({
       // that approved nothing still changes nothing, so the existing draft is
       // left alone rather than thrown away for a scrape that found nothing.
       generatedHtml: hasApprovedContent ? undefined : concept.generatedHtml,
-      structureId: hasApprovedContent ? undefined : concept.structureId,
+      // Legacy page shape, kept in the schema for rows generated before the
+      // picker was removed and never conditional again.
+      structureId: undefined,
       validationViolations: hasApprovedContent
         ? undefined
         : concept.validationViolations,

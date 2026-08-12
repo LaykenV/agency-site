@@ -33,6 +33,22 @@ import { internalMutation } from "../_generated/server";
  *
  * Safe to re-run: a row with nothing left to clear is skipped rather than
  * rewritten, so `cleared` on a second pass is the proof the first one finished.
+ *
+ * ## Run this BEFORE deploying prompt version 2026-08-12.5 or later
+ *
+ * As of that version `runSiteResearch` writes `category` and `locality` back
+ * onto the brief, derived from a two-field lookup on the confirmed place ID.
+ * Those are legitimate values with real provenance, and this migration cannot
+ * tell them apart from the pre-B0 ones it exists to remove.
+ *
+ * Ordering, therefore:
+ *
+ * - Before the deploy — run it plainly. Every `category` and `locality` in the
+ *   database is pre-B0 and should go.
+ * - After the deploy — pass `keepIdentityLabels: true`, or the run will strip
+ *   labels that research legitimately derived. Nothing is permanently lost if
+ *   that happens; re-running research on the concept re-derives both. It is
+ *   simply an avoidable round trip.
  */
 
 /** Google facts stripped from any stored `researchBrief`. */
@@ -42,17 +58,28 @@ const DEPRECATED_BRIEF_FIELDS = [
   "googleReviewCount",
   "hours",
   "googleReviewSummary",
-  // Before B0 these were populated only from Places. They remain valid brief
-  // fields for future approved website content, but old values have no such
-  // provenance and must be cleared.
-  "category",
-  "locality",
 ] as const;
+
+/**
+ * Cleared as well unless `keepIdentityLabels` is set.
+ *
+ * Before B0 these were populated only from Places and have no defensible
+ * provenance. From 2026-08-12.5 onward research repopulates them from the
+ * confirmed listing, which is why they are separable rather than part of the
+ * list above.
+ */
+const IDENTITY_LABEL_BRIEF_FIELDS = ["category", "locality"] as const;
 
 export const clearPersistedGoogleContent = internalMutation({
   args: {
     /** Report what would change without writing. Defaults to true. */
     dryRun: v.optional(v.boolean()),
+    /**
+     * Leave `category` and `locality` alone. Set this when running after
+     * prompt version 2026-08-12.5 has deployed, because from that point they
+     * are derived from the confirmed place ID rather than left over from B0.
+     */
+    keepIdentityLabels: v.optional(v.boolean()),
   },
   returns: v.object({
     dryRun: v.boolean(),
@@ -67,6 +94,9 @@ export const clearPersistedGoogleContent = internalMutation({
   }),
   handler: async (ctx, args) => {
     const dryRun = args.dryRun ?? true;
+    const clearableBriefFields = args.keepIdentityLabels
+      ? DEPRECATED_BRIEF_FIELDS
+      : [...DEPRECATED_BRIEF_FIELDS, ...IDENTITY_LABEL_BRIEF_FIELDS];
     const concepts = await ctx.db.query("website_concepts").collect();
 
     let cleared = 0;
@@ -86,7 +116,7 @@ export const clearPersistedGoogleContent = internalMutation({
         | (Record<string, unknown> & { businessName: string })
         | undefined;
       const staleBriefFields: Array<string> = brief
-        ? DEPRECATED_BRIEF_FIELDS.filter((field) => brief[field] !== undefined)
+        ? clearableBriefFields.filter((field) => brief[field] !== undefined)
         : [];
       if (brief?.phone !== undefined && !concept.phone) {
         staleBriefFields.push("phone");

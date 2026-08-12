@@ -1,7 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   findHighConfidencePlaceMatch,
+  humanizePlaceType,
   isCurrentPlaceCandidate,
+  localityFromFormattedAddress,
+  PLACE_IDENTITY_FIELD_MASK,
   PLACE_MATCH_FIELD_MASK,
 } from "../lib/concepts/placeMatch";
 
@@ -13,6 +16,51 @@ const baseCandidate = {
   websiteUrl: "https://www.shayscleaning.com/",
   businessStatus: "OPERATIONAL",
 };
+
+describe("Places identity labels", () => {
+  /**
+   * The identity lookup addresses one confirmed place, so it must not reach
+   * for anything beyond the two labels the brief is allowed to carry.
+   */
+  test("requests only the trade label and the address it derives a city from", () => {
+    expect([...PLACE_IDENTITY_FIELD_MASK]).toEqual([
+      "primaryType",
+      "formattedAddress",
+    ]);
+    const mask = PLACE_IDENTITY_FIELD_MASK.join(",");
+    for (const banned of [
+      "rating",
+      "review",
+      "photo",
+      "openingHours",
+      "phone",
+    ]) {
+      expect(mask.toLowerCase()).not.toContain(banned.toLowerCase());
+    }
+  });
+
+  test("humanizes a primary type without storing the raw enum", () => {
+    expect(humanizePlaceType("general_contractor")).toBe("general contractor");
+    expect(humanizePlaceType("  ")).toBeUndefined();
+    expect(humanizePlaceType(undefined)).toBeUndefined();
+  });
+
+  test("keeps city and region and drops street and postal code", () => {
+    expect(
+      localityFromFormattedAddress(
+        "101 Main Street, Youngsville, LA 70592, USA",
+      ),
+    ).toBe("Youngsville, LA");
+    expect(
+      localityFromFormattedAddress(
+        "Youngsville, Louisiana 70592, United States",
+      ),
+    ).toBe("Youngsville, Louisiana");
+    expect(localityFromFormattedAddress("101 Main Street, LA 70592")).toBe(
+      "LA",
+    );
+  });
+});
 
 describe("high-confidence Google Places matching", () => {
   test("requests no rating, review, photo, or hours fields", () => {

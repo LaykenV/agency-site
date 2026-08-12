@@ -346,6 +346,18 @@ export function validateConceptHtml(
     );
   }
 
+  // `overflow-x: hidden` is the standard way a model hides a layout that
+  // actually overflows. It also turns the element into a scroll container,
+  // which breaks `position: sticky` in iOS Safari — the exact browser these
+  // concepts are opened in. `clip` contains the overflow without that effect,
+  // and the prompt asks for it by name, so a `hidden` here is worth the one
+  // repair it costs.
+  if (/overflow-x\s*:\s*hidden/i.test(html)) {
+    violations.push(
+      "Uses `overflow-x: hidden`. Use `overflow-x: clip` instead, and fix whatever is actually overflowing at 360px.",
+    );
+  }
+
   // --- Executable and embedded content ---
 
   for (const element of BANNED_ELEMENTS) {

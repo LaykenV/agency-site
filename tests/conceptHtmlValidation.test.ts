@@ -212,6 +212,21 @@ describe("validateConceptHtml — self-containment", () => {
     expect(violationsFor(html).some((v) => v.includes("viewport"))).toBe(true);
   });
 
+  /**
+   * The prompt asks for `clip` by name. `hidden` is how a model papers over a
+   * layout that genuinely overflows, and it breaks `position: sticky` in the
+   * iOS browser these concepts are actually opened in.
+   */
+  test("rejects overflow-x: hidden and accepts overflow-x: clip", () => {
+    const hidden = baseline.replace("body{margin:0", "body{overflow-x:hidden;margin:0");
+    expect(
+      violationsFor(hidden).some((v) => v.includes("overflow-x: clip")),
+    ).toBe(true);
+
+    const clip = baseline.replace("body{margin:0", "body{overflow-x:clip;margin:0");
+    expect(violationsFor(clip)).toEqual([]);
+  });
+
   test("rejects a document over the size ceiling", () => {
     const html = validDocument(`<main><p>${"a".repeat(420_000)}</p></main>`);
     expect(violationsFor(html).some((v) => v.includes("byte ceiling"))).toBe(

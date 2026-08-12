@@ -33,6 +33,57 @@ export const PLACE_MATCH_FIELD_MASK = [
   "places.businessStatus",
 ] as const;
 
+/**
+ * The two fields a confirmed listing may contribute to a brief.
+ *
+ * Deliberately narrower than `PLACE_MATCH_FIELD_MASK`, and without the
+ * `places.` prefix, because this one addresses a single place by ID rather
+ * than a search response. Asking for nothing else means rating, reviews,
+ * hours, and phone never enter the process at this stage even by accident.
+ */
+export const PLACE_IDENTITY_FIELD_MASK = [
+  "primaryType",
+  "formattedAddress",
+] as const;
+
+/** Google's `general_contractor` becomes a brief category, not a stored Places row. */
+export function humanizePlaceType(
+  value: string | undefined,
+): string | undefined {
+  if (!value) return undefined;
+  const label = value.replace(/_/g, " ").replace(/\s+/g, " ").trim();
+  return label || undefined;
+}
+
+/**
+ * City and region only. Street, unit, and postal code stay out of the brief
+ * because Places content is identity, not an address the page may publish.
+ */
+export function localityFromFormattedAddress(
+  address: string | undefined,
+): string | undefined {
+  if (!address) return undefined;
+  const parts = address
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (parts.length === 0) return undefined;
+  if (/^(usa|us|united states)$/i.test(parts[parts.length - 1] ?? "")) {
+    parts.pop();
+  }
+  if (parts.length === 0) return undefined;
+
+  const region = (parts[parts.length - 1] ?? "")
+    .replace(/\s+\d{5}(?:-\d{4})?$/, "")
+    .trim();
+  if (parts.length === 1) return region || undefined;
+
+  const city = parts[parts.length - 2] ?? "";
+  if (!city || /^\d/.test(city)) return region || undefined;
+  if (!region) return city;
+  return `${city}, ${region}`;
+}
+
 export function isCurrentPlaceCandidate(
   placeId: string,
   candidates: Array<Pick<PlaceMatchCandidate, "placeId">>,

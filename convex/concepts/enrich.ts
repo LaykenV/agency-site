@@ -6,7 +6,10 @@ import { runPageSpeed } from "../lib/pagespeed";
 import type { ConceptBrief } from "../../lib/concepts/brief";
 import {
   findHighConfidencePlaceMatch,
+  humanizePlaceType,
   isCurrentPlaceCandidate,
+  localityFromFormattedAddress,
+  PLACE_IDENTITY_FIELD_MASK,
   PLACE_MATCH_FIELD_MASK,
 } from "../../lib/concepts/placeMatch";
 import { conceptGoogleMapsUrl } from "../../lib/concepts/googleMaps";
@@ -32,6 +35,7 @@ import { conceptPlaceCandidateValidator } from "../validators";
 
 const PLACES_SEARCH_ENDPOINT =
   "https://places.googleapis.com/v1/places:searchText";
+const PLACES_DETAILS_ENDPOINT = "https://places.googleapis.com/v1/places";
 const FIRECRAWL_ENDPOINT = "https://api.firecrawl.dev/v2/scrape";
 
 /** How many candidates a human is asked to choose between. */
@@ -114,6 +118,46 @@ async function runPlacesTextSearch(
 
   const json = (await response.json()) as { places?: Array<PlaceResult> };
   return Array.isArray(json.places) ? json.places : [];
+}
+
+/**
+ * Read the two identity labels off a confirmed place ID.
+ *
+ * Addressed by ID rather than by re-running the name search: the search is
+ * ranked and paged, so a listing confirmed weeks ago can drop out of the top
+ * results after a rename or a competitor moving in, and the labels would go
+ * quietly missing. This asks for exactly the place already confirmed, and for
+ * only two fields.
+ */
+async function fetchPlaceIdentity(placeId: string): Promise<{
+  primaryType?: string;
+  formattedAddress?: string;
+}> {
+  const response = await fetch(
+    `${PLACES_DETAILS_ENDPOINT}/${encodeURIComponent(placeId)}`,
+    {
+      headers: {
+        "X-Goog-Api-Key": getPlacesApiKey(),
+        "X-Goog-FieldMask": PLACE_IDENTITY_FIELD_MASK.join(","),
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Google Places details failed: ${response.status} ${details.slice(0, 300)}`,
+    );
+  }
+
+  const json = (await response.json()) as {
+    primaryType?: string;
+    formattedAddress?: string;
+  };
+  return {
+    primaryType: json.primaryType,
+    formattedAddress: json.formattedAddress,
+  };
 }
 
 function toCandidate(place: PlaceResult): PlaceCandidate | null {
@@ -426,16 +470,43 @@ export const runSiteResearch = internalAction({
         }
       }
 
+      // Identity labels only. A lookup on the confirmed place ID can name the
+      // trade and the city; street address, hours, rating, and reviews stay
+      // out, and the raw Places row is not stored.
+      //
+      // Research is re-runnable, so a lookup that fails keeps whatever the
+      // last successful run derived rather than blanking two good labels
+      // because Google was briefly unreachable.
+      let category = concept.researchBrief?.category;
+      let locality = concept.researchBrief?.locality;
+      if (concept.matchedGooglePlaceId) {
+        try {
+          const identity = await fetchPlaceIdentity(
+            concept.matchedGooglePlaceId,
+          );
+          category = humanizePlaceType(identity.primaryType) ?? category;
+          locality =
+            localityFromFormattedAddress(identity.formattedAddress) ?? locality;
+        } catch (error) {
+          console.warn("[concepts] place identity labels unavailable", {
+            conceptId: args.conceptId,
+            placeId: concept.matchedGooglePlaceId,
+            error,
+          });
+        }
+      }
+
       // The machine half of the brief. Human-owned fields (assets, notes,
       // quotes) are laid over this at generation time.
       //
       // Nothing Google-specific survives except the directions link, which is
-      // rebuilt from the exempt place ID. Rating, review count, opening hours,
-      // street address, and review themes are gone on purpose; a fact the page
-      // states has to come from Layken or, from B2 onward, from approved
-      // website content.
+      // rebuilt from the exempt place ID, and the two identity labels above.
+      // A fact the page states has to come from Layken or from approved
+      // Facebook / website content.
       const researchBrief: ConceptBrief = {
         businessName: concept.businessName,
+        category,
+        locality,
         serviceArea: concept.serviceArea,
         phone: concept.phone,
         googleMapsUrl: conceptGoogleMapsUrl({

@@ -501,7 +501,7 @@ export default defineSchema({
 
     researchBrief: v.optional(conceptBriefValidator),
     generatedHtml: v.optional(v.string()),
-    /** Which named page shape produced this draft, for admin visibility. */
+    /** Legacy named page shape. New drafts leave this unset. */
     structureId: v.optional(v.string()),
     /** Deterministic validator output from the last generation attempt. */
     validationViolations: v.optional(v.array(v.string())),

@@ -124,6 +124,15 @@ export type ConceptBrief = {
     url: string;
     role?: "hero" | "gallery" | "background" | "supporting";
     alt?: string;
+    width?: number;
+    height?: number;
+    /**
+     * Whether the generator sent this file to the model as pixels. False for a
+     * format the model cannot read, an unreadable file, or one the request
+     * budget cut off. The URL is still usable either way; the prompt just says
+     * which photos the model is placing blind.
+     */
+    seen?: boolean;
   }>;
 
   /** The only testimonial text the page may render. Usually empty. */
@@ -168,6 +177,9 @@ export function refreshConceptBrief(input: {
     url: string;
     role?: "hero" | "gallery" | "background" | "supporting";
     alt?: string;
+    width?: number;
+    height?: number;
+    seen?: boolean;
   }>;
   approvedQuotes: Array<ConceptApprovedQuote>;
   approvedWebsiteContent?: ConceptApprovedContent;
