@@ -165,6 +165,9 @@ describe("audit prompts", () => {
     // Supported claims are not repeated back as corrections.
     expect(instruction).not.toContain("Metal roofing");
     expect(instruction).toContain("remove the claim");
+    expect(instruction).toContain("Delete the complete sentence or paragraph");
+    expect(instruction).toContain("Never describe a BRIEF list as exhaustive");
+    expect(instruction).toContain("never infer what the owner emphasizes");
   });
 });
 

@@ -256,14 +256,16 @@ export function claimAuditViolations(audit: ClaimAudit): Array<string> {
  *
  * It names the offending sentences rather than restating the rules. The rules
  * were already in the prompt that produced them; what the second attempt needs
- * is the specific list of things to drop or soften.
+ * is the specific list of things to delete. Muse has a tendency to preserve a
+ * rejected idea as meta-commentary ("the owner emphasizes...") or negate it
+ * ("no other services..."). Both still assert facts the brief never supplied.
  */
 export function buildClaimAuditRetryInstruction(audit: ClaimAudit): string {
   const lines = [
     "",
     "## FACTUAL CORRECTIONS — mandatory",
     "",
-    "A previous draft of this page stated things the BRIEF does not support. Rewrite the page without them. Do not restate them in softer words; remove the claim.",
+    "A previous draft of this page stated things the BRIEF does not support. Rewrite the page without them. To remove the claim: Delete the complete sentence or paragraph containing each rejected idea. Do not negate it, soften it, attribute it to the owner or supplied materials, or explain that it was removed.",
     "",
   ];
   for (const entry of audit.unsupported) {
@@ -271,7 +273,7 @@ export function buildClaimAuditRetryInstruction(audit: ClaimAudit): string {
   }
   lines.push("");
   lines.push(
-    "The page must still be complete and persuasive. Carry it with design, the services you were given, and the owner's own words.",
+    "Never describe a BRIEF list as exhaustive and never infer what the owner emphasizes, prioritizes, specializes in, or intends. State supported facts directly. The page must still be complete and persuasive; carry it with design and the exact services and wording you were given.",
   );
   return lines.join("\n");
 }

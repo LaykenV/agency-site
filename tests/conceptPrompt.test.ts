@@ -217,6 +217,14 @@ describe("buildConceptSystemPrompt", () => {
   test("tells the model not to add its own concept disclaimer", () => {
     expect(prompt.toLowerCase()).toContain("do not add your own");
   });
+
+  test("forbids completeness and invented-emphasis meta claims", () => {
+    expect(prompt).toContain(
+      "Treat every service and claim list as non-exhaustive",
+    );
+    expect(prompt).toContain('does not mean "the owner emphasizes pricing"');
+    expect(prompt).toContain("Do not add source commentary");
+  });
 });
 
 describe("buildConceptUserPrompt", () => {

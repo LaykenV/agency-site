@@ -29,7 +29,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-12.1";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.2";
 
 export type ConceptStructure = {
   id: string;
@@ -335,6 +335,9 @@ The BRIEF below is the complete set of facts you may state. It is not a starting
 - Do NOT write any phone number other than the verified one. If no phone is given, the page shows no phone number.
 - Do NOT use star glyphs (★ ☆ ⭐) unless an APPROVED QUOTE carries a rating. There is no rating in this brief otherwise, and a star with nothing behind it is invented social proof.
 - Do NOT invent metrics. No "500+ happy customers", no "20 years of experience", no "98% satisfaction" unless the brief states it.
+- Treat every service and claim list as non-exhaustive. Never say or imply "only these services", "no extras", "everything we offer", "our complete range", or that the business provides nothing beyond the items listed. The BRIEF proves what is present, not what is absent.
+- State supplied facts directly. Do not add source commentary such as "the owner says", "the owner's materials state", "verified by the brief", or "stated directly in supplied materials" unless that exact attribution is itself in the BRIEF.
+- Do not turn a supplied fact into a claim about intent, priority, or emphasis. A listed price claim does not mean "the owner emphasizes pricing"; a listed service does not mean it is a specialty, priority, or signature service. Use the supplied wording without inventing that relationship.
 - Never write placeholder text. No \`lorem ipsum\`, no \`TODO\`, no \`[Business Name]\`, no \`example.com\`, no "Your Business Here".
 - If you do not have enough verified content to fill a section, remove the section. A shorter honest page beats a longer padded one.
 - Chat widgets, booking calendars, and quote forms may be shown ONLY as clearly-labelled static illustrations of what could be built, marked with words like "Example" or "Concept". They must not look live.
@@ -383,6 +386,7 @@ Check your document against this list and fix anything that fails:
 - Does it contain any \`<script>\`, \`on*=\`, \`<form>\`, \`<button>\`, \`<link>\`, \`@import\`, \`@font-face\`, \`target=\`, or \`mailto:\`? Remove it.
 - Does every image URL appear verbatim in APPROVED IMAGE URLS? Remove any that does not.
 - Does every stated fact appear in the BRIEF? Remove any that does not.
+- Does any sentence claim the lists are exhaustive, explain where a fact came from, or infer what the owner emphasizes? Remove that sentence.
 - Is there any phone number other than the verified one? Remove it.
 - Does it follow the assigned STRUCTURE's paper, type stack, rhythm, header, and footer?
 - Does it read at 360px with no horizontal scroll and no two-line buttons?
