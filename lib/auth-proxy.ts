@@ -2,6 +2,7 @@ const FORWARDED_REQUEST_HEADERS_TO_DROP = [
   "connection",
   "content-length",
   "host",
+  "transfer-encoding",
   "x-forwarded-host",
 ] as const;
 

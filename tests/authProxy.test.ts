@@ -24,6 +24,7 @@ describe("Better Auth proxy", () => {
         cookie: "session=abc",
         host: "acadianawebdesign.com",
         origin: "https://acadianawebdesign.com",
+        "transfer-encoding": "chunked",
         "x-forwarded-host": "acadianawebdesign.com",
       }),
     );
@@ -31,6 +32,7 @@ describe("Better Auth proxy", () => {
     expect(headers.has("connection")).toBe(false);
     expect(headers.has("content-length")).toBe(false);
     expect(headers.has("host")).toBe(false);
+    expect(headers.has("transfer-encoding")).toBe(false);
     expect(headers.has("x-forwarded-host")).toBe(false);
     expect(headers.get("cookie")).toBe("session=abc");
     expect(headers.get("origin")).toBe("https://acadianawebdesign.com");
