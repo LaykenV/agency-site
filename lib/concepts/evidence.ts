@@ -2,12 +2,11 @@
  * The common evidence contract: what a source claimed, and what may be said.
  *
  * Phase B asked Layken to tick a checkbox beside every harvested fact. Phase C
- * replaces that queue with a second model pass — a reviewer that receives the
- * normalized candidates and their source excerpts and decides which ones a
- * generated page may state. This module owns everything about that decision
- * that is not a network call: the candidate shape, the reviewer's prompt, the
- * runtime boundary around its answer, and the materialization into the approved
- * content the generation prompt actually sees.
+ * replaces that queue with one Luna extraction pass followed by deterministic
+ * server admission. This module owns the candidate shape, source-backed
+ * admission rules, conflict withholding, and materialization into the approved
+ * content the generation prompt actually sees. The older reviewer parser and
+ * prompt remain only until legacy rows are migrated and the schema contracts.
  *
  * It is deliberately source-agnostic. C2 feeds it Facebook Pack items; C4 feeds
  * it website harvest candidates through the same door, so neither source gets

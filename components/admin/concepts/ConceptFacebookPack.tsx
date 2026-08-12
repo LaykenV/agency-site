@@ -16,6 +16,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   PACK_MAX_IMAGE_ITEMS,
   PACK_MAX_ITEMS,
+  PACK_ANALYSIS_MAX_TOTAL_BYTES,
   summarizePack,
   type PackClassificationKind,
   type PackItem,
@@ -95,6 +96,10 @@ export function ConceptFacebookPack({
   const controlsLocked = isBusy || analyzing;
   const imagesFull = summary.images >= PACK_MAX_IMAGE_ITEMS;
   const packFull = summary.total >= PACK_MAX_ITEMS;
+  const imageBytes = items.reduce(
+    (sum, item) => sum + (item.kind === "image" ? (item.sizeBytes ?? 0) : 0),
+    0,
+  );
 
   const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const files = Array.from(event.clipboardData.items)
@@ -200,8 +205,11 @@ export function ConceptFacebookPack({
 
         <p className="text-[11px] text-[var(--muted-foreground)]">
           {summary.total} of {PACK_MAX_ITEMS} items · {summary.images} of{" "}
-          {PACK_MAX_IMAGE_ITEMS} images. JPEG, PNG, and WebP only; a copied
-          image URL is not fetched.
+          {PACK_MAX_IMAGE_ITEMS} images ·{" "}
+          {(imageBytes / 1024 / 1024).toFixed(1)} of{" "}
+          {PACK_ANALYSIS_MAX_TOTAL_BYTES / 1024 / 1024} MB. Large images are
+          resized before upload. JPEG, PNG, and WebP only; a copied image URL is
+          not fetched.
         </p>
       </div>
 
@@ -274,7 +282,7 @@ export function ConceptFacebookPack({
             ? "Sorted and reviewed. What survived review is what the next generation may say."
             : state === "collecting" && items.length > 0
               ? "Generation waits until this pack is analyzed, so nothing you pasted is silently left out."
-              : "Analysis is two paid model calls. Paste everything you want first, then analyze once."}
+              : "Analysis is one paid model call. Paste everything you want first, then analyze once."}
         </p>
       </div>
     </div>

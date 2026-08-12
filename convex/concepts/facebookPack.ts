@@ -363,7 +363,6 @@ export const runPackAnalysis = internalAction({
       // the same About section otherwise put the same claim in front of the
       // reviewer twice, which can be approved once and rejected once.
       const sourceCandidates = verdicts.flatMap((verdict) => verdict.facts);
-      const candidates = dedupeEvidenceCandidates(sourceCandidates);
 
       // No second request. The exclusion rules the reviewer used now run inside
       // the extraction prompt, and admission is decided here from the stored
@@ -378,18 +377,26 @@ export const runPackAnalysis = internalAction({
         verdicts,
       });
 
-      // Every extracted fact must be addressable by a unique short ref, and
-      // every ref used by a conflict must resolve. An incomplete conflict map is
-      // not a harmless warning: it could approve one side of a disagreement.
-      const factRefCount = verdicts.reduce(
-        (sum, verdict) => sum + verdict.factRefs.length,
-        0,
+      // A malformed ref must never turn into an approved fact, but it should
+      // not discard otherwise useful image classifications or unrelated facts.
+      // Keep only candidates the model made addressable. Unknown conflict refs
+      // then resolve to nothing, while every side we can resolve is withheld by
+      // `resolveEvidenceLocally`. This fails closed at the fact level instead
+      // of trapping the whole pack in a re-analysis loop.
+      const referencedCandidateIds = new Set(
+        Object.values(sourceRefIndex).flat(),
       );
-      if (factRefCount !== sourceCandidates.length) {
-        return await fail(
-          "The analysis returned a fact without a conflict reference. Re-analyze the pack.",
-          "classification",
-        );
+      const addressableSourceCandidates = sourceCandidates.filter((candidate) =>
+        referencedCandidateIds.has(candidate.id),
+      );
+      const candidates = dedupeEvidenceCandidates(addressableSourceCandidates);
+      if (addressableSourceCandidates.length !== sourceCandidates.length) {
+        console.warn("[concepts] withheld pack facts with missing refs", {
+          conceptId: args.conceptId,
+          requestId: args.facebookPackRequestId,
+          withheld:
+            sourceCandidates.length - addressableSourceCandidates.length,
+        });
       }
       if (conflictsTruncated) {
         return await fail(
@@ -397,16 +404,15 @@ export const runPackAnalysis = internalAction({
           "classification",
         );
       }
-      for (const conflict of conflicts) {
-        if (
-          new Set(conflict.refs).size < 2 ||
-          conflict.refs.some((ref) => (sourceRefIndex[ref]?.length ?? 0) === 0)
-        ) {
-          return await fail(
-            "The analysis reported a conflict it could not resolve to both facts. Re-analyze the pack.",
-            "classification",
-          );
-        }
+      const unresolvedConflictRefs = conflicts.flatMap((conflict) =>
+        conflict.refs.filter((ref) => (sourceRefIndex[ref]?.length ?? 0) === 0),
+      );
+      if (unresolvedConflictRefs.length > 0) {
+        console.warn("[concepts] pack conflict contained unknown refs", {
+          conceptId: args.conceptId,
+          requestId: args.facebookPackRequestId,
+          count: unresolvedConflictRefs.length,
+        });
       }
 
       const refIndex = remapEvidenceRefIndex({

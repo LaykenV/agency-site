@@ -30,6 +30,7 @@ import {
   type PackImageRole,
   type PackItem,
 } from "../lib/concepts/facebookPack";
+import { PACK_UPLOAD_TARGET_BYTES } from "../lib/concepts/preparePackImage";
 
 function imageItem(id: string, overrides: Partial<PackItem> = {}): PackItem {
   return {
@@ -49,6 +50,12 @@ function classified(id: string, kind: PackClassificationKind): PackItem {
 }
 
 describe("pack intake bounds", () => {
+  test("client preparation leaves headroom for a full image pack", () => {
+    expect(PACK_UPLOAD_TARGET_BYTES * PACK_MAX_IMAGE_ITEMS).toBeLessThan(
+      PACK_ANALYSIS_MAX_TOTAL_BYTES,
+    );
+  });
+
   test("blocks a thirteenth image before the pack itself is full", () => {
     const items = Array.from({ length: PACK_MAX_IMAGE_ITEMS }, (_, index) =>
       imageItem(`i${index}`),
@@ -603,7 +610,7 @@ describe("parsePackConflicts — one pass reports its own contradictions", () =>
     ]);
   });
 
-  test("a fact with no ref is visible to the parser but fails live analysis", () => {
+  test("a fact with no ref is visible so live analysis can withhold it", () => {
     const unlabelled = {
       items: [
         {
@@ -634,16 +641,18 @@ describe("parsePackConflicts — one pass reports its own contradictions", () =>
       resolve(process.cwd(), "convex/concepts/facebookPack.ts"),
       "utf8",
     );
-    expect(source).toContain("factRefCount !== sourceCandidates.length");
+    expect(source).toContain("addressableSourceCandidates");
+    expect(source).toContain("withheld pack facts with missing refs");
   });
 
-  test("a conflict with an unknown ref fails live analysis", () => {
+  test("a conflict with an unknown ref is logged and resolved facts are withheld", () => {
     const source = readFileSync(
       resolve(process.cwd(), "convex/concepts/facebookPack.ts"),
       "utf8",
     );
-    expect(source).toContain("sourceRefIndex[ref]?.length");
-    expect(source).toContain("could not resolve to both facts");
+    expect(source).toContain("unresolvedConflictRefs");
+    expect(source).toContain("pack conflict contained unknown refs");
+    expect(source).not.toContain("could not resolve to both facts");
   });
 
   test("tolerates a missing conflicts key", () => {

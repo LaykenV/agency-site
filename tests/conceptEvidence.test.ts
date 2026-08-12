@@ -395,15 +395,15 @@ describe("resolveEvidenceLocally — admission without a second model turn", () 
     expect(review.conflicts).toEqual(["Two different founding years."]);
   });
 
-  test("a conflict naming an unknown ref still surfaces but withholds nothing", () => {
+  test("a conflict with one known and one unknown ref withholds the known side", () => {
     const fact = candidate("service", "Outdoor kitchens");
     const review = resolveEvidenceLocally({
       candidates: [fact],
-      conflicts: [{ refs: ["f99"], note: "Something disagreed." }],
+      conflicts: [{ refs: ["f1", "f99"], note: "Something disagreed." }],
       refIndex: { f1: [fact.id] },
     });
 
-    expect(review.decisions[0]?.decision).toBe("approved");
+    expect(review.decisions[0]?.decision).toBe("rejected");
     expect(review.conflicts).toEqual(["Something disagreed."]);
   });
 

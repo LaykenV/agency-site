@@ -37,6 +37,7 @@ import {
   conceptPreviewUrl,
 } from "@/lib/concepts/messengerDraft";
 import { cn } from "@/lib/utils";
+import { preparePackImage } from "@/lib/concepts/preparePackImage";
 
 /**
  * The human review gate.
@@ -395,6 +396,7 @@ export function ConceptReviewCard({
   const handlePackImages = async (files: Array<File>) => {
     setIsUploading(true);
     let attached = 0;
+    let optimized = 0;
     try {
       for (const file of files) {
         try {
@@ -403,11 +405,13 @@ export function ConceptReviewCard({
               `${file.name || "Clipboard item"} is not an image.`,
             );
           }
+          const prepared = await preparePackImage(file);
+          if (prepared.optimized) optimized += 1;
           const uploadUrl = await generateUploadUrl();
           const response = await fetch(uploadUrl, {
             method: "POST",
-            headers: { "Content-Type": file.type },
-            body: file,
+            headers: { "Content-Type": prepared.file.type },
+            body: prepared.file,
           });
           if (!response.ok) throw new Error("Upload failed.");
 
@@ -424,7 +428,7 @@ export function ConceptReviewCard({
       }
       if (attached > 0) {
         toast.success(
-          `${attached} item${attached === 1 ? "" : "s"} added to the pack.`,
+          `${attached} item${attached === 1 ? "" : "s"} added to the pack.${optimized > 0 ? ` Optimized ${optimized} large image${optimized === 1 ? "" : "s"}.` : ""}`,
         );
       }
     } finally {
