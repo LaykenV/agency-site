@@ -34,6 +34,8 @@ import {
   conceptHarvestReviewStateValidator,
   conceptApprovedWebsiteContentValidator,
   conceptImportedWebsiteAssetValidator,
+  conceptFacebookPackItemValidator,
+  conceptFacebookPackStateValidator,
   conceptStatusValidator,
 } from "./validators";
 
@@ -442,6 +444,33 @@ export default defineSchema({
     importedWebsiteAssets: v.optional(
       v.array(conceptImportedWebsiteAssetValidator),
     ),
+
+    /**
+     * The supervised Facebook Pack: what Layken pasted or uploaded out of the
+     * prospect's Page, and the model's verdict on each item.
+     *
+     * Stored on the concept for the same reason the website harvest is — it is
+     * small, it belongs to exactly one concept, and it has no life after that
+     * concept is deleted. `lib/concepts/facebookPack.ts` holds the caps that
+     * keep it there: 20 items, 12 of them images, 4,000 characters of pasted
+     * text apiece. Image bytes live in Convex storage; only the storage ID,
+     * Convex's SHA-256, the declared type, and the byte count are kept here.
+     *
+     * Nothing in this block reaches a generation prompt yet. C1 collects and
+     * classifies; C2 adds the reviewed evidence that a brief may read, and with
+     * it the rule that changing pack material revokes the generated page.
+     *
+     * `facebookPackRequestId` works like `generationRequestId`: a slow analysis
+     * that lands after the pack changed is discarded rather than labelling
+     * material the model never saw.
+     */
+    facebookPackItems: v.optional(v.array(conceptFacebookPackItemValidator)),
+    facebookPackRequestId: v.optional(v.string()),
+    facebookPackState: v.optional(conceptFacebookPackStateValidator),
+    facebookPackAnalyzedAt: v.optional(v.number()),
+    facebookPackModel: v.optional(v.string()),
+    facebookPackPromptVersion: v.optional(v.string()),
+    facebookPackError: v.optional(v.string()),
 
     researchBrief: v.optional(conceptBriefValidator),
     generatedHtml: v.optional(v.string()),

@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ConceptPreviewFrame } from "./ConceptPreviewFrame";
 import { ConceptHarvestReview } from "./ConceptHarvestReview";
 import { ConceptHarvestImages } from "./ConceptHarvestImages";
+import { ConceptFacebookPack } from "./ConceptFacebookPack";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
 import {
   buildMessengerDraft,
@@ -121,14 +122,16 @@ export function ConceptReviewCard({
   const approveHarvestReview = useMutation(
     api.concepts.admin.approveHarvestReview,
   );
-  const stageHarvestImages = useMutation(
-    api.concepts.admin.stageHarvestImages,
-  );
+  const stageHarvestImages = useMutation(api.concepts.admin.stageHarvestImages);
   const approveHarvestImage = useMutation(
     api.concepts.admin.approveHarvestImage,
   );
-  const rejectHarvestImage = useMutation(
-    api.concepts.admin.rejectHarvestImage,
+  const rejectHarvestImage = useMutation(api.concepts.admin.rejectHarvestImage);
+  const addPackImage = useMutation(api.concepts.admin.addPackImage);
+  const addPackText = useMutation(api.concepts.admin.addPackText);
+  const removePackItem = useMutation(api.concepts.admin.removePackItem);
+  const analyzeFacebookPack = useMutation(
+    api.concepts.admin.analyzeFacebookPack,
   );
   const generate = useMutation(api.concepts.admin.generate);
   const publish = useMutation(api.concepts.admin.publish);
@@ -274,17 +277,24 @@ export function ConceptReviewCard({
       preview.url,
     ]),
   );
+  const packItems = concept.facebookPackItems ?? [];
+  const packPreviewUrls = Object.fromEntries(
+    data.packItemPreviews.map((preview) => [preview.itemId, preview.url]),
+  );
 
+  /** Resolves true when the action succeeded, so a caller can clear its input. */
   const runAction = async (
     action: () => Promise<unknown>,
     success?: string,
-  ) => {
+  ): Promise<boolean> => {
     setIsBusy(true);
     try {
       await action();
       if (success) toast.success(success);
+      return true;
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Something failed.");
+      return false;
     } finally {
       setIsBusy(false);
     }
@@ -346,6 +356,53 @@ export function ConceptReviewCard({
 
     event.preventDefault();
     void handleFiles(files, kind);
+  };
+
+  /**
+   * Add pasted or uploaded material to the Facebook Pack.
+   *
+   * Each file is reported on its own rather than aborting the batch: pasting
+   * four screenshots where the second is a repeat should attach the other
+   * three, not make Layken paste them again.
+   */
+  const handlePackImages = async (files: Array<File>) => {
+    setIsUploading(true);
+    let attached = 0;
+    try {
+      for (const file of files) {
+        try {
+          if (!file.type.startsWith("image/")) {
+            throw new Error(
+              `${file.name || "Clipboard item"} is not an image.`,
+            );
+          }
+          const uploadUrl = await generateUploadUrl();
+          const response = await fetch(uploadUrl, {
+            method: "POST",
+            headers: { "Content-Type": file.type },
+            body: file,
+          });
+          if (!response.ok) throw new Error("Upload failed.");
+
+          const { storageId } = (await response.json()) as {
+            storageId: Id<"_storage">;
+          };
+          await addPackImage({ conceptId, storageId });
+          attached += 1;
+        } catch (error) {
+          toast.error(
+            error instanceof Error ? error.message : "That item was not added.",
+          );
+        }
+      }
+      if (attached > 0) {
+        toast.success(
+          `${attached} item${attached === 1 ? "" : "s"} added to the pack.`,
+        );
+      }
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -555,6 +612,34 @@ export function ConceptReviewCard({
         </div>
       ) : null}
 
+      {/* --- Facebook Pack: the primary content source --- */}
+      <ConceptFacebookPack
+        items={packItems}
+        state={concept.facebookPackState}
+        error={concept.facebookPackError}
+        previewUrls={packPreviewUrls}
+        isBusy={isBusy || isUploading}
+        onAddImages={handlePackImages}
+        onAddText={(text) =>
+          runAction(
+            () => addPackText({ conceptId, text }),
+            "Text added to the pack.",
+          )
+        }
+        onRemoveItem={(itemId) =>
+          runAction(
+            () => removePackItem({ conceptId, itemId }),
+            "Item removed from the pack.",
+          )
+        }
+        onAnalyze={() =>
+          runAction(
+            () => analyzeFacebookPack({ conceptId }),
+            "Sorting the pack...",
+          )
+        }
+      />
+
       {/* --- Harvested website content and factual approval --- */}
       {harvestSourceUrl || concept.harvestReviewState ? (
         <div
@@ -630,7 +715,10 @@ export function ConceptReviewCard({
           {concept.harvestWarnings?.length ? (
             <ul className="mt-3 min-w-0 list-disc space-y-1 pl-4 text-xs text-[var(--muted-foreground)]">
               {concept.harvestWarnings.map((warning) => (
-                <li key={warning} className="break-words [overflow-wrap:anywhere]">
+                <li
+                  key={warning}
+                  className="break-words [overflow-wrap:anywhere]"
+                >
                   {warning}
                 </li>
               ))}

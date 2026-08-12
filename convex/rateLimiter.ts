@@ -165,4 +165,19 @@ export const rateLimiter = new RateLimiter(components.rateLimiter, {
     rate: 60,
     period: DAY,
   },
+
+  /**
+   * Runaway guard on Facebook Pack classification.
+   *
+   * Separate from the generation ceiling for the same reason harvesting is:
+   * analysis runs before `queueGeneration` and would otherwise be unprotected.
+   * One unit covers one vision call carrying up to twelve images, which is the
+   * most expensive single request in this pipeline, so this is the ceiling worth
+   * keeping tighter than the others.
+   */
+  conceptPackAnalyzeGlobalDaily: {
+    kind: "fixed window",
+    rate: 40,
+    period: DAY,
+  },
 });

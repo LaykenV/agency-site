@@ -3,11 +3,13 @@ import { internalMutation, internalQuery } from "../_generated/server";
 import { internal } from "../_generated/api";
 import {
   conceptBriefValidator,
+  conceptFacebookPackItemValidator,
   conceptHarvestCandidateValidator,
   conceptHarvestImageCandidateValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
 } from "../validators";
+import { packAnalysisBlockedReason } from "../../lib/concepts/facebookPack";
 import { requireAdmin } from "../adminGuard";
 import { rateLimiter } from "../rateLimiter";
 import {
@@ -343,6 +345,191 @@ export const saveGeneration = internalMutation({
       error: ok
         ? undefined
         : `Generated HTML failed ${args.violations.length} validation check(s).`,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+// --- Facebook Pack ---------------------------------------------------------
+
+/**
+ * Start one classification pass and take the daily ceiling.
+ *
+ * Reserved in a mutation rather than the action for the same reason the harvest
+ * ceiling is: a mutation is transactional, so two taps on Analyze cannot both
+ * pass the limiter and then both send a dozen images to a vision model.
+ *
+ * The request ID is the stale guard. Any change to pack material clears it, so
+ * an analysis still running against the previous batch finds nothing to save.
+ */
+export const queueFacebookPackAnalysis = internalMutation({
+  args: { conceptId: v.id("website_concepts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+
+    const items = concept.facebookPackItems ?? [];
+    const blocked = packAnalysisBlockedReason(items);
+    if (blocked) throw new Error(blocked);
+
+    if (concept.facebookPackRequestId) {
+      throw new Error("This pack is already being analyzed.");
+    }
+
+    const { ok } = await rateLimiter.limit(
+      ctx,
+      "conceptPackAnalyzeGlobalDaily",
+      {
+        key: "global",
+      },
+    );
+    if (!ok) {
+      throw new Error(
+        "Daily Facebook Pack analysis ceiling reached. Something is probably retrying in a loop.",
+      );
+    }
+
+    const facebookPackRequestId = crypto.randomUUID();
+    await ctx.db.patch(args.conceptId, {
+      facebookPackRequestId,
+      facebookPackState: "analyzing",
+      facebookPackError: undefined,
+      updatedAt: Date.now(),
+    });
+
+    await ctx.scheduler.runAfter(
+      0,
+      internal.concepts.facebookPack.runPackAnalysis,
+      { conceptId: args.conceptId, facebookPackRequestId },
+    );
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "admin",
+      kind: "concept.facebook_pack_analysis_started",
+      payload: {
+        conceptId: args.conceptId,
+        businessName: concept.businessName,
+        itemCount: items.length,
+        imageCount: items.filter((item) => item.kind === "image").length,
+      },
+    });
+    return null;
+  },
+});
+
+/** True when this result belongs to the analysis currently in flight. */
+function isCurrentPackAnalysis(
+  concept: { facebookPackRequestId?: string },
+  facebookPackRequestId: string,
+): boolean {
+  return concept.facebookPackRequestId === facebookPackRequestId;
+}
+
+/**
+ * Store one classification pass.
+ *
+ * Verdicts are matched back onto the items still present by ID, so an item
+ * removed while the model was running is simply not there to label, and an item
+ * the model skipped keeps no verdict at all rather than inheriting a
+ * neighbour's. An item left unclassified carries a visible error instead, which
+ * is the honest state: nobody has decided what it is.
+ */
+export const saveFacebookPackClassification = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    facebookPackRequestId: v.string(),
+    items: v.array(conceptFacebookPackItemValidator),
+    model: v.string(),
+    promptVersion: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+    if (!isCurrentPackAnalysis(concept, args.facebookPackRequestId))
+      return null;
+
+    const now = Date.now();
+    const classified = new Map(args.items.map((item) => [item.id, item]));
+    const items = (concept.facebookPackItems ?? []).map((item) => {
+      const updated = classified.get(item.id);
+      if (!updated) return item;
+      return {
+        ...item,
+        classification: updated.classification,
+        classificationError: updated.classificationError,
+      };
+    });
+
+    const unclassifiedCount = items.filter(
+      (item) => !item.classification,
+    ).length;
+
+    await ctx.db.patch(args.conceptId, {
+      facebookPackItems: items,
+      facebookPackRequestId: undefined,
+      // Partial model output is useful to display, but is not a ready evidence
+      // pack. C2 may only compile a pack after every item has a verdict.
+      facebookPackState: unclassifiedCount === 0 ? "ready" : "failed",
+      facebookPackAnalyzedAt: now,
+      facebookPackModel: args.model,
+      facebookPackPromptVersion: args.promptVersion,
+      facebookPackError:
+        unclassifiedCount === 0
+          ? undefined
+          : `${unclassifiedCount} pack item${unclassifiedCount === 1 ? " did" : "s did"} not receive a classification. Remove unreadable items or analyze again.`,
+      updatedAt: now,
+    });
+
+    await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+      actor: "system",
+      kind: "concept.facebook_pack_analyzed",
+      payload: {
+        conceptId: args.conceptId,
+        model: args.model,
+        itemCount: items.length,
+        logoCount: items.filter((item) => item.classification?.kind === "logo")
+          .length,
+        photoCount: items.filter(
+          (item) => item.classification?.kind === "business_photo",
+        ).length,
+        screenshotCount: items.filter(
+          (item) => item.classification?.kind === "context_screenshot",
+        ).length,
+        unclassifiedCount,
+      },
+    });
+    return null;
+  },
+});
+
+/**
+ * Record an analysis that could not run.
+ *
+ * Not a concept failure, and deliberately not a status change: the pack is
+ * still collected, the material is still there, and the concept is exactly as
+ * buildable as it was. Only the pack's own state moves, so the retry is one tap
+ * rather than a re-paste.
+ */
+export const failFacebookPackAnalysis = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    facebookPackRequestId: v.string(),
+    error: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept) return null;
+    if (!isCurrentPackAnalysis(concept, args.facebookPackRequestId))
+      return null;
+
+    await ctx.db.patch(args.conceptId, {
+      facebookPackRequestId: undefined,
+      facebookPackState: "failed",
+      facebookPackError: args.error.slice(0, 500),
       updatedAt: Date.now(),
     });
     return null;

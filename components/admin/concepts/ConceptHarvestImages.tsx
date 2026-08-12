@@ -35,11 +35,11 @@ export function ConceptHarvestImages({
   candidates: Array<HarvestImageReviewItem>;
   previewUrls: Record<string, string | null>;
   isBusy: boolean;
-  onRetry: (candidateId: string) => Promise<void>;
-  onApprove: (candidateId: string, kind: "logo" | "photo") => Promise<void>;
-  onReject: (candidateId: string) => Promise<void>;
+  onRetry: (candidateId: string) => Promise<unknown>;
+  onApprove: (candidateId: string, kind: "logo" | "photo") => Promise<unknown>;
+  onReject: (candidateId: string) => Promise<unknown>;
   canRegenerate: boolean;
-  onRegenerate: () => Promise<void>;
+  onRegenerate: () => Promise<unknown>;
 }) {
   const visible = candidates.filter(
     (candidate) => candidate.stageStatus !== "rejected",

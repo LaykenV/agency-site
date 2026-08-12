@@ -14,6 +14,16 @@ import {
   isHarvestCandidateApprovable,
 } from "../../lib/concepts/harvest";
 import {
+  PACK_IMAGE_MAX_BYTES,
+  isSupportedPackImageType,
+  normalizePackNote,
+  normalizePackText,
+  packAddBlockedReason,
+  packItemId,
+  packTextHash,
+  type PackItem,
+} from "../../lib/concepts/facebookPack";
+import {
   conceptApprovedQuoteValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
@@ -71,6 +81,8 @@ function toSummary(concept: Doc<"website_concepts">) {
     harvestCandidateCount:
       (concept.harvestCandidates?.length ?? 0) +
       (concept.harvestImageCandidates?.length ?? 0),
+    facebookPackState: concept.facebookPackState,
+    facebookPackItemCount: concept.facebookPackItems?.length ?? 0,
     assetCount:
       concept.assetStorageIds.length + (concept.logoStorageId ? 1 : 0),
     model: concept.model,
@@ -530,6 +542,192 @@ export const reEnrich = mutation({
       conceptId: args.conceptId,
     });
 
+    return null;
+  },
+});
+
+// --- Facebook Pack ---------------------------------------------------------
+
+/**
+ * Adding or removing pack material resets the analysis.
+ *
+ * Clearing `facebookPackRequestId` is what makes it safe: an analysis already
+ * running against the previous batch can no longer save, so a classification
+ * can never describe a set of items the model was not shown.
+ *
+ * It deliberately does *not* revoke `generatedHtml` yet. Nothing in the pack
+ * reaches a generation prompt in C1, so unpublishing a page because a
+ * screenshot was pasted would be confusing rather than careful. C2 materializes
+ * the reviewed evidence into `ConceptBrief`, and that is the change that must
+ * also add the artifact invalidation the plan requires.
+ */
+function packChanged(items: Array<PackItem<Id<"_storage">>>) {
+  return {
+    facebookPackItems: items.length > 0 ? items : undefined,
+    facebookPackRequestId: undefined,
+    facebookPackState: items.length > 0 ? ("collecting" as const) : undefined,
+    facebookPackAnalyzedAt: undefined,
+    facebookPackModel: undefined,
+    facebookPackPromptVersion: undefined,
+    facebookPackError: undefined,
+    updatedAt: Date.now(),
+  };
+}
+
+/**
+ * Attach one pasted or uploaded image to the pack.
+ *
+ * The browser uploads straight to Convex storage and hands back a storage ID,
+ * so the declared type and size are checked here against the file Convex
+ * actually stored rather than against whatever the client claimed. Convex's own
+ * SHA-256 comes from the same record, which is what makes duplicate detection
+ * server-side truth instead of a client courtesy.
+ *
+ * A rejected upload is deleted before the error is thrown. Leaving the file
+ * behind would accumulate orphans that nothing owns and nothing cleans up.
+ */
+export const addPackImage = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    storageId: v.id("_storage"),
+    note: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    const items = concept.facebookPackItems ?? [];
+
+    const reject = async (message: string): Promise<never> => {
+      try {
+        await ctx.storage.delete(args.storageId);
+      } catch (error) {
+        console.warn("[concepts] rejected pack upload cleanup failed", {
+          storageId: args.storageId,
+          error,
+        });
+      }
+      throw new Error(message);
+    };
+
+    const blocked = packAddBlockedReason({ items, adding: "image" });
+    if (blocked) await reject(blocked);
+
+    const metadata = await ctx.db.system.get(args.storageId);
+    if (!metadata) throw new Error("That upload is no longer available.");
+
+    if (!isSupportedPackImageType(metadata.contentType ?? undefined)) {
+      await reject("Facebook Pack images must be JPEG, PNG, or WebP.");
+    }
+    if (metadata.size > PACK_IMAGE_MAX_BYTES) {
+      await reject(
+        `That image is ${Math.round(metadata.size / (1024 * 1024))} MB, over the ${Math.round(
+          PACK_IMAGE_MAX_BYTES / (1024 * 1024),
+        )} MB limit.`,
+      );
+    }
+    if (items.some((item) => item.contentHash === metadata.sha256)) {
+      await reject("That exact image is already in this pack.");
+    }
+
+    const item: PackItem<Id<"_storage">> = {
+      id: packItemId({ kind: "image", contentHash: metadata.sha256 }),
+      kind: "image",
+      storageId: args.storageId,
+      contentHash: metadata.sha256,
+      contentType: metadata.contentType ?? undefined,
+      sizeBytes: metadata.size,
+      note: normalizePackNote(args.note),
+      capturedAt: Date.now(),
+    };
+
+    await ctx.db.patch(args.conceptId, packChanged([...items, item]));
+    return null;
+  },
+});
+
+/** Attach one block of text copied from the Page. */
+export const addPackText = mutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    text: v.string(),
+    note: v.optional(v.string()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    const items = concept.facebookPackItems ?? [];
+
+    const blocked = packAddBlockedReason({ items, adding: "text" });
+    if (blocked) throw new Error(blocked);
+
+    const text = normalizePackText(args.text);
+    if (!text) throw new Error("Paste some text before adding it to the pack.");
+
+    const contentHash = packTextHash(text);
+    if (items.some((item) => item.contentHash === contentHash)) {
+      throw new Error("That exact text is already in this pack.");
+    }
+
+    const item: PackItem<Id<"_storage">> = {
+      id: packItemId({ kind: "text", contentHash }),
+      kind: "text",
+      contentHash,
+      text,
+      sizeBytes: text.length,
+      note: normalizePackNote(args.note),
+      capturedAt: Date.now(),
+    };
+
+    await ctx.db.patch(args.conceptId, packChanged([...items, item]));
+    return null;
+  },
+});
+
+/** Remove one item and its file. The correction path for a bad paste. */
+export const removePackItem = mutation({
+  args: { conceptId: v.id("website_concepts"), itemId: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const concept = await loadConcept(ctx, args.conceptId);
+    const items = concept.facebookPackItems ?? [];
+
+    const item = items.find((candidate) => candidate.id === args.itemId);
+    if (!item) throw new Error("That pack item no longer exists.");
+
+    await ctx.db.patch(
+      args.conceptId,
+      packChanged(items.filter((candidate) => candidate.id !== args.itemId)),
+    );
+
+    if (item.storageId) {
+      try {
+        await ctx.storage.delete(item.storageId);
+      } catch (error) {
+        console.warn("[concepts] pack item cleanup failed", {
+          storageId: item.storageId,
+          error,
+        });
+      }
+    }
+    return null;
+  },
+});
+
+/** Send the collected pack to the classification model. */
+export const analyzeFacebookPack = mutation({
+  args: { conceptId: v.id("website_concepts") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await loadConcept(ctx, args.conceptId);
+
+    await ctx.runMutation(
+      internal.concepts.internal.queueFacebookPackAnalysis,
+      { conceptId: args.conceptId },
+    );
     return null;
   },
 });
@@ -1090,6 +1288,9 @@ export const remove = mutation({
       ...(concept.harvestImageCandidates ?? [])
         .map((candidate) => candidate.previewStorageId)
         .filter((id): id is Id<"_storage"> => id !== undefined),
+      ...(concept.facebookPackItems ?? [])
+        .map((item) => item.storageId)
+        .filter((id): id is Id<"_storage"> => id !== undefined),
     ]);
     for (const storageId of storageIds) {
       try {
@@ -1162,6 +1363,12 @@ export const get = query({
           url: v.union(v.string(), v.null()),
         }),
       ),
+      packItemPreviews: v.array(
+        v.object({
+          itemId: v.string(),
+          url: v.union(v.string(), v.null()),
+        }),
+      ),
     }),
     v.null(),
   ),
@@ -1189,6 +1396,14 @@ export const get = query({
       });
     }
 
+    const packItemPreviews: Array<{ itemId: string; url: string | null }> = [];
+    for (const item of concept.facebookPackItems ?? []) {
+      packItemPreviews.push({
+        itemId: item.id,
+        url: item.storageId ? await ctx.storage.getUrl(item.storageId) : null,
+      });
+    }
+
     return {
       concept,
       logoUrl: concept.logoStorageId
@@ -1196,6 +1411,7 @@ export const get = query({
         : null,
       photos,
       harvestImagePreviews,
+      packItemPreviews,
     };
   },
 });

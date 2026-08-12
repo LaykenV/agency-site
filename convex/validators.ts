@@ -667,6 +667,69 @@ export const conceptHarvestReviewStateValidator = v.union(
   v.literal("skipped"),
 );
 
+/**
+ * One item Layken pasted or uploaded out of the prospect's Facebook Page, and
+ * the model's verdict on what it is.
+ *
+ * The verdict is what keeps a screenshot off the page. `logo` and
+ * `business_photo` are the only two classifications
+ * `canUsePackItemAsPageImagery` in `lib/concepts/facebookPack.ts` admits, and
+ * `alt`/`roleHint` are stored only for those two so nothing downstream can read
+ * a display hint on a screenshot as permission to display it.
+ *
+ * `contentHash` is Convex's own SHA-256 for an image and a stable text hash for
+ * pasted copy, so re-pasting the same material is detected server-side rather
+ * than on the browser's word.
+ */
+export const conceptFacebookPackItemValidator = v.object({
+  id: v.string(),
+  kind: v.union(v.literal("image"), v.literal("text")),
+  storageId: v.optional(v.id("_storage")),
+  contentHash: v.optional(v.string()),
+  contentType: v.optional(v.string()),
+  sizeBytes: v.optional(v.number()),
+  text: v.optional(v.string()),
+  note: v.optional(v.string()),
+  capturedAt: v.number(),
+  classification: v.optional(
+    v.object({
+      kind: v.union(
+        v.literal("logo"),
+        v.literal("business_photo"),
+        v.literal("context_screenshot"),
+        v.literal("text_context"),
+        v.literal("duplicate"),
+        v.literal("unusable_or_uncertain"),
+      ),
+      description: v.optional(v.string()),
+      alt: v.optional(v.string()),
+      quality: v.optional(
+        v.union(v.literal("good"), v.literal("fair"), v.literal("poor")),
+      ),
+      roleHint: v.optional(
+        v.union(
+          v.literal("hero"),
+          v.literal("gallery"),
+          v.literal("background"),
+          v.literal("supporting"),
+        ),
+      ),
+      duplicateOfItemId: v.optional(v.string()),
+      reason: v.optional(v.string()),
+      classifiedAt: v.number(),
+    }),
+  ),
+  classificationError: v.optional(v.string()),
+});
+
+export const conceptFacebookPackStateValidator = v.union(
+  /** Material is being collected; nothing has been sent to a model. */
+  v.literal("collecting"),
+  v.literal("analyzing"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
 export const conceptStatusValidator = v.union(
   v.literal("draft"),
   v.literal("enriching"),
@@ -722,6 +785,15 @@ export const websiteConceptDocValidator = v.object({
     v.array(conceptImportedWebsiteAssetValidator),
   ),
 
+  // Supervised Facebook Pack. Present only after the first paste or upload.
+  facebookPackItems: v.optional(v.array(conceptFacebookPackItemValidator)),
+  facebookPackRequestId: v.optional(v.string()),
+  facebookPackState: v.optional(conceptFacebookPackStateValidator),
+  facebookPackAnalyzedAt: v.optional(v.number()),
+  facebookPackModel: v.optional(v.string()),
+  facebookPackPromptVersion: v.optional(v.string()),
+  facebookPackError: v.optional(v.string()),
+
   researchBrief: v.optional(conceptBriefValidator),
   generatedHtml: v.optional(v.string()),
   structureId: v.optional(v.string()),
@@ -762,6 +834,8 @@ export const websiteConceptSummaryValidator = v.object({
   matchedGooglePlaceId: v.optional(v.string()),
   harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
   harvestCandidateCount: v.number(),
+  facebookPackState: v.optional(conceptFacebookPackStateValidator),
+  facebookPackItemCount: v.number(),
   assetCount: v.number(),
   model: v.optional(v.string()),
   promptVersion: v.optional(v.string()),

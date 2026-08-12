@@ -23,6 +23,7 @@ import type * as clientEvents from "../clientEvents.js";
 import type * as clientLeads from "../clientLeads.js";
 import type * as concepts_admin from "../concepts/admin.js";
 import type * as concepts_enrich from "../concepts/enrich.js";
+import type * as concepts_facebookPack from "../concepts/facebookPack.js";
 import type * as concepts_generate from "../concepts/generate.js";
 import type * as concepts_harvest from "../concepts/harvest.js";
 import type * as concepts_imageImport from "../concepts/imageImport.js";
@@ -76,6 +77,7 @@ declare const fullApi: ApiFromModules<{
   clientLeads: typeof clientLeads;
   "concepts/admin": typeof concepts_admin;
   "concepts/enrich": typeof concepts_enrich;
+  "concepts/facebookPack": typeof concepts_facebookPack;
   "concepts/generate": typeof concepts_generate;
   "concepts/harvest": typeof concepts_harvest;
   "concepts/imageImport": typeof concepts_imageImport;

@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Core generator live; structured harvesting B0-B3 shipped; B4 and destructive cutover remain gated**
+Status: **Core generator and website harvesting live; Facebook Pack Phase C approved but not implemented; B4 and destructive cutover remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -27,6 +27,15 @@ Last reviewed: 2026-08-11
   reach regeneration through a mobile review gate, and source-observed website
   images are safely staged into Convex for explicit logo/photo approval. B4
   remains in this document under **Structured content harvesting plan**.
+- **Facebook Pack — Phase C approved 2026-08-11; C1 shipped 2026-08-11.**
+  Supervised Facebook capture becomes the primary content path. Layken pastes
+  logos, business photos, screenshots, and text; `openai/gpt-5.6-luna`
+  classifies the material, selects visual roles, extracts and reviews facts, and
+  audits the generated page. The existing website harvest becomes an optional
+  secondary gap-fill path. Candidate-by-candidate human approval is removed once
+  Phase C replaces it; final concept review before publication remains required.
+  C1 is live in code: bounded intake, storage, and the first real Luna
+  classification call. C2 through C5 are not implemented.
 
 The 2026-08-11 review blockers are fixed:
 
@@ -73,10 +82,13 @@ with one focused workflow:
 ```text
 manually find or receive a Facebook lead
   -> enter the business in /admin/marketing
-  -> enrich it from Google Places and any existing website
-  -> add the owner's logo and photos when available
+  -> confirm its identity with Google Places
+  -> paste a Facebook Pack: logo, photos, screenshots, and text
+  -> let Luna classify the pack, select imagery, and compile reviewed evidence
+  -> optionally fill remaining gaps from an existing website
   -> generate one fully custom homepage concept
-  -> review it on mobile and desktop
+  -> let Luna audit the generated claims against the evidence
+  -> review the final concept on mobile and desktop
   -> publish /preview/<private-token>
   -> copy the link and Messenger draft
 ```
@@ -86,22 +98,27 @@ or general marketing automation product.
 
 ## Locked decisions
 
-| Question                            | Decision                                                                   |
-| ----------------------------------- | -------------------------------------------------------------------------- |
-| Primary acquisition channel         | Facebook and Messenger                                                     |
-| Lead discovery                      | Manual; outside the application                                            |
-| Facebook scraping                   | None                                                                       |
-| Automated Messenger sending         | None                                                                       |
-| Admin route                         | Replace `/admin/marketing` in place                                        |
-| Legacy route or legacy UI           | None                                                                       |
-| Historical marketing-data migration | None                                                                       |
-| Preview hosting                     | Existing application at `/preview/<token>`                                 |
-| Preview subdomain                   | None                                                                       |
-| Concept format                      | Fully custom self-contained HTML and CSS                                   |
-| Default concept scope               | One substantial homepage                                                   |
-| Model                               | Configurable OpenRouter model, initially `deepseek/deepseek-v4-flash-0731` |
-| Public cold email                   | Removed                                                                    |
-| Human review                        | Required before publishing                                                 |
+| Question                            | Decision                                                                         |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| Primary acquisition channel         | Facebook and Messenger                                                           |
+| Lead discovery                      | Manual; outside the application                                                  |
+| Facebook collection                 | Supervised clipboard/upload capture; no crawling or Graph API                    |
+| Primary content source              | Facebook Pack                                                                    |
+| Secondary content source            | Optional existing-website harvest used only to fill gaps                         |
+| Automated Messenger sending         | None                                                                             |
+| Admin route                         | Replace `/admin/marketing` in place                                              |
+| Legacy route or legacy UI           | None                                                                             |
+| Historical marketing-data migration | None                                                                             |
+| Preview hosting                     | Existing application at `/preview/<token>`                                       |
+| Preview subdomain                   | None                                                                             |
+| Concept format                      | Fully custom self-contained HTML and CSS                                         |
+| Default concept scope               | One substantial homepage                                                         |
+| Generation model                    | Configurable OpenRouter model, initially `deepseek/deepseek-v4-flash-0731`       |
+| Evidence and vision model           | OpenRouter `openai/gpt-5.6-luna`                                                 |
+| Evidence approval                   | Automated by Luna, including sensitive claims; no manual fact approval           |
+| Visual selection                    | Luna selects the logo, hero, gallery, and rejects unusable or duplicate material |
+| Public cold email                   | Removed                                                                          |
+| Human review                        | One final concept review remains required before publishing                      |
 
 ## Scope
 
@@ -112,8 +129,11 @@ or general marketing automation product.
 - Manual lead intake.
 - Google Places matching.
 - Existing-website enrichment with Firecrawl and PageSpeed.
-- Logo and image uploads or clipboard paste through existing Convex file storage
-  patterns.
+- A primary Facebook Pack intake for pasted/uploaded logos, business photos,
+  screenshots, and copied text.
+- Luna vision classification, OCR, structured evidence extraction, automatic
+  visual selection, evidence review, and final generated-claim audit.
+- Logo and image storage through existing Convex file-storage patterns.
 - AI-generated bespoke HTML and CSS.
 - Basic deterministic safety and factual validation.
 - Sandboxed mobile and desktop review.
@@ -160,21 +180,23 @@ The application never crawls Facebook groups or sends Facebook messages.
 - Google Maps URL, optional.
 - Phone, optional.
 - Notes, optional: services, slogan, location, differentiators, desired CTA.
-- Logo and business photos, optional.
+- Initial logo and business photos, optional; the primary asset intake happens
+  in the Facebook Pack after identity matching.
 
 Facebook Page extraction is not a server dependency. An arbitrary Page cannot
-be reliably or safely scraped. If the Page contains the only available logo,
-photos, services, or copy, Layken either:
-
-1. uploads or pastes those assets during the supervised research session, or
-2. asks the interested owner to send the logo and several favorite photos.
+be reliably or safely scraped. The application does not crawl the Page or
+require a Graph API connection. Layken opens the Page in the signed-in browser
+and pastes or uploads selected material into one Facebook Pack during the
+supervised research session. The pack accepts logos, business photos,
+screenshots containing useful context, and copied text. If the Page is sparse,
+Layken can ask the interested owner to send a logo and favorite photos.
 
 The generator must still work without photography by using typography, color,
 layout, and only the facts it has.
 
 ### 3. Enrich
 
-After submission, one Convex action:
+Enrichment is ordered deliberately:
 
 1. searches Google Places for the named business and location clues;
 2. auto-confirms only one uniquely corroborated match: equivalent business name
@@ -182,10 +204,14 @@ After submission, one Convex action:
    may also resolve a name variant;
 3. presents all candidates when evidence is missing, conflicting, closed, or
    ambiguous rather than silently attaching the wrong business;
-4. records verified public facts needed for the concept;
-5. uses the submitted website or matched Places website when present;
-6. runs Firecrawl and PageSpeed against that website; and
-7. produces a concise generation brief.
+4. accepts the supervised Facebook Pack as the primary content source;
+5. uses Luna to classify images, choose the logo/hero/gallery, read context
+   screenshots and text, and compile a source-linked evidence pack;
+6. runs a separate Luna review over the extracted evidence without requiring
+   Layken to approve individual facts or assets;
+7. optionally uses the submitted website or matched Places website to fill
+   gaps through Firecrawl and PageSpeed; and
+8. produces one machine-reviewed generation brief.
 
 Reuse the existing Places, Firecrawl, and PageSpeed implementation where it is
 useful, but extract only the single-business functions. Do not preserve the
@@ -196,7 +222,9 @@ identity matching and the exempt place ID only. Review text, ratings, review
 counts, opening hours, and street addresses are neither persisted nor passed to
 generation, and match candidates are fetched live rather than stored. Preview
 images can be manual/pasted assets or individually approved website-source
-candidates copied into Convex storage.
+candidates copied into Convex storage. Until Phase C ships, the live website
+path still uses its existing manual approval UI; Phase C replaces that UI with
+the common Luna evidence-review path.
 
 ## Structured content harvesting plan
 
@@ -209,17 +237,19 @@ limiter, the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`, and the
 mobile factual approval-to-regeneration path.
 
 What is not: the full three-site canary. Remote image URLs still cannot reach a
-generated page directly; approved Convex copies can. Facebook-only content
-capture remains a separate decision after this website path is proven.
+generated page directly; approved Convex copies can. The Facebook-only content
+decision is now resolved by Phase C below: Facebook Pack becomes primary and
+this website path becomes secondary.
 
 The first successful production concepts showed that model output is no longer
 the main bottleneck. Collecting trustworthy services, about copy, logos, and
-photos is. This phase adds a bounded enrichment-and-approval workflow. It does
-not add lead discovery, a general crawler, or automatic publishing.
+photos is. This phase added a bounded enrichment-and-approval workflow. Phase C
+replaces its manual candidate approval with Luna review, but does not add lead
+discovery, a general crawler, or automatic publishing.
 
 ### Outcome and exit condition
 
-For a prospect with an existing website, the application should:
+For a prospect with an existing website, the shipped Phase B path:
 
 1. find the few pages most likely to contain useful business content;
 2. extract source-backed fact, quote, logo, and photo candidates;
@@ -229,9 +259,9 @@ For a prospect with an existing website, the application should:
 6. show exactly what is still missing.
 
 The phase succeeds when a normal small-business website can reach a reviewed
-generation brief in under five minutes, without copying Google or Facebook
-content into the prospect page and without Layken manually transcribing the
-site.
+generation brief in under five minutes without Layken manually transcribing the
+site. Phase C changes who performs candidate approval, not the source-backed
+harvest contract or the rule that remote source URLs never reach generation.
 
 ### Research findings and locked decisions
 
@@ -285,7 +315,7 @@ summary. Existing concept rows should retain the matched place ID but have
 persisted Google candidate/detail content cleared by an explicit, separately
 verified migration.
 
-#### Facebook remains supervised capture
+#### Facebook remains supervised capture and becomes primary in Phase C
 
 Meta's Page Public Content Access feature is required to read public content
 from Pages the app does not manage, and it requires App Review for live access.
@@ -293,11 +323,11 @@ These prospects have not connected their Pages or granted the agency Page
 permissions. Therefore Facebook is not a reliable backend enrichment source for
 this workflow.
 
-Keep upload and clipboard paste as the current fallback. After ten real
-concepts, if Facebook-only content is still the dominant bottleneck, consider a
-separate supervised browser helper that uses Layken's signed-in session to send
-selected text and images into the same review queue. Do not add Graph API app
-review, Page tokens, group scraping, or automated messaging to Phase B.
+Production use confirmed that Facebook-only content is the dominant bottleneck.
+Phase C therefore promotes upload and clipboard paste from fallback to the
+primary enrichment flow. Layken remains in control of what leaves the signed-in
+Facebook session: there is no automated Page navigation, browser extraction,
+Graph API app review, Page token, group scraping, or automated messaging.
 
 #### A public website is evidence, not proof of reuse rights
 
@@ -305,8 +335,10 @@ Website text and photographs can be copyrightable, and a business may itself be
 using photographer, vendor, franchise, or stock-library assets under a limited
 licence. Every harvested item is therefore labelled **Found on business
 website**, not **business-owned**. Source URL and source page remain visible.
-Layken explicitly approves an item for concept use; extraction alone never does.
-This is a provenance and review control, not a legal ownership determination.
+In Phase B, Layken explicitly approves an item for concept use. In Phase C,
+Luna makes that approval decision from the source evidence and records the
+reason and provenance; extraction alone still never makes an item usable. This
+is a provenance control, not a legal ownership determination.
 
 ### Bounded harvesting workflow
 
@@ -756,23 +788,26 @@ Record these values for the first ten real concepts:
 - minutes from confirmed match to generation; and
 - which missing content still required Facebook or owner follow-up.
 
-Continue only if the median review-to-generation time is under five minutes and
-the accepted candidates materially improve the page. If most extracted content
-is rejected, simplify the schema or lower the page cap before adding another
-source. Build a Facebook helper only if Facebook-only content remains the
-largest measured bottleneck after those ten concepts.
+The production path established that Facebook-only content remains the larger
+bottleneck. Phase C is the resulting decision. Website harvesting remains worth
+keeping only when it materially fills gaps after Facebook Pack analysis; do not
+expand it into a broader crawler.
 
-### Explicit non-goals
+### Explicit non-goals for Phase B
+
+The manual-approval and pending-review restrictions below describe the shipped
+Phase B implementation. Phase C intentionally supersedes those two restrictions
+with Luna approval and machine-reviewed readiness states.
 
 - No web-wide search, business discovery, or competitor research.
 - No arbitrary domain crawl and no background recrawl schedule.
-- No automatic claim, quote, logo, or photo approval.
+- No automatic claim, quote, logo, or photo approval in the Phase B path.
 - No Google photo/review ingestion.
 - No Facebook Graph API integration, Page token collection, or group scraping.
 - No asset licensing determination.
 - No generated image fallback in this phase.
 - No new generalized content or asset tables.
-- No automatic generation while harvest review is pending.
+- No automatic generation while the Phase B harvest review is pending.
 
 ### Primary references checked for this plan
 
@@ -789,11 +824,323 @@ largest measured bottleneck after those ten concepts.
 - [U.S. Copyright Office: websites and website content](https://www.copyright.gov/circs/circ66.pdf)
 - [U.S. Copyright Office: photographs](https://www.copyright.gov/engage/photographers/)
 
+## Facebook Pack plan
+
+Status: **Phase C approved on 2026-08-11; C1 implemented 2026-08-11, C2–C5 not
+implemented**
+
+Facebook Pack is the primary evidence and asset path for this product. It is a
+supervised intake, not a Facebook scraper: Layken opens the prospect's Page,
+chooses useful material, and pastes or uploads it into the concept. Existing
+website harvesting remains available only as a secondary gap-fill path.
+
+### Locked Phase C decisions
+
+1. Luna may approve every evidence category, including testimonials,
+   credentials, insurance, years, prices, guarantees, awards, superlatives, and
+   emergency claims. There is no manual fact-approval queue and no category
+   that automatically requires Layken's approval.
+2. Luna automatically chooses the logo, hero, gallery, and supporting images
+   and rejects screenshots, duplicates, or unusable imagery from page display.
+   Layken can remove a mistake or add more material, but does not select every
+   visual role manually.
+3. Layken still reviews the finished concept and explicitly publishes it. There
+   is no automatic publication.
+4. There is no preliminary model spike or separate F0 phase. Implementation
+   begins with the bounded storage and intake contract, then exercises the real
+   OpenRouter call as part of the first vertical slice.
+5. `openai/gpt-5.6-luna` is the vision, extraction, evidence-review, and final
+   factual-audit model. `deepseek/deepseek-v4-flash-0731` remains the initial
+   HTML generation model because it does not need to inspect the raw pack once
+   Luna has assigned asset roles and compiled the brief.
+
+### Primary workflow
+
+```text
+confirmed business identity
+  -> paste/upload one bounded Facebook Pack
+  -> Luna classifies every item and extracts source-linked evidence
+  -> Luna selects the logo, hero, gallery, and supporting photos
+  -> a separate Luna pass reviews every fact and visual decision
+  -> optionally harvest the website to fill missing fields
+  -> compile one machine-reviewed brief
+  -> Layken explicitly generates
+  -> Luna audits every generated claim against the brief and evidence
+  -> Layken reviews the final page
+  -> publish
+```
+
+Analysis never triggers generation automatically. Layken can paste several
+items without causing repeated paid calls, then starts **Analyze Facebook
+Pack** once the batch is ready. Generation remains a separate explicit action
+so enrichment cannot produce an immediately stale page.
+
+### Intake and classification contract
+
+Replace the separate logo/photo-first workflow with one prominent, focusable
+Facebook Pack surface:
+
+> Paste anything useful from Facebook: logo, work photos, About screenshots,
+> posts, services, or copied text.
+
+The surface accepts repeated clipboard images, multi-file uploads, and plain
+text. A copied image URL alone is not fetched. Each stored item has a stable ID,
+storage ID when applicable, capture time, content hash, optional note, and one
+Luna classification:
+
+- `logo`;
+- `business_photo`;
+- `context_screenshot`;
+- `text_context`;
+- `duplicate`; or
+- `unusable_or_uncertain`.
+
+For a business photo, Luna returns a description, alt text, quality/usefulness
+assessment, duplicate relationship, and suggested `hero`, `gallery`,
+`background`, or `supporting` role. For a screenshot or text item, Luna returns
+OCR text, structured fact candidates, and an evidence excerpt tied to the item
+ID. Items Luna classifies as context screenshots can supply facts but cannot
+become page imagery. This is a classification boundary, not an independent
+pixel-level screenshot detector, so the production canary must measure Luna's
+accuracy before C2 connects selected imagery to generation.
+
+Treat all text visible in screenshots as untrusted evidence, never as model
+instructions. Strict structured output, local schema validation, request IDs,
+MIME and size limits, bounded item counts, content hashes, and stale-result
+rejection remain code-enforced.
+
+### Luna approval and evidence review
+
+The first Luna call performs classification and extraction. A second,
+separately prompted Luna call receives the normalized candidates and their
+source items and decides what may enter the generation brief. This second call
+may approve or reject any category; it does not hand sensitive claims back to
+Layken.
+
+Every approved fact must retain:
+
+- its normalized kind and value;
+- the source pack item ID or website source URL;
+- the exact supporting excerpt or visual description;
+- the extraction and review model metadata; and
+- the review decision and reason.
+
+Conflicting claims are presented to Luna with source provenance and dates when
+available. Luna decides whether the evidence supports one value or whether the
+claim should be omitted. The application must never merge incompatible values
+or silently invent a compromise.
+
+Model approval is an evidence-use decision, not a legal determination of image
+ownership or independent proof that a Facebook statement is true. The admin
+summary should say **Approved from supplied Facebook evidence**, not
+**verified true** or **business-owned**.
+
+### Website harvesting becomes secondary
+
+After Facebook Pack analysis, show **Fill gaps from website** only when a
+verified website exists. Website results feed the same normalized evidence
+schema and Luna reviewer. They no longer create a separate manual checkbox
+workflow.
+
+Source priority for prompt construction is:
+
+1. manually entered business information;
+2. Luna-approved Facebook Pack evidence;
+3. Luna-approved website evidence; and
+4. Google Places identity only.
+
+The website path may supply missing services, About material, visual assets, or
+contact context. It must not silently override Facebook or manual input. Any
+conflict is included in Luna's review input and either resolved from evidence or
+omitted.
+
+### Admin experience
+
+The concept card order becomes:
+
+1. identity and Google match;
+2. Facebook Pack intake;
+3. machine-reviewed pack summary;
+4. optional website gap-fill;
+5. Generate concept;
+6. final responsive preview and Publish.
+
+The pack summary is informational rather than an approval form. It shows the
+selected logo and hero, gallery count, facts accepted, facts omitted, conflicts,
+and missing content. The available corrections are remove an item, paste more,
+reanalyze, or edit the manual brief. There are no fact checkboxes, **Needs
+care** section, or **Approve selected** action.
+
+### Lifecycle and data model
+
+Keep the bounded pack on `website_concepts`; do not add a generalized content,
+Facebook, crawler, or asset-manifest table. Image bytes remain in Convex
+storage. Add only bounded metadata and compiled evidence, including fields
+equivalent to:
+
+```text
+facebookPackItems[]
+facebookPackRequestId?
+facebookPackState?: collecting | analyzing | ready | failed
+facebookPackAnalyzedAt?
+facebookEvidence?
+facebookReviewModel?
+facebookReviewPromptVersion?
+facebookReviewError?
+```
+
+Starting a new analysis invalidates older in-flight results. Adding, removing,
+or replacing pack material invalidates the compiled evidence, generated HTML,
+and publication until reanalysis and regeneration. A website gap-fill does the
+same. Deleting a concept removes pack storage and unattached derivatives.
+
+Replace the user-facing `content_review` gate with analysis/readiness states
+after website harvesting has been moved to the shared reviewer. Do not contract
+the old validators or fields until production rows have been migrated and the
+new path has passed its canary.
+
+### Final generated-claim audit
+
+After the HTML generator and deterministic HTML validator succeed, Luna gets
+the generated copy, compiled brief, and evidence map. It extracts the factual
+claims in the page and confirms that each is supported. An unsupported or
+materially changed claim fails the draft and may trigger one bounded
+regeneration. A second failure is shown as an actionable generation error; it
+is never published automatically.
+
+This audit complements rather than replaces the deterministic restrictions on
+scripts, forms, contact data, asset hosts, placeholders, and approved quotes.
+
+### Phase C implementation sequence
+
+#### C1 — bounded pack intake and storage — **implemented 2026-08-11**
+
+- ~~Add the additive validators and `website_concepts` fields.~~
+  `facebookPackItems`, `facebookPackRequestId`, `facebookPackState`,
+  `facebookPackAnalyzedAt`, `facebookPackModel`, `facebookPackPromptVersion`,
+  and `facebookPackError`, all optional, so pre-pack rows still validate.
+- ~~Add the unified paste/upload/text surface and compact item gallery.~~
+  `ConceptFacebookPack.tsx`. One textarea takes both clipboard images and copied
+  text — images are intercepted on paste, text falls through — and the gallery
+  is a swipeable strip on a phone and a grid at `sm`. It sits directly under the
+  Google match card, ahead of website harvesting.
+- ~~Enforce file, MIME, count, size, hash, deletion, and stale-request rules.~~
+  20 items, 12 of them images, 8 text; JPEG/PNG/WebP only; 6 MiB a file;
+  duplicate content hashes refused. A rejected upload is deleted before the
+  error is thrown, and deleting a concept now removes pack files too.
+- ~~Wire the first real Luna request through the existing OpenRouter
+  integration.~~ `convex/concepts/facebookPack.ts`, a Node action, with the new
+  `conceptPackAnalyzeGlobalDaily` ceiling reserved transactionally in
+  `queueFacebookPackAnalysis`.
+
+Five decisions this section did not specify:
+
+1. **Images are sent as data URLs, not Convex storage links.** The model then
+   sees exactly the bytes the action verified, with no window between the
+   magic-byte check and a third-party fetch, and screenshots of a prospect's
+   Page are never handed out as URLs that outlive the request. The cost is
+   request size, which is why `PACK_ANALYSIS_MAX_TOTAL_BYTES` exists and an
+   over-budget pack is refused rather than silently trimmed.
+2. **Duplicate detection uses Convex's own SHA-256.** `ctx.db.system.get` on the
+   storage ID returns the hash, size, and content type of the file Convex
+   actually stored, so the declared type and the duplicate key are both
+   server-side facts rather than browser claims.
+3. **Alt text, visual role, and quality are stored only for `logo` and
+   `business_photo`.** A screenshot that arrives with `roleHint: "hero"` keeps
+   its description and loses the display hints, so no later change can read a
+   hint on a screenshot as permission to display it.
+4. **An unrecognized classification becomes `unusable_or_uncertain`.** Defaulting
+   toward the most useful-sounding neighbour is exactly how a screenshot would
+   reach a page.
+5. **Changing pack material does not yet revoke generated HTML.** Nothing in the
+   pack reaches a generation prompt in C1, so unpublishing a page because a
+   screenshot was pasted would be confusing rather than careful. C2
+   materializes reviewed evidence into `ConceptBrief` and must add that
+   invalidation in the same change; `packChanged` in `concepts/admin.ts` carries
+   the note.
+
+Exit: met. A concept collects a mixed pack, persists it, and classifies it, and
+`canUsePackItemAsPageImagery` admits only `logo` and `business_photo`. Local
+checks pass: Convex codegen with typecheck, TypeScript, 210 tests, lint,
+production build, and `git diff --check`. A real OpenRouter classification call
+against a live pack has not been run; that is C5's canary.
+
+#### C2 — Luna classification, selection, and evidence review
+
+- Add strict structured schemas for per-item classification and extracted
+  evidence.
+- Add automatic logo, hero, gallery, duplicate, and reject decisions.
+- Add the separate Luna reviewer for all fact categories.
+- Materialize the reviewed Facebook evidence into `ConceptBrief`.
+
+Exit: a Facebook-only business can reach a complete generation brief without a
+manual candidate-approval step.
+
+#### C3 — primary UI and final factual audit
+
+- Make Facebook Pack the primary content card and generation prerequisite once
+  analysis has started.
+- Replace approval checkboxes with the compact pack summary and correction
+  controls.
+- Add the post-generation Luna claim audit and bounded retry.
+- Keep explicit Generate and Publish actions.
+
+Exit: the only required human review is the finished page before publication.
+
+#### C4 — convert website harvesting to gap-fill
+
+- Route harvested facts and staged images through the common Luna reviewer.
+- Remove the manual standard/sensitive fact review and separate image approval
+  flow.
+- Replace `content_review` behavior with shared analysis/readiness behavior.
+- Preserve website provenance, bounded Firecrawl behavior, remote-image safety,
+  and failure isolation.
+
+Exit: Facebook is visibly primary, website enrichment is optional, and neither
+source requires line-by-line approval.
+
+#### C5 — canary, migration, and cleanup
+
+- Test a photo-rich Page, a screenshot/text-heavy Page, a sparse Page, a Page
+  with conflicting claims, a business with both Facebook and a website, and a
+  no-website business.
+- Verify on desktop, real iPhone Safari, and Messenger's in-app browser.
+- Run the additive production deployment and exercise real OpenRouter calls.
+- Migrate existing pending/approved website review state after verifying row
+  counts and backups.
+- Delete the old approval UI, mutations, validators, and status only after the
+  new production path succeeds.
+
+Exit: no screenshot appears as page imagery, Luna-selected assets render in the
+intended roles, every generated claim passes the evidence audit, a Facebook-only
+concept reaches generation in under five minutes, and publication still
+requires Layken's final review.
+
+### Phase C verification
+
+Automated coverage must include mixed clipboard intake, item caps, MIME and
+size rejection, duplicate hashes, stale analysis rejection, screenshot/photo
+separation, structured-response validation, source linkage, automatic
+sensitive-claim approval/rejection, conflict handling, asset-role selection,
+invalidation, final-claim audit failure, bounded regeneration, storage cleanup,
+and old rows remaining valid during the additive deployment.
+
+The canary must demonstrate that:
+
+1. screenshots never become page imagery;
+2. Luna can approve or reject every fact category without a manual queue;
+3. selected logos, heroes, and gallery images are usable;
+4. website evidence only fills gaps and does not silently override Facebook;
+5. unsupported generated claims block the draft;
+6. analysis never starts generation implicitly; and
+7. the final Publish action remains manual.
+
 ### 4. Generate
 
-The generation action sends the verified brief and approved asset URLs to a
-configurable OpenRouter model. Call OpenRouter directly from the action rather
-than adding an incompatible AI SDK provider solely for this feature.
+The generation action sends the machine-reviewed brief and Luna-selected asset
+URLs to a configurable OpenRouter model. Call OpenRouter directly from the
+action rather than adding an incompatible AI SDK provider solely for this
+feature.
 
 The model returns one self-contained HTML document:
 
@@ -817,8 +1164,8 @@ The default homepage may include:
 
 - hero and primary CTA;
 - services;
-- gallery or work examples when approved photos exist;
-- verified reviews or proof only when supplied for concept use;
+- gallery or work examples when Luna-selected photos exist;
+- reviews or proof only when approved by the Luna evidence reviewer;
 - about and trust section;
 - service area;
 - phone or quote CTA; and
@@ -843,9 +1190,10 @@ Before review, reject generated HTML containing:
 - phone numbers or review quotes absent from the verified brief.
 
 Arbitrary business claims are not represented as deterministically validated.
-The human review gate explicitly checks credentials, years in business,
-insurance, service areas, superlatives, and other factual claims against the
-brief before publication.
+Phase C adds a Luna audit that checks all generated claims, including
+credentials, years in business, insurance, service areas, prices, guarantees,
+testimonials, and superlatives, against the compiled evidence. These categories
+do not create a manual fact-approval queue.
 
 The admin review card renders the concept in a sandboxed iframe using `srcDoc`.
 It provides mobile and desktop widths without generating separate screenshot
@@ -858,7 +1206,8 @@ Actions:
 - Publish.
 - Delete.
 
-There is no automated publication. Layken reviews every concept.
+There is no automated publication. Layken reviews every finished concept; this
+final page review is the only required human approval after Phase C ships.
 
 ### 6. Publish and send
 
@@ -913,9 +1262,13 @@ verifiedWebsiteUrl?
 phone?
 notes?
 assetStorageIds[]
+facebookPackItems[]?
+facebookPackRequestId?
+facebookPackState?
+facebookEvidence?
 researchBrief?
 generatedHtml?
-status: draft | enriching | generating | review | published | failed
+status: draft | enriching | matching | harvesting | content_review | generating | review | published | failed
 model?
 promptVersion?
 error?
@@ -1104,8 +1457,9 @@ cold-email, hard-coded preview, or outbound-audit data path.
   no speculative system beyond the concept generator.
 - `../ARCHITECTURE.md`: `website_concepts`, new enrichment action, sandboxed
   dynamic preview, and deleted tables/routes.
-- `../OPERATIONS.md`: manual Facebook capture, human concept review, Messenger
-  handoff, and manual prospect creation after real interest.
+- `../OPERATIONS.md`: supervised Facebook Pack capture, Luna evidence review,
+  final human concept review, Messenger handoff, and manual prospect creation
+  after real interest.
 - `../BUSINESS.md`: replace the old outbound-pipeline capability description.
 - `../ROADMAP.md`: close the commercial-email address gate and remove work made
   obsolete by deleting cold outreach.

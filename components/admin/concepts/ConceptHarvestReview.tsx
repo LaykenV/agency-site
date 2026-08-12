@@ -154,9 +154,9 @@ export function ConceptHarvestReview({
   reviewState: "pending" | "approved" | "skipped";
   snapshotKey: number;
   isBusy: boolean;
-  onApproveAndGenerate: (candidateIds: Array<string>) => Promise<void>;
-  onSkipAndGenerate: () => Promise<void>;
-  onRefresh: () => Promise<void>;
+  onApproveAndGenerate: (candidateIds: Array<string>) => Promise<unknown>;
+  onSkipAndGenerate: () => Promise<unknown>;
+  onRefresh: () => Promise<unknown>;
   placeMatchResolved: boolean;
   hasPhone: boolean;
   hasLogo: boolean;
