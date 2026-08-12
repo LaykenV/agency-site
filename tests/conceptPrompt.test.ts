@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   CONCEPT_STRUCTURES,
+  buildConceptRepairUserPrompt,
   buildConceptSystemPrompt,
   buildConceptUserPrompt,
   pickConceptStructure,
@@ -395,5 +396,23 @@ describe("buildConceptUserPrompt", () => {
     const prompt = buildConceptUserPrompt(briefFor(), structure);
     expect(prompt).toContain(`## STRUCTURE — ${structure.name}`);
     expect(prompt).toContain(structure.spec);
+  });
+});
+
+describe("buildConceptRepairUserPrompt", () => {
+  test("gives the retry the exact failed document and correction", () => {
+    const repaired = buildConceptRepairUserPrompt({
+      basePrompt: "BRIEF AND STRUCTURE",
+      previousHtml: "<html><body>Unsupported sentence.</body></html>",
+      correction: "Remove Unsupported sentence.",
+    });
+
+    expect(repaired).toContain("BRIEF AND STRUCTURE");
+    expect(repaired).toContain("<<<UNTRUSTED_EXISTING_HTML");
+    expect(repaired).toContain(
+      "<html><body>Unsupported sentence.</body></html>",
+    );
+    expect(repaired).toContain("Remove Unsupported sentence.");
+    expect(repaired).toContain("Do not redesign the page");
   });
 });

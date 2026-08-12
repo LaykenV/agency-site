@@ -17,6 +17,7 @@ import {
 } from "../../lib/concepts/claimAudit";
 import {
   CONCEPT_PROMPT_VERSION,
+  buildConceptRepairUserPrompt,
   buildConceptSystemPrompt,
   buildConceptUserPrompt,
   pickConceptStructure,
@@ -579,14 +580,23 @@ export const runGeneration = internalAction({
 
       // One shared budget. Whatever went wrong on the first attempt — broken
       // HTML or a claim the evidence does not support — spends the same single
-      // repair, so no run can produce a third generation. The repair is given
-      // the specific offending lines rather than a repeat of the rules that
-      // already failed to prevent them.
+      // repair, so no run can produce a third generation. The repair receives
+      // both the exact failed document and the specific offending lines. A
+      // correction list without the draft is another greenfield generation and
+      // can replace one unsupported claim with a different one.
       for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+        const requestPrompt =
+          attempt === 1
+            ? basePrompt
+            : buildConceptRepairUserPrompt({
+                basePrompt,
+                previousHtml: html,
+                correction,
+              });
         html = unwrapHtml(
           await callOpenRouter(
             buildConceptSystemPrompt(),
-            `${basePrompt}${correction}`,
+            requestPrompt,
             model,
           ),
         );

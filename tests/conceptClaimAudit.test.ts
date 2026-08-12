@@ -198,6 +198,8 @@ describe("generation wiring", () => {
     expect(source).toContain("const MAX_GENERATION_ATTEMPTS = 2;");
     expect(source).toContain("attempt <= MAX_GENERATION_ATTEMPTS");
     expect(source).toContain("reserveGenerationRetry");
+    expect(source).toContain("buildConceptRepairUserPrompt");
+    expect(source).toContain("previousHtml: html");
 
     // Both failure paths must draw from the same allowance. If either stopped
     // reserving, a single run could pay for three generations.
