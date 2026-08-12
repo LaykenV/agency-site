@@ -463,9 +463,10 @@ render it in an iframe using `srcDoc` and the shared sandbox in
 reach the application DOM, authentication cookies, storage, or any network API.
 
 No sandbox tokens are granted. Concept CTAs are dummy controls: the validator
-rejects every `href` other than `#`, and the trusted parent rewrites leftover
-live links in already-published documents so taps cannot call, scroll, or leave
-the page.
+rejects every `href` and every `<a>`, and the trusted parent strips leftover
+hrefs from already-published documents. `href="#"` is not dummy — in a `srcDoc`
+iframe the browser resolves it to the parent preview URL and a click loads that
+page inside the frame.
 
 The trusted parent owns the concept notice, the page title, robots metadata,
 Open Graph tags, and view counting. Views are recorded from the browser rather
@@ -481,7 +482,7 @@ into the generated HTML.
 
 `lib/concepts/validateConceptHtml.ts` rejects scripts, inline event handlers,
 embedded and form elements, external requests, `target` attributes, live
-`href`s (`tel:`, maps URLs, `#section` anchors — only `#` is permitted),
+`href`s and `<a>` elements (CTAs must be inert `<span>`s),
 unverified `mailto:` links, assets outside the approved allowlist, placeholder
 text, any phone number other than the verified one, and testimonial markup when
 no quotes were approved. It also enforces two usage rules on approved imagery: a

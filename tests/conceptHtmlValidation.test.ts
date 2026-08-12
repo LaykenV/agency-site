@@ -40,7 +40,7 @@ ${body}
 const baseline = validDocument(`<main>
 <p>Residential and move-out cleaning in Youngsville, LA. Call (337) 384-2911.</p>
 <img src="${PHOTO_URL}" alt="Cleaning crew at work" width="800" height="600">
-<a href="#">Call (337) 384-2911</a>
+<span>Call (337) 384-2911</span>
 <span>See services</span>
 </main>`);
 
@@ -73,6 +73,7 @@ describe("validateConceptHtml — executable content", () => {
     ["base", '<base href="https://x.test/">'],
     ["form", '<form action="/x"><input name="a"></form>'],
     ["button", "<button>Send</button>"],
+    ["a", '<a href="#">Go</a>'],
     ["link", '<link rel="stylesheet" href="https://fonts.test/x.css">'],
   ])("rejects a %s element", (element, markup) => {
     const violations = violationsFor(validDocument(`<main>${markup}</main>`));
@@ -181,18 +182,21 @@ describe("validateConceptHtml — self-containment", () => {
     );
   });
 
-  test("accepts a dummy href=\"#\" CTA", () => {
-    const html = validDocument('<main><a href="#">Get a quote</a></main>');
+  test("accepts a dummy span CTA", () => {
+    const html = validDocument("<main><span>Get a quote</span></main>");
     expect(violationsFor(html)).toEqual([]);
+  });
+
+  test("rejects href=\"#\" because it navigates the srcDoc frame to the preview", () => {
+    const html = validDocument('<main><a href="#">Get a quote</a></main>');
+    expect(violationsFor(html).some((v) => v.includes("href"))).toBe(true);
   });
 
   test("rejects a tel: href even when it matches the verified phone", () => {
     const html = validDocument(
       '<main><a href="tel:+13373842911">Call (337) 384-2911</a></main>',
     );
-    expect(
-      violationsFor(html).some((v) => v.includes("live link")),
-    ).toBe(true);
+    expect(violationsFor(html).some((v) => v.includes("href"))).toBe(true);
   });
 
   test("rejects a section-anchor href", () => {
@@ -211,7 +215,7 @@ describe("validateConceptHtml — self-containment", () => {
     );
     expect(
       violationsFor(html, { googleMapsUrl: mapsUrl }).some((v) =>
-        v.includes("live link"),
+        v.includes("href"),
       ),
     ).toBe(true);
   });
@@ -478,7 +482,7 @@ img{display:block;width:100%;height:auto}
   <p style="letter-spacing:.18em;font-size:.75rem;text-transform:uppercase">Shay's Cleaning Services</p>
   <h1>Homes that feel cared for, not just cleaned.</h1>
   <p>Residential and move-out cleaning across Youngsville and Lafayette Parish.</p>
-  <a class="call" href="#">Call (337) 384-2911</a>
+  <span class="call">Call (337) 384-2911</span>
 </header>
 <hr class="rule">
 <section class="band wrap" id="services">
@@ -501,7 +505,7 @@ img{display:block;width:100%;height:auto}
 </section>
 <footer class="band wrap">
   <p>Serving Youngsville, LA</p>
-  <a class="call" href="#">Call (337) 384-2911</a>
+  <span class="call">Call (337) 384-2911</span>
 </footer>
 </body>
 </html>`;

@@ -14,16 +14,27 @@
  */
 export const CONCEPT_IFRAME_SANDBOX = "";
 
+const INERT_STYLE =
+  "<style data-concept-inert>a,area{pointer-events:none;cursor:default}</style>";
+
 /**
- * Force every `href` in generated HTML to `#`.
+ * Strip every `href` so concept CTAs cannot navigate.
  *
- * New generations are already rejected if they contain a live link. This
- * rewrite covers already-published documents that still carry `tel:`, a maps
- * URL, or a `#section` anchor, so those taps stay dummy without a regenerate.
+ * `href="#"` is not dummy: in a `srcDoc` iframe the browser resolves it to
+ * the parent preview URL, and a click loads that page *inside* the frame —
+ * stacking another concept notice on each tap. Removing the attribute leaves
+ * an inert `<a>`. The injected style is a second lock for already-published
+ * documents that still contain links.
  */
 export function neuterConceptHrefs(html: string): string {
-  return html.replace(
-    /(\shref\s*=\s*)("[^"]*"|'[^']*'|[^\s>]+)/gi,
-    `$1"#"`,
+  const stripped = html.replace(
+    /\s(?:href|xlink:href)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi,
+    "",
   );
+
+  if (stripped.includes("data-concept-inert")) return stripped;
+  if (/<head[\s>]/i.test(stripped)) {
+    return stripped.replace(/<head([^>]*)>/i, `<head$1>${INERT_STYLE}`);
+  }
+  return `${INERT_STYLE}${stripped}`;
 }

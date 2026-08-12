@@ -22,7 +22,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-12.6";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.7";
 
 function imageOrientation(
   width?: number,
@@ -64,12 +64,12 @@ These are enforced by an automatic validator. Violating any one causes the whole
 - One \`<style>\` element in \`<head>\`. All CSS goes there or in \`style="..."\` attributes.
 - NO JavaScript. No \`<script>\`, no \`onclick\` or any \`on*\` attribute, no \`javascript:\` URL.
 - NO \`<iframe>\`, \`<object>\`, \`<embed>\`, \`<base>\`, \`<link>\`, \`<noscript>\`, \`<canvas>\`, \`<video>\`, \`<audio>\`, \`<source>\`.
-- NO forms and NO form controls. No \`<form>\`, \`<input>\`, \`<textarea>\`, \`<select>\`, or \`<button>\`. Draw CTAs as styled \`<span>\` elements or \`<a href="#">\` only.
+- NO forms and NO form controls. No \`<form>\`, \`<input>\`, \`<textarea>\`, \`<select>\`, or \`<button>\`. Draw CTAs as styled \`<span>\` elements. Never use \`<a>\`.
 - NO external requests of any kind: no \`@import\`, no \`@font-face\`, no Google Fonts, no icon fonts, no analytics, no external images.
 - NO \`target\` attribute on any element.
 - NO \`mailto:\` links. No email address is verified for this business.
 - Images: ONLY the exact URLs given in the APPROVED IMAGE URLS list, used verbatim. If that list is empty, the page contains no \`<img>\` at all and no CSS \`url()\`. Inline \`<svg>\` you draw yourself is allowed; \`data:image/svg+xml\` URLs are not.
-- Every CTA is a dummy. The only permitted \`href\` is exactly \`#\`. No \`tel:\`, no \`#section\` anchors, no Google Maps URLs, no other destinations. Buttons may look real so the owner can see the layout; they must not call, scroll, or leave the page.
+- Every CTA is a dummy. No \`href\` attribute on any element. No \`<a>\`, no \`tel:\`, no \`#\` or \`#section\`, no Google Maps URLs. Buttons may look real so the owner can see the layout; they must not be links. A tap must do nothing.
 - Required in \`<head>\`: \`<meta charset="utf-8">\`, \`<meta name="viewport" content="width=device-width, initial-scale=1">\`, and a \`<title>\` containing the business name.
 - Fonts must be system or OS-bundled stacks only, since no font may be downloaded. Always end a stack with a generic family.
 - Do NOT add your own "this is a concept" banner or disclaimer. The page that frames this document already supplies one.
@@ -122,7 +122,7 @@ The mobile experience is judged on both look and feel:
 
 Check your document against this list and fix anything that fails:
 
-- Does it contain any \`<script>\`, \`on*=\`, \`<form>\`, \`<button>\`, \`<link>\`, \`@import\`, \`@font-face\`, \`target=\`, \`mailto:\`, \`tel:\`, or an \`href\` other than \`#\`? Remove it.
+- Does it contain any \`<script>\`, \`on*=\`, \`<form>\`, \`<button>\`, \`<a>\`, \`<link>\`, \`@import\`, \`@font-face\`, \`target=\`, \`mailto:\`, \`tel:\`, or any \`href\`? Remove it.
 - Does every image URL appear verbatim in APPROVED IMAGE URLS? Remove any that does not.
 - Does each photograph you placed carry the exact URL that was given with that photograph? Fix any that were swapped.
 - Does every stated fact appear in the BRIEF? Remove any that does not.

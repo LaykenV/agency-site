@@ -96,9 +96,10 @@ describe("buildConceptSystemPrompt", () => {
     expect(prompt.toLowerCase()).toContain("do not add your own");
   });
 
-  test("requires dummy CTAs with href=\"#\" only", () => {
+  test("requires dummy span CTAs with no href", () => {
     expect(prompt).toContain("Every CTA is a dummy");
-    expect(prompt).toContain("The only permitted `href` is exactly `#`");
+    expect(prompt).toContain("No `href` attribute on any element");
+    expect(prompt).toContain("Never use `<a>`");
     expect(prompt).not.toContain("tel:` CTA");
   });
 

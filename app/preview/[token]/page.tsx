@@ -21,10 +21,10 @@ import {
  * without a second domain.
  *
  * No sandbox tokens are granted. Concept CTAs are dummy controls — they look
- * like buttons so the owner can judge the layout, but they must not call,
- * scroll, or leave the page. `validateConceptHtml` already rejects every `href`
- * other than `#`, and `neuterConceptHrefs` rewrites leftover live links in
- * already-published documents.
+ * like buttons so the owner can judge the layout, but they must not navigate.
+ * `validateConceptHtml` rejects every `href` and every `<a>`. `neuterConceptHrefs`
+ * strips leftover hrefs from already-published documents, because `href="#"`
+ * resolves to this preview URL and a click would load the page inside the frame.
  *
  * ## If iOS sizing proves unacceptable
  *

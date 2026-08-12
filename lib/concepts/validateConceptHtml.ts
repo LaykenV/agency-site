@@ -66,8 +66,8 @@ const URL_ATTRIBUTES = [
  * Elements that either execute, embed, fetch, submit, or re-root the document.
  *
  * `<link>` is here because it is the main way a page pulls in Google Fonts.
- * `<button>` and the form controls are here because the plan forbids rendering
- * a control that looks interactive but cannot work in this sandbox.
+ * `<button>`, `<a>`, and the form controls are here because a control that
+ * looks interactive must not navigate. CTAs are styled `<span>`s.
  */
 const BANNED_ELEMENTS = [
   "script",
@@ -81,6 +81,7 @@ const BANNED_ELEMENTS = [
   "textarea",
   "select",
   "button",
+  "a",
   "applet",
   "frame",
   "frameset",
@@ -412,17 +413,17 @@ export function validateConceptHtml(
     );
   }
 
-  // Concept CTAs are visual only. A live tel:, maps URL, or #section looks
-  // tappable and then fails (or leaves the page) inside the sandbox.
+  // Concept CTAs are visual only. Any href — including `#` — is a live link
+  // inside a srcDoc iframe: the browser resolves `#` to the parent preview
+  // URL and a click loads that page inside the frame.
   for (const href of extractHrefValues(html)) {
-    if (href === "#") continue;
     const lowerHref = href.toLowerCase();
     if (lowerHref.startsWith("mailto:")) {
       violations.push(`Contains an unverified mailto: link (${href}).`);
       continue;
     }
     violations.push(
-      `Contains a live link (${href || "empty href"}); the only permitted href is "#".`,
+      `Contains an href (${href || "empty"}); concept CTAs must have no href.`,
     );
   }
 

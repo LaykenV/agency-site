@@ -48,8 +48,8 @@ git diff --check
   `allow-same-origin`, or `allow-top-navigation-by-user-activation`.
 - Generated pages must stay scriptless and self-contained: no JavaScript, no
   external fonts, stylesheets, embeds, or trackers, and images only from the
-  approved allowlist. Concept CTAs are dummy controls; the only permitted
-  `href` is `#`.
+  approved allowlist. Concept CTAs are dummy controls with no `href` and no
+  `<a>`; a tap must do nothing.
 - Every generation runs `validateConceptHtml`, and `publish` re-validates
   server-side. Do not add a path that publishes without validating.
 - The concept notice, page metadata, and view tracking belong to the trusted
