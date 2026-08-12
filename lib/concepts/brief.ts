@@ -32,10 +32,15 @@ export type ConceptApprovedQuote = {
   rating?: number;
   /** Present when the quote was approved from the business's own website. */
   sourceUrl?: string;
-  sourceKind?: "website";
+  /**
+   * Absent for a quote Layken typed himself. `website` and `facebook` mark a
+   * quote the evidence reviewer admitted, and are what lets a re-analysis
+   * replace that source's quotes without touching the hand-entered ones.
+   */
+  sourceKind?: "website" | "facebook";
 };
 
-export type ConceptApprovedWebsiteContent = {
+export type ConceptApprovedContent = {
   tagline?: string;
   about?: string;
   services: Array<{ name: string; description?: string }>;
@@ -81,7 +86,18 @@ export type ConceptBrief = {
   existingSiteSummary?: string;
 
   /** Website facts explicitly approved from the source-backed harvest. */
-  approvedWebsiteContent?: ConceptApprovedWebsiteContent;
+  approvedWebsiteContent?: ConceptApprovedContent;
+
+  /**
+   * Facts the evidence reviewer admitted from the supervised Facebook Pack.
+   *
+   * This is the primary content source. Where it and `approvedWebsiteContent`
+   * disagree, the prompt tells the model to follow this one: the pack is
+   * material Layken chose from the Page the owner actually maintains, and the
+   * website may be years stale. Genuine contradictions are resolved by the
+   * reviewer before either reaches here.
+   */
+  approvedFacebookContent?: ConceptApprovedContent;
 
   // --- Human-supplied context ---
   /** Services, slogan, differentiators, desired CTA — typed by Layken. */
@@ -94,6 +110,21 @@ export type ConceptBrief = {
   logoUrl?: string;
   /** Convex storage URLs for owner/business photos approved for the concept. */
   photoUrls: Array<string>;
+
+  /**
+   * What the evidence reviewer said each selected photo shows, and where it
+   * belongs on the page.
+   *
+   * Advisory only, and deliberately separate from `photoUrls`: the allowlist is
+   * built from `photoUrls` alone, so a note about a URL can never widen what the
+   * page may reference. It exists because a model given "hero: crew removing an
+   * oak limb" writes a better page than one given a bare storage URL.
+   */
+  imageNotes?: Array<{
+    url: string;
+    role?: "hero" | "gallery" | "background" | "supporting";
+    alt?: string;
+  }>;
 
   /** The only testimonial text the page may render. Usually empty. */
   approvedQuotes: Array<ConceptApprovedQuote>;
@@ -133,8 +164,14 @@ export function refreshConceptBrief(input: {
   facebookPageUrl?: string;
   logoUrl?: string;
   photoUrls: Array<string>;
+  imageNotes?: Array<{
+    url: string;
+    role?: "hero" | "gallery" | "background" | "supporting";
+    alt?: string;
+  }>;
   approvedQuotes: Array<ConceptApprovedQuote>;
-  approvedWebsiteContent?: ConceptApprovedWebsiteContent;
+  approvedWebsiteContent?: ConceptApprovedContent;
+  approvedFacebookContent?: ConceptApprovedContent;
 }): ConceptBrief {
   return {
     ...input.research,
@@ -147,7 +184,12 @@ export function refreshConceptBrief(input: {
     facebookPageUrl: input.facebookPageUrl,
     logoUrl: input.logoUrl,
     photoUrls: input.photoUrls,
+    imageNotes:
+      input.imageNotes && input.imageNotes.length > 0
+        ? input.imageNotes
+        : undefined,
     approvedQuotes: input.approvedQuotes,
     approvedWebsiteContent: input.approvedWebsiteContent,
+    approvedFacebookContent: input.approvedFacebookContent,
   };
 }

@@ -203,6 +203,19 @@ function ConceptsAdminContent() {
                   <p className="mt-1 pl-4 text-xs text-[var(--muted-foreground)]">
                     {STATUS_LABELS[concept.status] ?? concept.status}
                     {concept.sentAt ? " · sent" : ""}
+                    {/* Pack state is worth a word in the list: a concept sitting
+                        in Draft with unanalyzed material cannot be generated,
+                        and the list is where that is otherwise invisible. */}
+                    {concept.facebookPackItemCount > 0 &&
+                    concept.facebookPackState === "collecting"
+                      ? " · pack not analyzed"
+                      : concept.facebookPackState === "analyzing"
+                        ? " · analyzing pack"
+                        : concept.facebookPackState === "failed"
+                          ? " · pack needs retry"
+                          : concept.facebookApprovedFactCount > 0
+                            ? ` · ${concept.facebookApprovedFactCount} FB fact${concept.facebookApprovedFactCount === 1 ? "" : "s"}`
+                            : ""}
                     {concept.assetCount > 0
                       ? ` · ${concept.assetCount} image${concept.assetCount === 1 ? "" : "s"}`
                       : ""}

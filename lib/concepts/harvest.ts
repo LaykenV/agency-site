@@ -24,8 +24,9 @@
 
 import type {
   ConceptApprovedQuote,
-  ConceptApprovedWebsiteContent,
+  ConceptApprovedContent,
 } from "./brief";
+import { stableHash } from "./stableHash";
 
 // --- Bounds ---------------------------------------------------------------
 
@@ -140,7 +141,7 @@ export type HarvestSnapshot = {
 
 export type ApprovedHarvestSelection = {
   candidateIds: Array<string>;
-  content: ConceptApprovedWebsiteContent;
+  content: ConceptApprovedContent;
   websiteQuotes: Array<ConceptApprovedQuote>;
 };
 
@@ -324,25 +325,6 @@ export function normalizePhoneForMatch(value: string): string {
   return digits.length === 11 && digits.startsWith("1")
     ? digits.slice(1)
     : digits;
-}
-
-/**
- * A stable 64-bit FNV-1a, rendered hex.
- *
- * Deterministic and synchronous in every runtime this code runs in, which
- * `crypto.subtle` is not. Its job is to make review keys reproducible — running
- * the same site twice must not renumber the checkboxes — so collision
- * resistance across at most 60 short strings is all it needs to offer.
- */
-function stableHash(value: string): string {
-  let low = 0x811c9dc5;
-  let high = 0x01000193;
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index);
-    low = Math.imul(low ^ code, 0x01000193) >>> 0;
-    high = Math.imul(high ^ (code + index), 0x85ebca6b) >>> 0;
-  }
-  return low.toString(16).padStart(8, "0") + high.toString(16).padStart(8, "0");
 }
 
 /** Deterministic across reruns of the same site: kind, value, and page. */

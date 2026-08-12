@@ -89,6 +89,27 @@ describe("pickConceptStructure — fit", () => {
     );
     expect(structure.id).toBe("estimate-sheet");
   });
+
+  test("uses Facebook evidence when choosing the page shape", () => {
+    const structure = pickConceptStructure(
+      briefFor({
+        businessName: "Bayou Recovery",
+        approvedFacebookContent: {
+          tagline: "Help when the road stops",
+          about: undefined,
+          services: [
+            { name: "Emergency towing" },
+            { name: "Roadside assistance" },
+          ],
+          serviceAreas: ["Acadiana"],
+          differentiators: [],
+          sensitiveClaims: ["24/7 service"],
+          hours: [],
+        },
+      }),
+    );
+    expect(structure.id).toBe("dispatch");
+  });
 });
 
 describe("pickConceptStructure — determinism and variety", () => {
@@ -300,6 +321,65 @@ describe("buildConceptUserPrompt", () => {
     expect(prompt).toContain("Tree removal — Hazardous tree removal.");
     expect(prompt).toContain("Licensed and insured");
     expect(prompt).not.toContain("UNREVIEWED");
+  });
+
+  test("renders Facebook content as the primary approved source", () => {
+    const prompt = buildConceptUserPrompt(
+      briefFor({
+        approvedFacebookContent: {
+          tagline: "Tree care done right",
+          about: "Family owned since the storm.",
+          services: [{ name: "Storm cleanup" }],
+          serviceAreas: ["Acadiana"],
+          differentiators: [],
+          sensitiveClaims: ["Fully insured"],
+          hours: [],
+        },
+        approvedWebsiteContent: {
+          tagline: "Stale website tagline",
+          about: undefined,
+          services: [{ name: "Website-only service" }],
+          serviceAreas: [],
+          differentiators: [],
+          sensitiveClaims: [],
+          hours: [],
+        },
+      }),
+      CONCEPT_STRUCTURES[0],
+    );
+
+    expect(prompt).toContain("## APPROVED FACEBOOK CONTENT");
+    expect(prompt).toContain("Tree care done right");
+    expect(prompt).toContain("Fully insured");
+    expect(prompt).toContain(
+      "Where it and the website section disagree, follow this one",
+    );
+    // Facebook section appears before website so the model reads the primary
+    // source first and the gap-fill second.
+    expect(prompt.indexOf("## APPROVED FACEBOOK CONTENT")).toBeLessThan(
+      prompt.indexOf("## APPROVED WEBSITE CONTENT"),
+    );
+  });
+
+  test("attaches role and alt notes to photo URLs without inventing URLs", () => {
+    const prompt = buildConceptUserPrompt(
+      briefFor({
+        photoUrls: [PHOTOS[0]],
+        imageNotes: [
+          {
+            url: PHOTOS[0],
+            role: "hero",
+            alt: "Crew removing an oak limb",
+          },
+        ],
+      }),
+      CONCEPT_STRUCTURES[0],
+    );
+
+    expect(prompt).toContain(
+      `Photo: ${PHOTOS[0]} (hero — Crew removing an oak limb)`,
+    );
+    expect(prompt).toContain("where it belongs on the page and what it shows");
   });
 
   test("embeds the assigned structure spec", () => {

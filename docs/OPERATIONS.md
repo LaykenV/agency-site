@@ -59,20 +59,30 @@ For a Facebook lead who has shown interest but is not yet a prospect, build a
 concept in `/admin/marketing` before creating anything in the project lifecycle:
 
 1. Enter the business name, Facebook Page URL, service area, and any notes on
-   services, slogan, and the CTA they want. Notes carry the most weight on the
-   finished page.
+   services, slogan, and the CTA they want. Notes still outrank every other
+   source of voice and service detail.
 2. Confirm the Google Places match, or record that there is no listing.
    Generation is blocked until identity is settled, because attaching the wrong
    listing puts another company's facts on the page.
-3. Upload the logo and photos if you have them. Ask the owner for a few
-   favourites if you do not. Google photos are never used, and the generator
-   produces a typographic concept rather than inventing imagery.
-4. Generate, then read the page against the brief. The automatic checks catch
-   unsafe markup, wrong phone numbers, hotlinked images, and fabricated
-   testimonials. They cannot judge truth: check credentials, licences,
-   insurance, years in business, service areas, and superlatives yourself.
-5. Publish, then use Copy Messenger Draft and send it by hand.
-6. Watch the open count. Sent and never opened after one follow-up means stop.
+3. Paste a Facebook Pack from their Page: logo, work photos, About screenshots,
+   posts, services, or copied text. Use **Analyze Facebook Pack** once the batch
+   is ready — not after every paste. Luna classifies the material, picks the
+   logo/hero/gallery, and decides which facts the page may state. Screenshots
+   supply facts only; they never become page imagery.
+4. Optionally use **Fill gaps from website** when a verified site exists and the
+   pack still leaves services, about copy, or photos missing. Website evidence
+   goes through the same Luna reviewer; Facebook wins where the two disagree.
+   Wait for image sorting to resolve before Generate unlocks. A visible image
+   failure means generation will continue without those website images.
+5. Generate. Luna audits every factual claim in the draft against the brief. An
+   unsupported claim fails the draft (with one automatic rewrite attempt). Your
+   job is the finished page: does it look right and sound like them?
+6. Publish, then use Copy Messenger Draft and send it by hand.
+7. Watch the open count. Sent and never opened after one follow-up means stop.
+
+Google photos are never used. If the pack has no usable photography, the
+generator produces a typographic concept rather than inventing imagery. Manual
+image uploads remain available as overrides.
 
 A concept is not a prospect. Create the prospect and project by hand only after
 the conversation becomes a real opportunity.

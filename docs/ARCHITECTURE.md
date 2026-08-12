@@ -256,11 +256,14 @@ homepage concept:
 1. manual intake — no discovery, no Facebook scraping, no automated messaging
 2. a single Google Places lookup, whose match is automatically confirmed only
    when uniquely corroborated; otherwise a human confirms it
-3. Firecrawl and PageSpeed against the confirmed website, if there is one
-4. optionally, a bounded structured harvest of that website
-5. bespoke HTML and inline CSS from a configurable OpenRouter model
-6. deterministic safety and factual validation
-7. human review, then publication at an unlisted `/preview/<token>`
+3. supervised Facebook Pack intake — logos, work photos, screenshots, and text
+   pasted from the Page the owner maintains
+4. Luna (`openai/gpt-5.6-luna`) classification, visual selection, evidence
+   review, and — after generation — claim audit
+5. optionally, a bounded website harvest used only to fill gaps the pack left
+6. bespoke HTML and inline CSS from a configurable OpenRouter model
+7. deterministic safety and factual validation, plus the Luna claim audit
+8. human review of the finished page, then publication at `/preview/<token>`
 
 ### Google Places is identity, not content
 
@@ -287,42 +290,72 @@ hold. The fields it clears remain declared as deprecated optionals in
 against both deployments; contracting them is the follow-up step.
 
 Google photos and review text never become preview imagery. Preview imagery is
-limited to owner-supplied uploads and individually approved copies from the
-business's own website harvest.
+limited to Luna-selected Facebook Pack photos, owner-supplied manual uploads,
+and website harvest images Luna attaches only when the pack and manual assets
+left a gap.
 
-### Structured website harvest
+### Facebook Pack — primary evidence path
 
-`convex/concepts/harvest.ts` reads the business's own website into reviewable
-candidates: one Firecrawl Map call capped at 40 URLs, then at most six targeted
-Scrape calls against the pages a human would have opened. `lib/concepts/harvest.ts`
-holds every rule — URL ranking, same-host enforcement, normalization, caps,
-deduplication, sensitive-claim classification, and conflict detection — and is
-pure so it can be tested without a network.
+`convex/concepts/facebookPack.ts` is a supervised intake, not a scraper. Layken
+opens the prospect's Page and pastes or uploads selected material. The pack is
+bounded (20 items, 12 images, 8 text; JPEG/PNG/WebP; 6 MiB a file) and lives on
+`website_concepts` with storage IDs and content hashes — never as a separate
+asset-manifest table.
 
-The snapshot lives on `website_concepts` rather than in a content or crawler
-table. It stores candidates with a source URL and an evidence excerpt, never raw
-markdown, whole Firecrawl responses, or image bytes.
+Analysis is two Luna turns, deliberately separate:
 
-Nothing harvested is a fact until the admin selects it. A snapshot with
-reviewable candidates parks the concept in `content_review`, which blocks
-generation and publication. The mobile review separates standard facts from
-credentials, guarantees, prices, years, statistics, emergency claims, and
-testimonials; sensitive items are approved individually. The server rebuilds
-`approvedWebsiteContent` from candidate IDs in the current snapshot, then the
-primary **Approve and regenerate** action sends only that approved subset to the
-prompt. Skipping is explicit.
+1. **Classification** — vision over the pack items. Each item is labelled logo,
+   business photo, context screenshot, text, duplicate, or unusable. Screenshots
+   and text can supply facts; only logos and business photos may become page
+   imagery (`canUsePackItemAsPageImagery` is the single gate).
+2. **Evidence review** — text-only over the normalized candidates and their
+   source excerpts. Luna may approve or reject every category, including
+   credentials, insurance, years, prices, guarantees, awards, and testimonials.
+   There is no manual fact-approval queue.
 
-Image candidates are staged by a Node action that reads the current candidate
-from the database, validates HTTPS, exact/reviewed host, public DNS, manual
-redirects, an 8 MiB cap, MIME, and magic bytes, then stores JPEG/PNG/WebP in
-Convex. The admin sees only the Convex preview URL. Choosing **Logo** or
-**Photo** attaches that storage ID to the generator allowlist with source
-provenance; the original remote URL never renders in the browser or concept.
+The server rebuilds `approvedFacebookContent` from stored candidates, never from
+the model's free text. Changing pack material invalidates compiled evidence,
+generated HTML, and publication. Analysis never starts generation; **Generate**
+remains an explicit admin action. Any pack with material must be fully `ready`;
+collecting, analyzing, failed, partial, or legacy-unknown states block generation
+and publication until the pack is re-analyzed or the unreadable material is
+removed.
+
+### Website harvest — secondary gap-fill
+
+`convex/concepts/harvest.ts` still reads the business's own website: one
+Firecrawl Map call capped at 40 URLs, then at most six targeted Scrape calls.
+`lib/concepts/harvest.ts` holds every pure rule — URL ranking, same-host
+enforcement, normalization, caps, deduplication, sensitive-claim classification,
+and conflict detection.
+
+Candidates feed the same evidence reviewer the pack uses
+(`lib/concepts/evidence.ts`). New harvests land as `approved` or `skipped`
+rather than parking in `content_review`; legacy `pending` rows keep the old
+manual review surface until they are resolved or migrated. Source priority for
+the generation prompt is:
+
+1. manual business information
+2. Luna-approved Facebook Pack evidence
+3. Luna-approved website evidence
+4. Google Places identity only
+
+Image candidates are staged by a Node action that validates HTTPS, exact or
+reviewed host, public DNS, manual redirects, an 8 MiB cap, MIME, and magic bytes,
+then stores JPEG/PNG/WebP in Convex. Luna classifies the staged copies and
+attaches a logo or photos only where the concept still has none from the pack
+or a manual upload. Remote source URLs never reach the admin browser or the
+generated page.
+
+Fact review finishing does not unlock generation while website images are still
+being staged or classified. `harvestImageAnalysisState: processing` is a
+separate additive gate because image work continues after the Firecrawl request
+finishes. The pass resolves to `ready` or visibly `failed`; failure allows a
+typographic concept, while an in-flight pass cannot spend a draft that would be
+immediately invalidated by a late logo or photo.
 
 Matching and baseline research never generate automatically. They stop at
-`draft`, leaving time to harvest, upload assets, edit notes, or deliberately
-generate from the sparse brief. Every paid generation starts from an explicit
-admin button.
+`draft`. Every paid generation starts from an explicit admin button.
 
 ### Rendering and security boundary
 
@@ -355,10 +388,18 @@ into the generated HTML.
 embedded and form elements, external requests, `target` attributes, unverified
 `mailto:` links, assets outside the approved allowlist, placeholder text, any
 phone number other than the verified one, and testimonial markup when no quotes
-were approved. It cannot judge whether a claim is true — credentials, years in
-business, insurance, service areas, and superlatives are checked by a human
-before publication, and `publish` re-runs validation server-side regardless of
-the stored status.
+were approved.
+
+After those deterministic checks pass, `lib/concepts/claimAudit.ts` sends the
+page's visible copy and the exact brief back to Luna. Unsupported or materially
+strengthened claims fail the draft and may trigger one bounded regeneration.
+A zero-claim, malformed, over-limit, provider-error, or truncated response fails
+closed. Page text over the audit input ceiling also fails instead of silently
+dropping the end of the page.
+A second failure surfaces as a generation error; it is never published
+automatically. `publish` re-runs the deterministic validator server-side
+regardless of the stored status. The only required human review after analysis
+is the finished page before **Publish**.
 
 ## Content dashboard
 

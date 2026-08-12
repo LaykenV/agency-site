@@ -24,7 +24,11 @@ import { ConceptPreviewFrame } from "./ConceptPreviewFrame";
 import { ConceptHarvestReview } from "./ConceptHarvestReview";
 import { ConceptHarvestImages } from "./ConceptHarvestImages";
 import { ConceptFacebookPack } from "./ConceptFacebookPack";
+import { ConceptPackSummary } from "./ConceptPackSummary";
+import { ConceptEvidenceReport } from "./ConceptEvidenceReport";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
+import { generationBlockedReason } from "@/lib/concepts/lifecycle";
+import { harvestCandidatesToEvidence } from "@/lib/concepts/evidence";
 import {
   buildMessengerDraft,
   conceptPreviewUrl,
@@ -266,8 +270,9 @@ export function ConceptReviewCard({
   const needsMatch = isMatching;
   const harvestSourceUrl = concept.harvestSourceUrl;
   const harvestPending = concept.harvestReviewState === "pending";
-  const harvestApproved = concept.harvestReviewState === "approved";
   const harvestInFlight = Boolean(concept.harvestRequestId);
+  const harvestImagesInFlight =
+    concept.harvestImageAnalysisState === "processing";
   const sensitiveCount = (concept.harvestCandidates ?? []).filter(
     (candidate) => candidate.risk === "sensitive",
   ).length;
@@ -281,6 +286,15 @@ export function ConceptReviewCard({
   const packPreviewUrls = Object.fromEntries(
     data.packItemPreviews.map((preview) => [preview.itemId, preview.url]),
   );
+  const generationBlocked = generationBlockedReason({
+    placeMatchResolved: concept.placeMatchResolved,
+    hasResearchBrief: Boolean(concept.researchBrief),
+    harvestReviewState: concept.harvestReviewState,
+    harvestInFlight,
+    harvestImagesInFlight,
+    facebookPackState: concept.facebookPackState,
+    packItemCount: packItems.length,
+  });
 
   /** Resolves true when the action succeeded, so a caller can clear its input. */
   const runAction = async (
@@ -640,6 +654,18 @@ export function ConceptReviewCard({
         }
       />
 
+      {/* --- What the reviewer concluded. A report, not an approval form. --- */}
+      {concept.facebookEvidence ? (
+        <ConceptPackSummary
+          candidates={concept.facebookEvidence.candidates}
+          decisions={concept.facebookEvidence.decisions}
+          conflicts={concept.facebookEvidence.conflicts}
+          assets={concept.facebookEvidence.assets}
+          items={packItems}
+          previewUrls={packPreviewUrls}
+        />
+      ) : null}
+
       {/* --- Harvested website content and factual approval --- */}
       {harvestSourceUrl || concept.harvestReviewState ? (
         <div
@@ -650,13 +676,15 @@ export function ConceptReviewCard({
               : "border-[var(--border)] bg-[var(--card)]",
           )}
         >
-          <h3 className="text-sm font-semibold">Harvested website content</h3>
+          <h3 className="text-sm font-semibold">Website gap-fill</h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {harvestApproved
-              ? `${concept.approvedHarvestCandidateIds?.length ?? 0} source-backed item(s) are approved for the next generation.`
-              : concept.harvestReviewState === "skipped"
-                ? "This harvest is being ignored. Regeneration will use only your notes, verified phone, and uploaded assets."
-                : "Found on their website. Review the actual content below, then regenerate with the approved subset."}
+            {harvestPending
+              ? "This harvest was collected before automatic review and still has a manual approval below. Approve or skip it once; new scans are reviewed for you."
+              : harvestImagesInFlight
+                ? "Website facts are reviewed. Images are still being copied and sorted before generation unlocks."
+                : concept.harvestReviewState === "skipped"
+                  ? "Nothing usable came back from their website. The page will be built from the Facebook Pack, your notes, and uploaded assets."
+                  : "Found on their website and reviewed against its own source pages. Facebook material wins where the two disagree."}
           </p>
 
           <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
@@ -667,28 +695,38 @@ export function ConceptReviewCard({
               </dd>
             </div>
             <div>
-              <dt className="text-[var(--muted-foreground)]">Facts</dt>
+              <dt className="text-[var(--muted-foreground)]">Facts found</dt>
               <dd className="font-medium">
                 {concept.harvestCandidates?.length ?? 0}
               </dd>
             </div>
             <div>
-              <dt className="text-[var(--muted-foreground)]">Needs care</dt>
+              <dt className="text-[var(--muted-foreground)]">Held-to claims</dt>
               <dd className="font-medium">{sensitiveCount}</dd>
             </div>
             <div>
-              <dt className="text-[var(--muted-foreground)]">Images</dt>
+              <dt className="text-[var(--muted-foreground)]">Images used</dt>
               <dd className="font-medium">
+                {concept.importedWebsiteAssets?.length ?? 0} of{" "}
                 {concept.harvestImageCandidates?.length ?? 0}
               </dd>
             </div>
           </dl>
 
-          <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-            “Needs care” is included in the facts total; it marks credentials,
-            guarantees, prices, years, statistics, emergency claims, and
-            testimonials that require individual approval.
-          </p>
+          {/* The reviewed outcome. Legacy pending rows keep the old approval
+              form below instead; they were harvested before this existed. */}
+          {!harvestPending && concept.harvestReview ? (
+            <div className="mt-4 border-t border-[var(--border)] pt-4">
+              <ConceptEvidenceReport
+                candidates={harvestCandidatesToEvidence(
+                  concept.harvestCandidates ?? [],
+                )}
+                decisions={concept.harvestReview.decisions}
+                conflicts={concept.harvestReview.conflicts}
+                emptyMessage="Their website supplied no usable facts."
+              />
+            </div>
+          ) : null}
           {concept.harvestedPages?.length ? (
             <details className="mt-3 min-w-0 text-xs">
               <summary className="cursor-pointer font-medium text-[var(--muted-foreground)]">
@@ -725,48 +763,52 @@ export function ConceptReviewCard({
             </ul>
           ) : null}
 
-          <ConceptHarvestImages
-            candidates={concept.harvestImageCandidates ?? []}
-            previewUrls={harvestImagePreviewUrls}
-            isBusy={isBusy || isWorking}
-            canRegenerate={!harvestPending && Boolean(concept.researchBrief)}
-            onRetry={(candidateId) =>
-              runAction(
-                () => stageHarvestImages({ conceptId, candidateId }),
-                "Retrying that website image...",
-              )
-            }
-            onApprove={(candidateId, kind) =>
-              runAction(
-                () => approveHarvestImage({ conceptId, candidateId, kind }),
-                kind === "logo"
-                  ? "Website logo selected."
-                  : "Website photo selected.",
-              )
-            }
-            onReject={(candidateId) =>
-              runAction(
-                () => rejectHarvestImage({ conceptId, candidateId }),
-                "Website image rejected.",
-              )
-            }
-            onRegenerate={() =>
-              runAction(
-                () =>
-                  generate({
-                    conceptId,
-                    structureId: structureId || undefined,
-                  }),
-                "Generating with the selected images...",
-              )
-            }
-          />
+          {/* Legacy only. A reviewed harvest attaches its own imagery, and a
+              staged file nothing selected is deleted rather than offered. */}
+          {harvestPending ? (
+            <ConceptHarvestImages
+              candidates={concept.harvestImageCandidates ?? []}
+              previewUrls={harvestImagePreviewUrls}
+              isBusy={isBusy || isWorking}
+              canRegenerate={Boolean(concept.researchBrief)}
+              onRetry={(candidateId) =>
+                runAction(
+                  () => stageHarvestImages({ conceptId, candidateId }),
+                  "Retrying that website image...",
+                )
+              }
+              onApprove={(candidateId, kind) =>
+                runAction(
+                  () => approveHarvestImage({ conceptId, candidateId, kind }),
+                  kind === "logo"
+                    ? "Website logo selected."
+                    : "Website photo selected.",
+                )
+              }
+              onReject={(candidateId) =>
+                runAction(
+                  () => rejectHarvestImage({ conceptId, candidateId }),
+                  "Website image rejected.",
+                )
+              }
+              onRegenerate={() =>
+                runAction(
+                  () =>
+                    generate({
+                      conceptId,
+                      structureId: structureId || undefined,
+                    }),
+                  "Generating with the selected images...",
+                )
+              }
+            />
+          ) : null}
 
-          {harvestPending || harvestApproved ? (
+          {harvestPending ? (
             <ConceptHarvestReview
               candidates={concept.harvestCandidates ?? []}
               approvedCandidateIds={concept.approvedHarvestCandidateIds ?? []}
-              reviewState={harvestApproved ? "approved" : "pending"}
+              reviewState="pending"
               snapshotKey={concept.harvestedAt ?? 0}
               isBusy={isBusy || isWorking}
               placeMatchResolved={concept.placeMatchResolved}
@@ -810,26 +852,8 @@ export function ConceptReviewCard({
             <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
               <Button
                 size="sm"
-                disabled={isBusy || isWorking}
-                onClick={() =>
-                  runAction(
-                    () =>
-                      generate({
-                        conceptId,
-                        structureId: structureId || undefined,
-                      }),
-                    "Generating from your notes and uploads...",
-                  )
-                }
-              >
-                {concept.generatedHtml
-                  ? "Regenerate without harvest"
-                  : "Generate without harvest"}
-              </Button>
-              <Button
-                size="sm"
                 variant="outline"
-                disabled={isBusy || isWorking}
+                disabled={isBusy || isWorking || harvestImagesInFlight}
                 onClick={() =>
                   runAction(
                     () => harvestWebsiteContent({ conceptId, refresh: true }),
@@ -842,13 +866,20 @@ export function ConceptReviewCard({
             </div>
           )}
         </div>
-      ) : concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl ? (
+      ) : (concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl) &&
+        // Website is secondary: after the pack has been analyzed, or when there
+        // is no pack material at all. Collecting/analyzing the pack first keeps
+        // the card order honest and avoids spending Firecrawl while the primary
+        // source is still mid-pass.
+        (packItems.length === 0 ||
+          concept.facebookPackState === "ready" ||
+          concept.facebookPackState === "failed") ? (
         <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <h3 className="text-sm font-semibold">Harvested website content</h3>
+          <h3 className="text-sm font-semibold">Fill gaps from website</h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
             {harvestInFlight
-              ? "Reading and normalizing their website now..."
-              : "Read their current site for services, about copy, and images instead of retyping it. Costs one Firecrawl map plus up to six page reads."}
+              ? "Reading their website and reviewing what it says..."
+              : "Optional. Fill missing services, about copy, or photos from their current site. One Firecrawl map plus up to six page reads, then automatic review. Facebook material wins where the two disagree."}
           </p>
           <Button
             size="sm"
@@ -858,25 +889,25 @@ export function ConceptReviewCard({
             onClick={() =>
               runAction(
                 () => harvestWebsiteContent({ conceptId }),
-                "Reading their website...",
+                "Filling gaps from their website...",
               )
             }
           >
             {harvestInFlight ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
             ) : null}
-            {harvestInFlight ? "Harvesting..." : "Harvest website content"}
+            {harvestInFlight ? "Reading website..." : "Fill gaps from website"}
           </Button>
         </div>
       ) : null}
 
       {/* --- Assets --- */}
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h3 className="text-sm font-semibold">Approved images</h3>
+        <h3 className="text-sm font-semibold">Manual images</h3>
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          Only these reach the page. Google photos are research signals and are
-          never used. If the Facebook Page has the only good photos, upload them
-          here or ask the owner to send a few favourites.
+          Overrides for the Facebook Pack and website selections. Use when the
+          owner sent better photos, or when the pack has none. Google photos are
+          never used.
         </p>
 
         <div className="mt-3 flex flex-wrap gap-2">
@@ -1132,13 +1163,7 @@ export function ConceptReviewCard({
             </select>
           </div>
           <Button
-            disabled={
-              isBusy ||
-              isWorking ||
-              harvestPending ||
-              harvestInFlight ||
-              !concept.researchBrief
-            }
+            disabled={isBusy || isWorking || generationBlocked !== null}
             onClick={() =>
               runAction(
                 () =>
@@ -1152,9 +1177,11 @@ export function ConceptReviewCard({
           >
             {concept.generatedHtml ? "Regenerate" : "Generate concept"}
           </Button>
-          {!concept.researchBrief ? (
+          {/* The same predicate the mutation uses, so the button and the server
+              never disagree about why generation is unavailable. */}
+          {generationBlocked ? (
             <p className="text-xs text-[var(--muted-foreground)]">
-              Waiting on enrichment. Confirm the Google match first.
+              {generationBlocked}
             </p>
           ) : null}
         </div>
@@ -1166,10 +1193,9 @@ export function ConceptReviewCard({
           <div>
             <h3 className="text-sm font-semibold">Review</h3>
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              Read every factual claim against the brief before publishing:
-              credentials, licences, insurance, years in business, service areas
-              and any superlative. The automatic checks cannot tell whether a
-              claim is true.
+              Luna already audited the draft against the evidence. Your job is
+              the finished page: does it look right, does it sound like them,
+              and is it something you would send? Publish is still your call.
             </p>
           </div>
 

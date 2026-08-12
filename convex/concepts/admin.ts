@@ -83,6 +83,9 @@ function toSummary(concept: Doc<"website_concepts">) {
       (concept.harvestImageCandidates?.length ?? 0),
     facebookPackState: concept.facebookPackState,
     facebookPackItemCount: concept.facebookPackItems?.length ?? 0,
+    facebookApprovedFactCount: (
+      concept.facebookEvidence?.decisions ?? []
+    ).filter((decision) => decision.decision === "approved").length,
     assetCount:
       concept.assetStorageIds.length + (concept.logoStorageId ? 1 : 0),
     model: concept.model,
@@ -334,6 +337,8 @@ function clearedHarvest() {
     harvestedPages: undefined,
     harvestCandidates: undefined,
     harvestImageCandidates: undefined,
+    harvestImageAnalysisState: undefined,
+    harvestImageAnalysisError: undefined,
     harvestWarnings: undefined,
     harvestReviewState: undefined,
     harvestReviewedAt: undefined,
@@ -375,8 +380,7 @@ export const attachAsset = mutation({
       let importedWebsiteAssets = concept.importedWebsiteAssets;
       if (concept.logoStorageId && concept.logoStorageId !== args.storageId) {
         const stagedIndex = (harvestImageCandidates ?? []).findIndex(
-          (candidate) =>
-            candidate.previewStorageId === concept.logoStorageId,
+          (candidate) => candidate.previewStorageId === concept.logoStorageId,
         );
         if (stagedIndex >= 0 && harvestImageCandidates) {
           harvestImageCandidates = [...harvestImageCandidates];
@@ -549,19 +553,24 @@ export const reEnrich = mutation({
 // --- Facebook Pack ---------------------------------------------------------
 
 /**
- * Adding or removing pack material resets the analysis.
+ * Adding or removing pack material resets the analysis and the page built from
+ * it.
  *
  * Clearing `facebookPackRequestId` is what makes it safe: an analysis already
  * running against the previous batch can no longer save, so a classification
  * can never describe a set of items the model was not shown.
  *
- * It deliberately does *not* revoke `generatedHtml` yet. Nothing in the pack
- * reaches a generation prompt in C1, so unpublishing a page because a
- * screenshot was pasted would be confusing rather than careful. C2 materializes
- * the reviewed evidence into `ConceptBrief`, and that is the change that must
- * also add the artifact invalidation the plan requires.
+ * The compiled evidence goes with it. Pack material is now the primary source
+ * behind the generation prompt, so a draft built from the previous pack is
+ * stale as soon as the pack changes — and a published page would still be
+ * showing a prospect claims that are no longer supported. Re-analysis and
+ * regeneration are both one tap, which is the right price for not leaving an
+ * unsupported page live.
  */
-function packChanged(items: Array<PackItem<Id<"_storage">>>) {
+function packChanged(
+  concept: Doc<"website_concepts">,
+  items: Array<PackItem<Id<"_storage">>>,
+) {
   return {
     facebookPackItems: items.length > 0 ? items : undefined,
     facebookPackRequestId: undefined,
@@ -570,6 +579,28 @@ function packChanged(items: Array<PackItem<Id<"_storage">>>) {
     facebookPackModel: undefined,
     facebookPackPromptVersion: undefined,
     facebookPackError: undefined,
+    facebookEvidence: undefined,
+    approvedFacebookContent: undefined,
+    facebookReviewModel: undefined,
+    facebookReviewPromptVersion: undefined,
+    facebookReviewError: undefined,
+    approvedQuotes: concept.approvedQuotes.filter(
+      (quote) => quote.sourceKind !== "facebook",
+    ),
+    generatedHtml: undefined,
+    structureId: undefined,
+    validationViolations: undefined,
+    model: undefined,
+    promptVersion: undefined,
+    generationRequestId: undefined,
+    publishedAt: undefined,
+    status: statusAfterGenerationInputChange({
+      placeMatchResolved: concept.placeMatchResolved,
+      currentStatus: concept.status,
+      harvestReviewState: concept.harvestReviewState,
+      harvestInFlight: Boolean(concept.harvestRequestId),
+    }),
+    error: undefined,
     updatedAt: Date.now(),
   };
 }
@@ -641,7 +672,7 @@ export const addPackImage = mutation({
       capturedAt: Date.now(),
     };
 
-    await ctx.db.patch(args.conceptId, packChanged([...items, item]));
+    await ctx.db.patch(args.conceptId, packChanged(concept, [...items, item]));
     return null;
   },
 });
@@ -680,7 +711,7 @@ export const addPackText = mutation({
       capturedAt: Date.now(),
     };
 
-    await ctx.db.patch(args.conceptId, packChanged([...items, item]));
+    await ctx.db.patch(args.conceptId, packChanged(concept, [...items, item]));
     return null;
   },
 });
@@ -699,7 +730,10 @@ export const removePackItem = mutation({
 
     await ctx.db.patch(
       args.conceptId,
-      packChanged(items.filter((candidate) => candidate.id !== args.itemId)),
+      packChanged(
+        concept,
+        items.filter((candidate) => candidate.id !== args.itemId),
+      ),
     );
 
     if (item.storageId) {
@@ -733,11 +767,12 @@ export const analyzeFacebookPack = mutation({
 });
 
 /**
- * Harvest the business's own website into reviewable candidates.
+ * Fill gaps from the business's own website.
  *
  * Explicit rather than automatic. Matching and baseline research stop at Draft;
- * the admin decides whether this website is worth scanning before Firecrawl is
- * called or the concept can enter `content_review`.
+ * the admin decides whether this site is worth scanning after the Facebook Pack
+ * has been analyzed. Harvested candidates go through the same Luna reviewer the
+ * pack uses — there is no checkbox queue for new work.
  *
  * `refresh` bypasses Firecrawl's cache — the case where the owner has just
  * updated their site during the conversation.
@@ -1140,6 +1175,9 @@ export const generate = mutation({
       hasResearchBrief: Boolean(concept.researchBrief),
       harvestReviewState: concept.harvestReviewState,
       harvestInFlight: Boolean(concept.harvestRequestId),
+      harvestImagesInFlight: concept.harvestImageAnalysisState === "processing",
+      facebookPackState: concept.facebookPackState,
+      packItemCount: concept.facebookPackItems?.length ?? 0,
     });
     if (blocked) throw new Error(blocked);
 
@@ -1189,6 +1227,24 @@ export const publish = mutation({
     }
     if (concept.harvestRequestId) {
       throw new Error("Cannot publish while the website harvest is running.");
+    }
+    if (concept.harvestImageAnalysisState === "processing") {
+      throw new Error(
+        "Cannot publish while website images are still being sorted.",
+      );
+    }
+    if (concept.facebookPackState === "analyzing") {
+      throw new Error("Cannot publish while the Facebook Pack is analyzing.");
+    }
+    if (
+      (concept.facebookPackItems?.length ?? 0) > 0 &&
+      concept.facebookPackState !== "ready"
+    ) {
+      throw new Error(
+        concept.facebookPackState === "failed"
+          ? "Facebook Pack analysis failed. Re-analyze it before publishing."
+          : "Analyze the Facebook Pack before publishing, or remove what you pasted.",
+      );
     }
     if (concept.status !== "review") {
       throw new Error(

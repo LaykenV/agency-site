@@ -3,11 +3,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
   PACK_ANALYSIS_MAX_TOTAL_BYTES,
+  PACK_MAX_FACTS_PER_ITEM,
+  PACK_MAX_GALLERY_IMAGES,
   PACK_MAX_IMAGE_ITEMS,
   PACK_MAX_ITEMS,
   PACK_MAX_TEXT_ITEMS,
   PACK_TEXT_MAX,
   buildPackClassificationUserPrompt,
+  buildPackSourceLabels,
   canUsePackItemAsPageImagery,
   isPackFullyClassified,
   isSupportedPackImageType,
@@ -19,8 +22,11 @@ import {
   packTextHash,
   parsePackClassification,
   parsePackJson,
+  selectPackImagery,
   summarizePack,
   type PackClassificationKind,
+  type PackImageQuality,
+  type PackImageRole,
   type PackItem,
 } from "../lib/concepts/facebookPack";
 
@@ -348,6 +354,21 @@ describe("pack prompt and summary", () => {
     expect(summary.duplicates).toBe(1);
   });
 
+  test("source labels carry the model's own description of the item", () => {
+    const labels = buildPackSourceLabels([
+      imageItem("a", {
+        classification: {
+          kind: "context_screenshot",
+          description: "Screenshot of the About tab",
+          classifiedAt: 1,
+        },
+      }),
+      imageItem("b"),
+    ]);
+    expect(labels["pack:a"]).toContain("Screenshot of the About tab");
+    expect(labels["pack:b"]).toContain("unclassified");
+  });
+
   test("the live vision request requires non-retaining structured routing", () => {
     const source = readFileSync(
       resolve(process.cwd(), "convex/concepts/facebookPack.ts"),
@@ -366,5 +387,164 @@ describe("pack prompt and summary", () => {
     expect(source).toContain(
       'facebookPackState: unclassifiedCount === 0 ? "ready" : "failed"',
     );
+  });
+});
+
+describe("fact extraction", () => {
+  const sentItemIds = ["a", "b"];
+
+  test("facts are attributed to the item the entry was returned for", () => {
+    const [entry] = parsePackClassification({
+      json: {
+        items: [
+          {
+            itemId: "a",
+            kind: "context_screenshot",
+            ocrText: "Licensed and insured. Serving Lafayette Parish.",
+            facts: [
+              {
+                kind: "sensitiveClaim",
+                value: "Licensed and insured",
+                evidence: "Licensed and insured.",
+                // A model naming a different source cannot move the fact.
+                sourceItemId: "b",
+              },
+            ],
+          },
+        ],
+      },
+      sentItemIds,
+      classifiedAt: 1,
+    });
+    expect(entry.facts).toHaveLength(1);
+    expect(entry.facts[0].source).toEqual({ kind: "pack", itemId: "a" });
+    expect(entry.facts[0].risk).toBe("sensitive");
+    expect(entry.classification.ocrText).toContain("Lafayette Parish");
+  });
+
+  test("a fact with no excerpt is discarded, not stored unsourced", () => {
+    const [entry] = parsePackClassification({
+      json: {
+        items: [
+          {
+            itemId: "a",
+            kind: "text_context",
+            facts: [
+              { kind: "service", value: "Roof replacement" },
+              {
+                kind: "service",
+                value: "Gutter cleaning",
+                evidence: "we also clean gutters",
+              },
+            ],
+          },
+        ],
+      },
+      sentItemIds,
+      classifiedAt: 1,
+    });
+    expect(entry.facts.map((fact) => fact.value)).toEqual(["Gutter cleaning"]);
+  });
+
+  test("facts are capped per item and a malformed list yields none", () => {
+    const [many] = parsePackClassification({
+      json: {
+        items: [
+          {
+            itemId: "a",
+            kind: "text_context",
+            facts: Array.from(
+              { length: PACK_MAX_FACTS_PER_ITEM + 8 },
+              (_, index) => ({
+                kind: "service",
+                value: `Service ${index}`,
+                evidence: `we do service ${index}`,
+              }),
+            ),
+          },
+        ],
+      },
+      sentItemIds,
+      classifiedAt: 1,
+    });
+    expect(many.facts).toHaveLength(PACK_MAX_FACTS_PER_ITEM);
+
+    const [none] = parsePackClassification({
+      json: { items: [{ itemId: "a", kind: "logo", facts: "lots" }] },
+      sentItemIds,
+      classifiedAt: 1,
+    });
+    expect(none.facts).toEqual([]);
+  });
+});
+
+describe("automatic visual selection", () => {
+  function photo(
+    id: string,
+    quality: PackImageQuality,
+    roleHint?: PackImageRole,
+    capturedAt = 1,
+  ): PackItem {
+    return imageItem(id, {
+      capturedAt,
+      classification: {
+        kind: "business_photo",
+        quality,
+        roleHint,
+        classifiedAt: 2,
+      },
+    });
+  }
+
+  test("a screenshot is never selected, whatever else is in the pack", () => {
+    const selection = selectPackImagery([
+      classified("s1", "context_screenshot"),
+      classified("d1", "duplicate"),
+      classified("u1", "unusable_or_uncertain"),
+    ]);
+    expect(selection).toEqual({
+      logoItemId: undefined,
+      heroItemId: undefined,
+      galleryItemIds: [],
+    });
+  });
+
+  test("the model's hero hint wins, and the rest become the gallery", () => {
+    const selection = selectPackImagery([
+      classified("logo1", "logo"),
+      photo("p1", "good"),
+      photo("p2", "fair", "hero"),
+      photo("p3", "good"),
+    ]);
+    expect(selection.logoItemId).toBe("logo1");
+    expect(selection.heroItemId).toBe("p2");
+    expect(selection.galleryItemIds).toEqual(["p1", "p3"]);
+  });
+
+  test("with no hint the best-quality photo leads", () => {
+    const selection = selectPackImagery([
+      photo("p1", "fair", undefined, 1),
+      photo("p2", "good", undefined, 2),
+    ]);
+    expect(selection.heroItemId).toBe("p2");
+    expect(selection.galleryItemIds).toEqual(["p1"]);
+  });
+
+  test("poor photos are left out entirely", () => {
+    const selection = selectPackImagery([
+      photo("p1", "poor"),
+      photo("p2", "poor", "hero"),
+    ]);
+    expect(selection.heroItemId).toBeUndefined();
+    expect(selection.galleryItemIds).toEqual([]);
+  });
+
+  test("the gallery is capped and selection is stable across reruns", () => {
+    const items = Array.from({ length: PACK_MAX_GALLERY_IMAGES + 4 }, (_, i) =>
+      photo(`p${i}`, "good", undefined, i),
+    );
+    const first = selectPackImagery(items);
+    expect(first.galleryItemIds).toHaveLength(PACK_MAX_GALLERY_IMAGES);
+    expect(selectPackImagery([...items])).toEqual(first);
   });
 });

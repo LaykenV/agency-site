@@ -499,10 +499,29 @@ export const conceptApprovedQuoteValidator = v.object({
   text: v.string(),
   rating: v.optional(v.number()),
   sourceUrl: v.optional(v.string()),
-  sourceKind: v.optional(v.literal("website")),
+  /**
+   * Absent for a quote Layken typed. `website` and `facebook` mark one the
+   * evidence reviewer admitted, so re-analysing a source can replace its own
+   * quotes without disturbing the hand-entered ones.
+   */
+  sourceKind: v.optional(v.union(v.literal("website"), v.literal("facebook"))),
 });
 
-export const conceptApprovedWebsiteContentValidator = v.object({
+/**
+ * Where a selected photograph belongs on the page.
+ *
+ * Shared by the pack item's classification and the brief's image notes, so a
+ * role can never mean one thing when the model returns it and another when the
+ * generator reads it.
+ */
+export const conceptPackImageRoleValidator = v.union(
+  v.literal("hero"),
+  v.literal("gallery"),
+  v.literal("background"),
+  v.literal("supporting"),
+);
+
+export const conceptApprovedContentValidator = v.object({
   tagline: v.optional(v.string()),
   about: v.optional(v.string()),
   services: v.array(
@@ -540,11 +559,22 @@ export const conceptBriefValidator = v.object({
   existingPerformanceScore: v.optional(v.number()),
   existingPrimaryColor: v.optional(v.string()),
   existingSiteSummary: v.optional(v.string()),
-  approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
+  approvedWebsiteContent: v.optional(conceptApprovedContentValidator),
+  approvedFacebookContent: v.optional(conceptApprovedContentValidator),
   notes: v.optional(v.string()),
   facebookPageUrl: v.optional(v.string()),
   logoUrl: v.optional(v.string()),
   photoUrls: v.array(v.string()),
+  /** Advisory role and alt per selected photo. Never widens the allowlist. */
+  imageNotes: v.optional(
+    v.array(
+      v.object({
+        url: v.string(),
+        role: v.optional(conceptPackImageRoleValidator),
+        alt: v.optional(v.string()),
+      }),
+    ),
+  ),
   approvedQuotes: v.array(conceptApprovedQuoteValidator),
 
   // --- DEPRECATED: pre-migration Google Places content. Do not read or write. ---
@@ -661,11 +691,87 @@ export const conceptImportedWebsiteAssetValidator = v.object({
   importedAt: v.number(),
 });
 
+/**
+ * One source-backed claim, and where it came from.
+ *
+ * `source` is a pack item ID or a scraped page URL rather than free text, so
+ * the admin card can always show the exact screenshot or page behind a fact.
+ * `evidence` is the excerpt that supports `value`; a candidate that cannot
+ * carry one is dropped during normalization rather than stored.
+ */
+export const conceptEvidenceCandidateValidator = v.object({
+  id: v.string(),
+  kind: v.union(
+    v.literal("tagline"),
+    v.literal("about"),
+    v.literal("service"),
+    v.literal("serviceArea"),
+    v.literal("differentiator"),
+    v.literal("sensitiveClaim"),
+    v.literal("phone"),
+    v.literal("hours"),
+    v.literal("quote"),
+  ),
+  value: v.string(),
+  detail: v.optional(v.string()),
+  evidence: v.string(),
+  source: v.union(
+    v.object({ kind: v.literal("pack"), itemId: v.string() }),
+    v.object({ kind: v.literal("website"), url: v.string() }),
+  ),
+  risk: v.union(v.literal("standard"), v.literal("sensitive")),
+});
+
+/**
+ * The reviewer's ruling on one candidate.
+ *
+ * Rejections are stored, not discarded: "eleven facts, three omitted, here is
+ * why" is the whole content of the pack summary, and a rejection reason is how
+ * Layken notices the reviewer misread something.
+ */
+export const conceptEvidenceDecisionValidator = v.object({
+  candidateId: v.string(),
+  decision: v.union(v.literal("approved"), v.literal("rejected")),
+  reason: v.optional(v.string()),
+});
+
+/**
+ * `pending` is legacy.
+ *
+ * Phase C moved website review to the same model reviewer the Facebook Pack
+ * uses, so a new harvest lands as `approved` (the reviewer ruled on it) or
+ * `skipped` (there was nothing to rule on). Rows written before that change can
+ * still be `pending`, which is why the literal and the manual review surface
+ * both survive until the migration in C5.
+ */
 export const conceptHarvestReviewStateValidator = v.union(
   v.literal("pending"),
   v.literal("approved"),
   v.literal("skipped"),
 );
+
+/** The asynchronous website-image gap-fill pass that follows fact review. */
+export const conceptHarvestImageAnalysisStateValidator = v.union(
+  v.literal("processing"),
+  v.literal("ready"),
+  v.literal("failed"),
+);
+
+/**
+ * The reviewer's rulings on one website harvest.
+ *
+ * The candidates themselves already live in `harvestCandidates`, so only the
+ * decisions and the conflicts are stored here. Rejections are kept for the same
+ * reason the Facebook ones are: the admin card shows what was left out and why,
+ * which is the only way a misread is ever noticed.
+ */
+export const conceptHarvestReviewValidator = v.object({
+  reviewedAt: v.number(),
+  decisions: v.array(conceptEvidenceDecisionValidator),
+  conflicts: v.array(v.string()),
+  model: v.optional(v.string()),
+  promptVersion: v.optional(v.string()),
+});
 
 /**
  * One item Layken pasted or uploaded out of the prospect's Facebook Page, and
@@ -706,20 +812,35 @@ export const conceptFacebookPackItemValidator = v.object({
       quality: v.optional(
         v.union(v.literal("good"), v.literal("fair"), v.literal("poor")),
       ),
-      roleHint: v.optional(
-        v.union(
-          v.literal("hero"),
-          v.literal("gallery"),
-          v.literal("background"),
-          v.literal("supporting"),
-        ),
-      ),
+      roleHint: v.optional(conceptPackImageRoleValidator),
       duplicateOfItemId: v.optional(v.string()),
       reason: v.optional(v.string()),
+      /** Transcribed text, kept so an approved fact stays checkable. */
+      ocrText: v.optional(v.string()),
       classifiedAt: v.number(),
     }),
   ),
   classificationError: v.optional(v.string()),
+});
+
+/**
+ * One compiled evidence pass over the Facebook Pack.
+ *
+ * The candidates, the rulings, the conflicts the reviewer named, and the visual
+ * roles it assigned. The approved *content* is materialized separately into
+ * `approvedFacebookContent`, because that is what generation reads and it must
+ * be rebuilt by the server from these candidates rather than by a model.
+ */
+export const conceptFacebookEvidenceValidator = v.object({
+  compiledAt: v.number(),
+  candidates: v.array(conceptEvidenceCandidateValidator),
+  decisions: v.array(conceptEvidenceDecisionValidator),
+  conflicts: v.array(v.string()),
+  assets: v.object({
+    logoItemId: v.optional(v.string()),
+    heroItemId: v.optional(v.string()),
+    galleryItemIds: v.array(v.string()),
+  }),
 });
 
 export const conceptFacebookPackStateValidator = v.union(
@@ -776,11 +897,16 @@ export const websiteConceptDocValidator = v.object({
   harvestImageCandidates: v.optional(
     v.array(conceptHarvestImageCandidateValidator),
   ),
+  harvestImageAnalysisState: v.optional(
+    conceptHarvestImageAnalysisStateValidator,
+  ),
+  harvestImageAnalysisError: v.optional(v.string()),
   harvestWarnings: v.optional(v.array(v.string())),
   harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
   harvestReviewedAt: v.optional(v.number()),
+  harvestReview: v.optional(conceptHarvestReviewValidator),
   approvedHarvestCandidateIds: v.optional(v.array(v.string())),
-  approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
+  approvedWebsiteContent: v.optional(conceptApprovedContentValidator),
   importedWebsiteAssets: v.optional(
     v.array(conceptImportedWebsiteAssetValidator),
   ),
@@ -793,6 +919,11 @@ export const websiteConceptDocValidator = v.object({
   facebookPackModel: v.optional(v.string()),
   facebookPackPromptVersion: v.optional(v.string()),
   facebookPackError: v.optional(v.string()),
+  facebookEvidence: v.optional(conceptFacebookEvidenceValidator),
+  approvedFacebookContent: v.optional(conceptApprovedContentValidator),
+  facebookReviewModel: v.optional(v.string()),
+  facebookReviewPromptVersion: v.optional(v.string()),
+  facebookReviewError: v.optional(v.string()),
 
   researchBrief: v.optional(conceptBriefValidator),
   generatedHtml: v.optional(v.string()),
@@ -836,6 +967,7 @@ export const websiteConceptSummaryValidator = v.object({
   harvestCandidateCount: v.number(),
   facebookPackState: v.optional(conceptFacebookPackStateValidator),
   facebookPackItemCount: v.number(),
+  facebookApprovedFactCount: v.number(),
   assetCount: v.number(),
   model: v.optional(v.string()),
   promptVersion: v.optional(v.string()),

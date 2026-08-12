@@ -1,20 +1,30 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import {
+  conceptApprovedContentValidator,
+  conceptApprovedQuoteValidator,
   conceptBriefValidator,
+  conceptEvidenceDecisionValidator,
+  conceptFacebookEvidenceValidator,
   conceptFacebookPackItemValidator,
   conceptHarvestCandidateValidator,
   conceptHarvestImageCandidateValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
 } from "../validators";
+import {
+  buildApprovedEvidence,
+  harvestCandidatesToEvidence,
+} from "../../lib/concepts/evidence";
 import { packAnalysisBlockedReason } from "../../lib/concepts/facebookPack";
 import { requireAdmin } from "../adminGuard";
 import { rateLimiter } from "../rateLimiter";
 import {
   generationBlockedReason,
   isCurrentGeneration,
+  statusAfterGenerationInputChange,
 } from "../../lib/concepts/lifecycle";
 
 /**
@@ -88,16 +98,27 @@ export const queueGeneration = internalMutation({
       hasResearchBrief: Boolean(concept.researchBrief),
       harvestReviewState: concept.harvestReviewState,
       harvestInFlight: Boolean(concept.harvestRequestId),
+      harvestImagesInFlight: concept.harvestImageAnalysisState === "processing",
+      facebookPackState: concept.facebookPackState,
+      packItemCount: concept.facebookPackItems?.length ?? 0,
     });
     if (blocked) {
+      const packWaiting =
+        (concept.facebookPackItems?.length ?? 0) > 0 &&
+        (concept.facebookPackState === "analyzing" ||
+          concept.facebookPackState === "collecting");
+
       await ctx.db.patch(args.conceptId, {
-        // A pending review is a waiting state, not a failure: the concept is
-        // fine, it just has unreviewed content sitting in front of it.
+        // A pending review or an unanalyzed pack is a waiting state, not a
+        // failure: the concept is fine, it just has unreviewed content sitting
+        // in front of it.
         status: concept.harvestRequestId
           ? "harvesting"
           : concept.harvestReviewState === "pending"
             ? "content_review"
-            : "failed",
+            : packWaiting
+              ? "draft"
+              : "failed",
         generationRequestId: undefined,
         error: blocked,
         updatedAt: Date.now(),
@@ -134,6 +155,26 @@ export const queueGeneration = internalMutation({
       generationRequestId,
     });
     return null;
+  },
+});
+
+/**
+ * Take one more token from the daily ceiling for an audit-driven retry.
+ *
+ * The retry happens inside a generation that already paid for itself, so it
+ * would otherwise be invisible to the limiter — and an audit that fails
+ * reliably on some business would quietly double every generation's cost. It
+ * returns false rather than throwing: a refused retry is not an error, it just
+ * means the audited failure is what Layken sees.
+ */
+export const reserveGenerationRetry = internalMutation({
+  args: { conceptId: v.id("website_concepts") },
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const { ok } = await rateLimiter.limit(ctx, "conceptGenerateGlobalDaily", {
+      key: "global",
+    });
+    return ok;
   },
 });
 
@@ -392,10 +433,36 @@ export const queueFacebookPackAnalysis = internalMutation({
     }
 
     const facebookPackRequestId = crypto.randomUUID();
+    // Re-analysis invalidates the previous compiled result immediately. Leaving
+    // the old evidence up while the new pass runs would let generation read a
+    // brief the current analysis is about to replace — and a failure would leave
+    // state=failed with a still-usable evidence pack, which is a lie either way.
     await ctx.db.patch(args.conceptId, {
       facebookPackRequestId,
       facebookPackState: "analyzing",
       facebookPackError: undefined,
+      facebookReviewError: undefined,
+      facebookEvidence: undefined,
+      approvedFacebookContent: undefined,
+      facebookReviewModel: undefined,
+      facebookReviewPromptVersion: undefined,
+      approvedQuotes: concept.approvedQuotes.filter(
+        (quote) => quote.sourceKind !== "facebook",
+      ),
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
+      status: statusAfterGenerationInputChange({
+        placeMatchResolved: concept.placeMatchResolved,
+        currentStatus: concept.status,
+        harvestReviewState: concept.harvestReviewState,
+        harvestInFlight: Boolean(concept.harvestRequestId),
+      }),
+      error: undefined,
       updatedAt: Date.now(),
     });
 
@@ -428,21 +495,31 @@ function isCurrentPackAnalysis(
 }
 
 /**
- * Store one classification pass.
+ * Store one complete analysis: classifications, evidence, and the review.
  *
  * Verdicts are matched back onto the items still present by ID, so an item
  * removed while the model was running is simply not there to label, and an item
  * the model skipped keeps no verdict at all rather than inheriting a
  * neighbour's. An item left unclassified carries a visible error instead, which
  * is the honest state: nobody has decided what it is.
+ *
+ * This is also where reviewed Facebook content first reaches something
+ * generation reads, which is why it revokes the current draft and its
+ * publication. A page built from the previous pack is stale the moment the
+ * evidence behind it changes, and leaving it published would mean a prospect
+ * could be looking at claims this analysis just withdrew.
  */
-export const saveFacebookPackClassification = internalMutation({
+export const saveFacebookPackAnalysis = internalMutation({
   args: {
     conceptId: v.id("website_concepts"),
     facebookPackRequestId: v.string(),
     items: v.array(conceptFacebookPackItemValidator),
     model: v.string(),
     promptVersion: v.string(),
+    reviewPromptVersion: v.string(),
+    evidence: conceptFacebookEvidenceValidator,
+    approvedContent: conceptApprovedContentValidator,
+    approvedQuotes: v.array(conceptApprovedQuoteValidator),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -466,12 +543,16 @@ export const saveFacebookPackClassification = internalMutation({
     const unclassifiedCount = items.filter(
       (item) => !item.classification,
     ).length;
+    const approvedCount = args.evidence.decisions.filter(
+      (decision) => decision.decision === "approved",
+    ).length;
 
     await ctx.db.patch(args.conceptId, {
       facebookPackItems: items,
       facebookPackRequestId: undefined,
-      // Partial model output is useful to display, but is not a ready evidence
-      // pack. C2 may only compile a pack after every item has a verdict.
+      // Partial model output is useful to display, but it is not a ready
+      // evidence pack: an item nobody classified may be a screenshot, and the
+      // summary would be describing a pack that was never fully read.
       facebookPackState: unclassifiedCount === 0 ? "ready" : "failed",
       facebookPackAnalyzedAt: now,
       facebookPackModel: args.model,
@@ -480,6 +561,33 @@ export const saveFacebookPackClassification = internalMutation({
         unclassifiedCount === 0
           ? undefined
           : `${unclassifiedCount} pack item${unclassifiedCount === 1 ? " did" : "s did"} not receive a classification. Remove unreadable items or analyze again.`,
+      facebookEvidence: args.evidence,
+      approvedFacebookContent: args.approvedContent,
+      facebookReviewModel: args.model,
+      facebookReviewPromptVersion: args.reviewPromptVersion,
+      facebookReviewError: undefined,
+      // Hand-entered quotes and website-approved quotes are untouched; only the
+      // Facebook set this analysis supersedes is replaced.
+      approvedQuotes: [
+        ...concept.approvedQuotes.filter(
+          (quote) => quote.sourceKind !== "facebook",
+        ),
+        ...args.approvedQuotes,
+      ],
+      generatedHtml: undefined,
+      structureId: undefined,
+      validationViolations: undefined,
+      model: undefined,
+      promptVersion: undefined,
+      generationRequestId: undefined,
+      publishedAt: undefined,
+      status: statusAfterGenerationInputChange({
+        placeMatchResolved: concept.placeMatchResolved,
+        currentStatus: concept.status,
+        harvestReviewState: concept.harvestReviewState,
+        harvestInFlight: Boolean(concept.harvestRequestId),
+      }),
+      error: undefined,
       updatedAt: now,
     });
 
@@ -499,6 +607,10 @@ export const saveFacebookPackClassification = internalMutation({
           (item) => item.classification?.kind === "context_screenshot",
         ).length,
         unclassifiedCount,
+        candidateCount: args.evidence.candidates.length,
+        approvedCount,
+        conflictCount: args.evidence.conflicts.length,
+        quoteCount: args.approvedQuotes.length,
       },
     });
     return null;
@@ -518,6 +630,14 @@ export const failFacebookPackAnalysis = internalMutation({
     conceptId: v.id("website_concepts"),
     facebookPackRequestId: v.string(),
     error: v.string(),
+    /**
+     * Which pass broke. A review failure is worth naming separately: the pack
+     * was read successfully and the retry is likely to behave differently,
+     * whereas a classification failure usually means an item needs removing.
+     */
+    stage: v.optional(
+      v.union(v.literal("classification"), v.literal("review")),
+    ),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -530,6 +650,8 @@ export const failFacebookPackAnalysis = internalMutation({
       facebookPackRequestId: undefined,
       facebookPackState: "failed",
       facebookPackError: args.error.slice(0, 500),
+      facebookReviewError:
+        args.stage === "review" ? args.error.slice(0, 500) : undefined,
       updatedAt: Date.now(),
     });
     return null;
@@ -609,6 +731,8 @@ export const queueHarvest = internalMutation({
       harvestedPages: undefined,
       harvestCandidates: undefined,
       harvestImageCandidates: undefined,
+      harvestImageAnalysisState: undefined,
+      harvestImageAnalysisError: undefined,
       harvestWarnings: undefined,
       harvestReviewState: undefined,
       harvestReviewedAt: undefined,
@@ -687,11 +811,17 @@ function statusAfterHarvestWithoutReview(concept: {
 }
 
 /**
- * Store one bounded snapshot and park the concept for review.
+ * Store one bounded snapshot together with the reviewer's rulings on it.
  *
- * A snapshot with no candidates at all resolves itself as `skipped` rather than
- * asking Layken to review an empty list — there is nothing to approve, and a
- * gate with no content behind it is just an extra click.
+ * Phase C removed the human approval queue between these two steps: the harvest
+ * action reviews the candidates before calling this, so the snapshot and the
+ * decisions arrive in one write and the concept never parks in
+ * `content_review`. What is approved is rebuilt here from the stored
+ * candidates, never from the model's reply, so the reviewer can only admit text
+ * Firecrawl actually returned.
+ *
+ * A harvest that produced nothing resolves as `skipped`, which is the honest
+ * description: there was nothing to rule on.
  */
 export const saveHarvest = internalMutation({
   args: {
@@ -704,6 +834,10 @@ export const saveHarvest = internalMutation({
     candidates: v.array(conceptHarvestCandidateValidator),
     imageCandidates: v.array(conceptHarvestImageCandidateValidator),
     warnings: v.array(v.string()),
+    decisions: v.array(conceptEvidenceDecisionValidator),
+    conflicts: v.array(v.string()),
+    reviewModel: v.optional(v.string()),
+    reviewPromptVersion: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -721,6 +855,12 @@ export const saveHarvest = internalMutation({
       ]),
     );
 
+    const approved = buildApprovedEvidence({
+      candidates: harvestCandidatesToEvidence(args.candidates),
+      decisions: args.decisions,
+    });
+    const hasApprovedContent = approved.approvedCandidateIds.length > 0;
+
     await ctx.db.patch(args.conceptId, {
       harvestRequestId: undefined,
       harvestedAt: now,
@@ -737,24 +877,49 @@ export const saveHarvest = internalMutation({
             }
           : { stageStatus: "staging" as const }),
       })),
+      harvestImageAnalysisState:
+        args.imageCandidates.length > 0 ? "processing" : undefined,
+      harvestImageAnalysisError: undefined,
       harvestWarnings: args.warnings.length > 0 ? args.warnings : undefined,
-      harvestReviewState: reviewable ? "pending" : "skipped",
-      harvestReviewedAt: reviewable ? undefined : now,
-      approvedHarvestCandidateIds: undefined,
-      approvedWebsiteContent: undefined,
-      // A pending review revokes any generated artifact: the page in front of
-      // Layken was built without content he is about to approve.
-      generatedHtml: reviewable ? undefined : concept.generatedHtml,
-      structureId: reviewable ? undefined : concept.structureId,
-      validationViolations: reviewable
+      harvestReviewState: reviewable ? "approved" : "skipped",
+      harvestReviewedAt: now,
+      harvestReview: reviewable
+        ? {
+            reviewedAt: now,
+            decisions: args.decisions,
+            conflicts: args.conflicts,
+            model: args.reviewModel,
+            promptVersion: args.reviewPromptVersion,
+          }
+        : undefined,
+      approvedHarvestCandidateIds: hasApprovedContent
+        ? approved.approvedCandidateIds
+        : undefined,
+      approvedWebsiteContent: hasApprovedContent ? approved.content : undefined,
+      approvedQuotes: [
+        ...concept.approvedQuotes.filter(
+          (quote) => quote.sourceKind !== "website",
+        ),
+        ...approved.quotes,
+      ],
+      // New website content revokes any page generated without it. A harvest
+      // that approved nothing still changes nothing, so the existing draft is
+      // left alone rather than thrown away for a scrape that found nothing.
+      generatedHtml: hasApprovedContent ? undefined : concept.generatedHtml,
+      structureId: hasApprovedContent ? undefined : concept.structureId,
+      validationViolations: hasApprovedContent
         ? undefined
         : concept.validationViolations,
-      model: reviewable ? undefined : concept.model,
-      promptVersion: reviewable ? undefined : concept.promptVersion,
-      generationRequestId: reviewable ? undefined : concept.generationRequestId,
-      publishedAt: reviewable ? undefined : concept.publishedAt,
-      status: reviewable
-        ? "content_review"
+      model: hasApprovedContent ? undefined : concept.model,
+      promptVersion: hasApprovedContent ? undefined : concept.promptVersion,
+      generationRequestId: hasApprovedContent
+        ? undefined
+        : concept.generationRequestId,
+      publishedAt: hasApprovedContent ? undefined : concept.publishedAt,
+      status: hasApprovedContent
+        ? concept.placeMatchResolved
+          ? "draft"
+          : concept.status
         : statusAfterHarvestWithoutReview(concept),
       error: undefined,
       updatedAt: now,
@@ -772,6 +937,9 @@ export const saveHarvest = internalMutation({
         warningCount: args.warnings.length,
       },
     });
+    // Staging is scheduled rather than awaited: fetching a dozen remote files
+    // is not transactional work, and a broken image must never cost the facts.
+    // The staging action classifies what it managed to copy when it finishes.
     if (args.imageCandidates.length > 0) {
       await ctx.scheduler.runAfter(
         0,
@@ -782,6 +950,220 @@ export const saveHarvest = internalMutation({
         },
       );
     }
+    return null;
+  },
+});
+
+/**
+ * Attach the images the classifier selected, and clean up the rest.
+ *
+ * Website imagery is gap-fill, so it is attached only where the concept has
+ * nothing already: a manual upload or a Facebook Pack selection wins outright.
+ * That is not just precedence — a page mixing a business's Facebook photos with
+ * its old website's stock imagery looks like two businesses.
+ *
+ * Everything not selected is deleted here rather than left staged. A staged
+ * file nothing points at is an orphan, and the candidate keeps its `rejected`
+ * status so a later pass does not fetch it again.
+ */
+export const saveWebsiteImageSelection = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    expectedHarvestedAt: v.number(),
+    logoCandidateId: v.optional(v.string()),
+    photoCandidateIds: v.array(v.string()),
+    alts: v.array(v.object({ candidateId: v.string(), alt: v.string() })),
+    model: v.string(),
+    promptVersion: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept || concept.harvestedAt !== args.expectedHarvestedAt) {
+      return null;
+    }
+
+    const packAssets = concept.facebookEvidence?.assets;
+    const packHasLogo = Boolean(packAssets?.logoItemId);
+    const packHasPhotos = Boolean(
+      packAssets?.heroItemId || (packAssets?.galleryItemIds.length ?? 0) > 0,
+    );
+
+    const wantLogo = Boolean(
+      args.logoCandidateId && !concept.logoStorageId && !packHasLogo,
+    );
+    const wantPhotos =
+      concept.assetStorageIds.length === 0 && !packHasPhotos
+        ? args.photoCandidateIds
+        : [];
+
+    const altByCandidate = new Map(
+      args.alts.map((entry) => [entry.candidateId, entry.alt]),
+    );
+    const selected = new Set([
+      ...(wantLogo && args.logoCandidateId ? [args.logoCandidateId] : []),
+      ...wantPhotos,
+    ]);
+
+    const now = Date.now();
+    const imported = [...(concept.importedWebsiteAssets ?? [])];
+    const photoStorageIds: Array<Id<"_storage">> = [];
+    let logoStorageId = concept.logoStorageId;
+    const discarded: Array<Id<"_storage">> = [];
+
+    const candidates = (concept.harvestImageCandidates ?? []).map(
+      (candidate) => {
+        const storageId = candidate.previewStorageId;
+        if (!storageId || candidate.stageStatus !== "ready") return candidate;
+
+        if (!selected.has(candidate.id)) {
+          // Keep anything already attached by a previous pass; discard the rest.
+          const attached =
+            storageId === concept.logoStorageId ||
+            concept.assetStorageIds.includes(storageId);
+          if (attached) return candidate;
+          discarded.push(storageId);
+          return {
+            ...candidate,
+            previewStorageId: undefined,
+            stageStatus: "rejected" as const,
+            approvedKind: undefined,
+          };
+        }
+
+        const kind =
+          candidate.id === args.logoCandidateId && wantLogo
+            ? ("logo" as const)
+            : ("photo" as const);
+        if (kind === "logo") logoStorageId = storageId;
+        else photoStorageIds.push(storageId);
+
+        if (!imported.some((asset) => asset.storageId === storageId)) {
+          imported.push({
+            candidateId: candidate.id,
+            storageId,
+            kind,
+            sourceUrl: candidate.sourceUrl,
+            importedAt: now,
+          });
+        }
+
+        return {
+          ...candidate,
+          approvedKind: kind,
+          alt: altByCandidate.get(candidate.id) ?? candidate.alt,
+        };
+      },
+    );
+
+    for (const storageId of discarded) {
+      try {
+        await ctx.storage.delete(storageId);
+      } catch (error) {
+        console.warn("[concepts] unselected website image cleanup failed", {
+          storageId,
+          error,
+        });
+      }
+    }
+
+    const attachedAnything =
+      photoStorageIds.length > 0 || logoStorageId !== concept.logoStorageId;
+
+    await ctx.db.patch(args.conceptId, {
+      harvestImageCandidates: candidates,
+      harvestImageAnalysisState: "ready",
+      harvestImageAnalysisError: undefined,
+      importedWebsiteAssets: imported.length > 0 ? imported : undefined,
+      logoStorageId,
+      assetStorageIds: [...concept.assetStorageIds, ...photoStorageIds],
+      // New imagery changes the page, so an existing draft is revoked exactly
+      // as an approved fact would revoke it.
+      ...(attachedAnything
+        ? {
+            generatedHtml: undefined,
+            structureId: undefined,
+            validationViolations: undefined,
+            model: undefined,
+            promptVersion: undefined,
+            generationRequestId: undefined,
+            publishedAt: undefined,
+            status: concept.placeMatchResolved
+              ? ("draft" as const)
+              : concept.status,
+          }
+        : {}),
+      updatedAt: now,
+    });
+
+    if (attachedAnything) {
+      await ctx.scheduler.runAfter(0, internal.activityLog.logActivity, {
+        actor: "system",
+        kind: "concept.website_assets_selected",
+        payload: {
+          conceptId: args.conceptId,
+          model: args.model,
+          promptVersion: args.promptVersion,
+          logoAttached: logoStorageId !== concept.logoStorageId,
+          photosAttached: photoStorageIds.length,
+          discarded: discarded.length,
+        },
+      });
+    }
+    return null;
+  },
+});
+
+/** Append one warning to the active snapshot, e.g. from an image pass. */
+export const addHarvestWarning = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    expectedHarvestedAt: v.number(),
+    warning: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (!concept || concept.harvestedAt !== args.expectedHarvestedAt) {
+      return null;
+    }
+
+    await ctx.db.patch(args.conceptId, {
+      harvestWarnings: [
+        ...(concept.harvestWarnings ?? []),
+        args.warning.slice(0, 300),
+      ].slice(0, 20),
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/** Resolve the website-image gate when staging or Luna classification fails. */
+export const failWebsiteImageAnalysis = internalMutation({
+  args: {
+    conceptId: v.id("website_concepts"),
+    expectedHarvestedAt: v.number(),
+    error: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const concept = await ctx.db.get(args.conceptId);
+    if (
+      !concept ||
+      concept.harvestedAt !== args.expectedHarvestedAt ||
+      concept.harvestImageAnalysisState !== "processing"
+    ) {
+      return null;
+    }
+
+    const error = args.error.slice(0, 300);
+    await ctx.db.patch(args.conceptId, {
+      harvestImageAnalysisState: "failed",
+      harvestImageAnalysisError: error,
+      harvestWarnings: [...(concept.harvestWarnings ?? []), error].slice(0, 20),
+      updatedAt: Date.now(),
+    });
     return null;
   },
 });

@@ -9,12 +9,24 @@ import {
   PACK_CLASSIFICATION_PROMPT_VERSION,
   buildPackClassificationSystemPrompt,
   buildPackClassificationUserPrompt,
+  buildPackSourceLabels,
   isSupportedPackImageType,
   packAnalysisBlockedReason,
   parsePackClassification,
   parsePackJson,
+  selectPackImagery,
   type PackItem,
 } from "../../lib/concepts/facebookPack";
+import {
+  EVIDENCE_REVIEW_PROMPT_VERSION,
+  buildApprovedEvidence,
+  buildEvidenceReviewSystemPrompt,
+  buildEvidenceReviewUserPrompt,
+  dedupeEvidenceCandidates,
+  parseEvidenceReview,
+  type EvidenceCandidate,
+  type EvidenceReview,
+} from "../../lib/concepts/evidence";
 import { detectSupportedImageMime } from "../../lib/concepts/remoteImage";
 import {
   extractOpenRouterText,
@@ -23,14 +35,25 @@ import {
 } from "../../lib/concepts/openRouter";
 
 /**
- * Facebook Pack classification.
+ * Facebook Pack analysis: classify, extract, then review.
  *
- * One vision call sorts everything Layken pasted out of the prospect's Page:
- * which image is the logo, which is real work photography, which is a
- * screenshot that can carry facts but must never appear on a page. Nothing here
- * decides what reaches a generated page — `lib/concepts/facebookPack.ts` owns
- * that rule, and the database writes live in `concepts/internal.ts` with the
- * rest of the transactional surface.
+ * Two model turns, deliberately separate. The first is a vision call that sorts
+ * everything Layken pasted out of the prospect's Page — which image is the logo,
+ * which is real work photography, which is a screenshot that can carry facts but
+ * must never appear on a page — and reads the facts out of whatever text it can
+ * see. The second is a text-only call that rules on those facts: it receives the
+ * normalized candidates with their excerpts and decides which ones a generated
+ * page may state.
+ *
+ * They are separate because the extractor is the wrong judge of its own output.
+ * A model asked to find facts finds them; asking the same turn to also withhold
+ * them makes the instruction fight itself. The reviewer sees only normalized
+ * candidates and their source excerpts, with no memory of having produced them.
+ *
+ * Nothing here decides what reaches a generated page —
+ * `lib/concepts/facebookPack.ts` and `lib/concepts/evidence.ts` own those rules,
+ * and the database writes live in `concepts/internal.ts` with the rest of the
+ * transactional surface.
  *
  * Images are sent as data URLs rather than Convex storage links. That costs
  * request size and buys two things worth more: the model sees exactly the bytes
@@ -50,8 +73,15 @@ const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  */
 const DEFAULT_VISION_MODEL = "openai/gpt-5.6-luna";
 
-/** Classification is a short structured answer, not a document. */
-const MAX_OUTPUT_TOKENS = 4_000;
+/**
+ * Both passes return a short structured answer, not a document.
+ *
+ * The review pass gets more room than classification: it answers per candidate
+ * rather than per item, and a truncated review is a silently thinner page,
+ * because every candidate it did not reach is rejected by default.
+ */
+const MAX_CLASSIFICATION_TOKENS = 8_000;
+const MAX_REVIEW_TOKENS = 8_000;
 
 function getOpenRouterApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
@@ -63,7 +93,7 @@ function getOpenRouterApiKey(): string {
   return key;
 }
 
-function getVisionModel(): string {
+export function getVisionModel(): string {
   return process.env.OPENROUTER_VISION_MODEL?.trim() || DEFAULT_VISION_MODEL;
 }
 
@@ -78,9 +108,9 @@ function toBase64(bytes: Uint8Array): string {
  * are checked here because a declared type is a claim about a file and this is
  * the first moment the bytes themselves are in hand.
  */
-async function readPackImage(
+export async function readPackImage(
   blob: Blob | null,
-  item: PackItem<Id<"_storage">>,
+  item: Pick<PackItem<Id<"_storage">>, "contentType">,
 ): Promise<{ dataUrl: string; bytes: number }> {
   if (!blob) throw new Error("Pack image file is missing.");
 
@@ -102,14 +132,17 @@ async function readPackImage(
   };
 }
 
-type VisionContentPart =
+export type VisionContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
 
-async function callVisionModel(input: {
+export async function callVisionModel(input: {
   systemPrompt: string;
   content: Array<VisionContentPart>;
   model: string;
+  maxTokens: number;
+  /** Names the pass in errors and logs, so a failure says which one broke. */
+  pass: string;
 }): Promise<string> {
   const response = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
@@ -120,7 +153,7 @@ async function callVisionModel(input: {
     },
     body: JSON.stringify({
       model: input.model,
-      max_tokens: MAX_OUTPUT_TOKENS,
+      max_tokens: input.maxTokens,
       response_format: { type: "json_object" },
       provider: {
         // Packs can contain names, comments, messages, and other contextual
@@ -162,7 +195,7 @@ async function callVisionModel(input: {
   const choice = json.choices?.[0];
   if (choice?.finish_reason === "length") {
     throw new Error(
-      `Model hit the ${MAX_OUTPUT_TOKENS}-token cap before finishing the classification.`,
+      `Model hit the ${input.maxTokens}-token cap before finishing the ${input.pass}.`,
     );
   }
   if (choice?.finish_reason === "error") {
@@ -171,16 +204,55 @@ async function callVisionModel(input: {
 
   const content = extractOpenRouterText(choice?.message?.content);
   if (!content) {
-    console.warn("[concepts] pack classification returned no text", {
+    console.warn(`[concepts] pack ${input.pass} returned no text`, {
       requestId: json.id ?? "unknown",
       model: json.model ?? input.model,
       provider: json.provider ?? "unknown",
       finishReason: choice?.finish_reason ?? "missing",
     });
-    throw new Error("The classification model returned no answer.");
+    throw new Error(`The ${input.pass} model returned no answer.`);
   }
 
   return content;
+}
+
+/**
+ * Rule on the extracted candidates in a second, separately prompted turn.
+ *
+ * Text only: the reviewer judges excerpts against the claims drawn from them,
+ * and re-sending twenty megabytes of images so it can re-read a screenshot it
+ * would have to trust the transcription of anyway buys nothing.
+ *
+ * An empty candidate list never reaches here — a pack of photographs with no
+ * readable text is a normal outcome, and it should not cost a request.
+ */
+async function reviewEvidence(input: {
+  businessName: string;
+  candidates: Array<EvidenceCandidate>;
+  sourceLabels: Record<string, string>;
+  model: string;
+}): Promise<EvidenceReview> {
+  const raw = await callVisionModel({
+    systemPrompt: buildEvidenceReviewSystemPrompt(),
+    content: [
+      {
+        type: "text",
+        text: buildEvidenceReviewUserPrompt({
+          businessName: input.businessName,
+          candidates: input.candidates,
+          sourceLabels: input.sourceLabels,
+        }),
+      },
+    ],
+    model: input.model,
+    maxTokens: MAX_REVIEW_TOKENS,
+    pass: "evidence review",
+  });
+
+  return parseEvidenceReview({
+    json: parsePackJson(raw),
+    candidateIds: input.candidates.map((candidate) => candidate.id),
+  });
 }
 
 export const runPackAnalysis = internalAction({
@@ -199,13 +271,17 @@ export const runPackAnalysis = internalAction({
       return null;
     }
 
-    const fail = async (message: string): Promise<null> => {
+    const fail = async (
+      message: string,
+      stage?: "classification" | "review",
+    ): Promise<null> => {
       await ctx.runMutation(
         internal.concepts.internal.failFacebookPackAnalysis,
         {
           conceptId: args.conceptId,
           facebookPackRequestId: args.facebookPackRequestId,
           error: message,
+          stage,
         },
       );
       return null;
@@ -277,6 +353,8 @@ export const runPackAnalysis = internalAction({
         systemPrompt: buildPackClassificationSystemPrompt(),
         content,
         model,
+        maxTokens: MAX_CLASSIFICATION_TOKENS,
+        pass: "classification",
       });
 
       const classifiedAt = Date.now();
@@ -294,23 +372,68 @@ export const runPackAnalysis = internalAction({
       const byItemId = new Map(
         verdicts.map((verdict) => [verdict.itemId, verdict.classification]),
       );
+      const classifiedItems = items.map((item) => ({
+        ...item,
+        classification: byItemId.get(item.id),
+        classificationError:
+          unreadable.get(item.id) ??
+          (byItemId.has(item.id)
+            ? undefined
+            : "The model returned no verdict for this item."),
+      }));
+
+      // Facts are deduplicated across items before review: two screenshots of
+      // the same About section otherwise put the same claim in front of the
+      // reviewer twice, which can be approved once and rejected once.
+      const candidates = dedupeEvidenceCandidates(
+        verdicts.flatMap((verdict) => verdict.facts),
+      );
+
+      let review: EvidenceReview = { decisions: [], conflicts: [] };
+      if (candidates.length > 0) {
+        try {
+          review = await reviewEvidence({
+            businessName: concept.businessName,
+            candidates,
+            sourceLabels: buildPackSourceLabels(classifiedItems),
+            model,
+          });
+        } catch (error) {
+          // Nothing is stored when the reviewer fails. Saving the classification
+          // with an empty evidence set would read as "this pack said nothing",
+          // which is the one wrong answer here.
+          return await fail(
+            error instanceof Error
+              ? error.message
+              : "The evidence review failed.",
+            "review",
+          );
+        }
+      }
+
+      const approved = buildApprovedEvidence({
+        candidates,
+        decisions: review.decisions,
+      });
 
       await ctx.runMutation(
-        internal.concepts.internal.saveFacebookPackClassification,
+        internal.concepts.internal.saveFacebookPackAnalysis,
         {
           conceptId: args.conceptId,
           facebookPackRequestId: args.facebookPackRequestId,
-          items: items.map((item) => ({
-            ...item,
-            classification: byItemId.get(item.id),
-            classificationError:
-              unreadable.get(item.id) ??
-              (byItemId.has(item.id)
-                ? undefined
-                : "The model returned no verdict for this item."),
-          })),
+          items: classifiedItems,
           model,
           promptVersion: PACK_CLASSIFICATION_PROMPT_VERSION,
+          reviewPromptVersion: EVIDENCE_REVIEW_PROMPT_VERSION,
+          evidence: {
+            compiledAt: Date.now(),
+            candidates,
+            decisions: review.decisions,
+            conflicts: review.conflicts,
+            assets: selectPackImagery(classifiedItems),
+          },
+          approvedContent: approved.content,
+          approvedQuotes: approved.quotes,
         },
       );
     } catch (error) {

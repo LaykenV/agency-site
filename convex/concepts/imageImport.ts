@@ -115,6 +115,10 @@ async function fetchWebsiteImage(input: {
 /**
  * Copy every unstaged image in one harvest into Convex storage sequentially.
  * The browser never receives or fetches the remote URL.
+ *
+ * Staging is now automatic and unconditional, because nothing downstream asks a
+ * human which images to copy. When it finishes it hands the staged files to the
+ * classifier, which decides which of them — if any — become page imagery.
  */
 export const stageHarvestImages = internalAction({
   args: {
@@ -178,6 +182,18 @@ export const stageHarvestImages = internalAction({
         );
       }
     }
+
+    // Scheduled rather than called: classification is a separate paid model
+    // request, and a failure there must not look like a staging failure or
+    // re-run the fetches that already succeeded.
+    await ctx.scheduler.runAfter(
+      0,
+      internal.concepts.imageClassify.classifyWebsiteImages,
+      {
+        conceptId: args.conceptId,
+        expectedHarvestedAt: args.expectedHarvestedAt,
+      },
+    );
 
     return null;
   },

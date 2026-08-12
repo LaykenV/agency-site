@@ -32,10 +32,13 @@ import {
   conceptHarvestCandidateValidator,
   conceptHarvestImageCandidateValidator,
   conceptHarvestReviewStateValidator,
-  conceptApprovedWebsiteContentValidator,
+  conceptHarvestImageAnalysisStateValidator,
+  conceptHarvestReviewValidator,
+  conceptApprovedContentValidator,
   conceptImportedWebsiteAssetValidator,
   conceptFacebookPackItemValidator,
   conceptFacebookPackStateValidator,
+  conceptFacebookEvidenceValidator,
   conceptStatusValidator,
 } from "./validators";
 
@@ -436,11 +439,22 @@ export default defineSchema({
     harvestImageCandidates: v.optional(
       v.array(conceptHarvestImageCandidateValidator),
     ),
+    harvestImageAnalysisState: v.optional(
+      conceptHarvestImageAnalysisStateValidator,
+    ),
+    harvestImageAnalysisError: v.optional(v.string()),
     harvestWarnings: v.optional(v.array(v.string())),
     harvestReviewState: v.optional(conceptHarvestReviewStateValidator),
     harvestReviewedAt: v.optional(v.number()),
+    /**
+     * The model reviewer's rulings on this harvest.
+     *
+     * Absent on rows harvested before Phase C, which were approved by hand and
+     * whose `harvestReviewState` may still be `pending`.
+     */
+    harvestReview: v.optional(conceptHarvestReviewValidator),
     approvedHarvestCandidateIds: v.optional(v.array(v.string())),
-    approvedWebsiteContent: v.optional(conceptApprovedWebsiteContentValidator),
+    approvedWebsiteContent: v.optional(conceptApprovedContentValidator),
     importedWebsiteAssets: v.optional(
       v.array(conceptImportedWebsiteAssetValidator),
     ),
@@ -456,13 +470,20 @@ export default defineSchema({
      * text apiece. Image bytes live in Convex storage; only the storage ID,
      * Convex's SHA-256, the declared type, and the byte count are kept here.
      *
-     * Nothing in this block reaches a generation prompt yet. C1 collects and
-     * classifies; C2 adds the reviewed evidence that a brief may read, and with
-     * it the rule that changing pack material revokes the generated page.
-     *
      * `facebookPackRequestId` works like `generationRequestId`: a slow analysis
      * that lands after the pack changed is discarded rather than labelling
      * material the model never saw.
+     *
+     * `facebookEvidence` is the compiled result of one analysis: every candidate
+     * fact with its source item and excerpt, the reviewer's ruling on each, the
+     * conflicts it named, and the visual roles it assigned. Rejections are kept
+     * because "three facts omitted, here is why" is what the admin summary shows
+     * in place of the approval checkboxes Phase B used.
+     *
+     * `approvedFacebookContent` is the only part generation reads, and the
+     * server rebuilds it from the candidates above rather than from any model
+     * reply. Because it reaches the prompt, changing pack material revokes the
+     * generated page and its publication.
      */
     facebookPackItems: v.optional(v.array(conceptFacebookPackItemValidator)),
     facebookPackRequestId: v.optional(v.string()),
@@ -471,6 +492,11 @@ export default defineSchema({
     facebookPackModel: v.optional(v.string()),
     facebookPackPromptVersion: v.optional(v.string()),
     facebookPackError: v.optional(v.string()),
+    facebookEvidence: v.optional(conceptFacebookEvidenceValidator),
+    approvedFacebookContent: v.optional(conceptApprovedContentValidator),
+    facebookReviewModel: v.optional(v.string()),
+    facebookReviewPromptVersion: v.optional(v.string()),
+    facebookReviewError: v.optional(v.string()),
 
     researchBrief: v.optional(conceptBriefValidator),
     generatedHtml: v.optional(v.string()),

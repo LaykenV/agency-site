@@ -26,10 +26,10 @@
  * generated after a prompt fix.
  */
 
-import type { ConceptBrief } from "./brief";
+import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-11.2";
+export const CONCEPT_PROMPT_VERSION = "2026-08-11.4";
 
 export type ConceptStructure = {
   id: string;
@@ -147,23 +147,25 @@ export function pickConceptStructure(
     if (chosen) return chosen;
   }
 
-  const approved = brief.approvedWebsiteContent;
-  const approvedText = approved
-    ? [
-        approved.tagline,
-        approved.about,
-        ...approved.services.flatMap((service) => [
-          service.name,
-          service.description,
-        ]),
-        ...approved.serviceAreas,
-        ...approved.differentiators,
-        ...approved.sensitiveClaims,
-        ...approved.hours,
-      ]
-        .filter(Boolean)
-        .join(" ")
-    : "";
+  const approvedText = [
+    brief.approvedFacebookContent,
+    brief.approvedWebsiteContent,
+  ]
+    .filter((content): content is ConceptApprovedContent => Boolean(content))
+    .flatMap((content) => [
+      content.tagline,
+      content.about,
+      ...content.services.flatMap((service) => [
+        service.name,
+        service.description,
+      ]),
+      ...content.serviceAreas,
+      ...content.differentiators,
+      ...content.sensitiveClaims,
+      ...content.hours,
+    ])
+    .filter(Boolean)
+    .join(" ");
   const haystack = [brief.category, brief.notes, approvedText]
     .filter(Boolean)
     .join(" ")
@@ -388,6 +390,53 @@ Check your document against this list and fix anything that fails:
 Output the HTML document only.`;
 }
 
+/**
+ * Render one reviewed source's approved facts.
+ *
+ * Both sources use the same field layout because they carry the same guarantee:
+ * every line was drawn from a source excerpt and survived a review. Only the
+ * preamble differs, and what it says is which source wins a disagreement.
+ */
+function pushApprovedContent(
+  lines: Array<string>,
+  input: {
+    heading: string;
+    preamble: string;
+    content?: ConceptApprovedContent;
+  },
+): void {
+  const content = input.content;
+  if (!content) return;
+
+  lines.push("");
+  lines.push(`## ${input.heading}`);
+  lines.push("");
+  lines.push(input.preamble);
+
+  if (content.tagline) lines.push(`Tagline: ${content.tagline}`);
+  if (content.about) lines.push(`About: ${content.about}`);
+  if (content.services.length > 0) {
+    lines.push("Services:");
+    for (const service of content.services) {
+      lines.push(
+        `- ${service.name}${service.description ? ` — ${service.description}` : ""}`,
+      );
+    }
+  }
+  if (content.serviceAreas.length > 0) {
+    lines.push(`Service areas: ${content.serviceAreas.join("; ")}`);
+  }
+  if (content.differentiators.length > 0) {
+    lines.push(`Differentiators: ${content.differentiators.join("; ")}`);
+  }
+  if (content.sensitiveClaims.length > 0) {
+    lines.push(`Reviewed claims: ${content.sensitiveClaims.join("; ")}`);
+  }
+  if (content.hours.length > 0) {
+    lines.push(`Hours: ${content.hours.join("; ")}`);
+  }
+}
+
 /** The per-concept half of the prompt: the assigned shape and the verified facts. */
 export function buildConceptUserPrompt(
   brief: ConceptBrief,
@@ -436,45 +485,22 @@ export function buildConceptUserPrompt(
     lines.push(brief.notes);
   }
 
-  const approvedWebsite = brief.approvedWebsiteContent;
-  if (approvedWebsite) {
-    lines.push("");
-    lines.push("## APPROVED WEBSITE CONTENT");
-    lines.push("");
-    lines.push(
+  // Facebook first, deliberately. It is the primary source, and when the model
+  // sees the same field twice it should have read the pack's version last-but-
+  // best; the heading text names the precedence rather than relying on order.
+  pushApprovedContent(lines, {
+    heading: "APPROVED FACEBOOK CONTENT",
+    preamble:
+      "Every item below was drawn from material the owner published on their own Facebook Page and passed an evidence review. This is the most current picture of the business. Where it and the website section disagree, follow this one.",
+    content: brief.approvedFacebookContent,
+  });
+
+  pushApprovedContent(lines, {
+    heading: "APPROVED WEBSITE CONTENT",
+    preamble:
       "Every item below was selected by the reviewer from source-backed website evidence. You may use these facts. Do not add adjacent services, credentials, locations, hours, prices, or guarantees that are not listed.",
-    );
-    if (approvedWebsite.tagline) {
-      lines.push(`Tagline: ${approvedWebsite.tagline}`);
-    }
-    if (approvedWebsite.about) {
-      lines.push(`About: ${approvedWebsite.about}`);
-    }
-    if (approvedWebsite.services.length > 0) {
-      lines.push("Services:");
-      for (const service of approvedWebsite.services) {
-        lines.push(
-          `- ${service.name}${service.description ? ` — ${service.description}` : ""}`,
-        );
-      }
-    }
-    if (approvedWebsite.serviceAreas.length > 0) {
-      lines.push(`Service areas: ${approvedWebsite.serviceAreas.join("; ")}`);
-    }
-    if (approvedWebsite.differentiators.length > 0) {
-      lines.push(
-        `Differentiators: ${approvedWebsite.differentiators.join("; ")}`,
-      );
-    }
-    if (approvedWebsite.sensitiveClaims.length > 0) {
-      lines.push(
-        `Individually approved claims: ${approvedWebsite.sensitiveClaims.join("; ")}`,
-      );
-    }
-    if (approvedWebsite.hours.length > 0) {
-      lines.push(`Hours: ${approvedWebsite.hours.join("; ")}`);
-    }
-  }
+    content: brief.approvedWebsiteContent,
+  });
 
   if (brief.existingPrimaryColor) {
     lines.push("");
@@ -494,13 +520,27 @@ export function buildConceptUserPrompt(
     if (brief.logoUrl) {
       lines.push(`Logo: ${brief.logoUrl}`);
     }
+    // The note is the reviewer's own description of the photograph. A model
+    // told "hero — crew removing an oak limb" places and captions it far better
+    // than one handed a bare storage URL, and the note cannot widen the
+    // allowlist because the allowlist is built from the URLs alone.
+    const notes = new Map(
+      (brief.imageNotes ?? []).map((note) => [note.url, note]),
+    );
     for (const url of brief.photoUrls) {
-      lines.push(`Photo: ${url}`);
+      const note = notes.get(url);
+      const label = [note?.role, note?.alt].filter(Boolean).join(" — ");
+      lines.push(`Photo: ${url}${label ? ` (${label})` : ""}`);
     }
     lines.push("");
     lines.push(
       "Use these exact strings. Every photo needs a descriptive alt attribute and explicit width and height attributes to prevent layout shift. Do not reference any other image.",
     );
+    if (notes.size > 0) {
+      lines.push(
+        "The parenthetical after a photo is where it belongs on the page and what it shows. Use it; do not print it.",
+      );
+    }
   }
 
   lines.push("");

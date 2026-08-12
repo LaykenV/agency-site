@@ -271,8 +271,10 @@ export function ConceptFacebookPack({
 
         <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
           {state === "ready"
-            ? "Sorted from the material you supplied. Nothing from this pack reaches a generated page yet."
-            : "Sorting is one paid vision call. Paste everything you want first, then analyze once."}
+            ? "Sorted and reviewed. What survived review is what the next generation may say."
+            : state === "collecting" && items.length > 0
+              ? "Generation waits until this pack is analyzed, so nothing you pasted is silently left out."
+              : "Analysis is two paid model calls. Paste everything you want first, then analyze once."}
         </p>
       </div>
     </div>

@@ -1,6 +1,6 @@
 # Facebook Lead Website Concept Generator
 
-Status: **Core generator and website harvesting live; Facebook Pack Phase C approved but not implemented; B4 and destructive cutover remain gated**
+Status: **Phase C code complete (C1–C4); C5 production canary, B4 three-site canary, and destructive cutover remain gated**
 Owner: Layken
 Written: 2026-08-10
 Last reviewed: 2026-08-11
@@ -20,22 +20,19 @@ Last reviewed: 2026-08-11
   The legacy-row deletion and schema contraction remain gated on that smoke
   test, including the real-iPhone check.
 - **Step 4 — done.** `GROWTH.md`, `ARCHITECTURE.md`, `OPERATIONS.md`,
-  `BUSINESS.md`, `ROADMAP.md`, and `CLAUDE.md` updated.
+  `BUSINESS.md`, `ROADMAP.md`, and `CLAUDE.md` updated for the generator and
+  again for Phase C behavior.
 - **Structured harvesting — B0 through B3 shipped 2026-08-11.** Google is identity
-  only, the bounded source-backed harvest is live, and generation/publication
-  stay gated while a harvest is running or awaiting review. Approved facts now
-  reach regeneration through a mobile review gate, and source-observed website
-  images are safely staged into Convex for explicit logo/photo approval. B4
-  remains in this document under **Structured content harvesting plan**.
-- **Facebook Pack — Phase C approved 2026-08-11; C1 shipped 2026-08-11.**
-  Supervised Facebook capture becomes the primary content path. Layken pastes
-  logos, business photos, screenshots, and text; `openai/gpt-5.6-luna`
-  classifies the material, selects visual roles, extracts and reviews facts, and
-  audits the generated page. The existing website harvest becomes an optional
-  secondary gap-fill path. Candidate-by-candidate human approval is removed once
-  Phase C replaces it; final concept review before publication remains required.
-  C1 is live in code: bounded intake, storage, and the first real Luna
-  classification call. C2 through C5 are not implemented.
+  only, the bounded source-backed harvest is live. Phase C converted harvest
+  approval to Luna; B4 (three-site canary) remains gated.
+- **Facebook Pack — Phase C C1–C4 implemented 2026-08-11.** Supervised Facebook
+  capture is the primary content path. Layken pastes logos, business photos,
+  screenshots, and text; `openai/gpt-5.6-luna` classifies the material, selects
+  visual roles, extracts and reviews facts, routes website harvest through the
+  same reviewer, and audits generated claims. Candidate-by-candidate human
+  approval is gone for new work; final concept review before publication remains
+  required. C5 (production canary, pending-row migration, and deletion of the
+  legacy approval UI) remains gated.
 
 The 2026-08-11 review blockers are fixed:
 
@@ -49,10 +46,9 @@ The 2026-08-11 review blockers are fixed:
 - the cutover runbook now uses supported Convex deployment syntax, explicit row
   counts, archive integrity testing, and export/count reconciliation
 
-Local exit checks pass: Convex codegen, TypeScript, 188 tests, lint, production
-build (172 routes), and `git diff --check`. The implementation is done; live
-OpenRouter generation is now verified, while full production and
-physical-device verification remain operational gates.
+Local exit checks for Phase C C1–C4: Convex codegen with typecheck, TypeScript,
+full unit suite, lint, and production build. Live OpenRouter pack analysis,
+claim audit, and production canary remain C5 operational gates.
 
 Three decisions were taken during implementation that this plan did not specify:
 
@@ -221,25 +217,24 @@ Phase B0 tightened this boundary and is implemented: Places is used for live
 identity matching and the exempt place ID only. Review text, ratings, review
 counts, opening hours, and street addresses are neither persisted nor passed to
 generation, and match candidates are fetched live rather than stored. Preview
-images can be manual/pasted assets or individually approved website-source
-candidates copied into Convex storage. Until Phase C ships, the live website
-path still uses its existing manual approval UI; Phase C replaces that UI with
-the common Luna evidence-review path.
+images can be manual/pasted assets or Luna-selected website-source candidates
+copied into Convex storage. Phase C replaced the manual approval UI with the
+common Luna evidence-review path; legacy `pending` harvest rows keep the old
+surface until they are resolved or migrated.
 
 ## Structured content harvesting plan
 
-Status: **B0 through B3 implemented on 2026-08-11; B4 not implemented**
+Status: **B0 through B3 implemented 2026-08-11; Phase C converted approval to Luna; B4 canary not run**
 
 What is live: the corrected Google source boundary, the pure harvest core in
-`lib/concepts/harvest.ts`, the additive schema fields, the `content_review`
-status and its generation/publication gate, the `conceptHarvestGlobalDaily`
-limiter, the Map-plus-six-Scrape action in `convex/concepts/harvest.ts`, and the
-mobile factual approval-to-regeneration path.
+`lib/concepts/harvest.ts`, the additive schema fields, the
+`conceptHarvestGlobalDaily` limiter, the Map-plus-six-Scrape action, Luna
+evidence review of harvested facts, automatic staging and Luna image selection,
+and the legacy `content_review` path for pre-Phase-C pending rows only.
 
-What is not: the full three-site canary. Remote image URLs still cannot reach a
-generated page directly; approved Convex copies can. The Facebook-only content
-decision is now resolved by Phase C below: Facebook Pack becomes primary and
-this website path becomes secondary.
+What is not: the full three-site canary (B4). Remote image URLs still cannot
+reach a generated page directly; Convex copies can. Facebook Pack is primary;
+this website path is secondary gap-fill.
 
 The first successful production concepts showed that model output is no longer
 the main bottleneck. Collecting trustworthy services, about copy, logos, and
@@ -826,8 +821,7 @@ with Luna approval and machine-reviewed readiness states.
 
 ## Facebook Pack plan
 
-Status: **Phase C approved on 2026-08-11; C1 implemented 2026-08-11, C2–C5 not
-implemented**
+Status: **Phase C C1–C4 implemented 2026-08-11; C5 canary and cleanup gated**
 
 Facebook Pack is the primary evidence and asset path for this product. It is a
 supervised intake, not a Facebook scraper: Layken opens the prospect's Page,
@@ -1065,39 +1059,62 @@ checks pass: Convex codegen with typecheck, TypeScript, 210 tests, lint,
 production build, and `git diff --check`. A real OpenRouter classification call
 against a live pack has not been run; that is C5's canary.
 
-#### C2 — Luna classification, selection, and evidence review
+#### C2 — Luna classification, selection, and evidence review — **implemented 2026-08-11**
 
-- Add strict structured schemas for per-item classification and extracted
-  evidence.
-- Add automatic logo, hero, gallery, duplicate, and reject decisions.
-- Add the separate Luna reviewer for all fact categories.
-- Materialize the reviewed Facebook evidence into `ConceptBrief`.
+- ~~Add strict structured schemas for per-item classification and extracted
+  evidence.~~ `lib/concepts/evidence.ts`, pack fact extraction in
+  `lib/concepts/facebookPack.ts`, and `conceptFacebookEvidenceValidator`.
+- ~~Add automatic logo, hero, gallery, duplicate, and reject decisions.~~
+  `selectPackImagery` and `canUsePackItemAsPageImagery`.
+- ~~Add the separate Luna reviewer for all fact categories.~~ Second turn in
+  `convex/concepts/facebookPack.ts` via `buildEvidenceReview*`.
+- ~~Materialize the reviewed Facebook evidence into `ConceptBrief`.~~
+  `approvedFacebookContent`, pack imagery resolution in `generate.ts`, and
+  pack-change invalidation in `packChanged`.
+- ~~Use Facebook evidence when selecting the page shape.~~ Fit and content
+  richness combine the primary Facebook evidence with website gap-fill, so a
+  rich Facebook-only concept cannot be mistaken for an empty brief.
 
-Exit: a Facebook-only business can reach a complete generation brief without a
-manual candidate-approval step.
+Exit: met in code and unit tests. A Facebook-only business reaches a generation
+brief without a manual candidate-approval step.
 
-#### C3 — primary UI and final factual audit
+#### C3 — primary UI and final factual audit — **implemented 2026-08-11**
 
-- Make Facebook Pack the primary content card and generation prerequisite once
-  analysis has started.
-- Replace approval checkboxes with the compact pack summary and correction
-  controls.
-- Add the post-generation Luna claim audit and bounded retry.
-- Keep explicit Generate and Publish actions.
+- ~~Make Facebook Pack the primary content card and generation prerequisite once
+  analysis has started.~~ Generation and publication gate on unanalyzed pack
+  material; list shows pack state. The gate is fail-closed: a failed, partial, or
+  unknown state with pack items is not equivalent to `ready`.
+- ~~Replace approval checkboxes with the compact pack summary and correction
+  controls.~~ `ConceptPackSummary` and `ConceptEvidenceReport`.
+- ~~Add the post-generation Luna claim audit and bounded retry.~~
+  `lib/concepts/claimAudit.ts` and the two-attempt loop in `generate.ts`. Empty,
+  malformed, over-limit, provider-error, truncated, and partially-read audit
+  results fail rather than pass.
+- ~~Keep explicit Generate and Publish actions.~~ Analysis never starts
+  generation.
 
-Exit: the only required human review is the finished page before publication.
+Exit: met in code. The only required human review is the finished page before
+publication.
 
-#### C4 — convert website harvesting to gap-fill
+#### C4 — convert website harvesting to gap-fill — **implemented 2026-08-11**
 
-- Route harvested facts and staged images through the common Luna reviewer.
-- Remove the manual standard/sensitive fact review and separate image approval
-  flow.
-- Replace `content_review` behavior with shared analysis/readiness behavior.
-- Preserve website provenance, bounded Firecrawl behavior, remote-image safety,
-  and failure isolation.
+- ~~Route harvested facts and staged images through the common Luna reviewer.~~
+  `reviewHarvestEvidence` in `harvest.ts`; `imageClassify.ts` for staged images.
+- ~~Keep generation locked until asynchronous website image staging and Luna
+  selection resolves.~~ `harvestImageAnalysisState` separates the image pass
+  from the completed Firecrawl/fact-review request and resolves visibly to
+  `ready` or `failed`.
+- ~~Remove the manual standard/sensitive fact review and separate image approval
+  flow.~~ New harvests auto-approve via Luna; legacy `pending` rows keep the old
+  UI until C5 cleanup.
+- ~~Replace `content_review` behavior with shared analysis/readiness behavior.~~
+  New harvests land as `approved`/`skipped`; `content_review` remains only for
+  legacy pending rows.
+- ~~Preserve website provenance, bounded Firecrawl behavior, remote-image safety,
+  and failure isolation.~~ Unchanged under the new reviewer.
 
-Exit: Facebook is visibly primary, website enrichment is optional, and neither
-source requires line-by-line approval.
+Exit: met in code. Facebook is visibly primary, website enrichment is optional,
+and neither source requires line-by-line approval for new work.
 
 #### C5 — canary, migration, and cleanup
 

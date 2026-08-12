@@ -14,29 +14,49 @@
  * stale the moment Layken approves a service or a photo. Skipping the review is
  * an explicit action, so a blocked concept is never a dead end.
  */
-export function canGenerateConcept(input: {
+export type ConceptGenerationGate = {
   placeMatchResolved: boolean;
   hasResearchBrief: boolean;
   harvestReviewState?: string;
   harvestInFlight?: boolean;
-}): boolean {
-  if (input.harvestInFlight) return false;
-  if (input.harvestReviewState === "pending") return false;
-  return input.placeMatchResolved && input.hasResearchBrief;
+  /** Website image staging/classification is still running after fact review. */
+  harvestImagesInFlight?: boolean;
+  /** `collecting` | `analyzing` | `ready` | `failed`, absent when no pack. */
+  facebookPackState?: string;
+  packItemCount?: number;
+};
+
+export function canGenerateConcept(input: ConceptGenerationGate): boolean {
+  return generationBlockedReason(input) === null;
 }
 
 /** Human-readable reason `canGenerateConcept` refused, for admin surfaces. */
-export function generationBlockedReason(input: {
-  placeMatchResolved: boolean;
-  hasResearchBrief: boolean;
-  harvestReviewState?: string;
-  harvestInFlight?: boolean;
-}): string | null {
+export function generationBlockedReason(
+  input: ConceptGenerationGate,
+): string | null {
   if (input.harvestInFlight) {
     return "Wait for the website content harvest to finish.";
   }
   if (input.harvestReviewState === "pending") {
     return "Review the harvested website content first, or skip it.";
+  }
+  if (input.harvestImagesInFlight) {
+    return "Wait for the website images to finish sorting.";
+  }
+  // A pack that has been collected but not analyzed is material Layken pasted
+  // that no prompt can see. Generating now spends a paid call on a page built
+  // as though the Page were empty, and the result would be stale the moment the
+  // analysis he already intended finishes.
+  if ((input.packItemCount ?? 0) > 0) {
+    if (input.facebookPackState === "analyzing") {
+      return "Wait for the Facebook Pack analysis to finish.";
+    }
+    if (input.facebookPackState === "failed") {
+      return "Facebook Pack analysis failed. Re-analyze it, or remove the unreadable material.";
+    }
+    if (input.facebookPackState !== "ready") {
+      return "Analyze the Facebook Pack first, or remove what you pasted.";
+    }
   }
   if (!input.placeMatchResolved) {
     return "Confirm which Google business this is first.";
