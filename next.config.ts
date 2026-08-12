@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { WebpackSha256 } from "./lib/webpackSha256";
 
 /**
  * Industry slugs for URL rewrites / redirects
@@ -28,18 +29,14 @@ const nextConfig: NextConfig = {
    *   TypeError: Cannot read properties of undefined (reading 'length')
    *   at WasmHash._updateWithBuffer
    *
-   * Not memory pressure — raising the heap to 8 GB and isolating the webpack
-   * build worker was deployed first and failed identically, and the whole repo
-   * carries under 10 MB of static assets. Next sets `hashFunction: "xxhash64"`
-   * by default; this swaps in Node's crypto hasher so the WASM module is never
-   * instantiated. Slightly slower hashing, no behavior change in output.
+   * Switching the algorithm string to `"sha256"` only changed the error to
+   * Node's `Hash.update(undefined)` (`ERR_INVALID_ARG_TYPE`). A custom hasher
+   * keeps Node crypto (no WASM) and ignores empty writes. Do not replace the
+   * whole `output` object — Next attaches other fields on it.
    */
   webpack: (config, { dev }) => {
-    if (!dev) {
-      config.output = {
-        ...config.output,
-        hashFunction: "sha256",
-      };
+    if (!dev && config.output) {
+      config.output.hashFunction = WebpackSha256;
     }
     return config;
   },
