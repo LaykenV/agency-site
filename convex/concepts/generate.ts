@@ -215,8 +215,11 @@ async function callOpenRouter(
  *
  * A separate model from the generator on purpose: the auditor has never seen
  * the page being written and has no investment in keeping a good sentence. It
- * runs at temperature zero, because "does the brief say this" is a reading
- * question with one right answer, not a writing question.
+ *
+ * Do not send `temperature` here. Luna's OpenRouter endpoint does not advertise
+ * that parameter, and `require_parameters: true` correctly rejects the request
+ * when an unsupported parameter is present. The audit remains constrained by
+ * its prompt and structured JSON response.
  */
 async function auditGeneratedClaims(input: {
   brief: ConceptBrief;
@@ -231,7 +234,6 @@ async function auditGeneratedClaims(input: {
     },
     body: JSON.stringify({
       model: getAuditModel(),
-      temperature: 0,
       max_tokens: MAX_AUDIT_TOKENS,
       response_format: { type: "json_object" },
       provider: { data_collection: "deny", require_parameters: true },
