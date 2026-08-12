@@ -603,6 +603,93 @@ describe("buildHarvestSnapshot — images", () => {
     });
     expect(snapshot.imageCandidates.length).toBe(HARVEST_MAX_IMAGE_CANDIDATES);
   });
+
+  test("collapses Wix fill renditions and keeps the largest usable photo", () => {
+    const logoSmall =
+      "https://static.wixstatic.com/media/d10fe3_logo~mv2.png/v1/fill/w_600,h_510,enc_avif/Bagley%20logo_edited.png";
+    const logoLarge =
+      "https://static.wixstatic.com/media/d10fe3_logo~mv2.png/v1/fill/w_1024,h_870,enc_avif/Bagley%20logo_edited.png";
+    const photoASmall =
+      "https://static.wixstatic.com/media/8232aa_photoA~mv2.jpg/v1/fill/w_211,h_158,q_90,enc_avif/8232aa_photoA~mv2.jpg";
+    const photoALarge =
+      "https://static.wixstatic.com/media/8232aa_photoA~mv2.jpg/v1/fill/w_1055,h_790,q_90,enc_avif/8232aa_photoA~mv2.jpg";
+    const photoB =
+      "https://static.wixstatic.com/media/8232aa_photoB~mv2.jpg/v1/fill/w_1536,h_2048,q_90,enc_avif/8232aa_photoB~mv2.jpg";
+    const photoCEncoded =
+      "https://static.wixstatic.com/media/8232aa_photoC%7Emv2.jpg/v1/fill/w_918,h_1226,q_90,enc_avif/8232aa_photoC~mv2.jpg";
+    const photoCPlain =
+      "https://static.wixstatic.com/media/8232aa_photoC~mv2.jpg";
+    const blur =
+      "https://static.wixstatic.com/media/b25591_hero~mv2.jpg/v1/fill/w_60,h_45,blur_2,enc_avif/b25591_hero~mv2.jpg";
+    const icon =
+      "https://static.wixstatic.com/media/0fdef7_facebook.png/v1/fill/w_56,h_56,enc_avif/0fdef7_facebook.png";
+
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Bagley's Pro Construction",
+      pages: [
+        pageFor({
+          sourceUrl: "https://www.bagleyspro.com/",
+          pageType: "home",
+          brandingLogoUrl: logoSmall,
+          rawImageUrls: [logoSmall, logoLarge, blur, icon],
+        }),
+        pageFor({
+          sourceUrl: "https://www.bagleyspro.com/gallery",
+          pageType: "gallery",
+          rawImageUrls: [
+            blur,
+            photoASmall,
+            photoALarge,
+            photoB,
+            photoCEncoded,
+            photoCPlain,
+            icon,
+          ],
+        }),
+      ],
+    });
+
+    expect(snapshot.imageCandidates.map((image) => image.remoteUrl)).toEqual([
+      logoLarge,
+      photoB,
+      photoCPlain,
+      photoALarge,
+    ]);
+    expect(snapshot.imageCandidates[0].roleHint).toBe("logo");
+    expect(
+      snapshot.imageCandidates
+        .slice(1)
+        .every((image) => image.roleHint === "photo"),
+    ).toBe(true);
+  });
+
+  test("does not spend the image cap on Wix srcset duplicates", () => {
+    const photos = Array.from({ length: 8 }, (_, index) => {
+      const id = `8232aa_job${index}~mv2.jpg`;
+      return [
+        `https://static.wixstatic.com/media/${id}/v1/fill/w_211,h_158,q_90,enc_avif/${id}`,
+        `https://static.wixstatic.com/media/${id}/v1/fill/w_422,h_316,q_90,enc_avif/${id}`,
+        `https://static.wixstatic.com/media/${id}/v1/fill/w_844,h_632,q_90,enc_avif/${id}`,
+        `https://static.wixstatic.com/media/${id}/v1/fill/w_1536,h_2048,q_90,enc_avif/${id}`,
+      ];
+    }).flat();
+
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Bagley's Pro Construction",
+      pages: [
+        pageFor({
+          sourceUrl: "https://www.bagleyspro.com/gallery",
+          pageType: "gallery",
+          rawImageUrls: photos,
+        }),
+      ],
+    });
+
+    expect(snapshot.imageCandidates).toHaveLength(8);
+    expect(
+      snapshot.imageCandidates.every((image) => image.remoteUrl.includes("w_1536")),
+    ).toBe(true);
+  });
 });
 
 describe("harvestCompleteness", () => {

@@ -32,6 +32,11 @@ export const HARVEST_MAX_MAP_URLS = 40;
 export const HARVEST_MAX_PAGES = 6;
 export const HARVEST_MAX_CANDIDATES = 60;
 export const HARVEST_MAX_IMAGE_CANDIDATES = 12;
+/**
+ * Longest declared edge below this is a favicon, social icon, or LQIP, not a
+ * usable photograph. Unsized originals are kept and ranked as the source file.
+ */
+export const HARVEST_MIN_IMAGE_EDGE = 200;
 export const HARVEST_VALUE_MAX = 500;
 export const HARVEST_EVIDENCE_MAX = 400;
 export const HARVEST_ABOUT_MAX = 1200;
@@ -849,11 +854,74 @@ export function buildHarvestSnapshot(input: {
   };
 }
 
+function decodedImageLocator(url: URL): string {
+  const value = `${url.pathname}${url.search}`;
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * Declared pixel size for a CDN rendition, or 0 when the URL is the original
+ * file. Wix puts `w_690,h_920` in the path; other builders use `-1920w` or
+ * `?w=`.
+ */
+function harvestImageMaxEdge(
+  url: URL,
+  visible = decodedImageLocator(url),
+): number {
+  const pair = visible.match(/w_(\d+)[,x]h_(\d+)/i);
+  if (pair) return Math.max(Number(pair[1]), Number(pair[2]));
+  const namedW = visible.match(/(?:^|[/,?_&])w_(\d+)(?=$|[/,?_&])/i);
+  const namedH = visible.match(/(?:^|[/,?_&])h_(\d+)(?=$|[/,?_&])/i);
+  const suffix = url.pathname.match(/-(\d+)w(?=\.(?:jpe?g|png|webp)$)/i);
+  const queryW = Number(
+    url.searchParams.get("w") || url.searchParams.get("width") || "",
+  );
+  const queryH = Number(
+    url.searchParams.get("h") || url.searchParams.get("height") || "",
+  );
+  const width = namedW
+    ? Number(namedW[1])
+    : suffix
+      ? Number(suffix[1])
+      : Number.isFinite(queryW)
+        ? queryW
+        : 0;
+  const height = namedH
+    ? Number(namedH[1])
+    : Number.isFinite(queryH)
+      ? queryH
+      : 0;
+  return Math.max(width, height);
+}
+
+function isJunkHarvestImage(url: URL): boolean {
+  const visible = decodedImageLocator(url);
+  if (/blur_\d+/i.test(visible)) return true;
+  const edge = harvestImageMaxEdge(url, visible);
+  return edge > 0 && edge < HARVEST_MIN_IMAGE_EDGE;
+}
+
+/** Larger declared edge wins. An unsized original is treated as the source file. */
+function harvestImageRenditionRank(url: URL): number {
+  const visible = decodedImageLocator(url);
+  if (/blur_\d+/i.test(visible)) return -1;
+  const edge = harvestImageMaxEdge(url, visible);
+  return edge > 0 ? edge : 50_000;
+}
+
 /**
  * Only images Firecrawl actually saw on the page become candidates.
  *
  * The model selects from the raw image list; it does not get to name a URL.
  * Without this an extractor could point the import action at any host it liked.
+ *
+ * Builder CDNs emit many URLs per photograph. Those collapse to one slot, the
+ * largest usable rendition is kept, and tiny or blurred placeholders never
+ * consume the 12-candidate cap.
  */
 function collectImageCandidates(
   pages: Array<PageExtraction>,
@@ -864,14 +932,9 @@ function collectImageCandidates(
     try {
       const url = new URL(value);
       if (url.protocol !== "https:") return null;
-      let visible = `${url.pathname}${url.search}`;
-      try {
-        visible = decodeURIComponent(visible);
-      } catch {
-        // A malformed escape is still a valid URL, but there is no reason to
-        // decode it for the extension filter.
+      if (/\.(?:svg|gif|ico|avif)(?:$|[?&#])/i.test(decodedImageLocator(url))) {
+        return null;
       }
-      if (/\.(?:svg|gif|ico|avif)(?:$|[?&#])/i.test(visible)) return null;
       return url;
     } catch {
       return null;
@@ -881,7 +944,19 @@ function collectImageCandidates(
   const assetKey = (url: URL): string => {
     let path = url.pathname.replace(/\/opt\//g, "/");
     path = path.replace(/-\d+w(?=\.(?:jpe?g|png|webp)$)/i, "");
-    // Builder transformation parameters identify a rendition, not a different
+    // Wix (and similar) serve `/media/<id>/v1/fill/w_N,h_N/...`. The media id
+    // is the photograph; the fill segment is a rendition.
+    const media = path.match(/^\/media\/([^/]+)/i);
+    if (media) {
+      let id = media[1];
+      try {
+        id = decodeURIComponent(id);
+      } catch {
+        // Keep the encoded id so two undecodable URLs still share a key.
+      }
+      path = `/media/${id}`;
+    }
+    // Query transformation parameters identify a rendition, not a different
     // photograph. Keep parameters that may identify the underlying source.
     const params = new URLSearchParams(url.search);
     for (const key of ["w", "width", "h", "height", "q", "quality", "fit"]) {
@@ -891,14 +966,22 @@ function collectImageCandidates(
   };
 
   const rawScore = (url: URL, page: PageExtraction): number => {
-    const value = `${url.pathname}${url.search}`.toLowerCase();
+    const visible = decodedImageLocator(url).toLowerCase();
     let score =
       page.pageType === "gallery" ? 80 : page.pageType === "home" ? 40 : 0;
-    if (/logo|brand|wordmark/.test(value)) score += 60;
-    if (/1920w|1600w|1280w|original|full/.test(value)) score += 20;
+    if (/logo|brand|wordmark/.test(visible)) score += 60;
+    const edge = harvestImageMaxEdge(url, visible);
+    if (isJunkHarvestImage(url)) score -= 200;
+    else if (
+      edge >= 1280 ||
+      edge === 0 ||
+      /1920w|1600w|1280w|original|full/.test(visible)
+    )
+      score += 20;
+    else if (edge >= 800) score += 10;
     if (
       /favicon|sprite|icon|badge|pixel|tracking|placeholder|404|template|pexels|unsplash|shutterstock/.test(
-        value,
+        visible,
       )
     )
       score -= 200;
@@ -914,13 +997,14 @@ function collectImageCandidates(
     const remoteUrl = input.url?.trim();
     if (!remoteUrl) return;
     const parsed = parsedImage(remoteUrl);
-    if (!parsed) return;
+    if (!parsed || isJunkHarvestImage(parsed)) return;
     const key = assetKey(parsed);
-    if (byAsset.has(key) || byAsset.size >= HARVEST_MAX_IMAGE_CANDIDATES) {
-      return;
-    }
-    const looksLikeLogo = /logo|brand|wordmark/i.test(parsed.pathname);
-    byAsset.set(key, {
+    const existing = byAsset.get(key);
+    const looksLikeLogo = /logo|brand|wordmark/i.test(
+      decodedImageLocator(parsed),
+    );
+    const alt = normalizeHarvestText(input.alt).slice(0, 200) || undefined;
+    const next: HarvestImageCandidate = {
       id: harvestCandidateId({
         kind: "image",
         value: remoteUrl,
@@ -928,9 +1012,31 @@ function collectImageCandidates(
       }),
       remoteUrl,
       sourceUrl: input.page.sourceUrl,
-      roleHint: input.roleHint === "logo" || looksLikeLogo ? "logo" : "photo",
-      alt: normalizeHarvestText(input.alt).slice(0, 200) || undefined,
-    });
+      roleHint:
+        input.roleHint === "logo" ||
+        looksLikeLogo ||
+        existing?.roleHint === "logo"
+          ? "logo"
+          : "photo",
+      alt: alt ?? existing?.alt,
+    };
+    if (existing) {
+      if (
+        harvestImageRenditionRank(parsed) >
+        harvestImageRenditionRank(new URL(existing.remoteUrl))
+      ) {
+        byAsset.set(key, next);
+      } else if (next.roleHint === "logo" && existing.roleHint !== "logo") {
+        byAsset.set(key, {
+          ...existing,
+          roleHint: "logo",
+          alt: existing.alt ?? next.alt,
+        });
+      }
+      return;
+    }
+    if (byAsset.size >= HARVEST_MAX_IMAGE_CANDIDATES) return;
+    byAsset.set(key, next);
   };
 
   for (const page of pages) {

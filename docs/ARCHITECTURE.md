@@ -391,10 +391,13 @@ page. Source priority for the generation prompt is:
 
 Image candidates are staged by a Node action that validates HTTPS, exact or
 reviewed host, public DNS, manual redirects, an 8 MiB cap, MIME, and magic bytes,
-then stores JPEG/PNG/WebP in Convex. Luna classifies the staged copies and
-attaches a logo or photos only where the concept still has none from the pack
-or a manual upload. Remote source URLs never reach the admin browser or the
-generated page.
+then stores JPEG/PNG/WebP in Convex. The 12-candidate shortlist is unique
+photographs: builder renditions (Wix `/v1/fill/w_N,h_N/`, `-1920w`, query
+resizes) collapse to one slot, the largest usable file is kept, and tiny or
+blurred placeholders are dropped before they consume a slot. Luna classifies
+the staged copies and attaches a logo or photos only where the concept still
+has none from the pack or a manual upload. Remote source URLs never reach the
+admin browser or the generated page.
 
 Fact review finishing does not unlock generation while website images are still
 being staged or classified. `harvestImageAnalysisState: processing` is a
