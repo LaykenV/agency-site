@@ -19,8 +19,10 @@ import { Textarea } from "@/components/ui/textarea";
  */
 export function ConceptIntakeForm({
   onCreated,
+  hideIntro = false,
 }: {
   onCreated: (conceptId: Id<"website_concepts">) => void;
+  hideIntro?: boolean;
 }) {
   const createConcept = useMutation(api.concepts.admin.create);
 
@@ -69,17 +71,16 @@ export function ConceptIntakeForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--card)] p-4"
-    >
-      <div>
-        <h2 className="text-base font-semibold">New concept</h2>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          Only the business name is required. Everything else improves the match
-          and the page.
-        </p>
-      </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      {hideIntro ? null : (
+        <div>
+          <h2 className="text-base font-semibold">New concept</h2>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            Only the business name is required. Everything else improves the
+            match and the page.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="concept-business-name">Business name *</Label>
@@ -89,6 +90,7 @@ export function ConceptIntakeForm({
           onChange={(event) => setBusinessName(event.target.value)}
           placeholder="Shay's Cleaning Services"
           autoComplete="off"
+          autoFocus
           required
         />
       </div>

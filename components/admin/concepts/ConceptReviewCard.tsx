@@ -6,6 +6,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  ArrowLeft,
   Check,
   ClipboardPaste,
   Copy,
@@ -38,6 +39,11 @@ import {
 } from "@/lib/concepts/messengerDraft";
 import { cn } from "@/lib/utils";
 import { preparePackImage } from "@/lib/concepts/preparePackImage";
+import {
+  defaultWorkspacePane,
+  workspaceSteps,
+  type WorkspacePane,
+} from "@/lib/concepts/workspace";
 
 /**
  * The human review gate.
@@ -119,9 +125,11 @@ async function copyText(value: string, successMessage: string) {
 export function ConceptReviewCard({
   conceptId,
   onDeleted,
+  onBack,
 }: {
   conceptId: Id<"website_concepts">;
   onDeleted: () => void;
+  onBack?: () => void;
 }) {
   const data = useQuery(api.concepts.admin.get, { conceptId });
 
@@ -161,6 +169,7 @@ export function ConceptReviewCard({
   const [structureId, setStructureId] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
+  const [pane, setPane] = useState<WorkspacePane>("now");
   const logoInputRef = useRef<HTMLInputElement | null>(null);
   const photoInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -201,6 +210,19 @@ export function ConceptReviewCard({
     setQuotes(concept.approvedQuotes);
     setStructureId(concept.structureId ?? "");
   }, [concept?._id, concept?.updatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!concept) return;
+    setPane(
+      defaultWorkspacePane({
+        status: concept.status,
+        generatedHtml: concept.generatedHtml,
+      }),
+    );
+    // Seed from the loaded row. `concept` as a dependency would reset the
+    // pane on every reactive field change, including view counts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [concept?._id, concept?.status, concept?.generatedHtml]);
 
   // Fetch the candidate list only when the match panel is actually on screen.
   // `cancelled` matters because switching concepts mid-request would otherwise
@@ -260,7 +282,7 @@ export function ConceptReviewCard({
 
   if (data === undefined) {
     return (
-      <div className="flex items-center justify-center rounded-xl border border-[var(--border)] p-10">
+      <div className="flex flex-1 items-center justify-center p-10">
         <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
       </div>
     );
@@ -268,8 +290,13 @@ export function ConceptReviewCard({
 
   if (data === null || !concept) {
     return (
-      <div className="rounded-xl border border-[var(--border)] p-6 text-sm text-[var(--muted-foreground)]">
-        This concept no longer exists.
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-sm text-[var(--muted-foreground)]">
+        <p>This concept no longer exists.</p>
+        {onBack ? (
+          <Button size="sm" variant="outline" onClick={onBack}>
+            Back to queue
+          </Button>
+        ) : null}
       </div>
     );
   }
@@ -435,69 +462,106 @@ export function ConceptReviewCard({
     }
   };
 
+  const hasHtml = Boolean(concept.generatedHtml);
+  const steps = workspaceSteps({
+    status: concept.status,
+    placeMatchResolved: concept.placeMatchResolved,
+    facebookPackState: concept.facebookPackState,
+    facebookPackItemCount: packItems.length,
+    harvestReviewState: concept.harvestReviewState,
+    hasGeneratedHtml: hasHtml,
+    sentAt: concept.sentAt,
+    viewCount: concept.viewCount,
+  });
+  const panes: Array<{ id: WorkspacePane; label: string; hidden?: boolean }> = [
+    { id: "now", label: "Now" },
+    { id: "preview", label: "Preview", hidden: !hasHtml },
+    { id: "pack", label: "Pack" },
+    { id: "more", label: "More" },
+  ];
+
   return (
-    <div className="min-w-0 space-y-5">
-      {/* --- Header --- */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="truncate text-lg font-semibold">
-              {concept.businessName}
-            </h2>
-            <p className="mt-0.5 font-mono text-[11px] text-[var(--muted-foreground)]">
-              {concept.token}
-            </p>
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <header className="flex-none border-b border-[var(--border)] bg-[var(--background)] px-3 py-3 sm:px-4">
+        <div className="flex items-start gap-2">
+          {onBack ? (
+            <button
+              type="button"
+              onClick={onBack}
+              className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:hidden"
+              aria-label="Back to queue"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          ) : null}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <h2 className="truncate text-base font-semibold sm:text-lg">
+                {concept.businessName}
+              </h2>
+              <span
+                className={cn(
+                  "inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
+                  statusClass(concept.status),
+                )}
+              >
+                {isWorking ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : null}
+                {STATUS_LABELS[concept.status] ?? concept.status}
+              </span>
+            </div>
+            <ol className="mt-2 flex items-center gap-1 text-[11px]">
+              {steps.map((step, index) => (
+                <li key={step.id} className="flex min-w-0 items-center gap-1">
+                  {index > 0 ? (
+                    <span
+                      className="text-[var(--border)]"
+                      aria-hidden
+                    >
+                      /
+                    </span>
+                  ) : null}
+                  <span
+                    className={cn(
+                      step.state === "current" && "font-semibold text-[var(--foreground)]",
+                      step.state === "done" && "text-[var(--muted-foreground)]",
+                      step.state === "todo" && "text-[var(--muted-foreground)]/60",
+                    )}
+                  >
+                    {step.label}
+                  </span>
+                </li>
+              ))}
+            </ol>
           </div>
-          <span
-            className={cn(
-              "inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-              statusClass(concept.status),
-            )}
-          >
-            {isWorking ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-            {STATUS_LABELS[concept.status] ?? concept.status}
-          </span>
         </div>
+      </header>
 
-        <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs sm:grid-cols-4">
-          <div>
-            <dt className="text-[var(--muted-foreground)]">Opens</dt>
-            <dd className="font-medium">{concept.viewCount}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted-foreground)]">First opened</dt>
-            <dd className="font-medium">{formatDate(concept.firstViewedAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted-foreground)]">Last opened</dt>
-            <dd className="font-medium">{formatDate(concept.lastViewedAt)}</dd>
-          </div>
-          <div>
-            <dt className="text-[var(--muted-foreground)]">Marked sent</dt>
-            <dd className="font-medium">{formatDate(concept.sentAt)}</dd>
-          </div>
-        </dl>
+      <nav
+        className="flex flex-none gap-1 overflow-x-auto border-b border-[var(--border)] px-3 [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden"
+        aria-label="Concept sections"
+      >
+        {panes
+          .filter((entry) => !entry.hidden)
+          .map((entry) => (
+            <button
+              key={entry.id}
+              type="button"
+              onClick={() => setPane(entry.id)}
+              className={cn(
+                "-mb-px flex-none border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+                pane === entry.id
+                  ? "border-[var(--foreground)] text-[var(--foreground)]"
+                  : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+              )}
+            >
+              {entry.label}
+            </button>
+          ))}
+      </nav>
 
-        {concept.generatedHtml && (concept.structureId || concept.model) ? (
-          <p className="mt-3 border-t border-[var(--border)] pt-3 text-[11px] text-[var(--muted-foreground)]">
-            {concept.structureId ? (
-              <>
-                Shape:{" "}
-                <span className="font-medium">
-                  {CONCEPT_STRUCTURES.find((s) => s.id === concept.structureId)
-                    ?.name ?? concept.structureId}
-                </span>
-                {" · "}
-              </>
-            ) : null}
-            {concept.model ? <>Model: {concept.model} · </> : null}
-            {concept.promptVersion ? (
-              <>Prompt: {concept.promptVersion}</>
-            ) : null}
-          </p>
-        ) : null}
-      </div>
-
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-28 sm:px-4">
       {/* --- Failures --- */}
       {concept.error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
@@ -524,7 +588,7 @@ export function ConceptReviewCard({
       ) : null}
 
       {/* --- Google Places match confirmation --- */}
-      {needsMatch ? (
+      {needsMatch && pane === "now" ? (
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
           <h3 className="text-sm font-semibold">Which business is this?</h3>
           <p className="mt-1 text-xs text-[var(--muted-foreground)]">
@@ -650,7 +714,87 @@ export function ConceptReviewCard({
         </div>
       ) : null}
 
+      {needsMatch && pane !== "now" ? (
+        <button
+          type="button"
+          onClick={() => setPane("now")}
+          className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-left text-sm"
+        >
+          <span className="font-medium">Confirm the Google match first.</span>
+          <span className="mt-0.5 block text-xs text-[var(--muted-foreground)]">
+            Generation stays locked until you pick the listing.
+          </span>
+        </button>
+      ) : null}
+
+      {pane === "now" && isWorking ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <p className="flex items-center gap-2 text-sm font-medium">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            {STATUS_LABELS[concept.status] ?? "Working"}
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            This page will update when the next step is ready.
+          </p>
+        </div>
+      ) : null}
+
+      {pane === "now" &&
+      !needsMatch &&
+      !isWorking &&
+      concept.status !== "content_review" ? (
+        <NowPane
+          concept={concept}
+          previewUrl={previewUrl}
+          draftPassedValidation={draftPassedValidation}
+          generationBlocked={generationBlocked}
+          packItemCount={packItems.length}
+          isBusy={isBusy}
+          structureId={structureId}
+          onStructureId={setStructureId}
+          onOpenPack={() => setPane("pack")}
+          onOpenPreview={() => setPane("preview")}
+          onGenerate={() =>
+            runAction(
+              () =>
+                generate({
+                  conceptId,
+                  structureId: structureId || undefined,
+                }),
+              "Generating...",
+            )
+          }
+          onPublish={() =>
+            runAction(() => publish({ conceptId }), "Published.")
+          }
+          onUnpublish={() =>
+            runAction(
+              () => unpublish({ conceptId }),
+              "Unpublished. The link now returns not found.",
+            )
+          }
+          onCopyLink={() => copyText(previewUrl, "Link copied.")}
+          onCopyDraft={() =>
+            copyText(
+              buildMessengerDraft({
+                businessName: concept.businessName,
+                token: concept.token,
+              }),
+              "Messenger draft copied.",
+            )
+          }
+          onToggleSent={() =>
+            runAction(
+              () => markSent({ conceptId, sent: !concept.sentAt }),
+              concept.sentAt ? "Cleared." : "Marked as sent.",
+            )
+          }
+        />
+      ) : null}
+
       {/* --- Facebook Pack: the primary content source --- */}
+      {pane === "pack" ? (
+      <>
       <ConceptFacebookPack
         items={packItems}
         state={concept.facebookPackState}
@@ -689,9 +833,12 @@ export function ConceptReviewCard({
           previewUrls={packPreviewUrls}
         />
       ) : null}
+      </>
+      ) : null}
 
       {/* --- Harvested website content and factual approval --- */}
-      {harvestSourceUrl || concept.harvestReviewState ? (
+      {(harvestSourceUrl || concept.harvestReviewState) &&
+      (harvestPending ? pane === "now" : pane === "more") ? (
         <div
           className={cn(
             "min-w-0 overflow-hidden rounded-xl border p-3 sm:p-4",
@@ -890,7 +1037,8 @@ export function ConceptReviewCard({
             </div>
           )}
         </div>
-      ) : (concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl) &&
+      ) : pane === "more" &&
+        (concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl) &&
         // Website is secondary: after the pack has been analyzed, or when there
         // is no pack material at all. Collecting/analyzing the pack first keeps
         // the card order honest and avoids spending Firecrawl while the primary
@@ -926,6 +1074,8 @@ export function ConceptReviewCard({
       ) : null}
 
       {/* --- Assets --- */}
+      {pane === "more" ? (
+      <>
       <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
         <h3 className="text-sm font-semibold">Manual images</h3>
         <p className="mt-1 text-xs text-[var(--muted-foreground)]">
@@ -1055,10 +1205,8 @@ export function ConceptReviewCard({
       </div>
 
       {/* --- Brief editing --- */}
-      <details className="rounded-xl border border-[var(--border)] bg-[var(--card)]">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
-          Edit the brief
-        </summary>
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)]">
+        <h3 className="px-4 py-3 text-sm font-semibold">Edit the brief</h3>
         <div className="space-y-3 border-t border-[var(--border)] p-4">
           <div className="space-y-1.5">
             <Label htmlFor="edit-name">Business name</Label>
@@ -1164,55 +1312,12 @@ export function ConceptReviewCard({
             </Button>
           </div>
         </div>
-      </details>
-
-      {/* --- Generation --- */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h3 className="text-sm font-semibold">Generate</h3>
-        <div className="mt-3 space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="structure-select">Page shape</Label>
-            <select
-              id="structure-select"
-              value={structureId}
-              onChange={(event) => setStructureId(event.target.value)}
-              className="h-9 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm"
-            >
-              <option value="">Pick automatically from the brief</option>
-              {CONCEPT_STRUCTURES.map((structure) => (
-                <option key={structure.id} value={structure.id}>
-                  {structure.name} — {structure.fitsWhen}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button
-            disabled={isBusy || isWorking || generationBlocked !== null}
-            onClick={() =>
-              runAction(
-                () =>
-                  generate({
-                    conceptId,
-                    structureId: structureId || undefined,
-                  }),
-                "Generating...",
-              )
-            }
-          >
-            {concept.generatedHtml ? "Regenerate" : "Generate concept"}
-          </Button>
-          {/* The same predicate the mutation uses, so the button and the server
-              never disagree about why generation is unavailable. */}
-          {generationBlocked ? (
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {generationBlocked}
-            </p>
-          ) : null}
-        </div>
       </div>
+      </>
+      ) : null}
 
       {/* --- Review and publish --- */}
-      {concept.generatedHtml ? (
+      {pane === "preview" && concept.generatedHtml ? (
         <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
           <div>
             <h3 className="text-sm font-semibold">Review</h3>
@@ -1238,95 +1343,34 @@ export function ConceptReviewCard({
             businessName={concept.businessName}
           />
 
-          <div className="grid grid-cols-1 gap-2 border-t border-[var(--border)] pt-4 min-[430px]:grid-cols-2">
+          <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+            <Button size="sm" variant="outline" asChild>
+              {/* notrack keeps Layken's own checks out of the open count. */}
+              <a
+                href={`${previewUrl}?notrack=1`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open full page
+              </a>
+            </Button>
             {concept.status === "published" ? (
               <Button
                 size="sm"
-                className="w-full"
-                variant="outline"
-                disabled={isBusy}
-                onClick={() =>
-                  runAction(
-                    () => unpublish({ conceptId }),
-                    "Unpublished. The link now returns not found.",
-                  )
-                }
+                variant="ghost"
+                onClick={() => copyText(previewUrl, "Link copied.")}
               >
-                Unpublish
+                <Copy className="h-3.5 w-3.5" />
+                Copy link
               </Button>
-            ) : (
-              <Button
-                size="sm"
-                className="w-full"
-                disabled={isBusy}
-                onClick={() =>
-                  runAction(() => publish({ conceptId }), "Published.")
-                }
-              >
-                Publish
-              </Button>
-            )}
-
-            {concept.status === "published" ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => copyText(previewUrl, "Link copied.")}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy link
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() =>
-                    copyText(
-                      buildMessengerDraft({
-                        businessName: concept.businessName,
-                        token: concept.token,
-                      }),
-                      "Messenger draft copied.",
-                    )
-                  }
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy Messenger draft
-                </Button>
-                <Button size="sm" variant="ghost" className="w-full" asChild>
-                  {/* notrack keeps Layken's own checks out of the open count. */}
-                  <a
-                    href={`${previewUrl}?notrack=1`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    Open
-                  </a>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="w-full"
-                  disabled={isBusy}
-                  onClick={() =>
-                    runAction(
-                      () => markSent({ conceptId, sent: !concept.sentAt }),
-                      concept.sentAt ? "Cleared." : "Marked as sent.",
-                    )
-                  }
-                >
-                  {concept.sentAt ? "Clear sent" : "Mark sent"}
-                </Button>
-              </>
             ) : null}
           </div>
         </div>
       ) : null}
 
       {/* --- Delete --- */}
+      {pane === "more" ? (
       <div className="rounded-xl border border-[var(--border)] p-4">
         <Button
           size="sm"
@@ -1350,6 +1394,344 @@ export function ConceptReviewCard({
           Delete concept
         </Button>
       </div>
+      ) : null}
+
+      {pane === "preview" && concept.generatedHtml ? (
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 text-[11px] text-[var(--muted-foreground)]">
+          {concept.structureId ? (
+            <>
+              Shape:{" "}
+              <span className="font-medium text-[var(--foreground)]">
+                {CONCEPT_STRUCTURES.find((s) => s.id === concept.structureId)
+                  ?.name ?? concept.structureId}
+              </span>
+              {" · "}
+            </>
+          ) : null}
+          {concept.model ? <>Model: {concept.model} · </> : null}
+          {concept.promptVersion ? <>Prompt: {concept.promptVersion}</> : null}
+          <span className="mt-1 block">
+            {concept.viewCount} open{concept.viewCount === 1 ? "" : "s"}
+            {concept.firstViewedAt
+              ? ` · first ${formatDate(concept.firstViewedAt)}`
+              : ""}
+            {concept.sentAt ? ` · sent ${formatDate(concept.sentAt)}` : ""}
+          </span>
+        </div>
+      ) : null}
+      </div>
+
+      <StickyWorkspaceBar
+        status={concept.status}
+        hasHtml={hasHtml}
+        draftPassedValidation={draftPassedValidation}
+        generationBlocked={generationBlocked}
+        packNeedsAnalyze={
+          packItems.length > 0 &&
+          concept.facebookPackState !== "ready" &&
+          concept.facebookPackState !== "analyzing"
+        }
+        isBusy={isBusy || isWorking || isUploading}
+        onGenerate={() =>
+          runAction(
+            () =>
+              generate({
+                conceptId,
+                structureId: structureId || undefined,
+              }),
+            "Generating...",
+          )
+        }
+        onAnalyze={() =>
+          runAction(
+            () => analyzeFacebookPack({ conceptId }),
+            "Sorting the pack...",
+          )
+        }
+        onPublish={() => runAction(() => publish({ conceptId }), "Published.")}
+        onCopyDraft={() =>
+          copyText(
+            buildMessengerDraft({
+              businessName: concept.businessName,
+              token: concept.token,
+            }),
+            "Messenger draft copied.",
+          )
+        }
+      />
+    </div>
+  );
+}
+
+function NowPane({
+  concept,
+  previewUrl,
+  draftPassedValidation,
+  generationBlocked,
+  packItemCount,
+  isBusy,
+  structureId,
+  onStructureId,
+  onOpenPack,
+  onOpenPreview,
+  onGenerate,
+  onPublish,
+  onUnpublish,
+  onCopyLink,
+  onCopyDraft,
+  onToggleSent,
+}: {
+  concept: {
+    status: string;
+    generatedHtml?: string;
+    sentAt?: number;
+    viewCount: number;
+    firstViewedAt?: number;
+    lastViewedAt?: number;
+    facebookPackState?: string;
+  };
+  previewUrl: string;
+  draftPassedValidation: boolean;
+  generationBlocked: string | null;
+  packItemCount: number;
+  isBusy: boolean;
+  structureId: string;
+  onStructureId: (value: string) => void;
+  onOpenPack: () => void;
+  onOpenPreview: () => void;
+  onGenerate: () => Promise<boolean>;
+  onPublish: () => Promise<boolean>;
+  onUnpublish: () => Promise<boolean>;
+  onCopyLink: () => void;
+  onCopyDraft: () => void;
+  onToggleSent: () => Promise<boolean>;
+}) {
+  if (concept.status === "published") {
+    return (
+      <div className="space-y-3">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+          <h3 className="text-sm font-semibold">Send this concept</h3>
+          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+            {concept.viewCount === 0
+              ? concept.sentAt
+                ? "Marked sent, not opened yet. One follow-up, then stop."
+                : "Published. Copy the Messenger draft and send it by hand."
+              : `Opened ${concept.viewCount} time${concept.viewCount === 1 ? "" : "s"}.`}
+          </p>
+          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <dt className="text-[var(--muted-foreground)]">First opened</dt>
+              <dd className="font-medium">
+                {formatDate(concept.firstViewedAt)}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-[var(--muted-foreground)]">Last opened</dt>
+              <dd className="font-medium">{formatDate(concept.lastViewedAt)}</dd>
+            </div>
+          </dl>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" className="w-full" onClick={onCopyDraft}>
+            <Copy className="h-3.5 w-3.5" />
+            Messenger draft
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={onCopyLink}
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Copy link
+          </Button>
+          <Button size="sm" variant="outline" className="w-full" asChild>
+            <a href={`${previewUrl}?notrack=1`} target="_blank" rel="noreferrer">
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open
+            </a>
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full"
+            disabled={isBusy}
+            onClick={() => void onToggleSent()}
+          >
+            {concept.sentAt ? "Clear sent" : "Mark sent"}
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full"
+            onClick={onOpenPreview}
+          >
+            Preview
+          </Button>
+          <Button
+            size="sm"
+            variant="ghost"
+            className="w-full"
+            disabled={isBusy}
+            onClick={() => void onUnpublish()}
+          >
+            Unpublish
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (concept.status === "review" && concept.generatedHtml) {
+    return (
+      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+        <h3 className="text-sm font-semibold">Ready to publish</h3>
+        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          {draftPassedValidation
+            ? "Safety checks passed. Open Preview, then publish if you would send it."
+            : "This draft did not pass. Read the failure above before publishing."}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <Button
+            size="sm"
+            disabled={isBusy || !draftPassedValidation}
+            onClick={() => void onPublish()}
+          >
+            Publish
+          </Button>
+          <Button size="sm" variant="outline" onClick={onOpenPreview}>
+            Open preview
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+      <h3 className="text-sm font-semibold">
+        {concept.generatedHtml ? "Generate again" : "Generate the page"}
+      </h3>
+      <ul className="mt-2 space-y-1 text-xs text-[var(--muted-foreground)]">
+        <li>Google match confirmed</li>
+        <li>
+          {packItemCount === 0
+            ? "No Facebook Pack yet — optional, but the page will be thinner."
+            : concept.facebookPackState === "ready"
+              ? `${packItemCount} pack item${packItemCount === 1 ? "" : "s"} sorted`
+              : `${packItemCount} pack item${packItemCount === 1 ? "" : "s"} still need analysis`}
+        </li>
+      </ul>
+      {packItemCount === 0 || concept.facebookPackState !== "ready" ? (
+        <Button
+          size="sm"
+          variant="outline"
+          className="mt-3"
+          onClick={onOpenPack}
+        >
+          Open Facebook Pack
+        </Button>
+      ) : null}
+      <div className="mt-3 space-y-2">
+        <Label htmlFor="structure-select">Page shape</Label>
+        <select
+          id="structure-select"
+          value={structureId}
+          onChange={(event) => onStructureId(event.target.value)}
+          className="h-10 w-full rounded-md border border-[var(--border)] bg-[var(--background)] px-3 text-sm"
+        >
+          <option value="">Pick automatically from the brief</option>
+          {CONCEPT_STRUCTURES.map((structure) => (
+            <option key={structure.id} value={structure.id}>
+              {structure.name} — {structure.fitsWhen}
+            </option>
+          ))}
+        </select>
+        <Button
+          className="w-full sm:w-auto"
+          disabled={isBusy || generationBlocked !== null}
+          onClick={() => void onGenerate()}
+        >
+          {concept.generatedHtml ? "Regenerate" : "Generate concept"}
+        </Button>
+        {generationBlocked ? (
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {generationBlocked}
+          </p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function StickyWorkspaceBar({
+  status,
+  hasHtml,
+  draftPassedValidation,
+  generationBlocked,
+  packNeedsAnalyze,
+  isBusy,
+  onGenerate,
+  onAnalyze,
+  onPublish,
+  onCopyDraft,
+}: {
+  status: string;
+  hasHtml: boolean;
+  draftPassedValidation: boolean;
+  generationBlocked: string | null;
+  packNeedsAnalyze: boolean;
+  isBusy: boolean;
+  onGenerate: () => Promise<boolean>;
+  onAnalyze: () => Promise<boolean>;
+  onPublish: () => Promise<boolean>;
+  onCopyDraft: () => void;
+}) {
+  let action: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+  } | null = null;
+
+  if (status === "published") {
+    action = { label: "Copy Messenger draft", onClick: onCopyDraft };
+  } else if (status === "review" && hasHtml) {
+    action = {
+      label: "Publish",
+      onClick: () => void onPublish(),
+      disabled: !draftPassedValidation,
+    };
+  } else if (status === "matching" || status === "content_review") {
+    action = null;
+  } else if (
+    status !== "enriching" &&
+    status !== "harvesting" &&
+    status !== "generating" &&
+    generationBlocked === null
+  ) {
+    action = {
+      label: hasHtml ? "Regenerate" : "Generate concept",
+      onClick: () => void onGenerate(),
+    };
+  } else if (packNeedsAnalyze) {
+    action = {
+      label: "Analyze Facebook Pack",
+      onClick: () => void onAnalyze(),
+    };
+  }
+
+  if (!action) return null;
+
+  return (
+    <div className="flex-none border-t border-[var(--border)] bg-[var(--background)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4">
+      <Button
+        className="w-full"
+        disabled={isBusy || action.disabled}
+        onClick={action.onClick}
+      >
+        {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        {action.label}
+      </Button>
     </div>
   );
 }

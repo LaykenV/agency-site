@@ -120,9 +120,8 @@ export function ConceptFacebookPack({
         <div className="min-w-0">
           <h3 className="text-sm font-semibold">Facebook Pack</h3>
           <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
-            Paste anything useful from their Page: logo, work photos, About
-            screenshots, posts, services, or copied text. Items Luna identifies
-            as screenshots are context only, not page imagery.
+            Paste logo, work photos, About screenshots, or copied text. Screenshots
+            stay context-only.
           </p>
         </div>
         {state ? (
