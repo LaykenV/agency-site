@@ -339,7 +339,7 @@ function ConceptsAdminContent() {
 
       {showForm ? (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
           role="presentation"
           onClick={() => setShowForm(false)}
         >
@@ -347,7 +347,7 @@ function ConceptsAdminContent() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="new-concept-title"
-            className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-[var(--border)] bg-[var(--background)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-xl sm:p-5"
+            className="max-h-[92dvh] w-full overflow-y-auto rounded-t-2xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-[hsl(var(--foreground))] shadow-2xl sm:max-w-lg sm:rounded-xl sm:p-5"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-3">
