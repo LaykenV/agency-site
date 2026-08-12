@@ -18,22 +18,23 @@ describe("website image URL guard", () => {
     ).toBe("www.example.com");
   });
 
-  test("allows only exact reviewed site-builder asset hosts", () => {
+  test("allows source-observed images on arbitrary public CDN hostnames", () => {
     expect(
       validateRemoteImageUrl(
         "https://static.wixstatic.com/media/photo.webp",
         source,
       ).hostname,
     ).toBe("static.wixstatic.com");
-    expect(() =>
+    expect(
       validateRemoteImageUrl(
-        "https://attacker.static.wixstatic.com/photo.webp",
+        "https://irp.cdn-website.com/site/photo.webp",
         source,
-      ),
-    ).toThrow("approved website asset host");
-    expect(() =>
-      validateRemoteImageUrl("https://generic-cdn.example/photo.webp", source),
-    ).toThrow("approved website asset host");
+      ).hostname,
+    ).toBe("irp.cdn-website.com");
+    expect(
+      validateRemoteImageUrl("https://generic-cdn.example/photo.webp", source)
+        .hostname,
+    ).toBe("generic-cdn.example");
   });
 
   test("rejects unsafe schemes, destinations, credentials, and ports", () => {

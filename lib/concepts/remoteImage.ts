@@ -3,18 +3,6 @@
 export const REMOTE_IMAGE_MAX_BYTES = 8 * 1024 * 1024;
 export const REMOTE_IMAGE_MAX_REDIRECTS = 3;
 
-const REVIEWED_ASSET_HOSTS = new Set([
-  "assets.squarespace.com",
-  "cdn.prod.website-files.com",
-  "images.squarespace-cdn.com",
-  "static.wixstatic.com",
-  "static1.squarespace.com",
-]);
-
-function bareHost(hostname: string): string {
-  return hostname.toLowerCase().replace(/^www\./, "");
-}
-
 function isIpLiteral(hostname: string): boolean {
   const value = hostname.replace(/^\[|\]$/g, "");
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(value) || value.includes(":");
@@ -23,9 +11,12 @@ function isIpLiteral(hostname: string): boolean {
 /**
  * Validate one initial or redirect URL before DNS lookup and fetch.
  *
- * The business's exact bare/www host is always eligible. A short exact-host
- * list covers the image hosts used by common hosted-site builders; no wildcard
- * CDN suffixes are accepted.
+ * The candidate has already passed the separate provenance boundary: it must
+ * be one of the image URLs Firecrawl observed on the admin-selected website.
+ * Hosted-site builders serve those assets from an open-ended set of shared
+ * CDNs, so tying eligibility to the business host or a vendor allowlist drops
+ * legitimate imagery. Any syntactically safe public HTTPS hostname may proceed
+ * to the DNS, response-size, MIME-header, and magic-byte checks in the importer.
  */
 export function validateRemoteImageUrl(
   candidateUrl: string,
@@ -49,6 +40,9 @@ export function validateRemoteImageUrl(
   if (candidate.port) {
     throw new Error("Image URLs cannot use a custom port.");
   }
+  if (source.protocol !== "https:" && source.protocol !== "http:") {
+    throw new Error("Harvest source URL is invalid.");
+  }
 
   const hostname = candidate.hostname.toLowerCase();
   if (
@@ -60,11 +54,6 @@ export function validateRemoteImageUrl(
     isIpLiteral(hostname)
   ) {
     throw new Error("Image host is not public.");
-  }
-
-  const sameBusinessHost = bareHost(hostname) === bareHost(source.hostname);
-  if (!sameBusinessHost && !REVIEWED_ASSET_HOSTS.has(hostname)) {
-    throw new Error("Image host is not an approved website asset host.");
   }
 
   return candidate;

@@ -858,7 +858,80 @@ export function buildHarvestSnapshot(input: {
 function collectImageCandidates(
   pages: Array<PageExtraction>,
 ): Array<HarvestImageCandidate> {
-  const byUrl = new Map<string, HarvestImageCandidate>();
+  const byAsset = new Map<string, HarvestImageCandidate>();
+
+  const parsedImage = (value: string): URL | null => {
+    try {
+      const url = new URL(value);
+      if (url.protocol !== "https:") return null;
+      let visible = `${url.pathname}${url.search}`;
+      try {
+        visible = decodeURIComponent(visible);
+      } catch {
+        // A malformed escape is still a valid URL, but there is no reason to
+        // decode it for the extension filter.
+      }
+      if (/\.(?:svg|gif|ico|avif)(?:$|[?&#])/i.test(visible)) return null;
+      return url;
+    } catch {
+      return null;
+    }
+  };
+
+  const assetKey = (url: URL): string => {
+    let path = url.pathname.replace(/\/opt\//g, "/");
+    path = path.replace(/-\d+w(?=\.(?:jpe?g|png|webp)$)/i, "");
+    // Builder transformation parameters identify a rendition, not a different
+    // photograph. Keep parameters that may identify the underlying source.
+    const params = new URLSearchParams(url.search);
+    for (const key of ["w", "width", "h", "height", "q", "quality", "fit"]) {
+      params.delete(key);
+    }
+    return `${url.hostname.toLowerCase()}${path}?${params.toString()}`;
+  };
+
+  const rawScore = (url: URL, page: PageExtraction): number => {
+    const value = `${url.pathname}${url.search}`.toLowerCase();
+    let score =
+      page.pageType === "gallery" ? 80 : page.pageType === "home" ? 40 : 0;
+    if (/logo|brand|wordmark/.test(value)) score += 60;
+    if (/1920w|1600w|1280w|original|full/.test(value)) score += 20;
+    if (
+      /favicon|sprite|icon|badge|pixel|tracking|placeholder|404|template|pexels|unsplash|shutterstock/.test(
+        value,
+      )
+    )
+      score -= 200;
+    return score;
+  };
+
+  const add = (input: {
+    url?: string;
+    page: PageExtraction;
+    roleHint?: string;
+    alt?: string;
+  }) => {
+    const remoteUrl = input.url?.trim();
+    if (!remoteUrl) return;
+    const parsed = parsedImage(remoteUrl);
+    if (!parsed) return;
+    const key = assetKey(parsed);
+    if (byAsset.has(key) || byAsset.size >= HARVEST_MAX_IMAGE_CANDIDATES) {
+      return;
+    }
+    const looksLikeLogo = /logo|brand|wordmark/i.test(parsed.pathname);
+    byAsset.set(key, {
+      id: harvestCandidateId({
+        kind: "image",
+        value: remoteUrl,
+        sourceUrl: input.page.sourceUrl,
+      }),
+      remoteUrl,
+      sourceUrl: input.page.sourceUrl,
+      roleHint: input.roleHint === "logo" || looksLikeLogo ? "logo" : "photo",
+      alt: normalizeHarvestText(input.alt).slice(0, 200) || undefined,
+    });
+  };
 
   for (const page of pages) {
     const allowed = new Set<string>(page.rawImageUrls ?? []);
@@ -874,25 +947,43 @@ function collectImageCandidates(
     for (const selection of selections) {
       const remoteUrl = selection.url?.trim();
       if (!remoteUrl || !allowed.has(remoteUrl)) continue;
-      if (!/^https:\/\//i.test(remoteUrl)) continue;
-      if (byUrl.has(remoteUrl)) continue;
-      if (byUrl.size >= HARVEST_MAX_IMAGE_CANDIDATES) break;
-
-      byUrl.set(remoteUrl, {
-        id: harvestCandidateId({
-          kind: "image",
-          value: remoteUrl,
-          sourceUrl: page.sourceUrl,
-        }),
-        remoteUrl,
-        sourceUrl: page.sourceUrl,
-        roleHint: selection.roleHint === "logo" ? "logo" : "photo",
-        alt: normalizeHarvestText(selection.alt).slice(0, 200) || undefined,
+      add({
+        url: remoteUrl,
+        page,
+        roleHint: selection.roleHint,
+        alt: selection.alt,
       });
     }
   }
 
-  return [...byUrl.values()];
+  // Structured extraction is useful for labels, but it is not a reliable image
+  // shortlist. Firecrawl's images format already returns the full observed URL
+  // set, so fill the remaining bounded slots from that source-owned list and
+  // let the downstream vision classifier reject stock art, icons, and junk.
+  const fallbacks = pages
+    .flatMap((page) =>
+      (page.rawImageUrls ?? []).map((value, index) => ({
+        value,
+        page,
+        index,
+        parsed: parsedImage(value),
+      })),
+    )
+    .filter(
+      (item): item is typeof item & { parsed: URL } => item.parsed !== null,
+    )
+    .sort((left, right) => {
+      const score =
+        rawScore(right.parsed, right.page) - rawScore(left.parsed, left.page);
+      if (score !== 0) return score;
+      return left.index - right.index;
+    });
+
+  for (const fallback of fallbacks) {
+    add({ url: fallback.value, page: fallback.page });
+  }
+
+  return [...byAsset.values()];
 }
 
 /**

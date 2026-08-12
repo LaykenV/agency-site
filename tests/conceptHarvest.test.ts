@@ -532,6 +532,48 @@ describe("buildHarvestSnapshot — images", () => {
     expect(snapshot.imageCandidates[0].roleHint).toBe("logo");
   });
 
+  test("fills the shortlist from Firecrawl's observed images when extraction misses them", () => {
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Coastal Detailing",
+      pages: [
+        pageFor({
+          rawImageUrls: [
+            "https://irp.cdn-website.com/site/logo-216w.png",
+            "https://irp.cdn-website.com/site/job-1-1920w.jpg",
+            "https://irp.cdn-website.com/site/job-2-1920w.jpg",
+          ],
+          imageSelections: [],
+        }),
+      ],
+    });
+    expect(snapshot.imageCandidates.map((image) => image.remoteUrl)).toEqual([
+      "https://irp.cdn-website.com/site/logo-216w.png",
+      "https://irp.cdn-website.com/site/job-1-1920w.jpg",
+      "https://irp.cdn-website.com/site/job-2-1920w.jpg",
+    ]);
+    expect(snapshot.imageCandidates[0].roleHint).toBe("logo");
+  });
+
+  test("deduplicates builder renditions and drops unsupported image formats", () => {
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Coastal Detailing",
+      pages: [
+        pageFor({
+          rawImageUrls: [
+            "https://irp.cdn-website.com/site/opt/logo-216w.png",
+            "https://irp.cdn-website.com/site/logo-1920w.png",
+            "https://irp.cdn-website.com/site/404_test.svg",
+            "https://irp.cdn-website.com/site/job.jpg",
+          ],
+        }),
+      ],
+    });
+    expect(snapshot.imageCandidates.map((image) => image.remoteUrl)).toEqual([
+      "https://irp.cdn-website.com/site/logo-1920w.png",
+      "https://irp.cdn-website.com/site/job.jpg",
+    ]);
+  });
+
   test("rejects non-https image candidates", () => {
     const snapshot = buildHarvestSnapshot({
       businessName: "Bayou Fence",
