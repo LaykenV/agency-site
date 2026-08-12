@@ -2,7 +2,7 @@
 
 Status: **canonical implemented-system source of truth**  
 Owner: Layken  
-Last reviewed against code: 2026-08-10
+Last reviewed against code: 2026-08-12
 
 This document describes the current repository. Future states belong in
 `ROADMAP.md` or `plans/`; completed implementation evidence belongs in
@@ -263,28 +263,25 @@ homepage concept:
 5. optionally, a bounded website harvest used only to fill gaps the pack left
 6. bespoke HTML and inline CSS from Muse Spark 1.2 (`meta/muse-spark-1.2`) at
    medium reasoning
-7. deterministic safety and factual validation, then a Luna audit of the
-   finished page
+7. deterministic safety and HTML validation
 8. human review of the finished page, then publication at `/preview/<token>`
 
-The generator and the auditor are deliberately different models. The audit's
-value is that it reads a finished artifact it had no part in writing; pointing
-`OPENROUTER_MODEL` and `OPENROUTER_VISION_MODEL` at the same slug turns it into
-a model marking its own work.
+There is no post-generation Luna claim audit. A concept is a sales sketch, and
+the review card is the remaining judgment of whether the page is worth sending.
 
 ### Models and provider routing
 
 | Role                              | Default               | Override                  |
 | --------------------------------- | --------------------- | ------------------------- |
 | Generation                        | `meta/muse-spark-1.2` | `OPENROUTER_MODEL`        |
-| Evidence, vision, and claim audit | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
+| Evidence and vision               | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
 
 Both are pinned to a version rather than a `latest` alias: a concept is a sales
 artifact, and a silent model swap changing how every page looks is not something
 to discover from a prospect's reaction.
 
-Every OpenRouter request that carries prospect material — pack analysis,
-generation, and the claim audit — sends
+Every OpenRouter request that carries prospect material — pack analysis and
+generation — sends
 `provider: { data_collection: "deny", require_parameters: true }`. The first
 restricts routing to providers OpenRouter says do not collect inputs for
 training; the second refuses an endpoint that would silently ignore a parameter
@@ -295,9 +292,9 @@ tradeoff was taken to adopt it.
 
 `require_parameters: true` makes the parameter set part of routing, so an
 unsupported parameter is a failed request rather than a degraded one. Luna's
-endpoints do not advertise `temperature`, which is why the audit sends none;
-they do advertise `reasoning`. Reasoning tokens are billed against `max_tokens`,
-so effort and output budget are one decision, not two.
+endpoints do not advertise `temperature`, which is why pack analysis sends
+none; they do advertise `reasoning`. Reasoning tokens are billed against
+`max_tokens`, so effort and output budget are one decision, not two.
 
 ### Google Places is identity, not content
 
@@ -384,8 +381,8 @@ testimonial attributions are stripped; the common evidence gate then rejects
 an unattributed quote. New harvests land as `approved` or `skipped` rather than
 parking in `content_review`; legacy `pending` rows keep the old manual review
 surface until they are resolved or migrated. Nothing flags cross-page factual
-conflicts on this path, so the final audit of the generated page is the remaining
-claim check. Source priority for the generation prompt is:
+conflicts on this path; the remaining check is the human reading the finished
+page. Source priority for the generation prompt is:
 
 1. manual business information
 2. Facebook Pack evidence admitted from an exact excerpt
@@ -444,22 +441,18 @@ were approved. It also enforces two usage rules on approved imagery: a supplied
 logo must appear at least once, and no single approved photo may appear more
 than twice.
 
-After those deterministic checks pass, `lib/concepts/claimAudit.ts` sends the
-page's visible copy and the exact brief back to Luna. Unsupported or materially
-strengthened claims fail the draft. A zero-claim, malformed, over-limit,
-provider-error, or truncated response fails closed. Page text over the audit
-input ceiling also fails instead of silently dropping the end of the page.
-
-Deterministic violations and audit rejections share **one** repair budget: a run
-makes at most two generations total, and the repair is charged against the same
-daily ceiling as the first. Whichever failure ends the run is recorded in
-`generationFailure` so the admin card can distinguish HTML validation, a claim
-rejection, an incomplete audit, a provider error, and rate limiting — four
-failures that need four different reactions. A failed draft is stored and shown,
-never published automatically, and the review card only claims the draft was
-audited when one actually passed. `publish` re-runs the deterministic validator
-server-side regardless of the stored status. The only required human review
-after analysis is the finished page before **Publish**.
+There is no second-model claim audit after those checks pass. A concept preview
+is a sales sketch: the prompt still tells Muse not to invent facts, but an
+unsupported marketing flourish does not fail the draft. Deterministic
+violations share **one** repair budget: a run makes at most two generations
+total, and the repair is charged against the same daily ceiling as the first.
+Whichever failure ends the run is recorded in `generationFailure` so the admin
+card can distinguish HTML validation, a provider error, and rate limiting. Older
+rows may still carry `claims_unsupported` or `audit_unreadable` from the retired
+Luna audit. A failed draft is stored and shown, never published automatically.
+`publish` re-runs the deterministic validator server-side regardless of the
+stored status. The only required human review after analysis is the finished
+page before **Publish**.
 
 ## Content dashboard
 

@@ -165,13 +165,12 @@ export const queueGeneration = internalMutation({
 });
 
 /**
- * Take one more token from the daily ceiling for an audit-driven retry.
+ * Take one more token from the daily ceiling for an HTML-repair retry.
  *
  * The retry happens inside a generation that already paid for itself, so it
- * would otherwise be invisible to the limiter — and an audit that fails
- * reliably on some business would quietly double every generation's cost. It
- * returns false rather than throwing: a refused retry is not an error, it just
- * means the audited failure is what Layken sees.
+ * would otherwise be invisible to the limiter. It returns false rather than
+ * throwing: a refused retry is not an error, it just means the failed draft
+ * is what Layken sees.
  */
 export const reserveGenerationRetry = internalMutation({
   args: { conceptId: v.id("website_concepts") },
@@ -393,9 +392,8 @@ export const saveGeneration = internalMutation({
       generationFailure: ok ? undefined : args.failure,
       generationRequestId: undefined,
       status: ok ? "review" : "failed",
-      // The headline names which gate rejected the draft. Without it, an audit
-      // rejection and a broken stylesheet read identically, and only one of them
-      // means the page said something untrue about a stranger's business.
+      // The headline names which gate rejected the draft so a broken stylesheet
+      // and a dead provider do not read as the same failure.
       error: ok
         ? undefined
         : args.failure

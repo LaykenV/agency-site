@@ -4,17 +4,7 @@ import type { ActionCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { refreshConceptBrief } from "../../lib/concepts/brief";
-import type { ConceptBrief } from "../../lib/concepts/brief";
 import { canUsePackItemAsPageImagery } from "../../lib/concepts/facebookPack";
-import {
-  buildClaimAuditRetryInstruction,
-  buildClaimAuditSystemPrompt,
-  buildClaimAuditUserPrompt,
-  claimAuditViolations,
-  extractAuditableText,
-  parseClaimAudit,
-  type ClaimAudit,
-} from "../../lib/concepts/claimAudit";
 import {
   CONCEPT_PROMPT_VERSION,
   buildConceptRepairUserPrompt,
@@ -62,24 +52,8 @@ const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  */
 const DEFAULT_MODEL = "meta/muse-spark-1.2";
 
-/**
- * The auditor is the evidence model, never the generator.
- *
- * This is the one place the two must differ. The audit's whole value is that it
- * reads a finished page it had no part in writing and has no investment in
- * keeping a good sentence. Point `OPENROUTER_MODEL` and `OPENROUTER_VISION_MODEL`
- * at the same slug and the check becomes a model marking its own work.
- */
-const DEFAULT_AUDIT_MODEL = "openai/gpt-5.6-luna";
-
 /** A long homepage with inline CSS runs well past a default cap. */
 const MAX_OUTPUT_TOKENS = 32_000;
-
-/** The audit returns a claim list, not a document, but a long page has many. */
-const MAX_AUDIT_TOKENS = 8_000;
-
-/** One short retry handles transient provider pressure without regenerating. */
-const AUDIT_RETRY_DELAY_MS = 5_000;
 
 /** High enough for varied design, low enough to respect hard constraints. */
 const TEMPERATURE = 0.7;
@@ -99,15 +73,14 @@ const REASONING_EFFORT = "medium" as const;
  * on it.
  */
 const REQUEST_TIMEOUT_MS = 240_000;
-const AUDIT_TIMEOUT_MS = 120_000;
 
 /**
  * Every paid call in one generation run shares this budget.
  *
- * Two attempts total, whatever went wrong. Deterministic HTML violations and
- * an audit that found unsupported claims draw from the same allowance, so a
- * page cannot fail validation, get repaired, fail the audit, and be generated a
- * third time.
+ * Two attempts total. A first draft that fails the deterministic HTML
+ * validator gets one charged repair. There is no post-generation claim audit:
+ * a concept preview is a sales sketch, and the human review card is the gate
+ * before anyone else sees it.
  */
 const MAX_GENERATION_ATTEMPTS = 2;
 
@@ -123,27 +96,6 @@ function getOpenRouterApiKey(): string {
 
 function getModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;
-}
-
-/** Shares `OPENROUTER_VISION_MODEL` with pack analysis: one evidence model. */
-function getAuditModel(): string {
-  return process.env.OPENROUTER_VISION_MODEL?.trim() || DEFAULT_AUDIT_MODEL;
-}
-
-function isRetryableAuditFailure(status: number, message: string): boolean {
-  return (
-    status === 429 ||
-    status === 502 ||
-    status === 503 ||
-    status === 529 ||
-    /rate[- ]?limit|temporar(?:y|ily)|overload|unavailable/i.test(message)
-  );
-}
-
-function auditRetryDelay(response: Response): number {
-  const seconds = Number(response.headers.get("retry-after"));
-  if (!Number.isFinite(seconds) || seconds <= 0) return AUDIT_RETRY_DELAY_MS;
-  return Math.min(Math.max(seconds * 1_000, 1_000), 15_000);
 }
 
 /**
@@ -289,130 +241,6 @@ async function callOpenRouter(
   }
 
   return content;
-}
-
-/**
- * Ask the evidence model whether the page's claims survive the brief.
- *
- * This is the one model check the flow keeps, and the reason it earns its place
- * is that it reads a new artifact produced by a different model. Improving
- * evidence extraction cannot stop a generator from strengthening a source claim,
- * fusing two facts into a third, or inventing availability, credentials, or an
- * outcome, because none of that exists until the page is written. Turning
- * "outdoor living experts" into "full outdoor experts" happens here or nowhere.
- *
- * Do not send `temperature` here. Luna's OpenRouter endpoints do not advertise
- * that parameter, and `require_parameters: true` correctly rejects the request
- * when an unsupported parameter is present. `reasoning` is advertised on every
- * Luna endpoint, so it is safe. The audit stays constrained by its prompt and
- * its structured JSON response.
- */
-async function auditGeneratedClaims(input: {
-  brief: ConceptBrief;
-  html: string;
-}): Promise<ClaimAudit | null> {
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    let response: Response;
-    try {
-      response = await fetch(OPENROUTER_ENDPOINT, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${getOpenRouterApiKey()}`,
-          "Content-Type": "application/json",
-          ...OPENROUTER_ATTRIBUTION_HEADERS,
-        },
-        signal: AbortSignal.timeout(AUDIT_TIMEOUT_MS),
-        body: JSON.stringify({
-          model: getAuditModel(),
-          max_tokens: MAX_AUDIT_TOKENS,
-          reasoning: { effort: REASONING_EFFORT, exclude: true },
-          response_format: { type: "json_object" },
-          provider: { data_collection: "deny", require_parameters: true },
-          messages: [
-            { role: "system", content: buildClaimAuditSystemPrompt() },
-            {
-              role: "user",
-              content: buildClaimAuditUserPrompt({
-                brief: input.brief,
-                pageText: extractAuditableText(input.html),
-              }),
-            },
-          ],
-        }),
-      });
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        (error.name === "TimeoutError" || error.name === "AbortError")
-      ) {
-        throw new Error(
-          `The factual audit did not respond within ${Math.round(AUDIT_TIMEOUT_MS / 1000)} seconds and was cancelled.`,
-        );
-      }
-      throw error;
-    }
-
-    if (!response.ok) {
-      const details = await response.text();
-      if (attempt === 1 && isRetryableAuditFailure(response.status, details)) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, auditRetryDelay(response)),
-        );
-        continue;
-      }
-      throw new Error(
-        `Claim audit request failed: ${response.status} ${details.slice(0, 500)}`,
-      );
-    }
-
-    const json = (await response.json()) as {
-      choices?: Array<{
-        message?: { content?: OpenRouterMessageContent };
-        finish_reason?: string | null;
-      }>;
-      error?: { message?: string; code?: number };
-    };
-    if (json.error?.message) {
-      if (
-        attempt === 1 &&
-        isRetryableAuditFailure(json.error.code ?? 0, json.error.message)
-      ) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, auditRetryDelay(response)),
-        );
-        continue;
-      }
-      throw new Error(`Claim audit error: ${json.error.message}`);
-    }
-
-    const choice = json.choices?.[0];
-    // A truncated audit has silently stopped listing claims, and the ones it
-    // never reached would read as approved. That is the one failure mode this
-    // check exists to prevent, so it is an audit failure, not a short pass.
-    if (choice?.finish_reason === "length") {
-      throw new Error(
-        `Claim audit hit the ${MAX_AUDIT_TOKENS}-token cap before finishing.`,
-      );
-    }
-    if (choice?.finish_reason === "error") {
-      throw new Error(
-        "Claim audit provider ended the completion with an error.",
-      );
-    }
-
-    const content = extractOpenRouterText(choice?.message?.content);
-    if (!content) return null;
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-    } catch {
-      return null;
-    }
-    return parseClaimAudit(parsed);
-  }
-
-  return null;
 }
 
 /**
@@ -578,12 +406,10 @@ export const runGeneration = internalAction({
       let failure: ConceptGenerationFailure | undefined;
       let correction = "";
 
-      // One shared budget. Whatever went wrong on the first attempt — broken
-      // HTML or a claim the evidence does not support — spends the same single
-      // repair, so no run can produce a third generation. The repair receives
-      // both the exact failed document and the specific offending lines. A
-      // correction list without the draft is another greenfield generation and
-      // can replace one unsupported claim with a different one.
+      // One shared budget. A first draft that fails the HTML validator spends
+      // the same single repair, so no run can produce a third generation. The
+      // repair receives both the exact failed document and the specific
+      // offending lines.
       for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
         const requestPrompt =
           attempt === 1
@@ -602,38 +428,15 @@ export const runGeneration = internalAction({
         );
 
         violations = validateConceptHtml(html, brief).violations;
-        if (violations.length > 0) {
-          failure = "html_invalid";
-          if (attempt === MAX_GENERATION_ATTEMPTS) break;
-          if (!(await reserveRepair(ctx, args.conceptId))) break;
-          correction = buildHtmlRepairInstruction(violations);
-          continue;
-        }
-
-        const audit = await auditGeneratedClaims({ brief, html });
-        if (!audit) {
-          // Treated as a failure rather than a pass, and never repaired: a
-          // second unreadable answer costs another generation to learn nothing,
-          // and the page itself may be perfectly fine. Regenerating is Layken's
-          // call.
-          failure = "audit_unreadable";
-          violations = [
-            "The factual audit did not return a readable answer. Regenerate to try again.",
-          ];
-          break;
-        }
-
-        if (audit.unsupported.length === 0) {
+        if (violations.length === 0) {
           failure = undefined;
-          violations = [];
           break;
         }
 
-        failure = "claims_unsupported";
-        violations = claimAuditViolations(audit);
+        failure = "html_invalid";
         if (attempt === MAX_GENERATION_ATTEMPTS) break;
         if (!(await reserveRepair(ctx, args.conceptId))) break;
-        correction = buildClaimAuditRetryInstruction(audit);
+        correction = buildHtmlRepairInstruction(violations);
       }
 
       await ctx.runMutation(internal.concepts.internal.saveGeneration, {

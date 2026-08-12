@@ -92,12 +92,10 @@ export function statusAfterGenerationInputChange(input: {
 /**
  * Why a generation run ended without a sendable page.
  *
- * These four failures need four different reactions, and "Generation failed"
- * told Layken none of them apart: a validation break is usually a prompt bug
- * worth reading the draft over, an audit rejection means the page said something
- * the evidence does not support, a provider error means try again, and rate
- * limiting means try again later. Stored on the concept so the admin card can
- * say which one happened rather than guessing from the violation text.
+ * These labels stay on the concept so the admin card can tell a validation
+ * break from a dead provider from rate limiting, rather than guessing from
+ * the error sentence. `claims_unsupported` and `audit_unreadable` are kept
+ * so older rows still render; new runs never write them.
  */
 export type ConceptGenerationFailure =
   | "html_invalid"
@@ -137,8 +135,8 @@ export function generationFailureHeadline(
   }
 }
 
-/** True when the stored draft passed both validation and the factual audit. */
-export function conceptDraftWasAudited(concept: {
+/** True when the stored draft passed deterministic HTML validation. */
+export function conceptDraftPassedValidation(concept: {
   generatedHtml?: string;
   status: string;
   generationFailure?: string;

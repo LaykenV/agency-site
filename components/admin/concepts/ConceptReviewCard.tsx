@@ -28,7 +28,7 @@ import { ConceptPackSummary } from "./ConceptPackSummary";
 import { ConceptEvidenceReport } from "./ConceptEvidenceReport";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
 import {
-  conceptDraftWasAudited,
+  conceptDraftPassedValidation,
   generationBlockedReason,
 } from "@/lib/concepts/lifecycle";
 import { harvestCandidatesToEvidence } from "@/lib/concepts/evidence";
@@ -43,11 +43,10 @@ import { preparePackImage } from "@/lib/concepts/preparePackImage";
  * The human review gate.
  *
  * The deterministic validator catches unsafe markup, hotlinked assets, invented
- * phone numbers and fabricated testimonials. It cannot check whether a claim is
- * true. Credentials, years in business, insurance, licences, service areas and
- * superlatives are checked here, by reading the page against the brief, before
- * anything is published. That is why the publish control sits beneath the
- * rendered concept rather than next to the generate button.
+ * phone numbers and fabricated testimonials. Everything else — whether it looks
+ * right, sounds like them, and is worth sending — is checked here before
+ * publish. That is why the publish control sits beneath the rendered concept
+ * rather than next to the generate button.
  */
 
 const STATUS_LABELS: Record<string, string> = {
@@ -281,7 +280,7 @@ export function ConceptReviewCard({
     concept.status === "harvesting" ||
     concept.status === "generating";
   const needsMatch = isMatching;
-  const draftWasAudited = conceptDraftWasAudited(concept);
+  const draftPassedValidation = conceptDraftPassedValidation(concept);
   const harvestSourceUrl = concept.harvestSourceUrl;
   const harvestPending = concept.harvestReviewState === "pending";
   const harvestInFlight = Boolean(concept.harvestRequestId);
@@ -1217,17 +1216,12 @@ export function ConceptReviewCard({
         <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
           <div>
             <h3 className="text-sm font-semibold">Review</h3>
-            {/* Only claim an audit happened when one actually passed. A failed
-                draft is still stored and still rendered here, and telling
-                Layken it was audited would invite him to trust a page that was
-                rejected. */}
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              {draftWasAudited ? (
+              {draftPassedValidation ? (
                 <>
-                  Luna audited this draft against the evidence and it passed.
-                  Your job is the finished page: does it look right, does it
-                  sound like them, and is it something you would send? Publish
-                  is still your call.
+                  This draft passed the safety checks. Your job is the finished
+                  page: does it look right, does it sound like them, and is it
+                  something you would send? Publish is still your call.
                 </>
               ) : (
                 <>

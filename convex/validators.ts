@@ -876,9 +876,10 @@ export const conceptStatusValidator = v.union(
  * Which failure ended the last generation run.
  *
  * Kept beside `error` rather than parsed back out of it: the admin card reacts
- * differently to a validation break, an audit rejection, a dead provider, and a
- * rate limit, and inferring that from an error sentence is how the wrong advice
- * gets shown. Absent on a run that produced a sendable page.
+ * differently to a validation break, a dead provider, and a rate limit, and
+ * inferring that from an error sentence is how the wrong advice gets shown.
+ * Absent on a run that produced a sendable page. `claims_unsupported` and
+ * `audit_unreadable` remain so older rows still validate.
  */
 export const conceptGenerationFailureValidator = v.union(
   v.literal("html_invalid"),

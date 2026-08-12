@@ -515,9 +515,9 @@ export default defineSchema({
     /**
      * Which failure ended the last generation run, when one did.
      *
-     * Absent means the stored draft passed both the deterministic validator and
-     * the factual audit, which is the only thing that lets the review card claim
-     * the draft was audited.
+     * Absent means the stored draft passed the deterministic HTML validator.
+     * `claims_unsupported` and `audit_unreadable` remain valid so older rows
+     * still load; new runs never write them.
      */
     generationFailure: v.optional(conceptGenerationFailureValidator),
 
