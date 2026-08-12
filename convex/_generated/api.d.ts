@@ -10,6 +10,7 @@
 
 import type * as activityLog from "../activityLog.js";
 import type * as admin from "../admin.js";
+import type * as adminAccess from "../adminAccess.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminGuard from "../adminGuard.js";
 import type * as adminLeads from "../adminLeads.js";
@@ -64,6 +65,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activityLog: typeof activityLog;
   admin: typeof admin;
+  adminAccess: typeof adminAccess;
   adminAnalytics: typeof adminAnalytics;
   adminGuard: typeof adminGuard;
   adminLeads: typeof adminLeads;

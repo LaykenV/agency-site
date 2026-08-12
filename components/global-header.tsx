@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { AnimatedThemeToggler } from "@/components/animated-theme-toggler";
 import { usePathname } from "next/navigation";
-import { ArrowRight, LogOut } from "lucide-react";
-import { useQuery } from "convex/react";
+import { ArrowRight, LogOut, Shield } from "lucide-react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { authClient } from "@/lib/auth-client";
@@ -24,6 +24,7 @@ export function GlobalHeader() {
   // business sitting above one.
   const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
+  const isAdminRoute = pathname.startsWith("/admin");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
   const isGradientPage =
@@ -52,8 +53,16 @@ export function GlobalHeader() {
       !pathname.startsWith("/services")
     );
   const onLanding = isGradientPage;
+  const { isAuthenticated } = useConvexAuth();
   // Only check auth on portal pages to avoid unnecessary auth calls on public SEO pages
   const decision = useQuery(api.auth.getPortalDecision, isPortal ? {} : "skip");
+  // Anonymous visitors never run this query. Signed-in users get a small,
+  // non-blocking convenience check; server-side admin guards remain authoritative.
+  const currentUserIsAdmin = useQuery(
+    api.adminAccess.currentUserIsAdmin,
+    isAuthenticated ? {} : "skip",
+  );
+  const showAdminLink = currentUserIsAdmin === true && !isAdminRoute;
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {
@@ -136,6 +145,15 @@ export function GlobalHeader() {
           {!isPortal ? (
             <>
               <AnimatedThemeToggler onLanding={onLanding} />
+              {showAdminLink && (
+                <Link
+                  href="/admin"
+                  className="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold"
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin
+                </Link>
+              )}
               <Link
                 href="/portal"
                 className="group btn-cta inline-flex items-center gap-2 px-4 py-2 transition-transform hover:translate-y-0"
@@ -147,6 +165,15 @@ export function GlobalHeader() {
           ) : decision?.authed ? (
             <>
               <AnimatedThemeToggler onLanding={onLanding} />
+              {showAdminLink && (
+                <Link
+                  href="/admin"
+                  className="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold"
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin
+                </Link>
+              )}
               <div className="inline-flex items-center gap-3 btn-secondary px-3 py-2 text-sm font-semibold cursor-default">
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--muted)] text-xs font-semibold uppercase text-[var(--foreground)]">
                   {initials}
@@ -206,6 +233,17 @@ export function GlobalHeader() {
                 <AnimatedThemeToggler className="btn-icon" onLanding={onLanding} />
               </div>
               <div className="h-px" style={{ background: "hsl(var(--border))" }} />
+
+              {showAdminLink && (
+                <Link
+                  href="/admin"
+                  onClick={() => setMenuOpen(false)}
+                  className="btn-secondary inline-flex items-center justify-between gap-2 px-4 py-2 text-sm font-semibold"
+                >
+                  Admin
+                  <Shield className="h-4 w-4" />
+                </Link>
+              )}
 
               {decision?.authed ? (
                 <div className="flex flex-col gap-2">
