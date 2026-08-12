@@ -67,6 +67,9 @@ const MAX_OUTPUT_TOKENS = 32_000;
 /** The audit returns a claim list, not a document, but a long page has many. */
 const MAX_AUDIT_TOKENS = 8_000;
 
+/** One short retry handles transient provider pressure without regenerating. */
+const AUDIT_RETRY_DELAY_MS = 5_000;
+
 /** High enough for varied design, low enough to respect hard constraints. */
 const TEMPERATURE = 0.7;
 
@@ -87,6 +90,22 @@ function getModel(): string {
 /** Shares `OPENROUTER_VISION_MODEL` with pack analysis: one evidence model. */
 function getAuditModel(): string {
   return process.env.OPENROUTER_VISION_MODEL?.trim() || DEFAULT_AUDIT_MODEL;
+}
+
+function isRetryableAuditFailure(status: number, message: string): boolean {
+  return (
+    status === 429 ||
+    status === 502 ||
+    status === 503 ||
+    status === 529 ||
+    /rate[- ]?limit|temporar(?:y|ily)|overload|unavailable/i.test(message)
+  );
+}
+
+function auditRetryDelay(response: Response): number {
+  const seconds = Number(response.headers.get("retry-after"));
+  if (!Number.isFinite(seconds) || seconds <= 0) return AUDIT_RETRY_DELAY_MS;
+  return Math.min(Math.max(seconds * 1_000, 1_000), 15_000);
 }
 
 /**
@@ -225,72 +244,93 @@ async function auditGeneratedClaims(input: {
   brief: ConceptBrief;
   html: string;
 }): Promise<ClaimAudit | null> {
-  const response = await fetch(OPENROUTER_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${getOpenRouterApiKey()}`,
-      "Content-Type": "application/json",
-      ...OPENROUTER_ATTRIBUTION_HEADERS,
-    },
-    body: JSON.stringify({
-      model: getAuditModel(),
-      max_tokens: MAX_AUDIT_TOKENS,
-      response_format: { type: "json_object" },
-      provider: { data_collection: "deny", require_parameters: true },
-      messages: [
-        { role: "system", content: buildClaimAuditSystemPrompt() },
-        {
-          role: "user",
-          content: buildClaimAuditUserPrompt({
-            brief: input.brief,
-            pageText: extractAuditableText(input.html),
-          }),
-        },
-      ],
-    }),
-  });
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    const response = await fetch(OPENROUTER_ENDPOINT, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${getOpenRouterApiKey()}`,
+        "Content-Type": "application/json",
+        ...OPENROUTER_ATTRIBUTION_HEADERS,
+      },
+      body: JSON.stringify({
+        model: getAuditModel(),
+        max_tokens: MAX_AUDIT_TOKENS,
+        response_format: { type: "json_object" },
+        provider: { data_collection: "deny", require_parameters: true },
+        messages: [
+          { role: "system", content: buildClaimAuditSystemPrompt() },
+          {
+            role: "user",
+            content: buildClaimAuditUserPrompt({
+              brief: input.brief,
+              pageText: extractAuditableText(input.html),
+            }),
+          },
+        ],
+      }),
+    });
 
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(
-      `Claim audit request failed: ${response.status} ${details.slice(0, 500)}`,
-    );
+    if (!response.ok) {
+      const details = await response.text();
+      if (attempt === 1 && isRetryableAuditFailure(response.status, details)) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, auditRetryDelay(response)),
+        );
+        continue;
+      }
+      throw new Error(
+        `Claim audit request failed: ${response.status} ${details.slice(0, 500)}`,
+      );
+    }
+
+    const json = (await response.json()) as {
+      choices?: Array<{
+        message?: { content?: OpenRouterMessageContent };
+        finish_reason?: string | null;
+      }>;
+      error?: { message?: string; code?: number };
+    };
+    if (json.error?.message) {
+      if (
+        attempt === 1 &&
+        isRetryableAuditFailure(json.error.code ?? 0, json.error.message)
+      ) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, auditRetryDelay(response)),
+        );
+        continue;
+      }
+      throw new Error(`Claim audit error: ${json.error.message}`);
+    }
+
+    const choice = json.choices?.[0];
+    // A truncated audit has silently stopped listing claims, and the ones it
+    // never reached would read as approved. That is the one failure mode this
+    // check exists to prevent, so it is an audit failure, not a short pass.
+    if (choice?.finish_reason === "length") {
+      throw new Error(
+        `Claim audit hit the ${MAX_AUDIT_TOKENS}-token cap before finishing.`,
+      );
+    }
+    if (choice?.finish_reason === "error") {
+      throw new Error(
+        "Claim audit provider ended the completion with an error.",
+      );
+    }
+
+    const content = extractOpenRouterText(choice?.message?.content);
+    if (!content) return null;
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    } catch {
+      return null;
+    }
+    return parseClaimAudit(parsed);
   }
 
-  const json = (await response.json()) as {
-    choices?: Array<{
-      message?: { content?: OpenRouterMessageContent };
-      finish_reason?: string | null;
-    }>;
-    error?: { message?: string };
-  };
-  if (json.error?.message) {
-    throw new Error(`Claim audit error: ${json.error.message}`);
-  }
-
-  const choice = json.choices?.[0];
-  // A truncated audit has silently stopped listing claims, and the ones it
-  // never reached would read as approved. That is the one failure mode this
-  // check exists to prevent, so it is an audit failure, not a short pass.
-  if (choice?.finish_reason === "length") {
-    throw new Error(
-      `Claim audit hit the ${MAX_AUDIT_TOKENS}-token cap before finishing.`,
-    );
-  }
-  if (choice?.finish_reason === "error") {
-    throw new Error("Claim audit provider ended the completion with an error.");
-  }
-
-  const content = extractOpenRouterText(choice?.message?.content);
-  if (!content) return null;
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-  } catch {
-    return null;
-  }
-  return parseClaimAudit(parsed);
+  return null;
 }
 
 /**

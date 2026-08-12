@@ -206,4 +206,21 @@ describe("generation wiring", () => {
     expect(auditSource).toContain('response_format: { type: "json_object" }');
     expect(auditSource).toContain("require_parameters: true");
   });
+
+  test("the audit retries transient provider pressure without regenerating", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "convex/concepts/generate.ts"),
+      "utf8",
+    );
+    const auditStart = source.indexOf("async function auditGeneratedClaims");
+    const auditEnd = source.indexOf(
+      "/**\n * Turn the reviewer's visual selection",
+      auditStart,
+    );
+    const auditSource = source.slice(auditStart, auditEnd);
+
+    expect(auditSource).toContain("attempt <= 2");
+    expect(auditSource).toContain("isRetryableAuditFailure");
+    expect(auditSource).toContain("auditRetryDelay(response)");
+  });
 });
