@@ -103,6 +103,18 @@ const MAX_GENERATION_ATTEMPTS = 2;
  */
 const GENERATE_MAX_IMAGE_BYTES = 16 * 1024 * 1024;
 
+/**
+ * Smallest edge, in pixels, worth sending to a vision model.
+ *
+ * Providers reject degenerate images rather than ignoring them, and they
+ * reject the whole request when they do: xAI answers a sub-8px image with a
+ * 400 that fails the entire generation. A spacer, a favicon rendition, or a
+ * tracking pixel that survived harvesting is worth nothing as design material
+ * anyway, so it is dropped from the attachments and reported as unseen. Its
+ * URL stays allowlisted; only the pixels are withheld.
+ */
+const GENERATE_MIN_IMAGE_EDGE = 16;
+
 type VisionContentPart =
   | { type: "text"; text: string }
   | { type: "image_url"; image_url: { url: string } };
@@ -562,12 +574,22 @@ export const runGeneration = internalAction({
 
       for (const asset of assets) {
         const read = await readApprovedImage(ctx, asset);
-        const withinBudget =
+
+        // Unmeasurable is not the same as too small: a format whose header we
+        // could not parse still goes, because dropping a real photo over a
+        // parser gap costs more than the rare provider complaint.
+        const tooSmall =
+          read.note.width !== undefined &&
+          read.note.height !== undefined &&
+          Math.min(read.note.width, read.note.height) < GENERATE_MIN_IMAGE_EDGE;
+
+        const attachable =
           read.dataUrl !== undefined &&
+          !tooSmall &&
           encodedTotal + read.encodedBytes <= GENERATE_MAX_IMAGE_BYTES;
 
-        measuredNotes.push({ ...read.note, seen: withinBudget });
-        if (!withinBudget || !read.dataUrl) continue;
+        measuredNotes.push({ ...read.note, seen: attachable });
+        if (!attachable || !read.dataUrl) continue;
 
         encodedTotal += read.encodedBytes;
         const size =

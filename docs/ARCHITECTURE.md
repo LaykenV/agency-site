@@ -285,6 +285,13 @@ Both are pinned to a version rather than a `latest` alias: a concept is a sales
 artifact, and a silent model swap changing how every page looks is not something
 to discover from a prospect's reaction.
 
+Production currently overrides generation to `x-ai/grok-4.6` while its design
+quality is compared against the default. The override is the intended way to
+run that comparison — no deploy, instantly reversible, and every concept row
+records the `model` that produced it, so two drafts can be told apart after the
+fact. Promote a winner into `DEFAULT_MODEL` rather than leaving prod
+permanently diverged from the code.
+
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends
 `provider: { data_collection: "deny", require_parameters: true }`. The first
@@ -293,7 +300,17 @@ training; the second refuses an endpoint that would silently ignore a parameter
 rather than honour it. This is not a zero-retention claim: OpenRouter exposes
 `zdr: true` as a separate policy, and this workflow does not currently require
 it. Muse Spark's Meta endpoint satisfies the `deny` gate, so no training-policy
-tradeoff was taken to adopt it.
+tradeoff was taken to adopt it. xAI's `grok-4.6` endpoint was checked the same
+way on 2026-08-12 — a live request carrying both the provider block and an
+image part routed and returned — so the generation override does not relax the
+gate either. A provider that failed it would produce a routing error, not a
+quiet fallback.
+
+Vision requests carry one further provider constraint that is not visible in
+OpenRouter's model metadata: xAI rejects any image smaller than 8×8 with a 400
+that fails the whole request. `GENERATE_MIN_IMAGE_EDGE` withholds the pixels of
+anything under 16px on its short edge and reports it as unseen, which keeps a
+harvested spacer or favicon rendition from taking down a generation.
 
 `require_parameters: true` makes the parameter set part of routing, so an
 unsupported parameter is a failed request rather than a degraded one. Luna's

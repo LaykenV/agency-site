@@ -75,12 +75,13 @@ concept in `/admin/marketing` before creating anything in the project lifecycle:
    is accepted only when its value and evidence appear in that page's returned
    Markdown. Wait for image sorting to resolve before Generate unlocks. A
    visible image failure means generation continues without those images.
-5. Generate with Muse Spark 1.2. It sees the approved photos and invents the
-   layout. The draft is checked for unsafe markup and other hard HTML rules,
-   not for a named page shape. Your job is the finished page: does it look
-   right and sound like them? Review it on a phone, or at 360px in devtools —
-   that is where the owner will open it, and it is the one thing the validator
-   cannot judge for you.
+5. Generate. The model sees the approved photos and invents the layout; the
+   preview footer names which model produced the draft, which is how you
+   compare one generator against another. The draft is checked for unsafe
+   markup and other hard HTML rules, not for a named page shape. Your job is
+   the finished page: does it look right and sound like them? Review it on a
+   phone, or at 360px in devtools — that is where the owner will open it, and
+   it is the one thing the validator cannot judge for you.
 6. Publish, then use Copy Messenger Draft and send it by hand.
 7. Watch the open count. Sent and never opened after one follow-up means stop.
 

@@ -38,4 +38,29 @@ describe("parseImageDimensions", () => {
       null,
     );
   });
+
+  /**
+   * Generation withholds the pixels of anything under 16px on its short edge,
+   * because xAI answers a sub-8px image with a 400 that fails the whole
+   * request. The measurement that decision rests on has to be right for the
+   * degenerate sizes, not just for photographs.
+   */
+  test("measures the tiny images the attachment guard has to catch", () => {
+    const png = (width: number, height: number) => {
+      const bytes = new Uint8Array(24);
+      bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a], 0);
+      bytes.set([0x49, 0x48, 0x44, 0x52], 12);
+      new DataView(bytes.buffer).setUint32(16, width);
+      new DataView(bytes.buffer).setUint32(20, height);
+      return bytes;
+    };
+
+    expect(parseImageDimensions(png(1, 1))).toEqual({ width: 1, height: 1 });
+    expect(parseImageDimensions(png(8, 8))).toEqual({ width: 8, height: 8 });
+    // A wide banner with a degenerate short edge still reads as too small.
+    expect(parseImageDimensions(png(1200, 4))).toEqual({
+      width: 1200,
+      height: 4,
+    });
+  });
 });
