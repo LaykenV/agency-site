@@ -178,16 +178,28 @@ describe("generation wiring", () => {
     const audit = source.indexOf("auditGeneratedClaims({ brief, html })");
     expect(validation).toBeGreaterThan(-1);
     expect(audit).toBeGreaterThan(validation);
-    expect(source).toContain("if (violations.length > 0) break;");
+
+    // A draft with deterministic violations must never reach the audit. It is
+    // now repaired rather than abandoned, so the branch ends in `continue`
+    // instead of `break` — either way it leaves the iteration before the audit.
+    const branch = source.slice(validation, audit);
+    expect(branch).toContain("if (violations.length > 0) {");
+    expect(branch).toContain("continue;");
   });
 
-  test("the retry is bounded and charged to the daily ceiling", () => {
+  test("generation and repair share one bounded, charged budget", () => {
     const source = readFileSync(
       resolve(process.cwd(), "convex/concepts/generate.ts"),
       "utf8",
     );
-    expect(source).toContain("attempt <= 2");
+    expect(source).toContain("const MAX_GENERATION_ATTEMPTS = 2;");
+    expect(source).toContain("attempt <= MAX_GENERATION_ATTEMPTS");
     expect(source).toContain("reserveGenerationRetry");
+
+    // Both failure paths must draw from the same allowance. If either stopped
+    // reserving, a single run could pay for three generations.
+    const reservations = source.match(/reserveRepair\(ctx, args\.conceptId\)/g);
+    expect(reservations?.length).toBe(2);
   });
 
   test("the Luna audit omits unsupported sampling parameters", () => {

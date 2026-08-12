@@ -27,7 +27,10 @@ import { ConceptFacebookPack } from "./ConceptFacebookPack";
 import { ConceptPackSummary } from "./ConceptPackSummary";
 import { ConceptEvidenceReport } from "./ConceptEvidenceReport";
 import { CONCEPT_STRUCTURES } from "@/lib/concepts/prompt";
-import { generationBlockedReason } from "@/lib/concepts/lifecycle";
+import {
+  conceptDraftWasAudited,
+  generationBlockedReason,
+} from "@/lib/concepts/lifecycle";
 import { harvestCandidatesToEvidence } from "@/lib/concepts/evidence";
 import {
   buildMessengerDraft,
@@ -56,6 +59,15 @@ const STATUS_LABELS: Record<string, string> = {
   review: "Ready to review",
   published: "Published",
   failed: "Failed",
+};
+
+/** Which gate rejected the draft, as a short heading above the reason. */
+const GENERATION_FAILURE_LABELS: Record<string, string> = {
+  html_invalid: "Failed HTML validation",
+  claims_unsupported: "Failed the factual audit",
+  audit_unreadable: "Audit did not complete",
+  provider_error: "Model provider failed",
+  provider_rate_limited: "Rate limited — not your fault",
 };
 
 function statusClass(status: string): string {
@@ -268,6 +280,7 @@ export function ConceptReviewCard({
     concept.status === "harvesting" ||
     concept.status === "generating";
   const needsMatch = isMatching;
+  const draftWasAudited = conceptDraftWasAudited(concept);
   const harvestSourceUrl = concept.harvestSourceUrl;
   const harvestPending = concept.harvestReviewState === "pending";
   const harvestInFlight = Boolean(concept.harvestRequestId);
@@ -485,6 +498,14 @@ export function ConceptReviewCard({
       {/* --- Failures --- */}
       {concept.error ? (
         <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+          {/* Naming the gate that rejected the draft, because the four
+              failures need four different reactions: read the draft, reject
+              the claims, retry now, or retry later. */}
+          {concept.generationFailure ? (
+            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-red-700/70 dark:text-red-300/70">
+              {GENERATION_FAILURE_LABELS[concept.generationFailure]}
+            </p>
+          ) : null}
           <p className="flex items-start gap-2 text-sm font-medium text-red-700 dark:text-red-300">
             <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
             {concept.error}
@@ -1192,10 +1213,25 @@ export function ConceptReviewCard({
         <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
           <div>
             <h3 className="text-sm font-semibold">Review</h3>
+            {/* Only claim an audit happened when one actually passed. A failed
+                draft is still stored and still rendered here, and telling
+                Layken it was audited would invite him to trust a page that was
+                rejected. */}
             <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              Luna already audited the draft against the evidence. Your job is
-              the finished page: does it look right, does it sound like them,
-              and is it something you would send? Publish is still your call.
+              {draftWasAudited ? (
+                <>
+                  Luna audited this draft against the evidence and it passed.
+                  Your job is the finished page: does it look right, does it
+                  sound like them, and is it something you would send? Publish
+                  is still your call.
+                </>
+              ) : (
+                <>
+                  This draft did not pass. It is shown so you can see what the
+                  model produced — read the failure above before doing anything
+                  with it. Do not publish it.
+                </>
+              )}
             </p>
           </div>
 

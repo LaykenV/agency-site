@@ -275,11 +275,78 @@ function pageFor(overrides: Partial<PageExtraction> = {}): PageExtraction {
   return {
     sourceUrl: `${SITE}/services`,
     pageType: "services",
+    // Most snapshot tests describe valid extractor output. Mirror that output
+    // into the page text so each candidate proves its provenance; focused tests
+    // below override this with mismatching text to exercise the rejection path.
+    sourceText: JSON.stringify(overrides),
     ...overrides,
   };
 }
 
 describe("buildHarvestSnapshot", () => {
+  test("rejects model output whose value or evidence is absent from the page", () => {
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Bayou Fence",
+      pages: [
+        pageFor({
+          sourceText: "We install chain link fencing throughout Acadiana.",
+          services: [
+            {
+              name: "Lifetime-guaranteed custom gates",
+              evidence: "Every gate carries a lifetime guarantee.",
+            },
+            {
+              name: "Chain link fencing",
+              evidence: "We install chain link fencing throughout Acadiana.",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(snapshot.candidates.map((candidate) => candidate.value)).toEqual([
+      "Chain link fencing",
+    ]);
+    expect(
+      snapshot.warnings.some((warning) =>
+        warning.includes("could not be found in the page text"),
+      ),
+    ).toBe(true);
+  });
+
+  test("strips an unsupported service description and quote attribution", () => {
+    const snapshot = buildHarvestSnapshot({
+      businessName: "Bayou Fence",
+      pages: [
+        pageFor({
+          sourceText: "Fence repair. Great work from start to finish.",
+          services: [
+            {
+              name: "Fence repair",
+              description: "Includes a lifetime warranty",
+              evidence: "Fence repair.",
+            },
+          ],
+          quotes: [
+            {
+              text: "Great work from start to finish.",
+              author: "Mayor Guidry",
+            },
+          ],
+        }),
+      ],
+    });
+
+    expect(
+      snapshot.candidates.find((candidate) => candidate.kind === "service")
+        ?.detail,
+    ).toBeUndefined();
+    expect(
+      snapshot.candidates.find((candidate) => candidate.kind === "quote")
+        ?.detail,
+    ).toBeUndefined();
+  });
+
   test("discards a factual candidate with no evidence", () => {
     const snapshot = buildHarvestSnapshot({
       businessName: "Bayou Fence",
@@ -388,7 +455,12 @@ describe("buildHarvestSnapshot", () => {
   test("strips markup and collapses whitespace", () => {
     const snapshot = buildHarvestSnapshot({
       businessName: "Bayou Fence",
-      pages: [pageFor({ taglines: ["**Fences**   built\n\nto last"] })],
+      pages: [
+        pageFor({
+          sourceText: "**Fences**   built\n\nto last",
+          taglines: ["**Fences**   built\n\nto last"],
+        }),
+      ],
     });
     expect(snapshot.candidates[0].value).toBe("Fences built to last");
   });

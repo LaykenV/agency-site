@@ -66,15 +66,17 @@ concept in `/admin/marketing` before creating anything in the project lifecycle:
    listing puts another company's facts on the page.
 3. Paste a Facebook Pack from their Page: logo, work photos, About screenshots,
    posts, services, or copied text. Use **Analyze Facebook Pack** once the batch
-   is ready — not after every paste. Luna classifies the material, picks the
-   logo/hero/gallery, and decides which facts the page may state. Screenshots
-   supply facts only; they never become page imagery.
+   is ready — not after every paste. One medium-reasoning Luna pass classifies
+   the material, picks the logo/hero/gallery, extracts source-linked facts, and
+   flags contradictions. Server rules admit source-backed, non-conflicting
+   facts. Screenshots supply facts only; they never become page imagery.
 4. Optionally use **Fill gaps from website** when a verified site exists and the
    pack still leaves services, about copy, or photos missing. Website evidence
-   goes through the same Luna reviewer; Facebook wins where the two disagree.
-   Wait for image sorting to resolve before Generate unlocks. A visible image
-   failure means generation will continue without those website images.
-5. Generate. Luna audits every factual claim in the draft against the brief. An
+   is accepted only when its value and evidence appear in that page's returned
+   Markdown. Wait for image sorting to resolve before Generate unlocks. A
+   visible image failure means generation continues without those images.
+5. Generate with Muse Spark 1.2. Luna audits every factual claim in the finished
+   draft against the brief. An
    unsupported claim fails the draft (with one automatic rewrite attempt). Your
    job is the finished page: does it look right and sound like them?
 6. Publish, then use Copy Messenger Draft and send it by hand.
@@ -175,10 +177,10 @@ name whenever practical.
 
 From the project's admin panel, issue:
 
-| Kind | Prefix | Location |
-|---|---|---|
-| Secret lead credential | `sk_live_...` | Server-only Spoke environment |
-| Publishable event credential | `pk_live_...` | Browser bundle/environment |
+| Kind                         | Prefix        | Location                      |
+| ---------------------------- | ------------- | ----------------------------- |
+| Secret lead credential       | `sk_live_...` | Server-only Spoke environment |
+| Publishable event credential | `pk_live_...` | Browser bundle/environment    |
 
 Raw credentials are shown once. Rotation is issue, deploy, verify, then revoke.
 Never put an `sk_live_...` value in a `NEXT_PUBLIC_*` variable.
@@ -198,9 +200,9 @@ Never put an `sk_live_...` value in a `NEXT_PUBLIC_*` variable.
 
 Lead failures and event failures have different first checks:
 
-| Symptom | First checks |
-|---|---|
-| Lead missing | server-held secret, credential state, `[hub.lead.v2]` logs, fan-out-paused view |
+| Symptom               | First checks                                                                             |
+| --------------------- | ---------------------------------------------------------------------------------------- |
+| Lead missing          | server-held secret, credential state, `[hub.lead.v2]` logs, fan-out-paused view          |
 | Events missing or 403 | stored staging/live host, actual browser Origin, publishable key, `[hub.events.v2]` logs |
 
 ## 9. Review and revisions

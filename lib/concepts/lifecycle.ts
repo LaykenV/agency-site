@@ -88,3 +88,64 @@ export function statusAfterGenerationInputChange(input: {
   if (input.placeMatchResolved) return "draft";
   return input.currentStatus === "matching" ? "matching" : "draft";
 }
+
+/**
+ * Why a generation run ended without a sendable page.
+ *
+ * These four failures need four different reactions, and "Generation failed"
+ * told Layken none of them apart: a validation break is usually a prompt bug
+ * worth reading the draft over, an audit rejection means the page said something
+ * the evidence does not support, a provider error means try again, and rate
+ * limiting means try again later. Stored on the concept so the admin card can
+ * say which one happened rather than guessing from the violation text.
+ */
+export type ConceptGenerationFailure =
+  | "html_invalid"
+  | "claims_unsupported"
+  | "audit_unreadable"
+  | "provider_error"
+  | "provider_rate_limited";
+
+export const CONCEPT_GENERATION_FAILURES: Array<ConceptGenerationFailure> = [
+  "html_invalid",
+  "claims_unsupported",
+  "audit_unreadable",
+  "provider_error",
+  "provider_rate_limited",
+];
+
+/** One sentence naming what happened and what to do about it. */
+export function generationFailureHeadline(
+  kind: ConceptGenerationFailure,
+  violationCount = 0,
+): string {
+  switch (kind) {
+    case "html_invalid":
+      return `The draft broke ${violationCount} hard requirement${
+        violationCount === 1 ? "" : "s"
+      } and the repair attempt did not fix it. The draft is kept below so you can see what it did.`;
+    case "claims_unsupported":
+      return `The finished page stated ${violationCount} thing${
+        violationCount === 1 ? "" : "s"
+      } the evidence does not support, and the corrected attempt still did. Nothing here is publishable as written.`;
+    case "audit_unreadable":
+      return "The factual audit did not return a readable answer, so this draft is unverified rather than approved. Generate again.";
+    case "provider_rate_limited":
+      return "The model provider is rate limiting or overloaded right now. Nothing was wrong with the concept — try again in a few minutes.";
+    case "provider_error":
+      return "The model provider failed before returning a page. Try again.";
+  }
+}
+
+/** True when the stored draft passed both validation and the factual audit. */
+export function conceptDraftWasAudited(concept: {
+  generatedHtml?: string;
+  status: string;
+  generationFailure?: string;
+}): boolean {
+  return (
+    Boolean(concept.generatedHtml) &&
+    concept.status !== "failed" &&
+    !concept.generationFailure
+  );
+}

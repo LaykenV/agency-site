@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internalAction } from "../_generated/server";
 import type { ActionCtx } from "../_generated/server";
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { refreshConceptBrief } from "../../lib/concepts/brief";
 import type { ConceptBrief } from "../../lib/concepts/brief";
@@ -21,8 +21,14 @@ import {
   buildConceptUserPrompt,
   pickConceptStructure,
 } from "../../lib/concepts/prompt";
-import { validateConceptHtml } from "../../lib/concepts/validateConceptHtml";
-import { isCurrentGeneration } from "../../lib/concepts/lifecycle";
+import {
+  buildHtmlRepairInstruction,
+  validateConceptHtml,
+} from "../../lib/concepts/validateConceptHtml";
+import {
+  isCurrentGeneration,
+  type ConceptGenerationFailure,
+} from "../../lib/concepts/lifecycle";
 import {
   extractOpenRouterText,
   OPENROUTER_ATTRIBUTION_HEADERS,
@@ -45,19 +51,23 @@ import {
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
- * `deepseek/deepseek-v4-flash-0731` is pinned rather than the
- * `~deepseek/deepseek-v4-flash-latest` alias: a concept is a sales artifact, and
- * a silent model swap changing how every page looks is not something to discover
- * from a prospect's reaction.
+ * `meta/muse-spark-1.2` is pinned to the version, not an alias: a concept is a
+ * sales artifact, and a silent model swap changing how every page looks is not
+ * something to discover from a prospect's reaction.
+ *
+ * Its endpoint advertises `max_tokens`, `temperature`, `response_format`, and
+ * configurable reasoning, so `require_parameters: true` will not reject the
+ * request over any parameter sent below.
  */
-const DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731";
+const DEFAULT_MODEL = "meta/muse-spark-1.2";
 
 /**
- * The auditor is the evidence model, not the generator.
+ * The auditor is the evidence model, never the generator.
  *
- * Pinned to the same model that reviewed the evidence: the audit asks the same
- * question the reviewer asked, one step later, and answering it well is a
- * reading task rather than a writing one.
+ * This is the one place the two must differ. The audit's whole value is that it
+ * reads a finished page it had no part in writing and has no investment in
+ * keeping a good sentence. Point `OPENROUTER_MODEL` and `OPENROUTER_VISION_MODEL`
+ * at the same slug and the check becomes a model marking its own work.
  */
 const DEFAULT_AUDIT_MODEL = "openai/gpt-5.6-luna";
 
@@ -72,6 +82,33 @@ const AUDIT_RETRY_DELAY_MS = 5_000;
 
 /** High enough for varied design, low enough to respect hard constraints. */
 const TEMPERATURE = 0.7;
+
+/**
+ * Medium reasoning: enough to hold a long brief and a structure together,
+ * without paying high-effort latency on what is mostly a writing task.
+ */
+const REASONING_EFFORT = "medium" as const;
+
+/**
+ * A generation that has not returned in four minutes is not going to.
+ *
+ * Without this a stalled provider leaves the concept sitting in `generating`
+ * until the Convex action itself times out, with no error to read and no way to
+ * start again. `AbortSignal.timeout` turns that into a failure with a sentence
+ * on it.
+ */
+const REQUEST_TIMEOUT_MS = 240_000;
+const AUDIT_TIMEOUT_MS = 120_000;
+
+/**
+ * Every paid call in one generation run shares this budget.
+ *
+ * Two attempts total, whatever went wrong. Deterministic HTML violations and
+ * an audit that found unsupported claims draw from the same allowance, so a
+ * page cannot fail validation, get repaired, fail the audit, and be generated a
+ * third time.
+ */
+const MAX_GENERATION_ATTEMPTS = 2;
 
 function getOpenRouterApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
@@ -150,15 +187,22 @@ async function callOpenRouter(
       // dashboard traceable to this feature.
       ...OPENROUTER_ATTRIBUTION_HEADERS,
     },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     body: JSON.stringify({
       model,
       temperature: TEMPERATURE,
       max_tokens: MAX_OUTPUT_TOKENS,
-      // DeepSeek V4 Flash defaults to high reasoning. For a constrained HTML
-      // generation task that can consume the output budget and return no final
-      // document, while also making a cheap draft take several minutes. Low is
-      // ample for following the brief and leaves most tokens for the page.
-      reasoning: { effort: "low", exclude: true },
+      // Reasoning tokens are billed against `max_tokens`, so effort and output
+      // budget are one decision. Medium measured around 600 reasoning tokens on
+      // a full homepage brief, which leaves the document plenty of room.
+      reasoning: { effort: REASONING_EFFORT, exclude: true },
+      provider: {
+        // The prompt carries the whole verified brief: a stranger's services,
+        // their owner's notes, and their customers' testimonials. It gets the
+        // same routing restriction as the evidence that produced it.
+        data_collection: "deny",
+        require_parameters: true,
+      },
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -210,19 +254,36 @@ async function callOpenRouter(
 
   const content = extractOpenRouterText(choice?.message?.content);
   if (!content) {
+    const usage = json.usage;
+    const reasoningTokens =
+      usage?.completion_tokens_details?.reasoning_tokens ?? 0;
     const diagnostics = {
       requestId: json.id ?? "unknown",
       model: json.model ?? model,
       provider: json.provider ?? "unknown",
       finishReason: choice?.finish_reason ?? "missing",
-      completionTokens: json.usage?.completion_tokens ?? "unknown",
-      reasoningTokens:
-        json.usage?.completion_tokens_details?.reasoning_tokens ?? "unknown",
+      choices: json.choices?.length ?? 0,
+      completionTokens: usage?.completion_tokens ?? "unknown",
+      reasoningTokens,
       reasoningChars: choice?.message?.reasoning?.length ?? 0,
+      /** Content-type shape, to tell "no message" from "message with no text". */
+      contentShape: Array.isArray(choice?.message?.content)
+        ? `array(${choice.message.content.length})`
+        : typeof choice?.message?.content,
     };
     console.warn("[concepts] OpenRouter returned no final HTML", diagnostics);
+
+    // The single most common cause, named plainly instead of leaving it to be
+    // inferred from two numbers in a JSON blob: reasoning ate the budget.
+    const hint =
+      reasoningTokens > 0 &&
+      usage?.completion_tokens !== undefined &&
+      reasoningTokens >= usage.completion_tokens
+        ? " The whole completion was reasoning tokens, so the output budget was spent before the document started."
+        : "";
+
     throw new Error(
-      `OpenRouter returned no final HTML (${JSON.stringify(diagnostics)}).`,
+      `${model} returned no final HTML.${hint} Diagnostics: ${JSON.stringify(diagnostics)}`,
     );
   }
 
@@ -232,43 +293,63 @@ async function callOpenRouter(
 /**
  * Ask the evidence model whether the page's claims survive the brief.
  *
- * A separate model from the generator on purpose: the auditor has never seen
- * the page being written and has no investment in keeping a good sentence. It
+ * This is the one model check the flow keeps, and the reason it earns its place
+ * is that it reads a new artifact produced by a different model. Improving
+ * evidence extraction cannot stop a generator from strengthening a source claim,
+ * fusing two facts into a third, or inventing availability, credentials, or an
+ * outcome, because none of that exists until the page is written. Turning
+ * "outdoor living experts" into "full outdoor experts" happens here or nowhere.
  *
- * Do not send `temperature` here. Luna's OpenRouter endpoint does not advertise
+ * Do not send `temperature` here. Luna's OpenRouter endpoints do not advertise
  * that parameter, and `require_parameters: true` correctly rejects the request
- * when an unsupported parameter is present. The audit remains constrained by
- * its prompt and structured JSON response.
+ * when an unsupported parameter is present. `reasoning` is advertised on every
+ * Luna endpoint, so it is safe. The audit stays constrained by its prompt and
+ * its structured JSON response.
  */
 async function auditGeneratedClaims(input: {
   brief: ConceptBrief;
   html: string;
 }): Promise<ClaimAudit | null> {
   for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const response = await fetch(OPENROUTER_ENDPOINT, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${getOpenRouterApiKey()}`,
-        "Content-Type": "application/json",
-        ...OPENROUTER_ATTRIBUTION_HEADERS,
-      },
-      body: JSON.stringify({
-        model: getAuditModel(),
-        max_tokens: MAX_AUDIT_TOKENS,
-        response_format: { type: "json_object" },
-        provider: { data_collection: "deny", require_parameters: true },
-        messages: [
-          { role: "system", content: buildClaimAuditSystemPrompt() },
-          {
-            role: "user",
-            content: buildClaimAuditUserPrompt({
-              brief: input.brief,
-              pageText: extractAuditableText(input.html),
-            }),
-          },
-        ],
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(OPENROUTER_ENDPOINT, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${getOpenRouterApiKey()}`,
+          "Content-Type": "application/json",
+          ...OPENROUTER_ATTRIBUTION_HEADERS,
+        },
+        signal: AbortSignal.timeout(AUDIT_TIMEOUT_MS),
+        body: JSON.stringify({
+          model: getAuditModel(),
+          max_tokens: MAX_AUDIT_TOKENS,
+          reasoning: { effort: REASONING_EFFORT, exclude: true },
+          response_format: { type: "json_object" },
+          provider: { data_collection: "deny", require_parameters: true },
+          messages: [
+            { role: "system", content: buildClaimAuditSystemPrompt() },
+            {
+              role: "user",
+              content: buildClaimAuditUserPrompt({
+                brief: input.brief,
+                pageText: extractAuditableText(input.html),
+              }),
+            },
+          ],
+        }),
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError")
+      ) {
+        throw new Error(
+          `The factual audit did not respond within ${Math.round(AUDIT_TIMEOUT_MS / 1000)} seconds and was cancelled.`,
+        );
+      }
+      throw error;
+    }
 
     if (!response.ok) {
       const details = await response.text();
@@ -378,9 +459,7 @@ async function resolvePackImagery(
 
   for (const [itemId, role] of [
     [selection.heroItemId, "hero"] as const,
-    ...selection.galleryItemIds.map(
-      (itemId) => [itemId, "gallery"] as const,
-    ),
+    ...selection.galleryItemIds.map((itemId) => [itemId, "gallery"] as const),
   ]) {
     const resolved = await urlFor(itemId);
     if (!resolved) continue;
@@ -392,6 +471,32 @@ async function resolvePackImagery(
   }
 
   return { logoUrl: logo?.url, photos };
+}
+
+/**
+ * Take a token from the daily ceiling for the one repair attempt.
+ *
+ * A repair is a second paid generation, so it is charged like one. Refusing it
+ * leaves the failed draft on screen with its reason, which is the honest outcome
+ * when the budget is spent.
+ */
+async function reserveRepair(
+  ctx: ActionCtx,
+  conceptId: Id<"website_concepts">,
+): Promise<boolean> {
+  return await ctx.runMutation(
+    internal.concepts.internal.reserveGenerationRetry,
+    { conceptId },
+  );
+}
+
+/** Sort a thrown provider failure into something the admin card can act on. */
+function classifyThrownFailure(message: string): ConceptGenerationFailure {
+  return /rate[- ]?limit|429|too many requests|temporar(?:y|ily)|overload|unavailable|503|529/i.test(
+    message,
+  )
+    ? "provider_rate_limited"
+    : "provider_error";
 }
 
 export const runGeneration = internalAction({
@@ -456,7 +561,9 @@ export const runGeneration = internalAction({
         facebookPageUrl: concept.facebookPageUrl,
         logoUrl,
         photoUrls,
-        imageNotes: pack.photos.filter((photo) => photoUrls.includes(photo.url)),
+        imageNotes: pack.photos.filter((photo) =>
+          photoUrls.includes(photo.url),
+        ),
         approvedQuotes: concept.approvedQuotes,
         approvedWebsiteContent: concept.approvedWebsiteContent,
         approvedFacebookContent: concept.approvedFacebookContent,
@@ -467,15 +574,15 @@ export const runGeneration = internalAction({
 
       let html = "";
       let violations: Array<string> = [];
+      let failure: ConceptGenerationFailure | undefined;
       let correction = "";
 
-      // At most two attempts. The second exists for one specific failure — the
-      // page states something the brief does not support — and it is given the
-      // offending sentences rather than a repeat of the rules that already
-      // failed to prevent them. A deterministic validation failure is not
-      // retried here: those are prompt bugs, and the invalid draft is kept
-      // precisely so the prompt can be fixed by looking at it.
-      for (let attempt = 1; attempt <= 2; attempt += 1) {
+      // One shared budget. Whatever went wrong on the first attempt — broken
+      // HTML or a claim the evidence does not support — spends the same single
+      // repair, so no run can produce a third generation. The repair is given
+      // the specific offending lines rather than a repeat of the rules that
+      // already failed to prevent them.
+      for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
         html = unwrapHtml(
           await callOpenRouter(
             buildConceptSystemPrompt(),
@@ -485,33 +592,37 @@ export const runGeneration = internalAction({
         );
 
         violations = validateConceptHtml(html, brief).violations;
-        if (violations.length > 0) break;
+        if (violations.length > 0) {
+          failure = "html_invalid";
+          if (attempt === MAX_GENERATION_ATTEMPTS) break;
+          if (!(await reserveRepair(ctx, args.conceptId))) break;
+          correction = buildHtmlRepairInstruction(violations);
+          continue;
+        }
 
         const audit = await auditGeneratedClaims({ brief, html });
         if (!audit) {
-          // The auditor answered with something unreadable. Treated as a
-          // failure rather than a pass, and not retried, because a second
-          // unreadable answer costs another generation to learn nothing.
+          // Treated as a failure rather than a pass, and never repaired: a
+          // second unreadable answer costs another generation to learn nothing,
+          // and the page itself may be perfectly fine. Regenerating is Layken's
+          // call.
+          failure = "audit_unreadable";
           violations = [
             "The factual audit did not return a readable answer. Regenerate to try again.",
           ];
           break;
         }
 
-        if (audit.unsupported.length === 0) break;
+        if (audit.unsupported.length === 0) {
+          failure = undefined;
+          violations = [];
+          break;
+        }
 
+        failure = "claims_unsupported";
         violations = claimAuditViolations(audit);
-        if (attempt === 2) break;
-
-        // The retry is a second paid generation, so it takes a second token
-        // from the same daily ceiling. Refusing it leaves the audited failure
-        // on screen, which is the honest outcome when the budget is spent.
-        const retryAllowed: boolean = await ctx.runMutation(
-          internal.concepts.internal.reserveGenerationRetry,
-          { conceptId: args.conceptId },
-        );
-        if (!retryAllowed) break;
-
+        if (attempt === MAX_GENERATION_ATTEMPTS) break;
+        if (!(await reserveRepair(ctx, args.conceptId))) break;
         correction = buildClaimAuditRetryInstruction(audit);
       }
 
@@ -523,13 +634,27 @@ export const runGeneration = internalAction({
         model,
         promptVersion: CONCEPT_PROMPT_VERSION,
         violations,
+        failure,
         generationRequestId: args.generationRequestId,
       });
     } catch (error) {
+      // A timeout aborts the fetch, which surfaces as a DOMException rather
+      // than a provider message. Named here so the card does not report a
+      // four-minute stall as an unexplained failure.
+      const timedOut =
+        error instanceof Error &&
+        (error.name === "TimeoutError" || error.name === "AbortError");
+      const message = timedOut
+        ? `The model did not respond within ${Math.round(REQUEST_TIMEOUT_MS / 1000)} seconds and the request was cancelled.`
+        : error instanceof Error
+          ? error.message
+          : "Generation failed";
+
       await ctx.runMutation(internal.concepts.internal.setStatus, {
         conceptId: args.conceptId,
         status: "failed",
-        error: error instanceof Error ? error.message : "Generation failed",
+        error: message,
+        failure: timedOut ? "provider_error" : classifyThrownFailure(message),
         expectedGenerationRequestId: args.generationRequestId,
       });
     }

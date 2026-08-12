@@ -7,8 +7,10 @@ import {
   buildEvidenceCandidate,
   buildEvidenceReviewUserPrompt,
   dedupeEvidenceCandidates,
+  remapEvidenceRefIndex,
   isEvidenceCandidateApprovable,
   parseEvidenceReview,
+  resolveEvidenceLocally,
   summarizeEvidenceDecisions,
   type EvidenceCandidate,
   type EvidenceKind,
@@ -246,7 +248,11 @@ describe("what an approval materializes into", () => {
       candidates: [kept, dropped, claim],
       decisions: [
         { candidateId: kept.id, decision: "approved" },
-        { candidateId: dropped.id, decision: "rejected", reason: "no evidence" },
+        {
+          candidateId: dropped.id,
+          decision: "rejected",
+          reason: "no evidence",
+        },
         { candidateId: claim.id, decision: "approved" },
       ],
     });
@@ -317,5 +323,148 @@ describe("reviewer prompt", () => {
     });
     expect(prompt).toContain("higher bar");
     expect(prompt).toContain("Source: an About screenshot");
+  });
+});
+
+describe("resolveEvidenceLocally — admission without a second model turn", () => {
+  test("approves every source-backed candidate of an admissible kind", () => {
+    const candidates = [
+      candidate("service", "Pressure washing"),
+      candidate("serviceArea", "Lafayette Parish"),
+      candidate("differentiator", "Family owned since the start"),
+    ];
+    const review = resolveEvidenceLocally({
+      candidates,
+      conflicts: [],
+      refIndex: {},
+    });
+
+    expect(review.decisions).toHaveLength(3);
+    expect(review.decisions.every((d) => d.decision === "approved")).toBe(true);
+    expect(
+      buildApprovedEvidence({ candidates, decisions: review.decisions }).content
+        .services,
+    ).toEqual([{ name: "Pressure washing", description: undefined }]);
+  });
+
+  test("never admits a phone, whatever the extractor said about it", () => {
+    const phone = candidate("phone", "(337) 555-0100");
+    const review = resolveEvidenceLocally({
+      candidates: [phone],
+      conflicts: [],
+      refIndex: {},
+    });
+
+    expect(review.decisions[0]?.decision).toBe("rejected");
+    expect(review.decisions[0]?.reason).toContain("CTA");
+  });
+
+  test("rejects a testimonial with no attribution", () => {
+    const orphan = candidate("quote", "They were fantastic start to finish");
+    const attributed = candidate("quote", "Great crew, on time", {
+      detail: "Marie B.",
+    });
+    const review = resolveEvidenceLocally({
+      candidates: [orphan, attributed],
+      conflicts: [],
+      refIndex: {},
+    });
+
+    const byId = new Map(review.decisions.map((d) => [d.candidateId, d]));
+    expect(byId.get(orphan.id)?.decision).toBe("rejected");
+    expect(byId.get(attributed.id)?.decision).toBe("approved");
+  });
+
+  test("withholds both sides of a flagged conflict", () => {
+    const older = candidate("sensitiveClaim", "Serving Acadiana since 1998");
+    const newer = candidate("sensitiveClaim", "Serving Acadiana since 2003");
+    const unrelated = candidate("service", "Patio construction");
+
+    const review = resolveEvidenceLocally({
+      candidates: [older, newer, unrelated],
+      conflicts: [
+        { refs: ["f1", "f2"], note: "Two different founding years." },
+      ],
+      refIndex: { f1: [older.id], f2: [newer.id] },
+    });
+
+    const byId = new Map(review.decisions.map((d) => [d.candidateId, d]));
+    expect(byId.get(older.id)?.decision).toBe("rejected");
+    expect(byId.get(newer.id)?.decision).toBe("rejected");
+    expect(byId.get(unrelated.id)?.decision).toBe("approved");
+    expect(review.conflicts).toEqual(["Two different founding years."]);
+  });
+
+  test("a conflict naming an unknown ref still surfaces but withholds nothing", () => {
+    const fact = candidate("service", "Outdoor kitchens");
+    const review = resolveEvidenceLocally({
+      candidates: [fact],
+      conflicts: [{ refs: ["f99"], note: "Something disagreed." }],
+      refIndex: { f1: [fact.id] },
+    });
+
+    expect(review.decisions[0]?.decision).toBe("approved");
+    expect(review.conflicts).toEqual(["Something disagreed."]);
+  });
+
+  test("a reused ref withholds every candidate it points at", () => {
+    const first = candidate("sensitiveClaim", "Licensed and insured");
+    const second = candidate("sensitiveClaim", "Bonded and insured");
+    const review = resolveEvidenceLocally({
+      candidates: [first, second],
+      conflicts: [{ refs: ["f1"], note: "Ambiguous licence language." }],
+      refIndex: { f1: [first.id, second.id] },
+    });
+
+    expect(review.decisions.every((d) => d.decision === "rejected")).toBe(true);
+  });
+
+  test("a conflict follows a claim through source deduplication", () => {
+    const first = candidate("sensitiveClaim", "Serving Acadiana since 1998", {
+      source: { kind: "pack", itemId: "first" },
+      evidence: "Serving since 1998",
+    });
+    const duplicate = candidate(
+      "sensitiveClaim",
+      "Serving Acadiana since 1998",
+      {
+        source: { kind: "pack", itemId: "better" },
+        evidence: "Proudly serving all of Acadiana since 1998",
+      },
+    );
+    const conflicting = candidate(
+      "sensitiveClaim",
+      "Serving Acadiana since 2003",
+      { source: { kind: "pack", itemId: "newer" } },
+    );
+    const sourceCandidates = [first, duplicate, conflicting];
+    const candidates = dedupeEvidenceCandidates(sourceCandidates);
+    const refIndex = remapEvidenceRefIndex({
+      sourceCandidates,
+      candidates,
+      refIndex: { f1: [first.id], f2: [conflicting.id] },
+    });
+    const review = resolveEvidenceLocally({
+      candidates,
+      conflicts: [{ refs: ["f1", "f2"], note: "Years disagree." }],
+      refIndex,
+    });
+
+    expect(
+      review.decisions.every((decision) => decision.decision === "rejected"),
+    ).toBe(true);
+  });
+
+  test("caps the conflict notes it stores", () => {
+    const review = resolveEvidenceLocally({
+      candidates: [],
+      conflicts: Array.from({ length: EVIDENCE_MAX_CONFLICTS + 6 }, (_, i) => ({
+        refs: [],
+        note: `conflict ${i}`,
+      })),
+      refIndex: {},
+    });
+
+    expect(review.conflicts).toHaveLength(EVIDENCE_MAX_CONFLICTS);
   });
 });

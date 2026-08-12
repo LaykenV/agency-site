@@ -11,6 +11,7 @@ import {
   PACK_TEXT_MAX,
   buildPackClassificationUserPrompt,
   buildPackSourceLabels,
+  parsePackConflicts,
   canUsePackItemAsPageImagery,
   isPackFullyClassified,
   isSupportedPackImageType,
@@ -546,5 +547,131 @@ describe("automatic visual selection", () => {
     const first = selectPackImagery(items);
     expect(first.galleryItemIds).toHaveLength(PACK_MAX_GALLERY_IMAGES);
     expect(selectPackImagery([...items])).toEqual(first);
+  });
+});
+
+describe("parsePackConflicts — one pass reports its own contradictions", () => {
+  const json = {
+    items: [
+      {
+        itemId: "i1",
+        kind: "context_screenshot",
+        ocrText: "Serving Acadiana since 1998",
+        facts: [
+          {
+            ref: "f1",
+            kind: "sensitiveClaim",
+            value: "Serving Acadiana since 1998",
+            evidence: "Serving Acadiana since 1998",
+          },
+        ],
+      },
+      {
+        itemId: "i2",
+        kind: "context_screenshot",
+        ocrText: "Proudly serving since 2003",
+        facts: [
+          {
+            ref: "f2",
+            kind: "sensitiveClaim",
+            value: "Serving Acadiana since 2003",
+            evidence: "Proudly serving since 2003",
+          },
+        ],
+      },
+    ],
+    conflicts: [{ refs: ["f1", "f2"], note: "Two founding years." }],
+  };
+
+  const verdicts = parsePackClassification({
+    json,
+    sentItemIds: ["i1", "i2"],
+    classifiedAt: 1,
+  });
+
+  test("indexes each fact under the ref the extractor gave it", () => {
+    const { refIndex } = parsePackConflicts({ json, verdicts });
+    expect(Object.keys(refIndex).sort()).toEqual(["f1", "f2"]);
+    expect(refIndex.f1).toEqual([verdicts[0].facts[0].id]);
+    expect(refIndex.f2).toEqual([verdicts[1].facts[0].id]);
+  });
+
+  test("carries the conflict through so both facts can be withheld", () => {
+    const { conflicts } = parsePackConflicts({ json, verdicts });
+    expect(conflicts).toEqual([
+      { refs: ["f1", "f2"], note: "Two founding years." },
+    ]);
+  });
+
+  test("a fact with no ref is visible to the parser but fails live analysis", () => {
+    const unlabelled = {
+      items: [
+        {
+          itemId: "i1",
+          kind: "text_context",
+          facts: [
+            {
+              kind: "service",
+              value: "Outdoor kitchens",
+              evidence: "We build outdoor kitchens.",
+            },
+          ],
+        },
+      ],
+    };
+    const parsed = parsePackClassification({
+      json: unlabelled,
+      sentItemIds: ["i1"],
+      classifiedAt: 1,
+    });
+    expect(parsed[0].facts).toHaveLength(1);
+    expect(parsed[0].factRefs).toEqual([]);
+    expect(
+      parsePackConflicts({ json: unlabelled, verdicts: parsed }).refIndex,
+    ).toEqual({});
+
+    const source = readFileSync(
+      resolve(process.cwd(), "convex/concepts/facebookPack.ts"),
+      "utf8",
+    );
+    expect(source).toContain("factRefCount !== sourceCandidates.length");
+  });
+
+  test("a conflict with an unknown ref fails live analysis", () => {
+    const source = readFileSync(
+      resolve(process.cwd(), "convex/concepts/facebookPack.ts"),
+      "utf8",
+    );
+    expect(source).toContain("sourceRefIndex[ref]?.length");
+    expect(source).toContain("could not resolve to both facts");
+  });
+
+  test("tolerates a missing conflicts key", () => {
+    expect(parsePackConflicts({ json: { items: [] }, verdicts: [] })).toEqual({
+      conflicts: [],
+      refIndex: {},
+      truncated: false,
+    });
+  });
+
+  test("drops a conflict entry with neither refs nor a note", () => {
+    const { conflicts } = parsePackConflicts({
+      json: { conflicts: [{}, { refs: [], note: "   " }] },
+      verdicts: [],
+    });
+    expect(conflicts).toEqual([]);
+  });
+
+  test("marks oversized conflict output unsafe instead of silently truncating", () => {
+    const parsed = parsePackConflicts({
+      json: {
+        conflicts: Array.from({ length: 13 }, (_, index) => ({
+          refs: [`f${index}`, `f${index + 1}`],
+          note: `Conflict ${index}`,
+        })),
+      },
+      verdicts: [],
+    });
+    expect(parsed.truncated).toBe(true);
   });
 });

@@ -109,9 +109,22 @@ export type EvidenceDecision = {
 
 export type EvidenceReview = {
   decisions: Array<EvidenceDecision>;
-  /** Contradictions the reviewer found, for the admin summary. */
+  /** Contradictions the extractor found, for the admin summary. */
   conflicts: Array<string>;
 };
+
+/**
+ * A contradiction the extractor flagged during the single pass.
+ *
+ * `refs` are the extractor's own short labels for the facts it believes
+ * disagree — `f1`, `f7` — not candidate IDs. Candidate IDs are a server-side
+ * hash of kind, value, and source, so the model cannot know one to name it. The
+ * refs are resolved back to candidates by `resolveEvidenceLocally`.
+ */
+export type EvidenceConflict = { refs: Array<string>; note: string };
+
+/** The extractor's ref labels, mapped to the candidates they produced. */
+export type EvidenceRefIndex = Record<string, Array<string>>;
 
 export type ApprovedEvidence = {
   approvedCandidateIds: Array<string>;
@@ -210,6 +223,54 @@ export function dedupeEvidenceCandidates(
   return [...seen.values()].slice(0, EVIDENCE_MAX_CANDIDATES);
 }
 
+/** The source-independent identity used when a conflict crosses duplicates. */
+export function evidenceCandidateMatchKey(
+  candidate: Pick<EvidenceCandidate, "kind" | "value">,
+): string {
+  return `${candidate.kind} ${normalizeForMatch(candidate.value)}`;
+}
+
+/**
+ * Remap extractor refs from source-specific candidates to the candidates that
+ * survived semantic deduplication.
+ *
+ * If one screenshot's copy of a disputed fact is replaced by a better excerpt
+ * from another screenshot, the dispute follows the claim instead of being
+ * stranded on the discarded candidate ID.
+ */
+export function remapEvidenceRefIndex(input: {
+  sourceCandidates: Array<EvidenceCandidate>;
+  candidates: Array<EvidenceCandidate>;
+  refIndex: EvidenceRefIndex;
+}): EvidenceRefIndex {
+  const sourceById = new Map(
+    input.sourceCandidates.map((candidate) => [candidate.id, candidate]),
+  );
+  const targetsByKey = new Map<string, Array<string>>();
+  for (const candidate of input.candidates) {
+    const key = evidenceCandidateMatchKey(candidate);
+    const ids = targetsByKey.get(key) ?? [];
+    ids.push(candidate.id);
+    targetsByKey.set(key, ids);
+  }
+
+  const remapped: EvidenceRefIndex = {};
+  for (const [ref, sourceIds] of Object.entries(input.refIndex)) {
+    const ids = new Set<string>();
+    for (const sourceId of sourceIds) {
+      const source = sourceById.get(sourceId);
+      if (!source) continue;
+      for (const targetId of targetsByKey.get(
+        evidenceCandidateMatchKey(source),
+      ) ?? []) {
+        ids.add(targetId);
+      }
+    }
+    remapped[ref] = [...ids];
+  }
+  return remapped;
+}
+
 /**
  * Present a website harvest to the same reviewer the Facebook Pack uses.
  *
@@ -262,11 +323,91 @@ export function isEvidenceCandidateApprovable(
 }
 
 /**
+ * Rule on the extracted candidates without a second model turn.
+ *
+ * The separate reviewer pass is gone. It asked one model to reconsider facts it
+ * had just extracted from the same material, which bought less independence than
+ * it cost in latency, spend, and one more thing that could fail mid-analysis.
+ * What made it look valuable was the exclusion rules living in its prompt; those
+ * rules now live in the extraction prompt, where the model can apply them while
+ * it still has the source in front of it.
+ *
+ * So admission becomes a server decision with three parts, and no model opinion
+ * in any of them:
+ *
+ * 1. The candidate exists at all, which `buildEvidenceCandidate` already means:
+ *    a value and an exact source excerpt. No excerpt, no candidate, no fact.
+ * 2. `isEvidenceCandidateApprovable` admits its kind — never a phone, never an
+ *    unattributed testimonial.
+ * 3. Nothing the extractor flagged as contradicted survives. A claim two sources
+ *    disagree about is withheld rather than picked between.
+ *
+ * The output is still an `EvidenceReview`, so storage, the admin summary, and
+ * `buildApprovedEvidence` are unchanged. A rejection now carries a server
+ * sentence rather than a model's, which is the honest description of what
+ * happened.
+ */
+export function resolveEvidenceLocally(input: {
+  candidates: Array<EvidenceCandidate>;
+  conflicts: Array<EvidenceConflict>;
+  refIndex: EvidenceRefIndex;
+}): EvidenceReview {
+  // A ref the extractor never assigned resolves to nothing. The note still
+  // reaches the admin summary, because "these two disagree" is worth reading
+  // even when we cannot tell which candidates it meant.
+  const withheld = new Set<string>();
+  for (const conflict of input.conflicts) {
+    for (const ref of conflict.refs) {
+      for (const candidateId of input.refIndex[ref] ?? []) {
+        withheld.add(candidateId);
+      }
+    }
+  }
+
+  const decisions = input.candidates.map((candidate): EvidenceDecision => {
+    if (withheld.has(candidate.id)) {
+      return {
+        candidateId: candidate.id,
+        decision: "rejected",
+        reason: "Withheld: another extracted fact contradicts this one.",
+      };
+    }
+    if (candidate.kind === "phone") {
+      return {
+        candidateId: candidate.id,
+        decision: "rejected",
+        reason:
+          "Phone numbers never come from evidence; the concept's own phone is the CTA.",
+      };
+    }
+    if (!isEvidenceCandidateApprovable(candidate)) {
+      return {
+        candidateId: candidate.id,
+        decision: "rejected",
+        reason: "A testimonial needs both the words and who said them.",
+      };
+    }
+    return {
+      candidateId: candidate.id,
+      decision: "approved",
+      reason: "Backed by an exact excerpt from the supplied source.",
+    };
+  });
+
+  const conflicts = input.conflicts
+    .map((conflict) => clamp(conflict.note, EVIDENCE_CONFLICT_MAX))
+    .filter((note): note is string => Boolean(note))
+    .slice(0, EVIDENCE_MAX_CONFLICTS);
+
+  return { decisions, conflicts };
+}
+
+/**
  * Rebuild the approved content from the stored candidates.
  *
- * Values come from the candidates, never from the reviewer's reply, so the
- * reviewer's only power is to admit or withhold text a source actually
- * supplied. It cannot edit a claim on the way through.
+ * Values come from the candidates, never from a model's reply, so admission can
+ * only ever let through text a source actually supplied. Nothing can edit a
+ * claim on the way through.
  */
 export function buildApprovedEvidence(input: {
   candidates: Array<EvidenceCandidate>;
@@ -290,7 +431,8 @@ export function buildApprovedEvidence(input: {
   return {
     approvedCandidateIds: selected.map((candidate) => candidate.id),
     content: {
-      tagline: selected.find((candidate) => candidate.kind === "tagline")?.value,
+      tagline: selected.find((candidate) => candidate.kind === "tagline")
+        ?.value,
       about:
         values("about").join("\n\n").slice(0, EVIDENCE_ABOUT_MAX) || undefined,
       services: selected
@@ -312,7 +454,9 @@ export function buildApprovedEvidence(input: {
         text: candidate.value,
         author: candidate.detail!.trim(),
         sourceUrl:
-          candidate.source.kind === "website" ? candidate.source.url : undefined,
+          candidate.source.kind === "website"
+            ? candidate.source.url
+            : undefined,
         sourceKind:
           candidate.source.kind === "website"
             ? ("website" as const)
@@ -336,8 +480,17 @@ export function approvedEvidenceIsEmpty(
   );
 }
 
-// --- The reviewer ---------------------------------------------------------
+// --- The retired reviewer -------------------------------------------------
 
+/**
+ * @deprecated The separate review pass is no longer called.
+ *
+ * Everything below is kept only so stored rows written by it stay readable and
+ * their prompt version stays resolvable. `resolveEvidenceLocally` is the live
+ * path. Delete this section, the stored review fields, and the admin surfaces
+ * that read them once the production canaries pass and the legacy pending
+ * harvest rows are migrated.
+ */
 export const EVIDENCE_REVIEW_PROMPT_VERSION = "2026-08-11.1";
 
 export function buildEvidenceReviewSystemPrompt(): string {

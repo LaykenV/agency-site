@@ -9,23 +9,19 @@ import {
   PACK_CLASSIFICATION_PROMPT_VERSION,
   buildPackClassificationSystemPrompt,
   buildPackClassificationUserPrompt,
-  buildPackSourceLabels,
   isSupportedPackImageType,
   packAnalysisBlockedReason,
   parsePackClassification,
+  parsePackConflicts,
   parsePackJson,
   selectPackImagery,
   type PackItem,
 } from "../../lib/concepts/facebookPack";
 import {
-  EVIDENCE_REVIEW_PROMPT_VERSION,
   buildApprovedEvidence,
-  buildEvidenceReviewSystemPrompt,
-  buildEvidenceReviewUserPrompt,
   dedupeEvidenceCandidates,
-  parseEvidenceReview,
-  type EvidenceCandidate,
-  type EvidenceReview,
+  remapEvidenceRefIndex,
+  resolveEvidenceLocally,
 } from "../../lib/concepts/evidence";
 import { detectSupportedImageMime } from "../../lib/concepts/remoteImage";
 import {
@@ -35,20 +31,25 @@ import {
 } from "../../lib/concepts/openRouter";
 
 /**
- * Facebook Pack analysis: classify, extract, then review.
+ * Facebook Pack analysis: one pass that classifies, extracts, and flags.
  *
- * Two model turns, deliberately separate. The first is a vision call that sorts
- * everything Layken pasted out of the prospect's Page — which image is the logo,
- * which is real work photography, which is a screenshot that can carry facts but
- * must never appear on a page — and reads the facts out of whatever text it can
- * see. The second is a text-only call that rules on those facts: it receives the
- * normalized candidates with their excerpts and decides which ones a generated
- * page may state.
+ * A single vision call sorts everything Layken pasted out of the prospect's
+ * Page — which image is the logo, which is real work photography, which is a
+ * screenshot that can carry facts but must never appear on a page — reads the
+ * facts out of whatever text it can see, and names any facts that contradict
+ * each other.
  *
- * They are separate because the extractor is the wrong judge of its own output.
- * A model asked to find facts finds them; asking the same turn to also withhold
- * them makes the instruction fight itself. The reviewer sees only normalized
- * candidates and their source excerpts, with no memory of having produced them.
+ * There used to be a second turn that ruled on those facts. It was removed: it
+ * asked the same model to reconsider material it had just read, which is not the
+ * independent check it resembled, and it cost a request, a failure mode, and a
+ * share of the rate limit on every pack. The exclusion rules it applied now sit
+ * in the extraction prompt, where the source is still in front of the model, and
+ * admission is decided by `resolveEvidenceLocally` from the stored candidates.
+ *
+ * The independent check that survives is the one that reads a different
+ * artifact: the final claim audit in `concepts/generate.ts`, which examines a
+ * finished page written by a different model. Better extraction cannot prevent a
+ * generator from adding a claim afterwards, so that audit stays.
  *
  * Nothing here decides what reaches a generated page —
  * `lib/concepts/facebookPack.ts` and `lib/concepts/evidence.ts` own those rules,
@@ -74,14 +75,27 @@ const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 const DEFAULT_VISION_MODEL = "openai/gpt-5.6-luna";
 
 /**
- * Both passes return a short structured answer, not a document.
+ * The pass returns a short structured answer, not a document.
  *
- * The review pass gets more room than classification: it answers per candidate
- * rather than per item, and a truncated review is a silently thinner page,
- * because every candidate it did not reach is rejected by default.
+ * Raised from the 8,000 the classification-only pass used, for two reasons that
+ * compound. The pass now carries the exclusion work the review turn used to do,
+ * so its answer is longer; and reasoning tokens are billed against this same
+ * cap, so `medium` effort spends part of it before the first character of JSON.
+ * A truncated answer here is a silently thinner page, because every item and
+ * fact the model did not reach is simply absent.
  */
-const MAX_CLASSIFICATION_TOKENS = 8_000;
-const MAX_REVIEW_TOKENS = 8_000;
+const MAX_ANALYSIS_TOKENS = 16_000;
+
+/**
+ * Medium reasoning, set explicitly rather than left to the endpoint default.
+ *
+ * This pass does OCR, classification, and structured extraction, and now also
+ * applies the exclusion rules. Low is thin for deciding whether an excerpt
+ * really supports a licence claim; high buys little on a reading task and is
+ * paid in latency on every pack. Verified supported on every Luna endpoint, so
+ * `require_parameters: true` will not reject the request over it.
+ */
+const REASONING_EFFORT = "medium" as const;
 
 function getOpenRouterApiKey(): string {
   const key = process.env.OPENROUTER_API_KEY;
@@ -154,6 +168,7 @@ export async function callVisionModel(input: {
     body: JSON.stringify({
       model: input.model,
       max_tokens: input.maxTokens,
+      reasoning: { effort: REASONING_EFFORT, exclude: true },
       response_format: { type: "json_object" },
       provider: {
         // Packs can contain names, comments, messages, and other contextual
@@ -214,45 +229,6 @@ export async function callVisionModel(input: {
   }
 
   return content;
-}
-
-/**
- * Rule on the extracted candidates in a second, separately prompted turn.
- *
- * Text only: the reviewer judges excerpts against the claims drawn from them,
- * and re-sending twenty megabytes of images so it can re-read a screenshot it
- * would have to trust the transcription of anyway buys nothing.
- *
- * An empty candidate list never reaches here — a pack of photographs with no
- * readable text is a normal outcome, and it should not cost a request.
- */
-async function reviewEvidence(input: {
-  businessName: string;
-  candidates: Array<EvidenceCandidate>;
-  sourceLabels: Record<string, string>;
-  model: string;
-}): Promise<EvidenceReview> {
-  const raw = await callVisionModel({
-    systemPrompt: buildEvidenceReviewSystemPrompt(),
-    content: [
-      {
-        type: "text",
-        text: buildEvidenceReviewUserPrompt({
-          businessName: input.businessName,
-          candidates: input.candidates,
-          sourceLabels: input.sourceLabels,
-        }),
-      },
-    ],
-    model: input.model,
-    maxTokens: MAX_REVIEW_TOKENS,
-    pass: "evidence review",
-  });
-
-  return parseEvidenceReview({
-    json: parsePackJson(raw),
-    candidateIds: input.candidates.map((candidate) => candidate.id),
-  });
 }
 
 export const runPackAnalysis = internalAction({
@@ -353,13 +329,14 @@ export const runPackAnalysis = internalAction({
         systemPrompt: buildPackClassificationSystemPrompt(),
         content,
         model,
-        maxTokens: MAX_CLASSIFICATION_TOKENS,
-        pass: "classification",
+        maxTokens: MAX_ANALYSIS_TOKENS,
+        pass: "analysis",
       });
 
       const classifiedAt = Date.now();
+      const parsed = parsePackJson(raw);
       const verdicts = parsePackClassification({
-        json: parsePackJson(raw),
+        json: parsed,
         sentItemIds,
         classifiedAt,
       });
@@ -385,31 +362,63 @@ export const runPackAnalysis = internalAction({
       // Facts are deduplicated across items before review: two screenshots of
       // the same About section otherwise put the same claim in front of the
       // reviewer twice, which can be approved once and rejected once.
-      const candidates = dedupeEvidenceCandidates(
-        verdicts.flatMap((verdict) => verdict.facts),
-      );
+      const sourceCandidates = verdicts.flatMap((verdict) => verdict.facts);
+      const candidates = dedupeEvidenceCandidates(sourceCandidates);
 
-      let review: EvidenceReview = { decisions: [], conflicts: [] };
-      if (candidates.length > 0) {
-        try {
-          review = await reviewEvidence({
-            businessName: concept.businessName,
-            candidates,
-            sourceLabels: buildPackSourceLabels(classifiedItems),
-            model,
-          });
-        } catch (error) {
-          // Nothing is stored when the reviewer fails. Saving the classification
-          // with an empty evidence set would read as "this pack said nothing",
-          // which is the one wrong answer here.
+      // No second request. The exclusion rules the reviewer used now run inside
+      // the extraction prompt, and admission is decided here from the stored
+      // candidates: an exact excerpt, an admissible kind, and nothing the
+      // extractor flagged as contradicted.
+      const {
+        conflicts,
+        refIndex: sourceRefIndex,
+        truncated: conflictsTruncated,
+      } = parsePackConflicts({
+        json: parsed,
+        verdicts,
+      });
+
+      // Every extracted fact must be addressable by a unique short ref, and
+      // every ref used by a conflict must resolve. An incomplete conflict map is
+      // not a harmless warning: it could approve one side of a disagreement.
+      const factRefCount = verdicts.reduce(
+        (sum, verdict) => sum + verdict.factRefs.length,
+        0,
+      );
+      if (factRefCount !== sourceCandidates.length) {
+        return await fail(
+          "The analysis returned a fact without a conflict reference. Re-analyze the pack.",
+          "classification",
+        );
+      }
+      if (conflictsTruncated) {
+        return await fail(
+          "The analysis returned more conflict data than can be verified safely. Re-analyze a smaller pack.",
+          "classification",
+        );
+      }
+      for (const conflict of conflicts) {
+        if (
+          new Set(conflict.refs).size < 2 ||
+          conflict.refs.some((ref) => (sourceRefIndex[ref]?.length ?? 0) === 0)
+        ) {
           return await fail(
-            error instanceof Error
-              ? error.message
-              : "The evidence review failed.",
-            "review",
+            "The analysis reported a conflict it could not resolve to both facts. Re-analyze the pack.",
+            "classification",
           );
         }
       }
+
+      const refIndex = remapEvidenceRefIndex({
+        sourceCandidates,
+        candidates,
+        refIndex: sourceRefIndex,
+      });
+      const review = resolveEvidenceLocally({
+        candidates,
+        conflicts,
+        refIndex,
+      });
 
       const approved = buildApprovedEvidence({
         candidates,
@@ -424,7 +433,10 @@ export const runPackAnalysis = internalAction({
           items: classifiedItems,
           model,
           promptVersion: PACK_CLASSIFICATION_PROMPT_VERSION,
-          reviewPromptVersion: EVIDENCE_REVIEW_PROMPT_VERSION,
+          // There is no separate review prompt any more. The field stays in the
+          // schema until the stored rows that have one are migrated; leaving it
+          // unset is what "this row was decided in one pass" looks like.
+          reviewPromptVersion: undefined,
           evidence: {
             compiledAt: Date.now(),
             candidates,

@@ -50,11 +50,13 @@ export const buildDetailsValidator = v.object({
   inspirationLinks: v.array(v.string()),
   myNotes: v.union(v.string(), v.null()),
   notificationPhone: v.optional(v.string()),
-  smsConsent: v.optional(v.object({
-    acceptedAt: v.number(),
-    disclosureVersion: v.string(),
-    source: v.string(),
-  })),
+  smsConsent: v.optional(
+    v.object({
+      acceptedAt: v.number(),
+      disclosureVersion: v.string(),
+      source: v.string(),
+    }),
+  ),
   brand: v.object({
     colorScheme: v.object({
       primary: v.string(),
@@ -80,11 +82,13 @@ export const calBookingValidator = v.object({
   notes: v.optional(v.string()),
   calEventId: v.optional(v.string()),
   iCalUID: v.optional(v.string()),
-  attendeeMetadata: v.optional(v.object({
-    name: v.optional(v.string()),
-    email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-  })),
+  attendeeMetadata: v.optional(
+    v.object({
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+    }),
+  ),
   status: v.optional(v.string()),
   eventTypeKey: v.optional(v.string()),
   durationMinutes: v.optional(v.number()),
@@ -263,11 +267,13 @@ export const scheduledCallValidator = v.object({
   eventTypeKey: v.optional(v.string()),
   durationMinutes: v.optional(v.number()),
   externalBookingId: v.optional(v.string()),
-  attendeeMetadata: v.optional(v.object({
-    name: v.optional(v.string()),
-    email: v.optional(v.string()),
-    phone: v.optional(v.string()),
-  })),
+  attendeeMetadata: v.optional(
+    v.object({
+      name: v.optional(v.string()),
+      email: v.optional(v.string()),
+      phone: v.optional(v.string()),
+    }),
+  ),
 });
 
 export const prospectValidator = v.object({
@@ -317,7 +323,7 @@ export const editRequestValidator = v.object({
     v.literal("in_progress"),
     v.literal("waiting_on_client"),
     v.literal("resolved"),
-    v.literal("closed")
+    v.literal("closed"),
   ),
   priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
   attachments: v.optional(v.array(v.id("_storage"))),
@@ -346,7 +352,7 @@ export const triageObjectValidator = v.object({
   promptVersion: v.string(),
   triagedAt: v.number(),
   overriddenBy: v.optional(
-    v.union(v.literal("client"), v.literal("admin"), v.literal("system"))
+    v.union(v.literal("client"), v.literal("admin"), v.literal("system")),
   ),
   overriddenAt: v.optional(v.number()),
   overrideReason: v.optional(v.string()),
@@ -866,6 +872,22 @@ export const conceptStatusValidator = v.union(
   v.literal("failed"),
 );
 
+/**
+ * Which failure ended the last generation run.
+ *
+ * Kept beside `error` rather than parsed back out of it: the admin card reacts
+ * differently to a validation break, an audit rejection, a dead provider, and a
+ * rate limit, and inferring that from an error sentence is how the wrong advice
+ * gets shown. Absent on a run that produced a sendable page.
+ */
+export const conceptGenerationFailureValidator = v.union(
+  v.literal("html_invalid"),
+  v.literal("claims_unsupported"),
+  v.literal("audit_unreadable"),
+  v.literal("provider_error"),
+  v.literal("provider_rate_limited"),
+);
+
 export const websiteConceptDocValidator = v.object({
   _id: v.id("website_concepts"),
   _creationTime: v.number(),
@@ -934,6 +956,7 @@ export const websiteConceptDocValidator = v.object({
   model: v.optional(v.string()),
   promptVersion: v.optional(v.string()),
   error: v.optional(v.string()),
+  generationFailure: v.optional(conceptGenerationFailureValidator),
   sentAt: v.optional(v.number()),
   firstViewedAt: v.optional(v.number()),
   lastViewedAt: v.optional(v.number()),
@@ -972,6 +995,7 @@ export const websiteConceptSummaryValidator = v.object({
   model: v.optional(v.string()),
   promptVersion: v.optional(v.string()),
   error: v.optional(v.string()),
+  generationFailure: v.optional(conceptGenerationFailureValidator),
   sentAt: v.optional(v.number()),
   firstViewedAt: v.optional(v.number()),
   lastViewedAt: v.optional(v.number()),

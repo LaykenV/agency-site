@@ -29,7 +29,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-11.4";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.1";
 
 export type ConceptStructure = {
   id: string;
@@ -539,6 +539,27 @@ export function buildConceptUserPrompt(
     if (notes.size > 0) {
       lines.push(
         "The parenthetical after a photo is where it belongs on the page and what it shows. Use it; do not print it.",
+      );
+    }
+
+    if (brief.logoUrl) {
+      lines.push(
+        "The logo must appear on the page at least once. A business that sent you their mark and does not see it will notice.",
+      );
+    }
+
+    // The rule the live Rodriguez draft broke: one photo, used three times, as
+    // filler for sections that had nothing to show.
+    if (brief.photoUrls.length === 1) {
+      lines.push(
+        "There is exactly one photo. Use it once, or twice only if the second placement is a meaningfully different crop doing a different job. Never a third time.",
+      );
+      lines.push(
+        "Sections with no photo are not a problem to solve. Carry them with typography, colour, rules, and space — a page with one strong image and three confident typographic sections beats the same photo repeated down the page.",
+      );
+    } else if (brief.photoUrls.length > 1) {
+      lines.push(
+        "Do not use any single photo more than twice, and give each photo a distinct job. Repeating one image to fill a section reads as padding.",
       );
     }
   }

@@ -39,6 +39,7 @@ import {
   conceptFacebookPackItemValidator,
   conceptFacebookPackStateValidator,
   conceptFacebookEvidenceValidator,
+  conceptGenerationFailureValidator,
   conceptStatusValidator,
 } from "./validators";
 
@@ -176,7 +177,7 @@ export default defineSchema({
       v.literal("in_progress"),
       v.literal("waiting_on_client"),
       v.literal("resolved"),
-      v.literal("closed")
+      v.literal("closed"),
     ),
     priority: v.union(v.literal("low"), v.literal("normal"), v.literal("high")),
     attachments: v.optional(v.array(v.id("_storage"))),
@@ -195,7 +196,7 @@ export default defineSchema({
       v.literal("contacted"),
       v.literal("qualified"),
       v.literal("won"),
-      v.literal("lost")
+      v.literal("lost"),
     ),
     source: v.string(), // "contact-form", "footer-form", "phone"
     data: v.object({
@@ -511,6 +512,14 @@ export default defineSchema({
     model: v.optional(v.string()),
     promptVersion: v.optional(v.string()),
     error: v.optional(v.string()),
+    /**
+     * Which failure ended the last generation run, when one did.
+     *
+     * Absent means the stored draft passed both the deterministic validator and
+     * the factual audit, which is the only thing that lets the review card claim
+     * the draft was audited.
+     */
+    generationFailure: v.optional(conceptGenerationFailureValidator),
 
     sentAt: v.optional(v.number()),
     firstViewedAt: v.optional(v.number()),

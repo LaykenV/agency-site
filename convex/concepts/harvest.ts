@@ -14,19 +14,9 @@ import {
   type SelectedPage,
 } from "../../lib/concepts/harvest";
 import {
-  EVIDENCE_REVIEW_PROMPT_VERSION,
-  buildEvidenceReviewSystemPrompt,
-  buildEvidenceReviewUserPrompt,
   harvestCandidatesToEvidence,
-  parseEvidenceReview,
-  type EvidenceCandidate,
-  type EvidenceReview,
+  resolveEvidenceLocally,
 } from "../../lib/concepts/evidence";
-import {
-  extractOpenRouterText,
-  OPENROUTER_ATTRIBUTION_HEADERS,
-  type OpenRouterMessageContent,
-} from "../../lib/concepts/openRouter";
 
 /**
  * Structured harvesting of a prospect's existing website: the gap-fill source.
@@ -37,17 +27,18 @@ import {
  * the page count is small, and a bounded synchronous sequence is cheaper to
  * run, easier to retry, and possible to explain from the logs afterwards.
  *
- * Phase C changed what happens next. The candidates go straight to the same
- * evidence reviewer the Facebook Pack uses, so a website no longer produces a
- * queue of checkboxes and the concept no longer parks in `content_review`. What
- * did not change is the contract underneath: every candidate carries a source
- * excerpt and a page URL, `lib/concepts/evidence.ts` decides what an approval
- * may become, and the database writes live in `concepts/internal.ts`.
+ * What happens next is now a server rule rather than a model turn. The
+ * candidates were cut deterministically out of each page's own text, so they go
+ * straight to `resolveEvidenceLocally`: a website no longer produces a queue of
+ * checkboxes, no longer parks the concept in `content_review`, and no longer
+ * spends a request re-reading text it already has. The contract underneath is
+ * unchanged — every candidate carries a source excerpt and a page URL,
+ * `lib/concepts/evidence.ts` decides what an approval may become, and the
+ * database writes live in `concepts/internal.ts`.
  *
  * Failure is partial by design. A page that will not scrape becomes a warning,
- * not a lost harvest; a failed review approves nothing rather than everything;
- * and a Firecrawl-wide failure leaves the concept exactly as it was, with
- * manual notes and uploads untouched.
+ * not a lost harvest, and a Firecrawl-wide failure leaves the concept exactly as
+ * it was, with manual notes and uploads untouched.
  */
 
 const FIRECRAWL_MAP_ENDPOINT = "https://api.firecrawl.dev/v2/map";
@@ -60,89 +51,6 @@ const MAX_REVIEW_TOKENS = 8_000;
 
 function getReviewModel(): string {
   return process.env.OPENROUTER_VISION_MODEL?.trim() || DEFAULT_REVIEW_MODEL;
-}
-
-/**
- * Rule on the harvested candidates.
- *
- * Text only and temperature zero: the question is whether an excerpt supports a
- * claim, which has one right answer. A thrown error here is caught by the
- * caller and becomes a visible warning with nothing approved — the safe
- * direction, since the alternative is a page repeating claims nobody checked.
- */
-async function reviewHarvestEvidence(input: {
-  businessName: string;
-  candidates: Array<EvidenceCandidate>;
-  model: string;
-}): Promise<EvidenceReview> {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error("OPENROUTER_API_KEY is required");
-
-  const response = await fetch(OPENROUTER_ENDPOINT, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-      ...OPENROUTER_ATTRIBUTION_HEADERS,
-    },
-    body: JSON.stringify({
-      model: input.model,
-      temperature: 0,
-      max_tokens: MAX_REVIEW_TOKENS,
-      response_format: { type: "json_object" },
-      provider: { data_collection: "deny", require_parameters: true },
-      messages: [
-        { role: "system", content: buildEvidenceReviewSystemPrompt() },
-        {
-          role: "user",
-          content: buildEvidenceReviewUserPrompt({
-            businessName: input.businessName,
-            candidates: input.candidates,
-          }),
-        },
-      ],
-    }),
-  });
-
-  if (!response.ok) {
-    const details = await response.text();
-    throw new Error(
-      `Evidence review failed: ${response.status} ${details.slice(0, 300)}`,
-    );
-  }
-
-  const json = (await response.json()) as {
-    choices?: Array<{
-      message?: { content?: OpenRouterMessageContent };
-      finish_reason?: string | null;
-    }>;
-    error?: { message?: string };
-  };
-  if (json.error?.message) {
-    throw new Error(`Evidence review error: ${json.error.message}`);
-  }
-
-  const choice = json.choices?.[0];
-  if (choice?.finish_reason === "length") {
-    throw new Error(
-      `Evidence review hit the ${MAX_REVIEW_TOKENS}-token cap before finishing.`,
-    );
-  }
-
-  const content = extractOpenRouterText(choice?.message?.content);
-  if (!content) throw new Error("The evidence reviewer returned no answer.");
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(content.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-  } catch {
-    throw new Error("The evidence reviewer returned unreadable JSON.");
-  }
-
-  return parseEvidenceReview({
-    json: parsed,
-    candidateIds: input.candidates.map((candidate) => candidate.id),
-  });
 }
 
 /** Firecrawl's cache, in milliseconds. Bypassed by an explicit refresh. */
@@ -430,10 +338,13 @@ async function scrapePage(
   }
 
   // The page type and source URL chosen by the server win over model output.
+  // Markdown is carried only long enough to prove every extracted value and
+  // evidence excerpt came from this page; it is never persisted.
   return parsePageExtraction({
     sourceUrl: page.url,
     pageType: page.pageType,
     json: data.json,
+    sourceText: typeof data.markdown === "string" ? data.markdown : undefined,
     rawImageUrls: toImageUrls(data.images),
     brandingLogoUrl: isHome ? toBrandingLogoUrl(data.branding) : undefined,
   });
@@ -529,34 +440,21 @@ export const runHarvest = internalAction({
         pages: extractions,
       });
 
-      // The same reviewer the Facebook Pack uses, on the same contract. A
-      // website is evidence that a business says something, not a decision that
-      // the page may repeat it, so the harvest still ends in a ruling — it is
-      // just no longer Layken's to make one checkbox at a time.
-      const reviewWarnings: Array<string> = [];
-      let review: EvidenceReview = { decisions: [], conflicts: [] };
-      let reviewModel: string | undefined;
-
-      if (snapshot.candidates.length > 0) {
-        try {
-          reviewModel = getReviewModel();
-          review = await reviewHarvestEvidence({
-            businessName: concept.businessName,
-            candidates: harvestCandidatesToEvidence(snapshot.candidates),
-            model: reviewModel,
-          });
-        } catch (error) {
-          // Every candidate stays rejected, which is what the parser would have
-          // produced anyway. The pages, the images, and the warning survive, so
-          // a re-scan is one tap and nothing false reaches a page in between.
-          reviewModel = undefined;
-          reviewWarnings.push(
-            `The evidence review failed, so no website facts were approved: ${
-              error instanceof Error ? error.message : "review failed"
-            }`.slice(0, 300),
-          );
-        }
-      }
+      // No second model turn. Firecrawl's structured extraction is untrusted
+      // until `buildHarvestSnapshot` proves both the value and its evidence
+      // occur in the Markdown returned for that same page. That makes the
+      // extractor a selector over source text, not an authority that can invent
+      // a business claim.
+      //
+      // Admission is the same server rule the Facebook Pack now uses. Nothing
+      // flags conflicts on this path: there is no model reading the pages to
+      // notice that two of them disagree. What still stands between a harvested
+      // claim and a published page is the final audit of the generated page.
+      const review = resolveEvidenceLocally({
+        candidates: harvestCandidatesToEvidence(snapshot.candidates),
+        conflicts: [],
+        refIndex: {},
+      });
 
       await ctx.runMutation(internal.concepts.internal.saveHarvest, {
         conceptId: args.conceptId,
@@ -568,18 +466,17 @@ export const runHarvest = internalAction({
         })),
         candidates: snapshot.candidates,
         imageCandidates: snapshot.imageCandidates,
-        warnings: [
-          ...warnings,
-          ...pageWarnings,
-          ...snapshot.warnings,
-          ...reviewWarnings,
-        ].slice(0, 20),
+        warnings: [...warnings, ...pageWarnings, ...snapshot.warnings].slice(
+          0,
+          20,
+        ),
         decisions: review.decisions,
         conflicts: review.conflicts,
-        reviewModel,
-        reviewPromptVersion: reviewModel
-          ? EVIDENCE_REVIEW_PROMPT_VERSION
-          : undefined,
+        // No model ruled on this harvest, so there is no review model or review
+        // prompt to record. Both fields stay in the schema until the stored rows
+        // that have them are migrated.
+        reviewModel: undefined,
+        reviewPromptVersion: undefined,
       });
     } catch (error) {
       await ctx.runMutation(internal.concepts.internal.failHarvest, {

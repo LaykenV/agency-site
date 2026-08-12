@@ -258,12 +258,46 @@ homepage concept:
    when uniquely corroborated; otherwise a human confirms it
 3. supervised Facebook Pack intake — logos, work photos, screenshots, and text
    pasted from the Page the owner maintains
-4. Luna (`openai/gpt-5.6-luna`) classification, visual selection, evidence
-   review, and — after generation — claim audit
+4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
+   visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from a configurable OpenRouter model
-7. deterministic safety and factual validation, plus the Luna claim audit
+6. bespoke HTML and inline CSS from Muse Spark 1.2 (`meta/muse-spark-1.2`) at
+   medium reasoning
+7. deterministic safety and factual validation, then a Luna audit of the
+   finished page
 8. human review of the finished page, then publication at `/preview/<token>`
+
+The generator and the auditor are deliberately different models. The audit's
+value is that it reads a finished artifact it had no part in writing; pointing
+`OPENROUTER_MODEL` and `OPENROUTER_VISION_MODEL` at the same slug turns it into
+a model marking its own work.
+
+### Models and provider routing
+
+| Role                              | Default               | Override                  |
+| --------------------------------- | --------------------- | ------------------------- |
+| Generation                        | `meta/muse-spark-1.2` | `OPENROUTER_MODEL`        |
+| Evidence, vision, and claim audit | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
+
+Both are pinned to a version rather than a `latest` alias: a concept is a sales
+artifact, and a silent model swap changing how every page looks is not something
+to discover from a prospect's reaction.
+
+Every OpenRouter request that carries prospect material — pack analysis,
+generation, and the claim audit — sends
+`provider: { data_collection: "deny", require_parameters: true }`. The first
+restricts routing to providers OpenRouter says do not collect inputs for
+training; the second refuses an endpoint that would silently ignore a parameter
+rather than honour it. This is not a zero-retention claim: OpenRouter exposes
+`zdr: true` as a separate policy, and this workflow does not currently require
+it. Muse Spark's Meta endpoint satisfies the `deny` gate, so no training-policy
+tradeoff was taken to adopt it.
+
+`require_parameters: true` makes the parameter set part of routing, so an
+unsupported parameter is a failed request rather than a degraded one. Luna's
+endpoints do not advertise `temperature`, which is why the audit sends none;
+they do advertise `reasoning`. Reasoning tokens are billed against `max_tokens`,
+so effort and output budget are one decision, not two.
 
 ### Google Places is identity, not content
 
@@ -302,16 +336,28 @@ bounded (20 items, 12 images, 8 text; JPEG/PNG/WebP; 6 MiB a file) and lives on
 `website_concepts` with storage IDs and content hashes — never as a separate
 asset-manifest table.
 
-Analysis is two Luna turns, deliberately separate:
+Analysis is one Luna vision turn at medium reasoning. Each item is labelled
+logo, business photo, context screenshot, text, duplicate, or unusable;
+screenshots and text can supply facts, and only logos and business photos may
+become page imagery (`canUsePackItemAsPageImagery` is the single gate). The same
+turn extracts each fact with an exact source excerpt and names any facts that
+contradict each other.
 
-1. **Classification** — vision over the pack items. Each item is labelled logo,
-   business photo, context screenshot, text, duplicate, or unusable. Screenshots
-   and text can supply facts; only logos and business photos may become page
-   imagery (`canUsePackItemAsPageImagery` is the single gate).
-2. **Evidence review** — text-only over the normalized candidates and their
-   source excerpts. Luna may approve or reject every category, including
-   credentials, insurance, years, prices, guarantees, awards, and testimonials.
-   There is no manual fact-approval queue.
+A second Luna turn used to rule on those facts. It was removed: it asked the
+same model to reconsider material it had just read, which is not the independent
+check it resembled, and it cost a request, a failure mode, and rate-limit
+headroom on every pack. Its exclusion rules — dated promotions, hiring posts,
+platform artifacts, private information, other businesses, and any value the
+excerpt only supports in weaker form — now live in the extraction prompt.
+
+Admission is a server rule (`resolveEvidenceLocally`) with no model opinion in
+it. A candidate is approved when it has an exact source excerpt, its kind is
+admissible, and the extractor did not flag it as contradicted. Phones never
+become page content — the concept's own phone is the CTA — and a testimonial
+needs both the words and an attribution. There is no manual fact-approval queue.
+
+The retired review prompts, fields, and admin surfaces are kept as deprecated
+until the production canaries pass and legacy rows are migrated.
 
 The server rebuilds `approvedFacebookContent` from stored candidates, never from
 the model's free text. Changing pack material invalidates compiled evidence,
@@ -329,15 +375,21 @@ Firecrawl Map call capped at 40 URLs, then at most six targeted Scrape calls.
 enforcement, normalization, caps, deduplication, sensitive-claim classification,
 and conflict detection.
 
-Candidates feed the same evidence reviewer the pack uses
-(`lib/concepts/evidence.ts`). New harvests land as `approved` or `skipped`
-rather than parking in `content_review`; legacy `pending` rows keep the old
-manual review surface until they are resolved or migrated. Source priority for
-the generation prompt is:
+Candidates feed the same server admission rule the pack uses
+(`resolveEvidenceLocally` in `lib/concepts/evidence.ts`), with no second model
+turn. Firecrawl's structured JSON is model-produced and is never trusted by
+itself: every extracted value and evidence excerpt must occur in the normalized
+Markdown returned for that same page. Unsupported service descriptions and
+testimonial attributions are stripped; the common evidence gate then rejects
+an unattributed quote. New harvests land as `approved` or `skipped` rather than
+parking in `content_review`; legacy `pending` rows keep the old manual review
+surface until they are resolved or migrated. Nothing flags cross-page factual
+conflicts on this path, so the final audit of the generated page is the remaining
+claim check. Source priority for the generation prompt is:
 
 1. manual business information
-2. Luna-approved Facebook Pack evidence
-3. Luna-approved website evidence
+2. Facebook Pack evidence admitted from an exact excerpt
+3. website evidence admitted from an exact excerpt
 4. Google Places identity only
 
 Image candidates are staged by a Node action that validates HTTPS, exact or
@@ -388,18 +440,26 @@ into the generated HTML.
 embedded and form elements, external requests, `target` attributes, unverified
 `mailto:` links, assets outside the approved allowlist, placeholder text, any
 phone number other than the verified one, and testimonial markup when no quotes
-were approved.
+were approved. It also enforces two usage rules on approved imagery: a supplied
+logo must appear at least once, and no single approved photo may appear more
+than twice.
 
 After those deterministic checks pass, `lib/concepts/claimAudit.ts` sends the
 page's visible copy and the exact brief back to Luna. Unsupported or materially
-strengthened claims fail the draft and may trigger one bounded regeneration.
-A zero-claim, malformed, over-limit, provider-error, or truncated response fails
-closed. Page text over the audit input ceiling also fails instead of silently
-dropping the end of the page.
-A second failure surfaces as a generation error; it is never published
-automatically. `publish` re-runs the deterministic validator server-side
-regardless of the stored status. The only required human review after analysis
-is the finished page before **Publish**.
+strengthened claims fail the draft. A zero-claim, malformed, over-limit,
+provider-error, or truncated response fails closed. Page text over the audit
+input ceiling also fails instead of silently dropping the end of the page.
+
+Deterministic violations and audit rejections share **one** repair budget: a run
+makes at most two generations total, and the repair is charged against the same
+daily ceiling as the first. Whichever failure ends the run is recorded in
+`generationFailure` so the admin card can distinguish HTML validation, a claim
+rejection, an incomplete audit, a provider error, and rate limiting — four
+failures that need four different reactions. A failed draft is stored and shown,
+never published automatically, and the review card only claims the draft was
+audited when one actually passed. `publish` re-runs the deterministic validator
+server-side regardless of the stored status. The only required human review
+after analysis is the finished page before **Publish**.
 
 ## Content dashboard
 

@@ -1,9 +1,13 @@
 # Concept generator — production cutover runbook
 
-Status: **production smoke in progress; destructive steps remain gated**
+Status: **additive release ready; production canaries and destructive steps remain gated**
+
+Generation moved to Muse Spark 1.2 and evidence review collapsed to one Luna
+pass on 2026-08-12. The retired review surface is deprecated in place, not
+deleted. Step 6a is the gate on destructive cleanup.
 Owner: Layken
 Written: 2026-08-10
-Last reviewed: 2026-08-11
+Last reviewed: 2026-08-12
 
 Steps 1, 2, and 4 of `outreach-preview-engine.md` are implemented and verified
 locally. The implementation passed Convex codegen, TypeScript, 176 tests, lint,
@@ -61,12 +65,21 @@ npx convex env set OPENROUTER_API_KEY sk-or-v1-...
 npx convex env set --prod OPENROUTER_API_KEY sk-or-v1-...
 ```
 
-Optional. The default is `deepseek/deepseek-v4-flash-0731`, pinned in
-`convex/concepts/generate.ts`:
+Optional. The default is `meta/muse-spark-1.2`, pinned in
+`convex/concepts/generate.ts`. Production currently overrides this with
+`openai/gpt-5.6-luna`, which must change — the generator and the claim auditor
+must not be the same model, or the audit is a model marking its own work:
 
 ```bash
-npx convex env set --prod OPENROUTER_MODEL anthropic/claude-sonnet-5
+npx convex env set --prod OPENROUTER_MODEL meta/muse-spark-1.2
 ```
+
+`OPENROUTER_VISION_MODEL` is unset in production, so Luna comes from the source
+default. Leave it that way unless the evidence model itself is being changed.
+
+All three calls use `data_collection: "deny"`, which excludes providers
+OpenRouter says collect inputs for training. It is not the separate zero-data-
+retention policy (`zdr: true`), and the architecture does not claim otherwise.
 
 Verify the three existing enrichment keys are present in production:
 
@@ -205,12 +218,18 @@ Expected provider behavior during this smoke test:
   and fixed by making all attribution-header values printable ASCII. If that
   exact error appears after this change, the latest Convex functions are not the
   ones running; redeploy before investigating the API key or model.
-- `OpenRouter returned an empty completion` was observed with DeepSeek V4 Flash
-  after a roughly six-minute request. The model defaults to high reasoning; the
-  request now explicitly uses low reasoning and excludes the reasoning trace so
-  the output budget is reserved for final HTML. Empty results now record only
-  safe request/model/provider/finish/token diagnostics, never prompts or model
+- `returned no final HTML` means the model spent its output budget without
+  emitting a document. Reasoning tokens are billed against `max_tokens`, so the
+  usual cause is reasoning consuming the whole allowance; the error now says so
+  explicitly when the diagnostics show it. Empty results record only safe
+  request/model/provider/finish/token diagnostics, never prompts or model
   reasoning.
+- A generation that stalls is now cancelled at four minutes (two for the audit)
+  rather than leaving the concept in `generating` with nothing to read.
+- Muse Spark 1.2 at medium reasoning was measured on 2026-08-12 producing a
+  complete 34 KB document in one attempt, using roughly 10,400 completion tokens
+  of which about 640 were reasoning. A run far outside that shape is worth
+  investigating before blaming the brief.
 
 **The real-device check.** Open a published concept on your iPhone, in Safari
 and then from a Messenger message to yourself. Verify:
@@ -229,6 +248,43 @@ boundary before going further. The comment block at the top of
 
 If only the in-frame call link fails but the notice-bar button works, that is
 tolerable — the conversion path still exists — but note it.
+
+### 6a. Muse canaries — the gate on everything below
+
+Run six concepts through the new single-pass flow before any destructive step.
+The point is not that each one passes mechanically; it is that the shape of the
+output is trustworthy enough to stop watching it.
+
+| #   | Pack shape                                                    |
+| --- | ------------------------------------------------------------- |
+| 1   | Facebook only, one logo and one photo                         |
+| 2   | Photo-rich pack, at least four real photos                    |
+| 3   | Screenshot- and text-heavy pack containing conflicting claims |
+| 4   | Sparse business with almost no content                        |
+| 5   | Facebook plus an existing website                             |
+| 6   | Three fresh website harvests                                  |
+
+For each, record:
+
+- generation time and approximate OpenRouter cost
+- whether Muse returned complete HTML on the first attempt
+- logo used at least once; no photo used more than twice
+- screenshots excluded from page imagery
+- claim-audit result, and which failure kind was recorded if it failed
+- phone, tablet, and desktop rendering
+- overall design quality
+
+Canary 3 is the one that exercises the removed reviewer directly: the extractor
+must flag the contradiction itself, and both sides must be withheld from the
+page. If conflicting claims reach a draft, stop — that is the specific risk the
+collapse to one pass takes on.
+
+Include one duplicated side in canary 3 — for example, two screenshots saying
+"since 1998" and one saying "since 2003". This proves the conflict follows the
+claim through deduplication instead of attaching only to the discarded copy.
+
+Do not publish a page merely because it passed mechanically. The final visual
+review is still the last gate.
 
 ---
 
@@ -323,10 +379,47 @@ step 7 rather than forcing it.
 
 ---
 
+## 9a. Retire the two-pass evidence review
+
+Gated on the step-6a canaries passing. Everything below is deprecated in place
+and still readable today; nothing here is safe to delete while production rows
+still carry a recorded review model or prompt version.
+
+First migrate the legacy rows:
+
+- website concepts still sitting at `harvestReviewState: "pending"`, which are
+  the last rows depending on the manual review surface
+- rows carrying `facebookReviewModel`, `facebookReviewPromptVersion`,
+  `facebookReviewError`, or `harvestReview.model` / `.promptVersion`
+
+Then delete, in one change:
+
+- `lib/concepts/evidence.ts` § "The retired reviewer" —
+  `EVIDENCE_REVIEW_PROMPT_VERSION`, `buildEvidenceReviewSystemPrompt`,
+  `buildEvidenceReviewUserPrompt`, `parseEvidenceReview`
+- `buildPackSourceLabels` in `lib/concepts/facebookPack.ts`
+- the `reviewPromptVersion` argument on `saveFacebookPackAnalysis` and the
+  `reviewModel` / `reviewPromptVersion` arguments on `saveHarvest`
+- the `facebookReview*` and `harvestReview.model` / `.promptVersion` schema and
+  validator fields
+- the `content_review` concept status, once no row holds it
+- the manual harvest review UI in `ConceptHarvestReview.tsx`
+- the `"review"` stage in `failFacebookPackAnalysis`
+- the tests covering the above in `tests/conceptEvidence.test.ts` and
+  `tests/conceptFacebookPack.test.ts`
+
+Expand, backfill, verify, contract — the deprecated fields come out last, and
+only after `npx convex data --prod` shows nothing still writing them.
+
+---
+
 ## 10. Close out
 
 - Delete the smoke-test concept from `/admin/marketing` if it was not for a real
   lead.
+- Record in `docs/ARCHITECTURE.md` that Muse Spark 1.2 is the generator and Luna
+  is single-pass extraction plus the final audit. (Done as part of the change
+  that introduced them; confirm it still matches what is deployed.)
 - Keep `/Users/laykenvarholdt/Documents/awd-cutover-backup-*.zip` until at least
   ten concepts have been produced and the generator is clearly working, then
   move it into your normal durable-backup location.

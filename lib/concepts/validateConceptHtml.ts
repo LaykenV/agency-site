@@ -27,6 +27,15 @@ import { conceptAssetAllowlist } from "./brief";
 /** Generated documents above this size are rejected as runaway output. */
 const MAX_HTML_BYTES = 400_000;
 
+/**
+ * How many times one approved photo may appear.
+ *
+ * Two, not one: a hero and a genuinely different crop lower down is a real
+ * layout decision. Three is where it stops being design and starts being the
+ * model padding sections with the only image it has.
+ */
+const MAX_PHOTO_REPEATS = 2;
+
 /** Minimum length of a quoted run in body text before it counts as a claim. */
 const QUOTE_CLAIM_MIN_LENGTH = 40;
 
@@ -332,7 +341,9 @@ export function validateConceptHtml(
   // Without this the concept renders at desktop width inside the iframe on a
   // phone, which is the one thing the whole mobile-first brief exists to avoid.
   if (!/<meta[^>]+name\s*=\s*["']?viewport/i.test(html)) {
-    violations.push('Missing <meta name="viewport"> — will not size on mobile.');
+    violations.push(
+      'Missing <meta name="viewport"> — will not size on mobile.',
+    );
   }
 
   // --- Executable and embedded content ---
@@ -371,7 +382,9 @@ export function validateConceptHtml(
   // A tap that opens a new browsing context cannot work in this sandbox, and
   // the plan forbids controls that look interactive but are not.
   if (/\starget\s*=/i.test(markup)) {
-    violations.push("Contains a target attribute; links must navigate in place.");
+    violations.push(
+      "Contains a target attribute; links must navigate in place.",
+    );
   }
 
   // --- Asset allowlist ---
@@ -379,7 +392,15 @@ export function validateConceptHtml(
   const allowlist = new Set(conceptAssetAllowlist(brief));
   const briefPhone = brief.phone ? normalizePhone(brief.phone) : null;
 
+  // How often each approved asset is actually referenced, for the usage rules
+  // below. Counted from the same pass that checks the allowlist so the document
+  // is not walked twice.
+  const assetUses = new Map<string, number>();
+
   for (const url of extractReferencedUrls(html)) {
+    if (allowlist.has(url)) {
+      assetUses.set(url, (assetUses.get(url) ?? 0) + 1);
+    }
     const lower = url.toLowerCase();
 
     if (url.startsWith("#")) continue;
@@ -401,13 +422,18 @@ export function validateConceptHtml(
       continue;
     }
 
-    if (lower.startsWith("data:image/") && !lower.startsWith("data:image/svg")) {
+    if (
+      lower.startsWith("data:image/") &&
+      !lower.startsWith("data:image/svg")
+    ) {
       continue;
     }
 
     if (lower.startsWith("http://") || lower.startsWith("https://")) {
       if (!allowlist.has(url)) {
-        violations.push(`References a URL outside the approved allowlist: ${url}`);
+        violations.push(
+          `References a URL outside the approved allowlist: ${url}`,
+        );
       }
       continue;
     }
@@ -415,6 +441,29 @@ export function validateConceptHtml(
     violations.push(
       `References a non-self-contained URL (${url}); only approved absolute URLs, tel:, and #anchors are allowed.`,
     );
+  }
+
+  // --- Approved imagery is used, and used once ---
+
+  // A business that supplied a logo and does not see it on the page reads that
+  // as the agency not having looked at what they sent.
+  if (brief.logoUrl && (assetUses.get(brief.logoUrl) ?? 0) === 0) {
+    violations.push(
+      "An approved logo was supplied but the page never displays it.",
+    );
+  }
+
+  // The live Rodriguez draft used its one approved photo three times, which
+  // reads as padding rather than design. Twice is allowed — a hero and a
+  // meaningfully different crop further down is a real layout — and a third
+  // appearance is the model filling space with what it already has.
+  for (const url of brief.photoUrls) {
+    const uses = assetUses.get(url) ?? 0;
+    if (uses > MAX_PHOTO_REPEATS) {
+      violations.push(
+        `Repeats one approved photo ${uses} times; use it at most ${MAX_PHOTO_REPEATS}. Design the remaining sections without a photo.`,
+      );
+    }
   }
 
   // --- Factual claims ---
@@ -493,4 +542,30 @@ export function validateConceptHtml(
   }
 
   return { ok: violations.length === 0, violations };
+}
+
+/**
+ * The correction appended to the prompt for a deterministic-violation repair.
+ *
+ * These used to be terminal: an invalid draft was kept unrepaired, on the
+ * reasoning that a validation failure is a prompt bug and the broken page is the
+ * evidence for fixing it. The draft is still kept, but it is now worth one
+ * repair first, because most of these violations are a single fixable slip — an
+ * external font, a stray form, one unapproved phone number — and a concept that
+ * fails for that reason is a page Layken cannot send today.
+ *
+ * The violations are quoted rather than the rules restated. The rules were
+ * already in the prompt that produced them.
+ */
+export function buildHtmlRepairInstruction(violations: Array<string>): string {
+  return [
+    "",
+    "## VALIDATION FAILURES — mandatory",
+    "",
+    "A previous draft of this page broke hard requirements. Produce the page again with every one of these fixed. Change nothing else about the design.",
+    "",
+    ...violations.map((violation) => `- ${violation}`),
+    "",
+    "Return the complete corrected document.",
+  ].join("\n");
 }

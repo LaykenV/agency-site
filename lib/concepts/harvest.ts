@@ -22,10 +22,7 @@
  * plan for the research this implements.
  */
 
-import type {
-  ConceptApprovedQuote,
-  ConceptApprovedContent,
-} from "./brief";
+import type { ConceptApprovedQuote, ConceptApprovedContent } from "./brief";
 import { stableHash } from "./stableHash";
 
 // --- Bounds ---------------------------------------------------------------
@@ -107,6 +104,14 @@ export type SelectedPage = {
 export type PageExtraction = {
   sourceUrl: string;
   pageType: HarvestPageType;
+  /**
+   * The page text Firecrawl actually returned.
+   *
+   * This is transient verification material, not persisted on the concept. A
+   * structured extraction is still model output; candidates only survive when
+   * their value and evidence can be found in this source text.
+   */
+  sourceText?: string;
   taglines?: Array<string>;
   aboutSections?: Array<string>;
   services?: Array<{ name?: string; description?: string; evidence?: string }>;
@@ -248,6 +253,7 @@ export function parsePageExtraction(input: {
   sourceUrl: string;
   pageType: HarvestPageType;
   json: unknown;
+  sourceText?: string;
   rawImageUrls?: Array<string>;
   brandingLogoUrl?: string;
 }): PageExtraction {
@@ -261,6 +267,10 @@ export function parsePageExtraction(input: {
   return {
     sourceUrl: input.sourceUrl,
     pageType: input.pageType,
+    sourceText:
+      typeof input.sourceText === "string"
+        ? input.sourceText.slice(0, 250_000)
+        : undefined,
     taglines: extractedStrings(json.taglines),
     aboutSections: extractedStrings(json.aboutSections),
     services: extractedObjects(json.services).map((record) => ({
@@ -317,6 +327,13 @@ export function normalizeForMatch(value: string): string {
     .replace(/[^a-z0-9 ]+/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+/** Case-insensitive exact copy check after removing scrape markup/spacing. */
+export function sourceTextContains(sourceText: string, value: string): boolean {
+  const source = normalizeHarvestText(sourceText).toLocaleLowerCase();
+  const needle = normalizeHarvestText(value).toLocaleLowerCase();
+  return Boolean(needle) && source.includes(needle);
 }
 
 /** Digits only, so `(337) 384-2911` and `+1 337 384 2911` compare equal. */
@@ -706,18 +723,30 @@ export function buildHarvestSnapshot(input: {
   const warnings: Array<string> = [];
   const byKey = new Map<string, HarvestCandidate>();
   let discardedForEvidence = 0;
+  let discardedOutsideSource = 0;
 
   for (const page of input.pages) {
+    const sourceText = page.sourceText ?? "";
     for (const draft of draftsFor(page)) {
       const value = capValue(draft.kind, normalizeHarvestText(draft.value));
       if (!value) continue;
+
+      // Firecrawl's structured JSON is model-produced. Requiring the extracted
+      // value to occur in the Markdown from the same response turns the model
+      // into a selector, not an authority that can create a business claim.
+      if (!sourceTextContains(sourceText, value)) {
+        discardedOutsideSource += 1;
+        continue;
+      }
 
       const evidence = normalizeHarvestText(draft.evidence).slice(
         0,
         HARVEST_EVIDENCE_MAX,
       );
       const resolvedEvidence = evidence
-        ? evidence
+        ? sourceTextContains(sourceText, evidence)
+          ? evidence
+          : ""
         : draft.selfEvident
           ? value.slice(0, HARVEST_EVIDENCE_MAX)
           : "";
@@ -729,9 +758,19 @@ export function buildHarvestSnapshot(input: {
         continue;
       }
 
-      const detail = draft.detail
+      let detail = draft.detail
         ? capValue(draft.kind, normalizeHarvestText(draft.detail)) || undefined
         : undefined;
+      // Service descriptions and testimonial attributions reach the page too.
+      // If the source does not contain them, omit them; an unattributed quote is
+      // then rejected by the common evidence gate.
+      if (
+        detail &&
+        (draft.kind === "service" || draft.kind === "quote") &&
+        !sourceTextContains(sourceText, detail)
+      ) {
+        detail = undefined;
+      }
       const risk = classifyHarvestRisk(draft.kind, value, detail);
 
       // Sensitive text filed under a standard kind is re-filed, not trusted.
@@ -787,6 +826,11 @@ export function buildHarvestSnapshot(input: {
   if (discardedForEvidence > 0) {
     warnings.push(
       `Discarded ${discardedForEvidence} candidate(s) with no source excerpt.`,
+    );
+  }
+  if (discardedOutsideSource > 0) {
+    warnings.push(
+      `Discarded ${discardedOutsideSource} extracted candidate(s) that could not be found in the page text.`,
     );
   }
 

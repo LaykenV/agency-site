@@ -11,6 +11,7 @@ import {
   conceptFacebookPackItemValidator,
   conceptHarvestCandidateValidator,
   conceptHarvestImageCandidateValidator,
+  conceptGenerationFailureValidator,
   conceptStatusValidator,
   websiteConceptDocValidator,
 } from "../validators";
@@ -23,6 +24,7 @@ import { requireAdmin } from "../adminGuard";
 import { rateLimiter } from "../rateLimiter";
 import {
   generationBlockedReason,
+  generationFailureHeadline,
   isCurrentGeneration,
   statusAfterGenerationInputChange,
 } from "../../lib/concepts/lifecycle";
@@ -48,6 +50,8 @@ export const setStatus = internalMutation({
     conceptId: v.id("website_concepts"),
     status: conceptStatusValidator,
     error: v.optional(v.string()),
+    /** Set when `status` is `failed` and the cause is known. */
+    failure: v.optional(conceptGenerationFailureValidator),
     expectedGenerationRequestId: v.optional(v.string()),
   },
   returns: v.null(),
@@ -65,6 +69,7 @@ export const setStatus = internalMutation({
     await ctx.db.patch(args.conceptId, {
       status: args.status,
       error: args.error?.slice(0, 1000),
+      generationFailure: args.failure,
       generationRequestId:
         args.status === "generating" ? concept.generationRequestId : undefined,
       updatedAt: Date.now(),
@@ -146,6 +151,7 @@ export const queueGeneration = internalMutation({
       generationRequestId,
       error: undefined,
       validationViolations: undefined,
+      generationFailure: undefined,
       updatedAt: Date.now(),
     });
 
@@ -290,6 +296,7 @@ export const savePlaceMatchConfirmed = internalMutation({
       generatedHtml: undefined,
       structureId: undefined,
       validationViolations: undefined,
+      generationFailure: undefined,
       model: undefined,
       promptVersion: undefined,
       generationRequestId: undefined,
@@ -362,6 +369,8 @@ export const saveGeneration = internalMutation({
     model: v.string(),
     promptVersion: v.string(),
     violations: v.array(v.string()),
+    /** Which check rejected the draft, absent when it passed everything. */
+    failure: v.optional(conceptGenerationFailureValidator),
     generationRequestId: v.string(),
   },
   returns: v.null(),
@@ -372,7 +381,7 @@ export const saveGeneration = internalMutation({
       return null;
     }
 
-    const ok = args.violations.length === 0;
+    const ok = args.violations.length === 0 && !args.failure;
 
     await ctx.db.patch(args.conceptId, {
       researchBrief: args.brief,
@@ -381,11 +390,17 @@ export const saveGeneration = internalMutation({
       model: args.model,
       promptVersion: args.promptVersion,
       validationViolations: ok ? undefined : args.violations,
+      generationFailure: ok ? undefined : args.failure,
       generationRequestId: undefined,
       status: ok ? "review" : "failed",
+      // The headline names which gate rejected the draft. Without it, an audit
+      // rejection and a broken stylesheet read identically, and only one of them
+      // means the page said something untrue about a stranger's business.
       error: ok
         ? undefined
-        : `Generated HTML failed ${args.violations.length} validation check(s).`,
+        : args.failure
+          ? generationFailureHeadline(args.failure, args.violations.length)
+          : `Generated HTML failed ${args.violations.length} validation check(s).`,
       updatedAt: Date.now(),
     });
     return null;
@@ -452,6 +467,7 @@ export const queueFacebookPackAnalysis = internalMutation({
       generatedHtml: undefined,
       structureId: undefined,
       validationViolations: undefined,
+      generationFailure: undefined,
       model: undefined,
       promptVersion: undefined,
       generationRequestId: undefined,
@@ -516,7 +532,13 @@ export const saveFacebookPackAnalysis = internalMutation({
     items: v.array(conceptFacebookPackItemValidator),
     model: v.string(),
     promptVersion: v.string(),
-    reviewPromptVersion: v.string(),
+    /**
+     * @deprecated Absent since the analysis collapsed to one pass.
+     *
+     * Optional rather than removed so rows written by the two-pass path keep
+     * their recorded review prompt until they are migrated.
+     */
+    reviewPromptVersion: v.optional(v.string()),
     evidence: conceptFacebookEvidenceValidator,
     approvedContent: conceptApprovedContentValidator,
     approvedQuotes: v.array(conceptApprovedQuoteValidator),
@@ -577,6 +599,7 @@ export const saveFacebookPackAnalysis = internalMutation({
       generatedHtml: undefined,
       structureId: undefined,
       validationViolations: undefined,
+      generationFailure: undefined,
       model: undefined,
       promptVersion: undefined,
       generationRequestId: undefined,
@@ -747,6 +770,7 @@ export const queueHarvest = internalMutation({
       generatedHtml: undefined,
       structureId: undefined,
       validationViolations: undefined,
+      generationFailure: undefined,
       model: undefined,
       promptVersion: undefined,
       generationRequestId: undefined,
@@ -1084,6 +1108,7 @@ export const saveWebsiteImageSelection = internalMutation({
             generatedHtml: undefined,
             structureId: undefined,
             validationViolations: undefined,
+            generationFailure: undefined,
             model: undefined,
             promptVersion: undefined,
             generationRequestId: undefined,

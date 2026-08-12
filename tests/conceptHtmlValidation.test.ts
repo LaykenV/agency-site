@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { validateConceptHtml } from "../lib/concepts/validateConceptHtml";
-import { conceptAssetAllowlist, type ConceptBrief } from "../lib/concepts/brief";
+import {
+  conceptAssetAllowlist,
+  type ConceptBrief,
+} from "../lib/concepts/brief";
 
 const LOGO_URL =
   "https://sturdy-marmot-123.convex.cloud/api/storage/1a2b3c4d-logo.png";
@@ -28,7 +31,7 @@ function validDocument(body: string): string {
 <style>body{margin:0;font-family:system-ui,-apple-system,sans-serif}</style>
 </head>
 <body>
-<header><h1>Shay's Cleaning Services</h1></header>
+<header><img src="${LOGO_URL}" alt="Shay's Cleaning Services" width="160" height="48"><h1>Shay's Cleaning Services</h1></header>
 ${body}
 </body>
 </html>`;
@@ -91,7 +94,9 @@ describe("validateConceptHtml — executable content", () => {
   });
 
   test("rejects a javascript: URL", () => {
-    const html = validDocument('<main><a href="javascript:alert(1)">Go</a></main>');
+    const html = validDocument(
+      '<main><a href="javascript:alert(1)">Go</a></main>',
+    );
     expect(violationsFor(html)).toContain("Contains javascript: URL.");
   });
 
@@ -103,7 +108,9 @@ describe("validateConceptHtml — executable content", () => {
   });
 
   test("rejects a javascript: URL split by an invisible character", () => {
-    const html = validDocument('<main><a href="java\tscript:alert(1)">Go</a></main>');
+    const html = validDocument(
+      '<main><a href="java\tscript:alert(1)">Go</a></main>',
+    );
     expect(violationsFor(html)).toContain("Contains javascript: URL.");
   });
 });
@@ -122,9 +129,9 @@ describe("validateConceptHtml — self-containment", () => {
     const html = validDocument(
       "<main><style>@font-face{font-family:X;src:url(x.woff2)}</style></main>",
     );
-    expect(
-      violationsFor(html).some((v) => v.includes("@font-face")),
-    ).toBe(true);
+    expect(violationsFor(html).some((v) => v.includes("@font-face"))).toBe(
+      true,
+    );
   });
 
   test("rejects an image outside the allowlist", () => {
@@ -157,7 +164,9 @@ describe("validateConceptHtml — self-containment", () => {
   });
 
   test("rejects a relative asset path", () => {
-    const html = validDocument('<main><img src="/images/hero.jpg" alt="Hero"></main>');
+    const html = validDocument(
+      '<main><img src="/images/hero.jpg" alt="Hero"></main>',
+    );
     expect(
       violationsFor(html).some((v) => v.includes("non-self-contained URL")),
     ).toBe(true);
@@ -190,9 +199,9 @@ describe("validateConceptHtml — self-containment", () => {
     const svg = validDocument(
       '<main><img src="data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=" alt="Mark"></main>',
     );
-    expect(
-      violationsFor(svg).some((v) => v.includes("data: SVG URL")),
-    ).toBe(true);
+    expect(violationsFor(svg).some((v) => v.includes("data: SVG URL"))).toBe(
+      true,
+    );
   });
 
   test("requires a viewport meta tag", () => {
@@ -200,25 +209,25 @@ describe("validateConceptHtml — self-containment", () => {
       '<meta name="viewport" content="width=device-width, initial-scale=1">',
       "",
     );
-    expect(
-      violationsFor(html).some((v) => v.includes("viewport")),
-    ).toBe(true);
+    expect(violationsFor(html).some((v) => v.includes("viewport"))).toBe(true);
   });
 
   test("rejects a document over the size ceiling", () => {
     const html = validDocument(`<main><p>${"a".repeat(420_000)}</p></main>`);
-    expect(
-      violationsFor(html).some((v) => v.includes("byte ceiling")),
-    ).toBe(true);
+    expect(violationsFor(html).some((v) => v.includes("byte ceiling"))).toBe(
+      true,
+    );
   });
 });
 
 describe("validateConceptHtml — factual claims", () => {
   test("rejects placeholder copy", () => {
-    const html = validDocument("<main><p>Lorem ipsum dolor sit amet.</p></main>");
-    expect(
-      violationsFor(html).some((v) => v.includes("lorem ipsum")),
-    ).toBe(true);
+    const html = validDocument(
+      "<main><p>Lorem ipsum dolor sit amet.</p></main>",
+    );
+    expect(violationsFor(html).some((v) => v.includes("lorem ipsum"))).toBe(
+      true,
+    );
   });
 
   test("rejects a phone number that is not the verified one", () => {
@@ -227,9 +236,9 @@ describe("validateConceptHtml — factual claims", () => {
     );
     const violations = violationsFor(html);
     expect(violations.some((v) => v.includes("does not match"))).toBe(true);
-    expect(
-      violations.some((v) => v.includes("not the verified number")),
-    ).toBe(true);
+    expect(violations.some((v) => v.includes("not the verified number"))).toBe(
+      true,
+    );
   });
 
   test("rejects any phone number when the brief has none", () => {
@@ -237,13 +246,15 @@ describe("validateConceptHtml — factual claims", () => {
     expect(
       violations.some((v) => v.includes("the brief has no phone number")),
     ).toBe(true);
-    expect(
-      violations.some((v) => v.includes("but the brief has none")),
-    ).toBe(true);
+    expect(violations.some((v) => v.includes("but the brief has none"))).toBe(
+      true,
+    );
   });
 
   test("rejects a fictional 555-01xx phone number", () => {
-    const html = validDocument("<main><p>Call us at (337) 555-0142 today.</p></main>");
+    const html = validDocument(
+      "<main><p>Call us at (337) 555-0142 today.</p></main>",
+    );
     expect(
       violationsFor(html, { phone: "(337) 555-0142" }).some((v) =>
         v.includes("fictional phone number"),
@@ -256,9 +267,9 @@ describe("validateConceptHtml — factual claims", () => {
       "<main><blockquote>They did an incredible job on our whole house.</blockquote></main>",
     );
     const violations = violationsFor(html);
-    expect(
-      violations.some((v) => v.includes("no quotes were approved")),
-    ).toBe(true);
+    expect(violations.some((v) => v.includes("no quotes were approved"))).toBe(
+      true,
+    );
   });
 
   test("rejects quoted copy that is not an approved quote", () => {
@@ -266,7 +277,9 @@ describe("validateConceptHtml — factual claims", () => {
       "<main><p>“Shay and her team left our home absolutely spotless.”</p></main>",
     );
     expect(
-      violationsFor(html).some((v) => v.includes("not present in the approved")),
+      violationsFor(html).some((v) =>
+        v.includes("not present in the approved"),
+      ),
     ).toBe(true);
   });
 
@@ -281,7 +294,9 @@ describe("validateConceptHtml — factual claims", () => {
   });
 
   test("rejects star glyphs when no approved quote carries a rating", () => {
-    const html = validDocument("<main><p>★★★★★ Rated by our customers</p></main>");
+    const html = validDocument(
+      "<main><p>★★★★★ Rated by our customers</p></main>",
+    );
     expect(violationsFor(html).some((v) => v.includes("star glyphs"))).toBe(
       true,
     );
@@ -291,9 +306,7 @@ describe("validateConceptHtml — factual claims", () => {
   // put a star on the page is a testimonial Layken approved by hand.
   test("rejects star glyphs when an approved quote has no rating", () => {
     const quote = "Shay and her team left our home absolutely spotless.";
-    const html = validDocument(
-      `<main><p>★★★★★</p><p>“${quote}”</p></main>`,
-    );
+    const html = validDocument(`<main><p>★★★★★</p><p>“${quote}”</p></main>`);
     expect(
       violationsFor(html, {
         approvedQuotes: [{ author: "Dana R.", text: quote }],
@@ -303,9 +316,7 @@ describe("validateConceptHtml — factual claims", () => {
 
   test("accepts star glyphs when an approved quote carries a rating", () => {
     const quote = "Shay and her team left our home absolutely spotless.";
-    const html = validDocument(
-      `<main><p>★★★★★</p><p>“${quote}”</p></main>`,
-    );
+    const html = validDocument(`<main><p>★★★★★</p><p>“${quote}”</p></main>`);
     expect(
       violationsFor(html, {
         approvedQuotes: [{ author: "Dana R.", text: quote, rating: 5 }],
@@ -314,11 +325,21 @@ describe("validateConceptHtml — factual claims", () => {
   });
 
   test("rejects a page for the wrong business", () => {
-    const html = validDocument("<main><p>Welcome to Gator Constructors.</p></main>")
-      .replace("<h1>Shay's Cleaning Services</h1>", "<h1>Gator Constructors</h1>")
-      .replace("<title>Shay's Cleaning Services</title>", "<title>Gator</title>");
+    const html = validDocument(
+      "<main><p>Welcome to Gator Constructors.</p></main>",
+    )
+      .replace(
+        "<h1>Shay's Cleaning Services</h1>",
+        "<h1>Gator Constructors</h1>",
+      )
+      .replace(
+        "<title>Shay's Cleaning Services</title>",
+        "<title>Gator</title>",
+      );
     expect(
-      violationsFor(html).some((v) => v.includes("does not appear in the page text")),
+      violationsFor(html).some((v) =>
+        v.includes("does not appear in the page text"),
+      ),
     ).toBe(true);
   });
 });
@@ -347,9 +368,9 @@ describe("validateConceptHtml — prose is not markup", () => {
     const html = validDocument(
       "<main><style>body{width:expression(alert(1))}</style></main>",
     );
-    expect(
-      violationsFor(html).some((v) => v.includes("expression()")),
-    ).toBe(true);
+    expect(violationsFor(html).some((v) => v.includes("expression()"))).toBe(
+      true,
+    );
   });
 });
 
@@ -409,6 +430,7 @@ img{display:block;width:100%;height:auto}
 </head>
 <body>
 <header class="band wrap">
+  <img src="${LOGO_URL}" alt="Shay's Cleaning Services" width="160" height="48">
   <p style="letter-spacing:.18em;font-size:.75rem;text-transform:uppercase">Shay's Cleaning Services</p>
   <h1>Homes that feel cared for, not just cleaned.</h1>
   <p>Residential and move-out cleaning across Youngsville and Lafayette Parish.</p>
@@ -444,5 +466,71 @@ img{display:block;width:100%;height:auto}
     const result = validateConceptHtml(realistic, brief);
     expect(result.violations).toEqual([]);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("validateConceptHtml — approved imagery is used, and used once", () => {
+  test("rejects a page that never displays the approved logo", () => {
+    const noLogo = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shay's Cleaning Services</title>
+</head>
+<body>
+<header><h1>Shay's Cleaning Services</h1></header>
+<main><img src="${PHOTO_URL}" alt="Crew" width="800" height="600"></main>
+</body>
+</html>`;
+    expect(violationsFor(noLogo)).toContain(
+      "An approved logo was supplied but the page never displays it.",
+    );
+  });
+
+  test("says nothing about a logo when the brief has none", () => {
+    const noLogo = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shay's Cleaning Services</title>
+</head>
+<body>
+<header><h1>Shay's Cleaning Services</h1></header>
+<main><img src="${PHOTO_URL}" alt="Crew" width="800" height="600"></main>
+</body>
+</html>`;
+    expect(violationsFor(noLogo, { logoUrl: undefined })).toEqual([]);
+  });
+
+  test("allows one approved photo twice", () => {
+    const twice = validDocument(`<main>
+<img src="${PHOTO_URL}" alt="Crew at work" width="800" height="600">
+<img src="${PHOTO_URL}" alt="A closer crop of the same job" width="400" height="400">
+</main>`);
+    expect(violationsFor(twice)).toEqual([]);
+  });
+
+  test("rejects the same approved photo used three times", () => {
+    const thrice = validDocument(`<main>
+<img src="${PHOTO_URL}" alt="Crew at work" width="800" height="600">
+<img src="${PHOTO_URL}" alt="Crew at work" width="400" height="400">
+<img src="${PHOTO_URL}" alt="Crew at work" width="200" height="200">
+</main>`);
+    expect(violationsFor(thrice)).toEqual([
+      "Repeats one approved photo 3 times; use it at most 2. Design the remaining sections without a photo.",
+    ]);
+  });
+
+  test("counts a CSS background use of the same photo toward the repeat cap", () => {
+    const mixed = validDocument(`<main>
+<img src="${PHOTO_URL}" alt="Crew at work" width="800" height="600">
+<img src="${PHOTO_URL}" alt="Crew at work" width="400" height="400">
+<div style="background-image:url('${PHOTO_URL}')"></div>
+</main>`);
+    expect(violationsFor(mixed)).toContain(
+      "Repeats one approved photo 3 times; use it at most 2. Design the remaining sections without a photo.",
+    );
   });
 });
