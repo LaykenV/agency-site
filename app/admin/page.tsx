@@ -327,7 +327,7 @@ function ProspectsTab() {
     try {
       setCooldowns((prev) => ({ ...prev, [cooldownKey]: 60 }));
 
-      await authClient.signIn.magicLink(
+      const result = await authClient.signIn.magicLink(
         {
           email: prospect.details.contactEmail,
           name: prospect.details.contactName,
@@ -353,6 +353,11 @@ function ProspectsTab() {
           },
         }
       );
+
+      if (result.error) {
+        setCooldowns((prev) => ({ ...prev, [cooldownKey]: 0 }));
+        return;
+      }
 
       await logMagicLinkSent({
         prospectId: prospect._id,

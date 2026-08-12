@@ -98,12 +98,16 @@ function UnauthenticatedView({ isRecheckingSession }: { isRecheckingSession: boo
         return;
       }
 
-      await authClient.signIn.magicLink({
+      const result = await authClient.signIn.magicLink({
         email: trimmed,
         callbackURL: "/portal/verify",
         newUserCallbackURL: "/portal/verify",
         errorCallbackURL: "/portal/autherror?error=magic_link",
       });
+
+      if (result.error) {
+        throw new Error(result.error.message || "Magic link request failed");
+      }
 
       // Persist success state to localStorage
       if (typeof window !== "undefined") {
