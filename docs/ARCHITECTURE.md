@@ -261,11 +261,11 @@ homepage concept:
 4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from Muse Spark 1.2 (`meta/muse-spark-1.2`) at
-   medium reasoning. The request includes the approved logo and photographs as
-   vision input plus their pixel sizes, each attachment labelled with the exact
-   allowlisted URL to use for it. Muse invents the visual system; there is no
-   assigned page shape. Mobile is not part of what it invents — the prompt
+6. bespoke HTML and inline CSS from Grok 4.6 (`x-ai/grok-4.6`) at medium
+   reasoning. The request includes the approved logo and photographs as vision
+   input plus their pixel sizes, each attachment labelled with the exact
+   allowlisted URL to use for it. The model invents the visual system; there is
+   no assigned page shape. Mobile is not part of what it invents — the prompt
    carries hard 360px-first requirements, and the validator rejects
    `overflow-x: hidden`.
 7. deterministic safety and HTML validation
@@ -276,21 +276,27 @@ the review card is the remaining judgment of whether the page is worth sending.
 
 ### Models and provider routing
 
-| Role                              | Default               | Override                  |
+| Role                              | Model                 | Incident override         |
 | --------------------------------- | --------------------- | ------------------------- |
-| Generation                        | `meta/muse-spark-1.2` | `OPENROUTER_MODEL`        |
+| Generation                        | `x-ai/grok-4.6`       | `OPENROUTER_MODEL`        |
 | Evidence and vision               | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
 
 Both are pinned to a version rather than a `latest` alias: a concept is a sales
 artifact, and a silent model swap changing how every page looks is not something
 to discover from a prospect's reaction.
 
-Production currently overrides generation to `x-ai/grok-4.6` while its design
-quality is compared against the default. The override is the intended way to
-run that comparison — no deploy, instantly reversible, and every concept row
-records the `model` that produced it, so two drafts can be told apart after the
-fact. Promote a winner into `DEFAULT_MODEL` rather than leaving prod
-permanently diverged from the code.
+The model slug lives in code, not in deployment configuration. Changing it is a
+diff, reviewed next to the prompt it was tuned against, rather than a CLI
+command whose effect is invisible in the repository. The environment overrides
+exist for an incident — routing around a provider outage before a deploy can
+land — and are expected to be unset; both were confirmed unset on dev and prod
+on 2026-08-12. A set override is how production ends up quietly disagreeing
+with the code about what drew a page.
+
+Generation moved from `meta/muse-spark-1.2` to `x-ai/grok-4.6` on 2026-08-12
+after a side-by-side on real concepts: visibly better pages at roughly 8c a
+generation against 5c. Every concept row records the `model` that produced it,
+so drafts from either generator can still be told apart after the fact.
 
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends

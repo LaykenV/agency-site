@@ -50,15 +50,23 @@ import {
 const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
 
 /**
- * `meta/muse-spark-1.2` is pinned to the version, not an alias: a concept is a
- * sales artifact, and a silent model swap changing how every page looks is not
- * something to discover from a prospect's reaction.
+ * The generation model lives here, in code, not in an environment variable.
+ * A concept is a sales artifact; which model drew it belongs in the diff that
+ * changed it, next to the prompt it was tuned against.
  *
- * Its endpoint advertises `max_tokens`, `temperature`, `response_format`, and
- * configurable reasoning, so `require_parameters: true` will not reject the
- * request over any parameter sent below.
+ * `x-ai/grok-4.6` is pinned to the version, not an alias — `~x-ai/grok-latest`
+ * exists and is deliberately not used, because a silent model swap changing
+ * how every page looks is not something to discover from a prospect's
+ * reaction. It replaced `meta/muse-spark-1.2` on 2026-08-12 after a side-by-side
+ * on real concepts: visibly better pages for roughly 8c a generation against
+ * 5c.
+ *
+ * Its endpoint advertises `max_tokens`, `temperature`, `reasoning`, and
+ * `reasoning_effort`, so `require_parameters: true` will not reject the
+ * request over any parameter sent below, and it satisfies the
+ * `data_collection: "deny"` gate that the photographs in this request require.
  */
-const DEFAULT_MODEL = "meta/muse-spark-1.2";
+const DEFAULT_MODEL = "x-ai/grok-4.6";
 
 /** A long homepage with inline CSS runs well past a default cap. */
 const MAX_OUTPUT_TOKENS = 32_000;
@@ -138,6 +146,13 @@ function getOpenRouterApiKey(): string {
   return key;
 }
 
+/**
+ * `OPENROUTER_MODEL` is an unset escape hatch for an incident — a provider
+ * outage worth routing around before a deploy can land. It is not where the
+ * model is configured. Leaving it set is how production ends up quietly
+ * disagreeing with `DEFAULT_MODEL` about what drew a page, so unset it again
+ * once the incident is over.
+ */
 function getModel(): string {
   return process.env.OPENROUTER_MODEL?.trim() || DEFAULT_MODEL;
 }
