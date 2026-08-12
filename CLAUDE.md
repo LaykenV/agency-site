@@ -44,11 +44,12 @@ git diff --check
 
 - Model-generated HTML is untrusted. Never render it with
   `dangerouslySetInnerHTML`; use an iframe with `srcDoc` and the shared sandbox
-  in `lib/concepts/sandbox.ts`. Never add `allow-scripts`, `allow-forms`, or
-  `allow-same-origin`.
+  in `lib/concepts/sandbox.ts`. Never add `allow-scripts`, `allow-forms`,
+  `allow-same-origin`, or `allow-top-navigation-by-user-activation`.
 - Generated pages must stay scriptless and self-contained: no JavaScript, no
   external fonts, stylesheets, embeds, or trackers, and images only from the
-  approved allowlist.
+  approved allowlist. Concept CTAs are dummy controls; the only permitted
+  `href` is `#`.
 - Every generation runs `validateConceptHtml`, and `publish` re-validates
   server-side. Do not add a path that publishes without validating.
 - The concept notice, page metadata, and view tracking belong to the trusted

@@ -3,17 +3,27 @@
  *
  * Shared by `/preview/[token]` and the admin review card so the two cannot
  * drift. Reviewing a concept under weaker or stronger restrictions than the
- * recipient gets would make the review meaningless — a call button that works
- * for Layken and not for the prospect is exactly the bug this prevents.
+ * recipient gets would make the review meaningless.
  *
- * Deliberately absent: `allow-scripts`, `allow-forms`, `allow-same-origin`, and
- * `allow-popups`. Without them the document cannot execute, submit, reach the
- * parent DOM or cookies, or open a new context.
- *
- * `allow-top-navigation-by-user-activation` is granted because without it a
- * `tel:` link inside the frame silently fails in several browsers, and tapping
- * to call is the only conversion path these pages have. It requires a genuine
- * user gesture, scripts still cannot run, and `validateConceptHtml` has already
- * restricted every `href` to `tel:`, a `#` fragment, or one allowlisted maps URL.
+ * No tokens are granted. `allow-scripts`, `allow-forms`, `allow-same-origin`,
+ * `allow-popups`, and `allow-top-navigation-by-user-activation` are all
+ * withheld, so the document cannot execute, submit, reach the parent DOM or
+ * cookies, open a new context, or navigate the parent. Concept CTAs are dummy
+ * controls; there is no in-frame conversion path that needs a live `tel:` or
+ * maps link.
  */
-export const CONCEPT_IFRAME_SANDBOX = "allow-top-navigation-by-user-activation";
+export const CONCEPT_IFRAME_SANDBOX = "";
+
+/**
+ * Force every `href` in generated HTML to `#`.
+ *
+ * New generations are already rejected if they contain a live link. This
+ * rewrite covers already-published documents that still carry `tel:`, a maps
+ * URL, or a `#section` anchor, so those taps stay dummy without a regenerate.
+ */
+export function neuterConceptHrefs(html: string): string {
+  return html.replace(
+    /(\shref\s*=\s*)("[^"]*"|'[^']*'|[^\s>]+)/gi,
+    `$1"#"`,
+  );
+}

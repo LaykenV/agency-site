@@ -462,11 +462,10 @@ render it in an iframe using `srcDoc` and the shared sandbox in
 `allow-same-origin`, and `allow-popups`. The generated document therefore cannot
 reach the application DOM, authentication cookies, storage, or any network API.
 
-`allow-top-navigation-by-user-activation` is the one token granted, because
-without it a `tel:` link inside the frame silently fails and tapping to call is
-the only conversion path these pages have. It requires a real gesture, and every
-`href` has already been restricted by the validator to `tel:`, a `#` fragment,
-or one allowlisted maps URL.
+No sandbox tokens are granted. Concept CTAs are dummy controls: the validator
+rejects every `href` other than `#`, and the trusted parent rewrites leftover
+live links in already-published documents so taps cannot call, scroll, or leave
+the page.
 
 The trusted parent owns the concept notice, the page title, robots metadata,
 Open Graph tags, and view counting. Views are recorded from the browser rather
@@ -481,12 +480,13 @@ into the generated HTML.
 ### Validation
 
 `lib/concepts/validateConceptHtml.ts` rejects scripts, inline event handlers,
-embedded and form elements, external requests, `target` attributes, unverified
-`mailto:` links, assets outside the approved allowlist, placeholder text, any
-phone number other than the verified one, and testimonial markup when no quotes
-were approved. It also enforces two usage rules on approved imagery: a supplied
-logo must appear at least once, and no single approved photo may appear more
-than twice.
+embedded and form elements, external requests, `target` attributes, live
+`href`s (`tel:`, maps URLs, `#section` anchors — only `#` is permitted),
+unverified `mailto:` links, assets outside the approved allowlist, placeholder
+text, any phone number other than the verified one, and testimonial markup when
+no quotes were approved. It also enforces two usage rules on approved imagery: a
+supplied logo must appear at least once, and no single approved photo may appear
+more than twice.
 
 There is no second-model claim audit after those checks pass. A concept preview
 is a sales sketch: the prompt still tells Muse not to invent facts, but an

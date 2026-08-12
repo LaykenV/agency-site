@@ -253,6 +253,10 @@ function extractReferencedUrls(html: string): Array<string> {
   for (const match of html.matchAll(attributePattern)) {
     const attribute = match[1].toLowerCase();
     const raw = match[3] ?? match[4] ?? match[5] ?? "";
+    // hrefs are dummy-only and checked separately. Including them here would
+    // let an allowlisted maps URL (or an image URL used as a link) pass.
+    if (attribute === "href" || attribute === "xlink:href") continue;
+
     if (attribute === "srcset") {
       for (const candidate of raw.split(",")) {
         const url = candidate.trim().split(/\s+/)[0];
@@ -268,6 +272,16 @@ function extractReferencedUrls(html: string): Array<string> {
   }
 
   return urls.map((url) => decodeEntities(url).trim()).filter(Boolean);
+}
+
+/** Every `href` / `xlink:href` value, including empty ones. */
+function extractHrefValues(html: string): Array<string> {
+  const values: Array<string> = [];
+  const pattern = /(href|xlink:href)\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/gi;
+  for (const match of html.matchAll(pattern)) {
+    values.push(decodeEntities(match[3] ?? match[4] ?? match[5] ?? "").trim());
+  }
+  return values;
 }
 
 /** Last ten digits, so `+1 (337) 555-1234` and `337.555.1234` compare equal. */
@@ -391,11 +405,24 @@ export function validateConceptHtml(
     }
   }
 
-  // A tap that opens a new browsing context cannot work in this sandbox, and
-  // the plan forbids controls that look interactive but are not.
+  // A tap that opens a new browsing context cannot work in this sandbox.
   if (/\starget\s*=/i.test(markup)) {
     violations.push(
-      "Contains a target attribute; links must navigate in place.",
+      "Contains a target attribute; concept links must be dummy.",
+    );
+  }
+
+  // Concept CTAs are visual only. A live tel:, maps URL, or #section looks
+  // tappable and then fails (or leaves the page) inside the sandbox.
+  for (const href of extractHrefValues(html)) {
+    if (href === "#") continue;
+    const lowerHref = href.toLowerCase();
+    if (lowerHref.startsWith("mailto:")) {
+      violations.push(`Contains an unverified mailto: link (${href}).`);
+      continue;
+    }
+    violations.push(
+      `Contains a live link (${href || "empty href"}); the only permitted href is "#".`,
     );
   }
 
@@ -417,18 +444,9 @@ export function validateConceptHtml(
 
     if (url.startsWith("#")) continue;
 
-    if (lower.startsWith("tel:")) {
-      const normalized = normalizePhone(url.slice(4));
-      if (!briefPhone) {
-        violations.push(`tel: link ${url} but the brief has no phone number.`);
-      } else if (normalized !== briefPhone) {
-        violations.push(`tel: link ${url} does not match the verified phone.`);
-      }
-      continue;
-    }
-
     // No verified email address exists in the brief, so any mailto: address is
-    // necessarily invented.
+    // necessarily invented. Caught here when it appears as src/action/etc.;
+    // href mailto: is already rejected by the dummy-link rule above.
     if (lower.startsWith("mailto:")) {
       violations.push(`Contains an unverified mailto: link (${url}).`);
       continue;
@@ -451,7 +469,7 @@ export function validateConceptHtml(
     }
 
     violations.push(
-      `References a non-self-contained URL (${url}); only approved absolute URLs, tel:, and #anchors are allowed.`,
+      `References a non-self-contained URL (${url}); only approved absolute URLs are allowed.`,
     );
   }
 

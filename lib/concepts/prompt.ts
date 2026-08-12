@@ -7,7 +7,7 @@
  * Design is the model's job. Variety comes from the business's own photographs
  * and words, which travel with the request as vision input, not from a named
  * page shape. This file states what the sandbox will reject, what the brief
- * will not allow the page to claim, and what the page owes a phone.
+ * will not allow the page to claim, and that every CTA is a dummy control.
  *
  * That last one is not a style preference. These concepts are opened almost
  * exclusively on an iPhone inside Messenger's in-app browser, so the mobile
@@ -22,7 +22,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-12.5";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.6";
 
 function imageOrientation(
   width?: number,
@@ -64,12 +64,12 @@ These are enforced by an automatic validator. Violating any one causes the whole
 - One \`<style>\` element in \`<head>\`. All CSS goes there or in \`style="..."\` attributes.
 - NO JavaScript. No \`<script>\`, no \`onclick\` or any \`on*\` attribute, no \`javascript:\` URL.
 - NO \`<iframe>\`, \`<object>\`, \`<embed>\`, \`<base>\`, \`<link>\`, \`<noscript>\`, \`<canvas>\`, \`<video>\`, \`<audio>\`, \`<source>\`.
-- NO forms and NO form controls. No \`<form>\`, \`<input>\`, \`<textarea>\`, \`<select>\`, or \`<button>\`. A control that cannot work must not be drawn.
+- NO forms and NO form controls. No \`<form>\`, \`<input>\`, \`<textarea>\`, \`<select>\`, or \`<button>\`. Draw CTAs as styled \`<span>\` elements or \`<a href="#">\` only.
 - NO external requests of any kind: no \`@import\`, no \`@font-face\`, no Google Fonts, no icon fonts, no analytics, no external images.
-- NO \`target\` attribute on any element. Links must navigate in place.
+- NO \`target\` attribute on any element.
 - NO \`mailto:\` links. No email address is verified for this business.
 - Images: ONLY the exact URLs given in the APPROVED IMAGE URLS list, used verbatim. If that list is empty, the page contains no \`<img>\` at all and no CSS \`url()\`. Inline \`<svg>\` you draw yourself is allowed; \`data:image/svg+xml\` URLs are not.
-- The only permitted \`href\` values are \`tel:\` with the verified phone, \`#\` fragment anchors to sections on this page, and the exact Google Maps URL if one is supplied.
+- Every CTA is a dummy. The only permitted \`href\` is exactly \`#\`. No \`tel:\`, no \`#section\` anchors, no Google Maps URLs, no other destinations. Buttons may look real so the owner can see the layout; they must not call, scroll, or leave the page.
 - Required in \`<head>\`: \`<meta charset="utf-8">\`, \`<meta name="viewport" content="width=device-width, initial-scale=1">\`, and a \`<title>\` containing the business name.
 - Fonts must be system or OS-bundled stacks only, since no font may be downloaded. Always end a stack with a generic family.
 - Do NOT add your own "this is a concept" banner or disclaimer. The page that frames this document already supplies one.
@@ -114,7 +114,7 @@ The mobile experience is judged on both look and feel:
 - Tap targets are at least 44px tall with real spacing between them. Nothing tappable sits within 8px of another tappable thing.
 - Tappable labels must never wrap to two lines. Keep them to two or three words.
 - Body text is at least 16px. Anything smaller triggers zoom-on-focus and reads badly in one hand.
-- If a phone number is verified, the \`tel:\` CTA appears within the first screen and again near the end, and it is unmistakably tappable — not a bare line of text.
+- If a phone number is verified, show it as plain text (a dummy "Call" control styled as a button is fine). Do not make it a working \`tel:\` link.
 - Images need explicit \`width\` and \`height\` attributes so the page does not jump while photos load on a slow connection.
 - Respect \`@media (prefers-reduced-motion: reduce)\` for any transition you add.
 
@@ -122,7 +122,7 @@ The mobile experience is judged on both look and feel:
 
 Check your document against this list and fix anything that fails:
 
-- Does it contain any \`<script>\`, \`on*=\`, \`<form>\`, \`<button>\`, \`<link>\`, \`@import\`, \`@font-face\`, \`target=\`, or \`mailto:\`? Remove it.
+- Does it contain any \`<script>\`, \`on*=\`, \`<form>\`, \`<button>\`, \`<link>\`, \`@import\`, \`@font-face\`, \`target=\`, \`mailto:\`, \`tel:\`, or an \`href\` other than \`#\`? Remove it.
 - Does every image URL appear verbatim in APPROVED IMAGE URLS? Remove any that does not.
 - Does each photograph you placed carry the exact URL that was given with that photograph? Fix any that were swapped.
 - Does every stated fact appear in the BRIEF? Remove any that does not.
@@ -231,12 +231,8 @@ export function buildConceptUserPrompt(brief: ConceptBrief): string {
   fact("City / area", brief.locality);
   fact("Service area", brief.serviceArea);
   fact(
-    "Verified phone (the ONLY number that may appear)",
+    "Verified phone (the ONLY number that may appear, as text — never as a tel: link)",
     brief.phone ?? "none — the page must show no phone number",
-  );
-  fact(
-    "Google Maps URL (the only permitted external link)",
-    brief.googleMapsUrl,
   );
 
   if (brief.notes) {

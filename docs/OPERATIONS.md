@@ -82,7 +82,10 @@ concept in `/admin/marketing` before creating anything in the project lifecycle:
    the finished page: does it look right and sound like them? Review it on a
    phone, or at 360px in devtools — that is where the owner will open it, and
    it is the one thing the validator cannot judge for you.
-6. Publish, then use Copy Messenger Draft and send it by hand.
+6. Publish, then use Copy Messenger Draft and send it by hand. The draft and
+   the preview strip both say this is a direction sketch, not the finished
+   site — buttons are mockups, and the live build will have more pages and a
+   custom design.
 7. Watch the open count. Sent and never opened after one follow-up means stop.
 
 Google photos are never used. If the pack has no usable photography, the

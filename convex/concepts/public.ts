@@ -13,10 +13,10 @@ import { rateLimiter } from "../rateLimiter";
 /**
  * Load a published concept for rendering.
  *
- * Returns only the three fields the preview page needs. Notes, the research
- * brief, Google match details, and view counters stay server-side: the recipient
- * is a business owner being pitched, and none of Layken's research notes about
- * them belong in a response they can read.
+ * Returns only the fields the preview page needs. Notes, the research brief,
+ * phone, Google match details, and view counters stay server-side: the
+ * recipient is a business owner being pitched, and none of Layken's research
+ * notes about them belong in a response they can read.
  */
 export const getPublishedByToken = query({
   args: { token: v.string() },
@@ -25,7 +25,6 @@ export const getPublishedByToken = query({
       token: v.string(),
       businessName: v.string(),
       html: v.string(),
-      phone: v.union(v.string(), v.null()),
     }),
     v.null(),
   ),
@@ -43,10 +42,6 @@ export const getPublishedByToken = query({
       token: concept.token,
       businessName: concept.businessName,
       html: concept.generatedHtml,
-      // Powers the guaranteed-working call button in the trusted frame, since a
-      // tel: link inside the sandboxed document is the one control most likely
-      // to be blocked by a stricter in-app browser.
-      phone: concept.researchBrief?.phone ?? concept.phone ?? null,
     };
   },
 });

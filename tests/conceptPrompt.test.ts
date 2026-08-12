@@ -31,6 +31,7 @@ describe("buildConceptSystemPrompt", () => {
     "mailto:",
     "target",
     "<button>",
+    "tel:",
     "lorem ipsum",
     "APPROVED IMAGE URLS",
     "APPROVED QUOTES",
@@ -93,6 +94,12 @@ describe("buildConceptSystemPrompt", () => {
 
   test("tells the model not to add its own concept disclaimer", () => {
     expect(prompt.toLowerCase()).toContain("do not add your own");
+  });
+
+  test("requires dummy CTAs with href=\"#\" only", () => {
+    expect(prompt).toContain("Every CTA is a dummy");
+    expect(prompt).toContain("The only permitted `href` is exactly `#`");
+    expect(prompt).not.toContain("tel:` CTA");
   });
 
   test("forbids completeness and invented-emphasis meta claims", () => {
@@ -188,19 +195,16 @@ describe("buildConceptUserPrompt", () => {
   });
 
   /**
-   * The maps URL is allowlisted as an href, not as an image source. Listing it
-   * under APPROVED IMAGE URLS would invite the model to render it as a photo.
+   * Maps is identity only. Offering it as a permitted link invites a
+   * directions button that cannot work in the sandbox.
    */
-  test("keeps the Google Maps URL out of the image list", () => {
+  test("does not offer the Google Maps URL as a link", () => {
     const mapsUrl = "https://maps.google.com/?cid=42";
     const prompt = buildConceptUserPrompt(
       briefFor({ googleMapsUrl: mapsUrl, photoUrls: [PHOTOS[0]] }),
     );
-    const imageSection = prompt.slice(prompt.indexOf("## APPROVED IMAGE URLS"));
-    expect(imageSection).not.toContain(mapsUrl);
-    expect(prompt).toContain(
-      `Google Maps URL (the only permitted external link): ${mapsUrl}`,
-    );
+    expect(prompt).not.toContain(mapsUrl);
+    expect(prompt).not.toContain("permitted external link");
   });
 
   test("states when no phone number is verified", () => {

@@ -3,7 +3,10 @@ import { notFound } from "next/navigation";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { ConceptViewTracker } from "@/components/concepts/ConceptViewTracker";
-import { CONCEPT_IFRAME_SANDBOX } from "@/lib/concepts/sandbox";
+import {
+  CONCEPT_IFRAME_SANDBOX,
+  neuterConceptHrefs,
+} from "@/lib/concepts/sandbox";
 
 /**
  * The unlisted concept preview a Facebook lead actually opens.
@@ -17,14 +20,11 @@ import { CONCEPT_IFRAME_SANDBOX } from "@/lib/concepts/sandbox";
  * authentication cookies, storage, or any network API — the boundary holds
  * without a second domain.
  *
- * The one sandbox token granted is `allow-top-navigation-by-user-activation`.
- * Without it a `tel:` link inside the frame silently does nothing in several
- * browsers, and the call button is the entire conversion path on these pages.
- * It permits navigation only in response to a real tap, scripts still cannot
- * run, and every `href` in the document has already been restricted by
- * `validateConceptHtml` to `tel:`, `#anchor`, or one allowlisted maps URL. The
- * trusted bar below also carries its own call button, so the conversion path
- * works even if an in-app browser blocks the in-frame link anyway.
+ * No sandbox tokens are granted. Concept CTAs are dummy controls — they look
+ * like buttons so the owner can judge the layout, but they must not call,
+ * scroll, or leave the page. `validateConceptHtml` already rejects every `href`
+ * other than `#`, and `neuterConceptHrefs` rewrites leftover live links in
+ * already-published documents.
  *
  * ## If iOS sizing proves unacceptable
  *
@@ -62,7 +62,7 @@ export async function generateMetadata({
   if (!concept) return { robots: { index: false, follow: false } };
 
   const title = `${concept.businessName} — Website Concept`;
-  const description = `An unlisted website concept prepared for ${concept.businessName}. Not a live website.`;
+  const description = `An early homepage concept for ${concept.businessName}. Not the finished website.`;
 
   return {
     // Absolute, so the root layout's "| Acadiana Web Design" template does not
@@ -113,34 +113,28 @@ export default async function ConceptPreviewPage({
         frame — which is what makes putting someone else's business name and
         logo on a page we wrote defensible.
       */}
-      <header className="flex flex-none items-center gap-3 px-3 py-2 text-neutral-300 sm:px-4">
-        <p className="min-w-0 flex-1 truncate text-[11px] leading-tight sm:text-xs">
-          Website concept for{" "}
+      <header className="flex flex-none items-start px-3 py-2 text-neutral-300 sm:px-4">
+        <p className="min-w-0 flex-1 text-[11px] leading-snug sm:text-xs">
+          Concept for{" "}
           <span className="font-semibold text-white">
             {concept.businessName}
           </span>
-          <span className="text-neutral-400"> — not a live site</span>
-          <span className="hidden text-neutral-500 sm:inline">
+          <span className="text-neutral-400">
             {" "}
-            · built by Acadiana Web Design
+            — a direction sketch, not the finished website
+          </span>
+          <span className="mt-0.5 block text-neutral-500">
+            Buttons are mockups. The live site will have more pages and a custom
+            design.
           </span>
         </p>
-
-        {concept.phone ? (
-          <a
-            href={`tel:${concept.phone.replace(/[^\d+]/g, "")}`}
-            className="flex-none rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-neutral-900 sm:text-xs"
-          >
-            Call
-          </a>
-        ) : null}
       </header>
 
       <iframe
         // Shared with the admin review card so what Layken approves renders
         // under exactly the restrictions the prospect gets.
         sandbox={CONCEPT_IFRAME_SANDBOX}
-        srcDoc={concept.html}
+        srcDoc={neuterConceptHrefs(concept.html)}
         title={`${concept.businessName} website concept`}
         referrerPolicy="no-referrer"
         className="min-h-0 w-full flex-1 border-0 bg-white"

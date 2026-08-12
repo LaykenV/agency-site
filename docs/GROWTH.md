@@ -151,11 +151,13 @@ Active need:
 
 Preview handoff:
 
-> I put together the website concept we talked about using the information and
-> photos I had for [business]: [preview URL]
+> I mocked up a homepage concept for [business] from the photos and info I
+> had: [preview URL]
 >
-> Take a look when you have a minute. If you like the direction, we can adjust
-> anything you want and talk about getting it live.
+> It's just a sketch so you can see a direction — not the finished site.
+> Buttons don't do anything, and the real build will have more pages and a
+> tighter design. If you like the vibe we can keep that look; if not, we
+> start from wherever you want.
 
 `/admin/marketing` produces this draft with the link already filled in — the
 Copy Messenger Draft action. It is always pasted and sent by hand; nothing in

@@ -67,7 +67,8 @@ export type ConceptBrief = {
    */
   phone?: string;
   /**
-   * Directions CTA target. Allowlisted as the one permitted external href.
+   * Confirmed Google Maps URL for the matched place. Identity only — it is
+   * never a permitted href. Concept CTAs are dummy controls.
    *
    * Built from the confirmed place ID — the one Places field Google's policy
    * exempts from its retention limits — not from a stored `googleMapsUri`.

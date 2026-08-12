@@ -38,10 +38,10 @@ ${body}
 }
 
 const baseline = validDocument(`<main>
-<p>Residential and move-out cleaning in Youngsville, LA.</p>
+<p>Residential and move-out cleaning in Youngsville, LA. Call (337) 384-2911.</p>
 <img src="${PHOTO_URL}" alt="Cleaning crew at work" width="800" height="600">
-<a href="tel:+13373842911">Call (337) 384-2911</a>
-<a href="#services">Services</a>
+<a href="#">Call (337) 384-2911</a>
+<span>See services</span>
 </main>`);
 
 function violationsFor(html: string, override?: Partial<ConceptBrief>) {
@@ -174,11 +174,46 @@ describe("validateConceptHtml — self-containment", () => {
 
   test("rejects a target attribute", () => {
     const html = validDocument(
-      '<main><a href="#services" target="_blank">Services</a></main>',
+      '<main><a href="#" target="_blank">Services</a></main>',
     );
     expect(violationsFor(html)).toContain(
-      "Contains a target attribute; links must navigate in place.",
+      "Contains a target attribute; concept links must be dummy.",
     );
+  });
+
+  test("accepts a dummy href=\"#\" CTA", () => {
+    const html = validDocument('<main><a href="#">Get a quote</a></main>');
+    expect(violationsFor(html)).toEqual([]);
+  });
+
+  test("rejects a tel: href even when it matches the verified phone", () => {
+    const html = validDocument(
+      '<main><a href="tel:+13373842911">Call (337) 384-2911</a></main>',
+    );
+    expect(
+      violationsFor(html).some((v) => v.includes("live link")),
+    ).toBe(true);
+  });
+
+  test("rejects a section-anchor href", () => {
+    const html = validDocument(
+      '<main><a href="#services">See services</a></main>',
+    );
+    expect(
+      violationsFor(html).some((v) => v.includes('href="#services"') || v.includes("#services")),
+    ).toBe(true);
+  });
+
+  test("rejects an allowlisted maps URL used as a link", () => {
+    const mapsUrl = "https://maps.google.test/?cid=1";
+    const html = validDocument(
+      `<main><a href="${mapsUrl}">Directions</a></main>`,
+    );
+    expect(
+      violationsFor(html, { googleMapsUrl: mapsUrl }).some((v) =>
+        v.includes("live link"),
+      ),
+    ).toBe(true);
   });
 
   test("rejects an unverified mailto: link", () => {
@@ -246,11 +281,8 @@ describe("validateConceptHtml — factual claims", () => {
   });
 
   test("rejects a phone number that is not the verified one", () => {
-    const html = validDocument(
-      '<main><a href="tel:+13375550000">Call (337) 555-0000</a></main>',
-    );
+    const html = validDocument("<main><p>Call (337) 555-0000</p></main>");
     const violations = violationsFor(html);
-    expect(violations.some((v) => v.includes("does not match"))).toBe(true);
     expect(violations.some((v) => v.includes("not the verified number"))).toBe(
       true,
     );
@@ -258,9 +290,6 @@ describe("validateConceptHtml — factual claims", () => {
 
   test("rejects any phone number when the brief has none", () => {
     const violations = violationsFor(baseline, { phone: undefined });
-    expect(
-      violations.some((v) => v.includes("the brief has no phone number")),
-    ).toBe(true);
     expect(violations.some((v) => v.includes("but the brief has none"))).toBe(
       true,
     );
@@ -449,7 +478,7 @@ img{display:block;width:100%;height:auto}
   <p style="letter-spacing:.18em;font-size:.75rem;text-transform:uppercase">Shay's Cleaning Services</p>
   <h1>Homes that feel cared for, not just cleaned.</h1>
   <p>Residential and move-out cleaning across Youngsville and Lafayette Parish.</p>
-  <a class="call" href="tel:+13373842911">Call (337) 384-2911</a>
+  <a class="call" href="#">Call (337) 384-2911</a>
 </header>
 <hr class="rule">
 <section class="band wrap" id="services">
@@ -472,7 +501,7 @@ img{display:block;width:100%;height:auto}
 </section>
 <footer class="band wrap">
   <p>Serving Youngsville, LA</p>
-  <a class="call" href="tel:+13373842911">Call (337) 384-2911</a>
+  <a class="call" href="#">Call (337) 384-2911</a>
 </footer>
 </body>
 </html>`;

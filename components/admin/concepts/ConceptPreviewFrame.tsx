@@ -1,7 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CONCEPT_IFRAME_SANDBOX } from "@/lib/concepts/sandbox";
+import {
+  CONCEPT_IFRAME_SANDBOX,
+  neuterConceptHrefs,
+} from "@/lib/concepts/sandbox";
 import { cn } from "@/lib/utils";
 
 /**
@@ -92,10 +95,10 @@ export function ConceptPreviewFrame({
         style={{ height: device.height * scale }}
       >
         <iframe
-          // Identical to the recipient-facing sandbox, so this review reflects
-          // what the prospect will actually be able to tap.
+          // Identical to the recipient-facing sandbox and href rewrite, so this
+          // review reflects what the prospect will actually see.
           sandbox={CONCEPT_IFRAME_SANDBOX}
-          srcDoc={html}
+          srcDoc={neuterConceptHrefs(html)}
           title={`${businessName} concept at ${device.width}px`}
           referrerPolicy="no-referrer"
           className="border-0 bg-white"

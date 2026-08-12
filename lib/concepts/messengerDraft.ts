@@ -29,17 +29,17 @@ export function conceptPreviewUrl(token: string): string {
 /**
  * The default handoff message.
  *
- * Deliberately low-pressure and honest about provenance: it says the concept
- * was built from the information and photos already on hand, which is exactly
- * what happened, and it names adjustment rather than purchase as the next step.
+ * Deliberately low-pressure and honest about what the link is: a direction
+ * sketch built from the information and photos already on hand, not the
+ * finished website. The next step is a conversation, not a purchase.
  */
 export function buildMessengerDraft(input: {
   businessName: string;
   token: string;
 }): string {
   return [
-    `I put together the website concept we talked about using the information and photos I had for ${input.businessName}: ${conceptPreviewUrl(input.token)}`,
+    `I mocked up a homepage concept for ${input.businessName} from the photos and info I had: ${conceptPreviewUrl(input.token)}`,
     "",
-    "Take a look when you have a minute. If you like the direction, we can adjust anything you want and talk about getting it live.",
+    "It's just a sketch so you can see a direction — not the finished site. Buttons don't do anything, and the real build will have more pages and a tighter design. If you like the vibe we can keep that look; if not, we start from wherever you want.",
   ].join("\n");
 }
