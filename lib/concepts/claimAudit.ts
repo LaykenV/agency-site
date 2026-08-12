@@ -28,7 +28,7 @@
 
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 
-export const CLAIM_AUDIT_PROMPT_VERSION = "2026-08-11.2";
+export const CLAIM_AUDIT_PROMPT_VERSION = "2026-08-12.1";
 
 /** Refuse an implausibly long audit input instead of silently ignoring its end. */
 export const CLAIM_AUDIT_MAX_PAGE_CHARS = 32_000;
@@ -96,8 +96,11 @@ export function buildClaimAuditSystemPrompt(): string {
     "- the concept notice and anything about the page being a draft or a preview; and",
     "- pure sales voice with nothing checkable in it, such as work you can rely on.",
     "",
-    "`supported` is true only when the BRIEF states the same thing.",
-    "Mark it false when the page states something the brief does not contain, makes a brief fact stronger, more specific, or more numeric than the brief does, or turns a service into a promise about outcome or timing.",
+    "`supported` is true when a reasonable reader would understand the page as making the same practical claim as the BRIEF.",
+    "Allow ordinary grammatical paraphrase, concise marketing headings, and grouping independently supported facts in one section or sentence. For example, BRIEF wording like 'reliable services and lasting results' supports a heading like 'Built for lasting results'; separately listed inspections and exterior services may be described as offered alongside each other.",
+    "Do not fail a claim merely because the page uses a different subject, active voice, a shorter label, or non-quantified marketing framing. This audit is a material factual guardrail, not a verbatim-copy checker.",
+    "Mark it false when the page adds a materially new or stronger checkable fact: a service, credential, number, price, discount, guarantee, warranty, availability or response-time promise, location or service area, years of experience, testimonial, outcome promise, or an exhaustive statement such as 'these are the only services'.",
+    "Also mark it false when it turns a supported service into a materially different bundle, prerequisite, guarantee, outcome, or timing promise.",
     "A superlative is supported only if the brief contains that superlative.",
     "",
     "`reason` is one short sentence, and is required whenever supported is false: say what the page claims and what the brief actually contains.",

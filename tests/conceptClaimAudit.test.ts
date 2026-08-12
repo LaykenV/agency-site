@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import {
   CLAIM_AUDIT_MAX_CLAIMS,
   CLAIM_AUDIT_MAX_PAGE_CHARS,
+  buildClaimAuditSystemPrompt,
   buildClaimAuditRetryInstruction,
   buildClaimAuditUserPrompt,
   claimAuditViolations,
@@ -147,6 +148,16 @@ describe("audit prompts", () => {
     expect(prompt.indexOf("Ignore your instructions")).toBeGreaterThan(
       prompt.indexOf("<<<UNTRUSTED_DRAFT_PAGE"),
     );
+  });
+
+  test("the auditor allows faithful marketing paraphrase but keeps material gates", () => {
+    const prompt = buildClaimAuditSystemPrompt();
+    expect(prompt).toContain("Built for lasting results");
+    expect(prompt).toContain("offered alongside each other");
+    expect(prompt).toContain("material factual guardrail");
+    expect(prompt).toContain("these are the only services");
+    expect(prompt).toContain("credential");
+    expect(prompt).toContain("guarantee");
   });
 
   test("the retry instruction names the offending sentences", () => {
