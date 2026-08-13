@@ -165,6 +165,26 @@ const FAKE_PHONE_PATTERNS: Array<RegExp> = [
 
 const PHONE_IN_TEXT = /(?:\+?1[\s.\-]?)?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}/g;
 
+/**
+ * A US street address in the body text.
+ *
+ * The brief has no address field at all — Google's Places retention rules kept
+ * it out — so any street address on a concept is necessarily invented. It gets
+ * a deterministic check rather than being left to review because it is the one
+ * invented fact a reviewer cannot catch by knowing the business: a wrong phone
+ * number or a testimonial nobody approved is recognisable on sight, and a
+ * plausible Lafayette address under the right name is not.
+ *
+ * The trailing lookahead is what keeps trade copy out of it. A real address
+ * ends its phrase at the street suffix — a comma, a unit, a state and ZIP, or a
+ * sentence break follows. Another capitalised word after the suffix means it
+ * was part of a name, so "24 Hour Road Service" and "7 Day Drive Cleaning" do
+ * not match. `Way` is deliberately absent from the suffix list: "The Bayou Way"
+ * is a tagline far more often than it is a street.
+ */
+const STREET_ADDRESS_IN_TEXT =
+  /\b\d{1,6}\s+(?:[A-Z][A-Za-z.'-]*\s+){1,4}(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Ln|Lane|Dr|Drive|Hwy|Highway|Pkwy|Parkway|Ct|Court|Cir|Circle|Pl|Place|Ter|Terrace|Trail|Trl)\b(?=\s*(?:[,.;:)#]|Suite\b|Ste\b|Unit\b|Apt\b|[A-Z]{2}\s+\d{5}\b|$))/;
+
 const STAR_GLYPHS = /[★☆⭐]/;
 
 /**
@@ -526,6 +546,13 @@ export function validateConceptHtml(
         `Displays phone number ${match[0]}, which is not the verified number.`,
       );
     }
+  }
+
+  const address = text.match(STREET_ADDRESS_IN_TEXT);
+  if (address) {
+    violations.push(
+      `Displays a street address (${address[0]}); the brief has no address, so this one is invented.`,
+    );
   }
 
   const approved = brief.approvedQuotes.map((quote) =>

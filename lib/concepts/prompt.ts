@@ -26,7 +26,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-13.3";
+export const CONCEPT_PROMPT_VERSION = "2026-08-13.4";
 
 function imageOrientation(width?: number, height?: number): string | undefined {
   if (!width || !height) return undefined;
@@ -116,7 +116,9 @@ Follow every rule. The validator checks many of them and rejects unsafe output.
 - NO external requests of any kind: no \`@import\`, no \`@font-face\`, no Google Fonts, no icon fonts, no analytics, no external images.
 - NO \`target\` attribute on any element.
 - NO \`mailto:\` links. No email address is verified for this business.
-- Images: ONLY the exact URLs given in the APPROVED IMAGE URLS list, used verbatim. If that list is empty, the page contains no \`<img>\` at all and no CSS \`url()\`. Inline \`<svg>\` you draw yourself is allowed; \`data:image/svg+xml\` URLs are not.
+- Images: ONLY the exact URLs given in the APPROVED IMAGE URLS list, used verbatim. If that list is empty, the page contains no \`<img>\` at all and no CSS \`url()\`. \`data:image/svg+xml\` URLs are not allowed.
+- Inline \`<svg>\` is for simple geometric icons only: a square \`viewBox\`, \`fill="none"\`, \`stroke="currentColor"\`, \`stroke-width="2"\`, round caps and joins, and roughly six or fewer \`<line>\`, \`<circle>\`, \`<rect>\`, \`<polyline>\`, or short \`<path>\` shapes. If an icon needs more than that to read, drop it and use a text label instead.
+- Do NOT draw illustrations, scenes, mascots, badges, seals, crests, monograms, decorative flourishes, or rating stars. Never redraw the business's logo, a photograph, a vehicle, a building, a tool, or a person as vector art. A clumsy hand-drawn graphic makes the page look cheaper than the empty space it was filling.
 - Every CTA is a dummy. No \`href\` attribute on any element. No \`<a>\`, no \`tel:\`, no \`#\` or \`#section\`, no Google Maps URLs. Buttons may look real so the owner can see the layout; they must not be links. A tap must do nothing.
 - Required in \`<head>\`: \`<meta charset="utf-8">\`, \`<meta name="viewport" content="width=device-width, initial-scale=1">\`, and a \`<title>\` containing the business name.
 - Fonts must be system or OS-bundled stacks only. Choose the stack yourself and end it with a generic family so the design degrades deliberately across iOS and Android.
@@ -258,7 +260,7 @@ export function buildConceptUserPrompt(brief: ConceptBrief): string {
   lines.push("");
   if (allowlist.length === 0) {
     lines.push(
-      "None. This page must contain no <img> element and no CSS url(). Carry it entirely with typography, colour, layout, and inline <svg> you draw yourself.",
+      "None. This page must contain no <img> element and no CSS url(). Carry it entirely with typography, colour, layout, and space. Inline <svg> stays inside the simple-icon rule — with no photography the temptation is to fill the gap with drawn artwork, and drawn artwork is exactly what makes a page look cheap. Use type, colour, and shape instead.",
     );
   } else {
     const notes = new Map(

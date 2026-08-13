@@ -187,7 +187,7 @@ describe("validateConceptHtml — self-containment", () => {
     expect(violationsFor(html)).toEqual([]);
   });
 
-  test("rejects href=\"#\" because it navigates the srcDoc frame to the preview", () => {
+  test('rejects href="#" because it navigates the srcDoc frame to the preview', () => {
     const html = validDocument('<main><a href="#">Get a quote</a></main>');
     expect(violationsFor(html).some((v) => v.includes("href"))).toBe(true);
   });
@@ -204,7 +204,9 @@ describe("validateConceptHtml — self-containment", () => {
       '<main><a href="#services">See services</a></main>',
     );
     expect(
-      violationsFor(html).some((v) => v.includes('href="#services"') || v.includes("#services")),
+      violationsFor(html).some(
+        (v) => v.includes('href="#services"') || v.includes("#services"),
+      ),
     ).toBe(true);
   });
 
@@ -257,12 +259,18 @@ describe("validateConceptHtml — self-containment", () => {
    * iOS browser these concepts are actually opened in.
    */
   test("rejects overflow-x: hidden and accepts overflow-x: clip", () => {
-    const hidden = baseline.replace("body{margin:0", "body{overflow-x:hidden;margin:0");
+    const hidden = baseline.replace(
+      "body{margin:0",
+      "body{overflow-x:hidden;margin:0",
+    );
     expect(
       violationsFor(hidden).some((v) => v.includes("overflow-x: clip")),
     ).toBe(true);
 
-    const clip = baseline.replace("body{margin:0", "body{overflow-x:clip;margin:0");
+    const clip = baseline.replace(
+      "body{margin:0",
+      "body{overflow-x:clip;margin:0",
+    );
     expect(violationsFor(clip)).toEqual([]);
   });
 
@@ -308,6 +316,52 @@ describe("validateConceptHtml — factual claims", () => {
         v.includes("fictional phone number"),
       ),
     ).toBe(true);
+  });
+
+  test("rejects an invented street address", () => {
+    const html = validDocument(
+      "<main><p>Visit us at 1234 Bayou Rd, Lafayette, LA 70501.</p></main>",
+    );
+    expect(violationsFor(html).some((v) => v.includes("street address"))).toBe(
+      true,
+    );
+  });
+
+  test("rejects a street address that ends the sentence", () => {
+    const html = validDocument(
+      "<main><p>Our shop is on 400 Verot School Road.</p></main>",
+    );
+    expect(violationsFor(html).some((v) => v.includes("street address"))).toBe(
+      true,
+    );
+  });
+
+  test("rejects a street address carrying a suite number", () => {
+    const html = validDocument(
+      "<main><p>Drop off at 88 Ambassador Caffery Pkwy Suite 200 anytime.</p></main>",
+    );
+    expect(violationsFor(html).some((v) => v.includes("street address"))).toBe(
+      true,
+    );
+  });
+
+  // The suffix words are ordinary trade vocabulary. A false positive here costs
+  // a regeneration on a page that was fine, so the phrases most likely to
+  // collide are pinned.
+  test("accepts trade copy that ends in a street-suffix word", () => {
+    for (const copy of [
+      "24 Hour Road Service across Lafayette Parish.",
+      "7 Day Drive Cleaning for busy families.",
+      "3 Room Deep Clean Court Special this month.",
+      "Ask about our 2 Story Place Cleaning package.",
+    ]) {
+      const violations = violationsFor(
+        validDocument(`<main><p>${copy}</p></main>`),
+      );
+      expect(violations.filter((v) => v.includes("street address"))).toEqual(
+        [],
+      );
+    }
   });
 
   test("rejects a testimonial when no quotes were approved", () => {
