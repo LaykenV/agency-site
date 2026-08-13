@@ -261,7 +261,7 @@ homepage concept:
 4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at high
+6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at low
    reasoning. The request includes the approved logo and photographs as vision
    input plus their pixel sizes, each attachment labelled with the exact
    allowlisted URL to use for it. The model invents the visual system; there is
@@ -343,19 +343,18 @@ that produced it, so drafts from any of the three can still be told apart after
 the fact.
 
 Kimi K3's effort ladder is `low`, `high`, `max`, with no `medium`, and reasoning
-is enabled by default at `max`. Effort is therefore sent explicitly. It shipped
-at `low` and was raised to `high` on 2026-08-12 after real concepts followed the
-rules but made weak visual choices. `max` is the remaining step and is
-deliberately not taken. What would justify stepping back down is
-`finish_reason: "length"` against the 32k output cap, which surfaces as an
-explicit truncation error rather than a quietly worse page.
+is enabled by default at `max`. Effort is therefore sent explicitly. Generation
+uses `low` for a live latency, cost, and quality comparison. The prompt version
+was bumped with the setting so these drafts remain distinguishable from earlier
+high-effort runs. A `finish_reason: "length"` against the 32k output cap still
+surfaces as an explicit truncation error rather than a quietly incomplete page.
 
-One OpenRouter attempt may run for seven minutes. The entire Node action,
-including image preparation, validation, and the optional HTML repair, has a
-nine-minute budget. A repair receives only the time left in that shared budget.
-This leaves one minute before Convex's ten-minute Node action limit so the action
-can save a clean failure instead of being killed while the concept still says
-`generating`.
+Generation makes exactly one OpenRouter request, which may run for nine minutes.
+The entire Node action, including image preparation and validation, has a
+nine-and-a-half-minute budget. This leaves thirty seconds before Convex's
+ten-minute Node action limit so the action can save a clean failure instead of
+being killed while the concept still says `generating`. A validation failure is
+stored and shown on the admin card; it does not trigger another provider call.
 
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends
@@ -555,14 +554,14 @@ supplied logo must appear at least once, and no single approved photo may appear
 more than twice.
 
 There is no second-model claim audit after those checks pass. A concept preview
-is a sales sketch: the prompt still tells Muse not to invent facts, but an
+is a sales sketch: the prompt still tells Kimi not to invent facts, but an
 unsupported marketing flourish does not fail the draft. Deterministic
-violations share **one** repair budget: a run makes at most two generations
-total, and the repair is charged against the same daily ceiling as the first.
-Whichever failure ends the run is recorded in `generationFailure` so the admin
-card can distinguish HTML validation, a provider error, and rate limiting. Older
-rows may still carry `claims_unsupported` or `audit_unreadable` from the retired
-Luna audit. A failed draft is stored and shown, never published automatically.
+violations do not trigger a repair request. The original failed draft and its
+violations are stored and shown so the reviewer can see what the model got
+wrong. The failure is recorded in `generationFailure` so the admin card can
+distinguish HTML validation, a provider error, and rate limiting. Older rows may
+still carry `claims_unsupported` or `audit_unreadable` from the retired Luna
+audit. A failed draft is never published automatically.
 `publish` re-runs the deterministic validator server-side regardless of the
 stored status. The only required human review after analysis is the finished
 page before **Publish**.

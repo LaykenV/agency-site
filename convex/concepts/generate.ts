@@ -11,15 +11,11 @@ import { canUsePackItemAsPageImagery } from "../../lib/concepts/facebookPack";
 import { parseImageDimensions } from "../../lib/concepts/imageDimensions";
 import {
   CONCEPT_PROMPT_VERSION,
-  buildConceptRepairUserPrompt,
   buildConceptSystemPrompt,
   buildConceptUserPrompt,
 } from "../../lib/concepts/prompt";
 import { detectSupportedImageMime } from "../../lib/concepts/remoteImage";
-import {
-  buildHtmlRepairInstruction,
-  validateConceptHtml,
-} from "../../lib/concepts/validateConceptHtml";
+import { validateConceptHtml } from "../../lib/concepts/validateConceptHtml";
 import {
   isCurrentGeneration,
   type ConceptGenerationFailure,
@@ -91,36 +87,22 @@ const TEMPERATURE = 0.7;
  * are billed against `max_tokens`, and a maximum-effort trace on a long
  * multimodal brief can spend the output budget before the document starts.
  *
- * `high` is based on judgment rather than a benchmark. This started at `low`
- * and was raised on 2026-08-12 after real concepts followed the rules but made
- * weak visual choices. `max` is the remaining step and is deliberately not
- * taken because it can spend the whole budget before the document starts.
- *
- * What would justify stepping back down is `finish_reason: "length"` showing
- * up, which surfaces as the truncation error in `callOpenRouter` rather than
- * as a quietly worse page.
+ * This is set to `low` for a live quality and latency test. The prompt and
+ * validator already carry the requirements, and each concept records its model
+ * and prompt version so the resulting pages can be compared with earlier runs.
  */
-const REASONING_EFFORT = "high" as const;
+const REASONING_EFFORT = "low" as const;
 
-/** Seven minutes for one Kimi response, including its hidden reasoning. */
-const PROVIDER_ATTEMPT_TIMEOUT_MS = 420_000;
+/** Nine minutes for the one Kimi response, including its hidden reasoning. */
+const PROVIDER_REQUEST_TIMEOUT_MS = 540_000;
 
 /**
  * Convex Node actions stop after ten minutes. All preparation, generation,
- * validation, and an optional repair share nine minutes, leaving one minute to
- * record a clean failure instead of letting Convex kill the action mid-save.
+ * and validation share nine and a half minutes. The remaining thirty seconds
+ * let the action save a clean failure instead of dying while the concept still
+ * says `generating`.
  */
-const GENERATION_RUN_BUDGET_MS = 540_000;
-
-/**
- * Every paid call in one generation run shares this budget.
- *
- * Two attempts total. A first draft that fails the deterministic HTML
- * validator gets one charged repair. There is no post-generation claim audit:
- * a concept preview is a sales sketch, and the human review card is the gate
- * before anyone else sees it.
- */
-const MAX_GENERATION_ATTEMPTS = 2;
+const GENERATION_RUN_BUDGET_MS = 570_000;
 
 /**
  * Encoded image payload attached to one generate request.
@@ -499,23 +481,6 @@ function buildUserContent(
   return content;
 }
 
-/**
- * Take a token from the daily ceiling for the one repair attempt.
- *
- * A repair is a second paid generation, so it is charged like one. Refusing it
- * leaves the failed draft on screen with its reason, which is the honest outcome
- * when the budget is spent.
- */
-async function reserveRepair(
-  ctx: ActionCtx,
-  conceptId: Id<"website_concepts">,
-): Promise<boolean> {
-  return await ctx.runMutation(
-    internal.concepts.internal.reserveGenerationRetry,
-    { conceptId },
-  );
-}
-
 /** Sort a thrown provider failure into something the admin card can act on. */
 function classifyThrownFailure(message: string): ConceptGenerationFailure {
   return /rate[- ]?limit|429|too many requests|temporar(?:y|ily)|overload|unavailable|503|529/i.test(
@@ -533,7 +498,7 @@ export const runGeneration = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     const generationDeadline = Date.now() + GENERATION_RUN_BUDGET_MS;
-    let activeAttemptTimeoutMs = PROVIDER_ATTEMPT_TIMEOUT_MS;
+    let providerTimeoutMs = PROVIDER_REQUEST_TIMEOUT_MS;
     const concept: Doc<"website_concepts"> | null = await ctx.runQuery(
       internal.concepts.internal.getById,
       { conceptId: args.conceptId },
@@ -672,57 +637,22 @@ export const runGeneration = internalAction({
 
       const basePrompt = buildConceptUserPrompt(brief);
 
-      let html = "";
-      let violations: Array<string> = [];
-      let failure: ConceptGenerationFailure | undefined;
-      let correction = "";
-
-      // One shared budget. A first draft that fails the HTML validator spends
-      // the same single repair, so no run can produce a third generation. The
-      // repair receives both the exact failed document and the specific
-      // offending lines.
-      for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
-        const remainingRunMs = generationDeadline - Date.now();
-        if (remainingRunMs <= 0) {
-          throw new GenerationTimeoutError(GENERATION_RUN_BUDGET_MS);
-        }
-        activeAttemptTimeoutMs = Math.min(
-          PROVIDER_ATTEMPT_TIMEOUT_MS,
-          remainingRunMs,
-        );
-        const requestPrompt =
-          attempt === 1
-            ? basePrompt
-            : buildConceptRepairUserPrompt({
-                basePrompt,
-                previousHtml: html,
-                correction,
-              });
-        // Only the first attempt carries pixels. The repair edits a document
-        // the model already wrote and is told not to redesign it, so re-sending
-        // megabytes of base64 would buy nothing.
-        html = unwrapHtml(
-          await callOpenRouter(
-            buildConceptSystemPrompt(brief),
-            attempt === 1
-              ? buildUserContent(requestPrompt, attached)
-              : requestPrompt,
-            model,
-            activeAttemptTimeoutMs,
-          ),
-        );
-
-        violations = validateConceptHtml(html, brief).violations;
-        if (violations.length === 0) {
-          failure = undefined;
-          break;
-        }
-
-        failure = "html_invalid";
-        if (attempt === MAX_GENERATION_ATTEMPTS) break;
-        if (!(await reserveRepair(ctx, args.conceptId))) break;
-        correction = buildHtmlRepairInstruction(violations);
+      const remainingRunMs = generationDeadline - Date.now();
+      if (remainingRunMs <= 0) {
+        throw new GenerationTimeoutError(GENERATION_RUN_BUDGET_MS);
       }
+      providerTimeoutMs = Math.min(PROVIDER_REQUEST_TIMEOUT_MS, remainingRunMs);
+      const html = unwrapHtml(
+        await callOpenRouter(
+          buildConceptSystemPrompt(brief),
+          buildUserContent(basePrompt, attached),
+          model,
+          providerTimeoutMs,
+        ),
+      );
+      const violations = validateConceptHtml(html, brief).violations;
+      const failure: ConceptGenerationFailure | undefined =
+        violations.length > 0 ? "html_invalid" : undefined;
 
       await ctx.runMutation(internal.concepts.internal.saveGeneration, {
         conceptId: args.conceptId,
@@ -742,7 +672,7 @@ export const runGeneration = internalAction({
       const message = timedOut
         ? error instanceof GenerationTimeoutError
           ? error.message
-          : `The model did not respond within ${Math.max(1, Math.round(activeAttemptTimeoutMs / 1000))} seconds and the request was cancelled.`
+          : `The model did not respond within ${Math.max(1, Math.round(providerTimeoutMs / 1000))} seconds and the request was cancelled.`
         : error instanceof Error
           ? error.message
           : "Generation failed";

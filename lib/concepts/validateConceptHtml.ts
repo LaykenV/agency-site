@@ -365,8 +365,8 @@ export function validateConceptHtml(
   // actually overflows. It also turns the element into a scroll container,
   // which breaks `position: sticky` in iOS Safari — the exact browser these
   // concepts are opened in. `clip` contains the overflow without that effect,
-  // and the prompt asks for it by name, so a `hidden` here is worth the one
-  // repair it costs.
+  // and the prompt asks for it by name, so a `hidden` here is a hard failure
+  // worth surfacing to the reviewer.
   if (/overflow-x\s*:\s*hidden/i.test(html)) {
     violations.push(
       "Uses `overflow-x: hidden`. Use `overflow-x: clip` instead, and fix whatever is actually overflowing at 360px.",
@@ -573,30 +573,4 @@ export function validateConceptHtml(
   }
 
   return { ok: violations.length === 0, violations };
-}
-
-/**
- * The correction appended to the prompt for a deterministic-violation repair.
- *
- * These used to be terminal: an invalid draft was kept unrepaired, on the
- * reasoning that a validation failure is a prompt bug and the broken page is the
- * evidence for fixing it. The draft is still kept, but it is now worth one
- * repair first, because most of these violations are a single fixable slip — an
- * external font, a stray form, one unapproved phone number — and a concept that
- * fails for that reason is a page Layken cannot send today.
- *
- * The violations are quoted rather than the rules restated. The rules were
- * already in the prompt that produced them.
- */
-export function buildHtmlRepairInstruction(violations: Array<string>): string {
-  return [
-    "",
-    "## VALIDATION FAILURES — mandatory",
-    "",
-    "A previous draft of this page broke hard requirements. Produce the page again with every one of these fixed. Change nothing else about the design.",
-    "",
-    ...violations.map((violation) => `- ${violation}`),
-    "",
-    "Return the complete corrected document.",
-  ].join("\n");
 }

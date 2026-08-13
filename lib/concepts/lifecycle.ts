@@ -121,7 +121,7 @@ export function generationFailureHeadline(
     case "html_invalid":
       return `The draft broke ${violationCount} hard requirement${
         violationCount === 1 ? "" : "s"
-      } and the repair attempt did not fix it. The draft is kept below so you can see what it did.`;
+      }. The draft is kept below so you can see exactly what the model did.`;
     case "claims_unsupported":
       return `The finished page stated ${violationCount} thing${
         violationCount === 1 ? "" : "s"

@@ -163,25 +163,6 @@ export const queueGeneration = internalMutation({
 });
 
 /**
- * Take one more token from the daily ceiling for an HTML-repair retry.
- *
- * The retry happens inside a generation that already paid for itself, so it
- * would otherwise be invisible to the limiter. It returns false rather than
- * throwing: a refused retry is not an error, it just means the failed draft
- * is what Layken sees.
- */
-export const reserveGenerationRetry = internalMutation({
-  args: { conceptId: v.id("website_concepts") },
-  returns: v.boolean(),
-  handler: async (ctx) => {
-    const { ok } = await rateLimiter.limit(ctx, "conceptGenerateGlobalDaily", {
-      key: "global",
-    });
-    return ok;
-  },
-});
-
-/**
  * Admin guard usable from an action.
  *
  * Actions cannot read `ctx.db`, and `requireAdmin` needs a query context to

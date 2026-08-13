@@ -20,29 +20,30 @@ describe("generation wiring", () => {
     expect(source).not.toContain("audit_unreadable");
   });
 
-  test("HTML repair is one bounded, charged retry", () => {
-    expect(source).toContain("const MAX_GENERATION_ATTEMPTS = 2;");
-    expect(source).toContain("attempt <= MAX_GENERATION_ATTEMPTS");
-    expect(source).toContain("reserveGenerationRetry");
-    expect(source).toContain("buildConceptRepairUserPrompt");
-    expect(source).toContain("previousHtml: html");
-    expect(source).toContain("buildHtmlRepairInstruction");
-
-    const reservations = source.match(/reserveRepair\(ctx, args\.conceptId\)/g);
-    expect(reservations?.length).toBe(1);
+  test("makes one provider call and surfaces validator failures", () => {
+    expect(source).not.toContain("MAX_GENERATION_ATTEMPTS");
+    expect(source).not.toContain("reserveGenerationRetry");
+    expect(source).not.toContain("buildConceptRepairUserPrompt");
+    expect(source).not.toContain("buildHtmlRepairInstruction");
+    expect(source.match(/await callOpenRouter\(/g)).toHaveLength(1);
+    expect(source).toContain("validateConceptHtml(html, brief).violations");
+    expect(source).toContain(
+      'violations.length > 0 ? "html_invalid" : undefined',
+    );
   });
 
-  test("shares a nine-minute run budget across seven-minute provider attempts", () => {
-    expect(source).toContain("const PROVIDER_ATTEMPT_TIMEOUT_MS = 420_000;");
-    expect(source).toContain("const GENERATION_RUN_BUDGET_MS = 540_000;");
+  test("uses low reasoning with one nine-minute provider budget", () => {
+    expect(source).toContain('const REASONING_EFFORT = "low" as const;');
+    expect(source).toContain("const PROVIDER_REQUEST_TIMEOUT_MS = 540_000;");
+    expect(source).toContain("const GENERATION_RUN_BUDGET_MS = 570_000;");
     expect(source).toContain(
       "const generationDeadline = Date.now() + GENERATION_RUN_BUDGET_MS;",
     );
     expect(source).toContain("generationDeadline - Date.now()");
     expect(source).toContain(
-      "activeAttemptTimeoutMs = Math.min(\n          PROVIDER_ATTEMPT_TIMEOUT_MS,\n          remainingRunMs,",
+      "providerTimeoutMs = Math.min(PROVIDER_REQUEST_TIMEOUT_MS, remainingRunMs)",
     );
-    expect(source).toContain("model,\n            activeAttemptTimeoutMs,");
+    expect(source).toMatch(/model,\s+providerTimeoutMs,/);
   });
 });
 
