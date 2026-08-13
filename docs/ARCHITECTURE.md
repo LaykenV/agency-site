@@ -265,14 +265,32 @@ homepage concept:
    reasoning. The request includes the approved logo and photographs as vision
    input plus their pixel sizes, each attachment labelled with the exact
    allowlisted URL to use for it. The model invents the visual system; there is
-   no assigned page shape. Mobile is not part of what it invents — the prompt
-   carries hard 360px-first requirements, and the validator rejects
-   `overflow-x: hidden`.
+   no assigned page shape and no assigned lead image. Mobile is not part of what
+   it invents — the prompt carries hard 360px-first requirements, and the
+   validator rejects `overflow-x: hidden`.
 7. deterministic safety and HTML validation
 8. human review of the finished page, then publication at `/preview/<token>`
 
 There is no post-generation Luna claim audit. A concept is a sales sketch, and
 the review card is the remaining judgment of whether the page is worth sending.
+
+Placement belongs to the generator alone. `selectPackImagery` decides *which*
+photographs a page may use — screenshots excluded, `poor` quality dropped,
+quality then capture order ranking the rest — and nothing more. It used to
+promote the classifier's `hero` roleHint to the front of the list, which put a
+placement decision two models upstream of the one that can see the page and
+delivered it as list position, unlabelled and unreadable as anything but an
+instruction. `roleHint` is still classified and shown on the pack card; nothing
+consumes it. The generation prompt states outright that the order nominates no
+lead image and that no photograph has been chosen to run full-bleed.
+
+The prompt carries no desktop layout rule and no image height ceiling, which is
+a decision rather than an omission. `width: 100%; height: auto` on a 2048px-wide
+photo is 219px tall on a phone and 787px on a laptop; the phone is what the
+prospect opens from Messenger, and the wide viewport is mostly the reviewer's.
+Adding a second target would dilute the one instruction in that section doing
+the most work — that the phone is the real design target and desktop is the
+exception — so tall hero bands on a desktop review are expected, not a defect.
 
 The generator states no market of its own. `buildConceptSystemPrompt` takes the
 brief and names the business's region only from `locality`, the Places-derived

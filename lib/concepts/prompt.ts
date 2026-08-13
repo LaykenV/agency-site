@@ -29,7 +29,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-12.8";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.9";
 
 function imageOrientation(
   width?: number,
@@ -359,6 +359,9 @@ export function buildConceptUserPrompt(brief: ConceptBrief): string {
     );
     lines.push(
       "The photographs themselves are attached after this brief, each preceded by a line naming the exact URL to use for it. Look at them. You decide crop, order, scale, and which sections they carry. When you place one, use the URL given with that photograph — do not match them up by position. Do not invent other photographs. The size and description after each URL are facts about the file, not placement instructions — do not print them on the page.",
+    );
+    lines.push(
+      "Nothing in this list is a lead image. The order is how the files were collected, no photograph has been nominated for any position, and none of them has been chosen to run full-bleed. Which one opens the page — if any of them does — is your decision to make from looking at them.",
     );
     if (unseen.length > 0) {
       lines.push(

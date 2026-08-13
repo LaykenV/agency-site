@@ -517,7 +517,14 @@ describe("automatic visual selection", () => {
     });
   });
 
-  test("the model's hero hint wins, and the rest become the gallery", () => {
+  /**
+   * Selection picks which photographs a page may use, never where they go.
+   * A `hero` hint from the classifier is a placement decision made two models
+   * upstream of the one that can see the page, and it reached the generator as
+   * list position — which is exactly how a page ends up opening on a photo
+   * nobody chose to lead with.
+   */
+  test("the model's hero hint does not reorder the selection", () => {
     const selection = selectPackImagery([
       classified("logo1", "logo"),
       photo("p1", "good"),
@@ -525,11 +532,11 @@ describe("automatic visual selection", () => {
       photo("p3", "good"),
     ]);
     expect(selection.logoItemId).toBe("logo1");
-    expect(selection.heroItemId).toBe("p2");
-    expect(selection.galleryItemIds).toEqual(["p1", "p3"]);
+    expect(selection.heroItemId).toBe("p1");
+    expect(selection.galleryItemIds).toEqual(["p3", "p2"]);
   });
 
-  test("with no hint the best-quality photo leads", () => {
+  test("quality still ranks the photos", () => {
     const selection = selectPackImagery([
       photo("p1", "fair", undefined, 1),
       photo("p2", "good", undefined, 2),

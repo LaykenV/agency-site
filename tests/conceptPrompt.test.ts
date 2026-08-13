@@ -174,6 +174,20 @@ describe("buildConceptSystemPrompt", () => {
       const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
       expect(checklist).toContain("Read the page again at 360px wide");
     });
+
+    /**
+     * Deliberately no desktop rule here, and no image height ceiling. A
+     * concept generated on 2026-08-12 rendered a 2048×1152 photo 787px tall on
+     * a laptop and 219px tall on a phone, which is the same CSS behaving
+     * correctly at the viewport that matters. Adding "also check 1440px" to
+     * this section buys a better review experience for Layken at the cost of
+     * the absoluteness of the rule above it, and the phone is what the
+     * prospect opens.
+     */
+    test("states no desktop layout rule", () => {
+      expect(prompt).not.toContain("1440px.");
+      expect(prompt).not.toContain("height ceiling");
+    });
   });
 
   test("tells the model not to add its own concept disclaimer", () => {
@@ -244,6 +258,22 @@ describe("buildConceptUserPrompt", () => {
     );
     expect(prompt).toContain("each preceded by a line naming the exact URL");
     expect(prompt).toContain("do not match them up by position");
+  });
+
+  /**
+   * List position is the one channel an upstream placement decision can still
+   * reach the generator through: `role` is never printed, but being first in
+   * APPROVED IMAGE URLS reads as a nomination. `selectPackImagery` no longer
+   * promotes a `hero` hint, and this says so in the prompt as well, because a
+   * silent ordering rule is not something the model can infer.
+   */
+  test("states that list order nominates no lead image", () => {
+    const prompt = buildConceptUserPrompt(
+      briefFor({ photoUrls: [PHOTOS[0], PHOTOS[1], PHOTOS[2]] }),
+    );
+    expect(prompt).toContain("Nothing in this list is a lead image");
+    expect(prompt).toContain("no photograph has been nominated for any position");
+    expect(prompt).toContain("none of them has been chosen to run full-bleed");
   });
 
   /**

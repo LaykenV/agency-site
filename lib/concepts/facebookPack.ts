@@ -236,11 +236,18 @@ export function isPackFullyClassified(items: Array<PackItem>): boolean {
  * - `poor` quality is excluded outright. A concept with three sharp photos and
  *   no filler is more persuasive than one padded with a blurry truck, and a
  *   typographic page with no photos is an explicitly valid outcome here;
- * - the hero is the model's own `hero` hint when it gave one, otherwise the
- *   best-quality remaining photo, because a page needs a lead image more than
- *   it needs the hint honoured exactly; and
- * - capture order breaks every remaining tie, so re-running analysis on an
- *   unchanged pack selects the same images.
+ * - quality ranks the photos and capture order breaks every remaining tie, so
+ *   re-running analysis on an unchanged pack selects the same images.
+ *
+ * This picks *which* photographs a page may use. It does not pick where they
+ * go. `heroItemId` is the first of the selected photos and nothing more — the
+ * name is kept because it is a stored field, not because a lead image has been
+ * chosen. It used to prefer the classifier's `hero` roleHint, which made a
+ * placement decision two models upstream of the one that can see the page, and
+ * arrived at the generator as list position it had no way to read as anything
+ * but an instruction. The generation prompt now states outright that the list
+ * order nominates nothing, and this function is what makes that true.
+ * `roleHint` is still classified and stored; nothing consumes it.
  */
 export type PackImagerySelection = {
   logoItemId?: string;
@@ -270,9 +277,7 @@ export function selectPackImagery(
     .filter((item) => item.classification?.kind === "business_photo")
     .sort(byQuality);
 
-  const hero =
-    photos.find((item) => item.classification?.roleHint === "hero") ??
-    photos[0];
+  const hero = photos[0];
 
   return {
     logoItemId: logo?.id,
