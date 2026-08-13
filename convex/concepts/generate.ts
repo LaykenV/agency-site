@@ -102,15 +102,15 @@ const TEMPERATURE = 0.7;
  */
 const REASONING_EFFORT = "high" as const;
 
+/** Seven minutes for one Kimi response, including its hidden reasoning. */
+const PROVIDER_ATTEMPT_TIMEOUT_MS = 420_000;
+
 /**
- * A generation that has not returned in four minutes is not going to.
- *
- * Without this a stalled provider leaves the concept sitting in `generating`
- * until the Convex action itself times out, with no error to read and no way to
- * start again. `AbortSignal.timeout` turns that into a failure with a sentence
- * on it.
+ * Convex Node actions stop after ten minutes. All preparation, generation,
+ * validation, and an optional repair share nine minutes, leaving one minute to
+ * record a clean failure instead of letting Convex kill the action mid-save.
  */
-const REQUEST_TIMEOUT_MS = 240_000;
+const GENERATION_RUN_BUDGET_MS = 540_000;
 
 /**
  * Every paid call in one generation run shares this budget.
@@ -236,6 +236,7 @@ async function callOpenRouter(
   systemPrompt: string,
   userContent: string | Array<VisionContentPart>,
   model: string,
+  timeoutMs: number,
 ): Promise<string> {
   const response = await fetch(OPENROUTER_ENDPOINT, {
     method: "POST",
@@ -246,7 +247,7 @@ async function callOpenRouter(
       // dashboard traceable to this feature.
       ...OPENROUTER_ATTRIBUTION_HEADERS,
     },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify({
       model,
       temperature: TEMPERATURE,
@@ -348,6 +349,15 @@ async function callOpenRouter(
   }
 
   return content;
+}
+
+class GenerationTimeoutError extends Error {
+  constructor(timeoutMs: number) {
+    super(
+      `The generation did not finish within its ${Math.max(1, Math.round(timeoutMs / 1000))}-second run budget.`,
+    );
+    this.name = "GenerationTimeoutError";
+  }
 }
 
 /**
@@ -522,6 +532,8 @@ export const runGeneration = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const generationDeadline = Date.now() + GENERATION_RUN_BUDGET_MS;
+    let activeAttemptTimeoutMs = PROVIDER_ATTEMPT_TIMEOUT_MS;
     const concept: Doc<"website_concepts"> | null = await ctx.runQuery(
       internal.concepts.internal.getById,
       { conceptId: args.conceptId },
@@ -670,6 +682,14 @@ export const runGeneration = internalAction({
       // repair receives both the exact failed document and the specific
       // offending lines.
       for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+        const remainingRunMs = generationDeadline - Date.now();
+        if (remainingRunMs <= 0) {
+          throw new GenerationTimeoutError(GENERATION_RUN_BUDGET_MS);
+        }
+        activeAttemptTimeoutMs = Math.min(
+          PROVIDER_ATTEMPT_TIMEOUT_MS,
+          remainingRunMs,
+        );
         const requestPrompt =
           attempt === 1
             ? basePrompt
@@ -688,6 +708,7 @@ export const runGeneration = internalAction({
               ? buildUserContent(requestPrompt, attached)
               : requestPrompt,
             model,
+            activeAttemptTimeoutMs,
           ),
         );
 
@@ -714,14 +735,14 @@ export const runGeneration = internalAction({
         generationRequestId: args.generationRequestId,
       });
     } catch (error) {
-      // A timeout aborts the fetch, which surfaces as a DOMException rather
-      // than a provider message. Named here so the card does not report a
-      // four-minute stall as an unexplained failure.
       const timedOut =
-        error instanceof Error &&
-        (error.name === "TimeoutError" || error.name === "AbortError");
+        error instanceof GenerationTimeoutError ||
+        (error instanceof Error &&
+          (error.name === "TimeoutError" || error.name === "AbortError"));
       const message = timedOut
-        ? `The model did not respond within ${Math.round(REQUEST_TIMEOUT_MS / 1000)} seconds and the request was cancelled.`
+        ? error instanceof GenerationTimeoutError
+          ? error.message
+          : `The model did not respond within ${Math.max(1, Math.round(activeAttemptTimeoutMs / 1000))} seconds and the request was cancelled.`
         : error instanceof Error
           ? error.message
           : "Generation failed";

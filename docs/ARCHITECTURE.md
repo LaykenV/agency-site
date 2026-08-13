@@ -350,6 +350,13 @@ deliberately not taken. What would justify stepping back down is
 `finish_reason: "length"` against the 32k output cap, which surfaces as an
 explicit truncation error rather than a quietly worse page.
 
+One OpenRouter attempt may run for seven minutes. The entire Node action,
+including image preparation, validation, and the optional HTML repair, has a
+nine-minute budget. A repair receives only the time left in that shared budget.
+This leaves one minute before Convex's ten-minute Node action limit so the action
+can save a clean failure instead of being killed while the concept still says
+`generating`.
+
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends
 `provider: { data_collection: "deny", require_parameters: true }`. The first

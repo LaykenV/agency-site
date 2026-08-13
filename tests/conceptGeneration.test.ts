@@ -31,6 +31,19 @@ describe("generation wiring", () => {
     const reservations = source.match(/reserveRepair\(ctx, args\.conceptId\)/g);
     expect(reservations?.length).toBe(1);
   });
+
+  test("shares a nine-minute run budget across seven-minute provider attempts", () => {
+    expect(source).toContain("const PROVIDER_ATTEMPT_TIMEOUT_MS = 420_000;");
+    expect(source).toContain("const GENERATION_RUN_BUDGET_MS = 540_000;");
+    expect(source).toContain(
+      "const generationDeadline = Date.now() + GENERATION_RUN_BUDGET_MS;",
+    );
+    expect(source).toContain("generationDeadline - Date.now()");
+    expect(source).toContain(
+      "activeAttemptTimeoutMs = Math.min(\n          PROVIDER_ATTEMPT_TIMEOUT_MS,\n          remainingRunMs,",
+    );
+    expect(source).toContain("model,\n            activeAttemptTimeoutMs,");
+  });
 });
 
 describe("conceptDraftPassedValidation", () => {
