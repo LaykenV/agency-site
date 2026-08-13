@@ -97,7 +97,7 @@ const TEMPERATURE = 0.7;
  * is the first knob to try if pages come back thin — one step to `high`, with
  * an eye on `finish_reason: "length"`.
  */
-const REASONING_EFFORT = "low" as const;
+const REASONING_EFFORT = "high" as const;
 
 /**
  * A generation that has not returned in four minutes is not going to.
