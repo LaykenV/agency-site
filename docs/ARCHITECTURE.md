@@ -306,6 +306,11 @@ placement, or internal design exercise. Kimi chooses those from the business and
 its photographs. The final check rejects a direction that would still fit after
 the business name and photographs were swapped.
 
+The admin's optional Generation note is the one per-concept escape hatch. It is
+omitted from the prompt when blank. When filled, it can carry extra approved
+business context or a one-off design direction without adding that preference to
+every concept.
+
 The prompt states the render facts the model cannot infer from the HTML request.
 The document renders in a scrolling `srcDoc` iframe, so viewport units resolve
 to the frame and `position: fixed` is unreliable on iOS inside it. Mobile rules
@@ -535,7 +540,9 @@ page inside the frame.
 The trusted parent owns the concept notice, the page title, robots metadata,
 Open Graph tags, and view counting. Views are recorded from the browser rather
 than the server so Facebook's link-preview crawler does not register as the
-prospect's first open.
+prospect's first open. The shared render preparation also injects
+`<meta name="format-detection" content="telephone=no">`, preventing iOS from
+restyling verified plain-text phone numbers as blue links.
 
 `docs/plans/outreach-preview-engine.md` records the named fallback if nested
 iframe scrolling proves unacceptable on iOS: serve the document as the top-level

@@ -193,6 +193,25 @@ describe("buildConceptSystemPrompt", () => {
 });
 
 describe("buildConceptUserPrompt", () => {
+  test("adds the optional generation note only when supplied", () => {
+    const withoutNote = buildConceptUserPrompt(briefFor());
+    const withNote = buildConceptUserPrompt(
+      briefFor({
+        notes: "Keep the page restrained and lead with storm cleanup.",
+      }),
+    );
+
+    expect(withoutNote).not.toContain("## REVIEWER GENERATION NOTE");
+    expect(withNote).toContain("## REVIEWER GENERATION NOTE");
+    expect(withNote).toContain(
+      "Keep the page restrained and lead with storm cleanup.",
+    );
+    expect(withNote).toContain("Follow any design direction here");
+    expect(withNote).toContain(
+      "unless it conflicts with the hard requirements",
+    );
+  });
+
   test("declares an empty image allowlist explicitly", () => {
     const prompt = buildConceptUserPrompt(
       briefFor({ businessName: "Landry & Sons" }),

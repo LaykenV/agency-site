@@ -1246,7 +1246,7 @@ export function ConceptReviewCard({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="edit-notes">Notes</Label>
+            <Label htmlFor="edit-notes">Generation note (optional)</Label>
             <Textarea
               id="edit-notes"
               rows={5}
@@ -1254,7 +1254,12 @@ export function ConceptReviewCard({
               onChange={(event) =>
                 setDraft({ ...draft, notes: event.target.value })
               }
+              placeholder="Extra business context or a one-off design direction for this page."
             />
+            <p className="text-[11px] text-[var(--muted-foreground)]">
+              Added to the Kimi prompt only when filled. Saving a change clears
+              the current draft so the next generation uses it.
+            </p>
           </div>
 
           <QuotesEditor quotes={quotes} onChange={setQuotes} />

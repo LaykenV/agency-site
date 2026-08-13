@@ -26,7 +26,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-13.2";
+export const CONCEPT_PROMPT_VERSION = "2026-08-13.3";
 
 function imageOrientation(width?: number, height?: number): string | undefined {
   if (!width || !height) return undefined;
@@ -221,8 +221,10 @@ export function buildConceptUserPrompt(brief: ConceptBrief): string {
 
   if (brief.notes) {
     lines.push("");
+    lines.push("## REVIEWER GENERATION NOTE");
+    lines.push("");
     lines.push(
-      "Owner-supplied notes (services, slogan, differentiators, desired CTA). Treat this as the most authoritative source of voice and service detail:",
+      "This is trusted direction for this generation. Follow any design direction here unless it conflicts with the hard requirements. Treat factual business details here as approved and more authoritative than other sources:",
     );
     lines.push(brief.notes);
   }

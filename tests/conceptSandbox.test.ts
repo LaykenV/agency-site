@@ -40,5 +40,29 @@ describe("neuterConceptHrefs", () => {
     const once = neuterConceptHrefs("<head></head><a href='#'>X</a>");
     const twice = neuterConceptHrefs(once);
     expect(twice.match(/data-concept-inert/g)?.length).toBe(1);
+    expect(twice.match(/data-concept-telephone-format/g)?.length).toBe(1);
+  });
+
+  test("disables iOS automatic phone-link styling", () => {
+    const rendered = neuterConceptHrefs(
+      "<!doctype html><html><head><title>Test</title></head><body>(337) 384-2911</body></html>",
+    );
+
+    expect(rendered).toContain(
+      '<meta name="format-detection" content="telephone=no" data-concept-telephone-format>',
+    );
+    expect(rendered.indexOf("data-concept-telephone-format")).toBeLessThan(
+      rendered.indexOf("</head>"),
+    );
+  });
+
+  test("creates a head for the render guards when the document lacks one", () => {
+    const rendered = neuterConceptHrefs(
+      "<!doctype html><html><body>Call us</body></html>",
+    );
+
+    expect(rendered).toContain("<html><head>");
+    expect(rendered).toContain("data-concept-telephone-format");
+    expect(rendered).toContain("data-concept-inert");
   });
 });

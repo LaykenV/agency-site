@@ -154,14 +154,18 @@ export function ConceptIntakeForm({
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="concept-notes">Notes</Label>
+        <Label htmlFor="concept-notes">Generation note (optional)</Label>
         <Textarea
           id="concept-notes"
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
-          placeholder="Services, slogan, what makes them different, the CTA they want. This is the most influential field on the finished page."
+          placeholder="Extra business context or a one-off design direction for this page."
           rows={5}
         />
+        <p className="text-[11px] text-[var(--muted-foreground)]">
+          Added to the Kimi prompt only when filled. Use it for services, voice,
+          CTA, or a specific direction for this concept.
+        </p>
       </div>
 
       <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
