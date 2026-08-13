@@ -91,14 +91,10 @@ const TEMPERATURE = 0.7;
  * are billed against `max_tokens`, and a maximum-effort trace on a long
  * multimodal brief can spend the output budget before the document starts.
  *
- * `high` on judgment rather than a benchmark. This started at `low` and was
- * raised on 2026-08-12 after reading real concepts, because the prompt asks
- * for colour, type, layout, and a signature element to be settled before any
- * HTML is written and that work happens in the reasoning trace — starving it
- * produces a page that satisfies every rule and decides nothing. `max` is the
- * remaining step and is deliberately not taken: the gap between a good page
- * and a described one closed here, and the risk it trades against is the whole
- * budget going to the trace.
+ * `high` is based on judgment rather than a benchmark. This started at `low`
+ * and was raised on 2026-08-12 after real concepts followed the rules but made
+ * weak visual choices. `max` is the remaining step and is deliberately not
+ * taken because it can spend the whole budget before the document starts.
  *
  * What would justify stepping back down is `finish_reason: "length"` showing
  * up, which surfaces as the truncation error in `callOpenRouter` rather than

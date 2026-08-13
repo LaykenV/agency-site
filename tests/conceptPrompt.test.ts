@@ -25,11 +25,6 @@ const PHOTOS = [
 describe("buildConceptSystemPrompt", () => {
   const prompt = buildConceptSystemPrompt(briefFor());
 
-  /**
-   * The generator serves whoever is in the brief. A hard-coded market was a
-   * fact the BRIEF could not contradict and the validator could not see, so
-   * these assertions are about honesty, not tone.
-   */
   describe("market", () => {
     test("names the region from the brief", () => {
       expect(
@@ -64,92 +59,97 @@ describe("buildConceptSystemPrompt", () => {
     expect(prompt).toContain(needle);
   });
 
-  test("does not assign a page shape or type stack", () => {
+  test("does not assign a page shape or spacing system", () => {
     expect(prompt).not.toContain("STRUCTURE");
     expect(prompt).not.toContain("Field Record");
-    expect(prompt).not.toContain("Copperplate");
     expect(prompt).not.toContain("4pt spacing");
   });
 
-  test("gives the model placement discretion and asks it to look at the photos", () => {
-    expect(prompt).toContain("full discretion");
-    expect(prompt).toContain("Look at them");
+  test("gives the model visual freedom without prescribing a formula", () => {
+    expect(prompt).toContain(
+      "full discretion over layout, colour, typography, crop, hierarchy, section order, and image placement",
+    );
+    expect(prompt).toContain("There is no assigned page shape or house style");
+    expect(prompt).toContain(
+      "If another business could use the page after swapping its name and photographs, revise the design",
+    );
+
+    for (const prescription of [
+      "The type shelf",
+      "Avenir Next",
+      "#F4F1EA",
+      "The hero is a thesis",
+      "four to six specific values",
+      "vertical sequence of screens",
+      "one heading, one supporting line",
+      "Thumbs live in the bottom third",
+      "35 characters",
+      "take one thing off",
+    ]) {
+      expect(prompt).not.toContain(prescription);
+    }
   });
 
-  /**
-   * Design guidance says how to choose, never what to choose. These assertions
-   * exist so a later edit cannot quietly turn the direction section back into
-   * an assigned page shape, and so the parts that keep a design plan from
-   * being printed on the page survive.
-   */
-  describe("design direction", () => {
+  test("asks the model to inspect photos without assigning their placement", () => {
+    expect(prompt).toContain("Look at them");
+    expect(prompt).toContain("do not match images to URLs by position");
+  });
+
+  test("does not invent an existing website or owner situation", () => {
+    expect(prompt).not.toContain("site they have now");
+    expect(prompt).not.toContain("sold templated web design");
+    expect(prompt).not.toContain("standing on a job site");
+    expect(prompt).toContain(
+      "the page itself must read as this business's website and speak to its customers",
+    );
+  });
+
+  describe("render surface", () => {
     test.each([
-      "Colour",
-      "Type",
-      "Layout",
-      "Signature",
-      "The hero is a thesis",
-      "Structure carries information",
-      "Spend your boldness in one place",
-    ])("asks the model to settle %s", (needle) => {
+      "renders inside a scrolling iframe",
+      "resolve to the iframe, not the top-level phone viewport",
+      "`position: fixed` is unreliable inside a scrolled iframe on iOS",
+      "use `position: sticky` only when the design needs it",
+    ])("states that %s", (needle) => {
       expect(prompt).toContain(needle);
     });
 
-    test("names the generated-design defaults instead of prescribing a look", () => {
-      expect(prompt).toContain("#F4F1EA");
-      expect(prompt).toContain("acid-green or vermilion");
-      expect(prompt).toContain("Do not spend a free decision on one");
+    test("expects both iPhone and Android readers", () => {
+      expect(prompt).toContain("both iPhones and Android phones");
     });
+  });
 
-    test("keeps the design plan out of the document", () => {
-      expect(prompt).toContain("it must never appear in the output");
-      const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
-      expect(checklist).toContain("Did any part of your design plan leak");
-    });
-
-    test("does not assign a font, since none can be downloaded", () => {
-      expect(prompt).toContain("No font can be downloaded here");
-      expect(prompt).toContain("Fonts must be system or OS-bundled stacks only");
-    });
-
-    test("checks the direction against another business", () => {
-      const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
-      expect(checklist).toContain("Swap in another business's photographs");
-    });
+  test("leaves font selection open while requiring safe fallbacks", () => {
+    expect(prompt).toContain("Choose the stack yourself");
+    expect(prompt).toContain("end it with a generic family");
   });
 
   describe("copy", () => {
     test.each([
-      "Plain verbs, sentence case, active voice",
-      "prefer it to a smoother rewrite",
+      "Write for the business's customers",
+      "prefer the owner's own wording",
       "A dummy CTA still needs a real label",
+      "Do not pad the page with generic marketing copy",
     ])("states the %s rule", (needle) => {
       expect(prompt).toContain(needle);
     });
 
     test("keeps copy guidance subordinate to the factual limits", () => {
-      expect(prompt).toContain("Inside the facts the BRIEF allows");
-      expect(prompt.indexOf("## Factual honesty")).toBeLessThan(
-        prompt.indexOf("## How the copy reads"),
+      expect(prompt).toContain("## Factual limits");
+      expect(prompt).toContain(
+        "The BRIEF below is the complete set of facts you may state",
       );
     });
   });
 
   test("tells the model to take the src from the label on each attachment", () => {
-    expect(prompt).toContain("exact URL to use for it");
-    expect(prompt).toContain("Do not guess by position");
+    expect(prompt).toContain("exact URL to use for that photograph");
+    expect(prompt).toContain("do not match images to URLs by position");
   });
 
-  /**
-   * Design freedom is the point of this prompt version, but the phone is not
-   * part of what the model gets to decide. These concepts are opened in
-   * Messenger's in-app browser, so every rule here is a hard requirement and
-   * has to survive future edits to the design section above it.
-   */
   describe("mobile first", () => {
     test.each([
-      "Mobile first — this is not a secondary concern",
-      "Design at 360px first",
+      "Design for 360px first",
       "overflow-x: clip",
       "never `overflow-x: hidden`",
       "minmax(0, 1fr)",
@@ -157,36 +157,19 @@ describe("buildConceptSystemPrompt", () => {
       "at least 44px tall",
       "at least 16px",
       "clamp()",
-      "min-width: 640px",
       "prefers-reduced-motion",
     ])("keeps the %s rule", (needle) => {
       expect(prompt).toContain(needle);
     });
 
-    test("names the phone as the real design target, not a fallback", () => {
-      expect(prompt).toContain("The phone is the real design target");
-      expect(prompt).toContain(
-        "beautiful at 1440px and broken at 360px is a failed concept",
-      );
-    });
-
     test("re-checks the layout at 360px in the final checklist", () => {
-      const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
-      expect(checklist).toContain("Read the page again at 360px wide");
+      const checklist = prompt.slice(prompt.indexOf("## Final check"));
+      expect(checklist).toContain("At 360px");
     });
 
-    /**
-     * Deliberately no desktop rule here, and no image height ceiling. A
-     * concept generated on 2026-08-12 rendered a 2048×1152 photo 787px tall on
-     * a laptop and 219px tall on a phone, which is the same CSS behaving
-     * correctly at the viewport that matters. Adding "also check 1440px" to
-     * this section buys a better review experience for Layken at the cost of
-     * the absoluteness of the rule above it, and the phone is what the
-     * prospect opens.
-     */
-    test("states no desktop layout rule", () => {
-      expect(prompt).not.toContain("1440px.");
-      expect(prompt).not.toContain("height ceiling");
+    test("does not prescribe a breakpoint or column structure", () => {
+      expect(prompt).not.toContain("min-width: 640px");
+      expect(prompt).not.toContain("Every layout starts single-column");
     });
   });
 
@@ -272,7 +255,9 @@ describe("buildConceptUserPrompt", () => {
       briefFor({ photoUrls: [PHOTOS[0], PHOTOS[1], PHOTOS[2]] }),
     );
     expect(prompt).toContain("Nothing in this list is a lead image");
-    expect(prompt).toContain("no photograph has been nominated for any position");
+    expect(prompt).toContain(
+      "no photograph has been nominated for any position",
+    );
     expect(prompt).toContain("none of them has been chosen to run full-bleed");
   });
 

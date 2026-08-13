@@ -274,7 +274,7 @@ homepage concept:
 There is no post-generation Luna claim audit. A concept is a sales sketch, and
 the review card is the remaining judgment of whether the page is worth sending.
 
-Placement belongs to the generator alone. `selectPackImagery` decides *which*
+Placement belongs to the generator alone. `selectPackImagery` decides _which_
 photographs a page may use — screenshots excluded, `poor` quality dropped,
 quality then capture order ranking the rest — and nothing more. It used to
 promote the classifier's `hero` roleHint to the front of the list, which put a
@@ -299,21 +299,26 @@ opening sentence used to hard-code Acadiana, which asserted a region the BRIEF
 could not contradict and the validator could not see — the one way a concept
 could claim a location that was never verified.
 
-`buildConceptSystemPrompt` in `lib/concepts/prompt.ts` carries design and copy
-guidance adapted from Anthropic's `frontend-design` skill
-(`github.com/anthropics/skills`, Apache 2.0), rewritten for a scriptless
-single-shot document with no downloadable fonts and no second pass. It says how
-to choose — settle colour, type, layout, and a signature element before writing
-HTML; do not spend a free decision on the palettes generated design defaults to
-— and never what to choose. No page shape, type stack, or colour is assigned,
-and the model is told to keep that plan out of the output.
+`buildConceptSystemPrompt` in `lib/concepts/prompt.ts` gives Kimi the page's job,
+audience, approved design material, factual limits, and runtime constraints. It
+does not prescribe a palette, font list, hero treatment, section order, image
+placement, or internal design exercise. Kimi chooses those from the business and
+its photographs. The final check rejects a direction that would still fit after
+the business name and photographs were swapped.
+
+The prompt states the render facts the model cannot infer from the HTML request.
+The document renders in a scrolling `srcDoc` iframe, so viewport units resolve
+to the frame and `position: fixed` is unreliable on iOS inside it. Mobile rules
+prevent overflow and undersized controls without assigning a mobile composition
+or breakpoint. Safe-area behavior stays outside the generation prompt until it
+has been verified in Safari and Messenger on a real iPhone.
 
 ### Models and provider routing
 
-| Role                              | Model                 | Incident override         |
-| --------------------------------- | --------------------- | ------------------------- |
-| Generation                        | `moonshotai/kimi-k3`  | `OPENROUTER_MODEL`        |
-| Evidence and vision               | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
+| Role                | Model                 | Incident override         |
+| ------------------- | --------------------- | ------------------------- |
+| Generation          | `moonshotai/kimi-k3`  | `OPENROUTER_MODEL`        |
+| Evidence and vision | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
 
 Both are pinned to a version rather than a `latest` alias: a concept is a sales
 artifact, and a silent model swap changing how every page looks is not something
@@ -339,13 +344,11 @@ the fact.
 
 Kimi K3's effort ladder is `low`, `high`, `max`, with no `medium`, and reasoning
 is enabled by default at `max`. Effort is therefore sent explicitly. It shipped
-at `low` and was raised to `high` on 2026-08-12 after reading real concepts: the
-prompt asks for colour, type, layout, and a signature element to be settled
-before any HTML is written, that work happens in the reasoning trace, and
-starving it produced pages that satisfied every rule while deciding nothing.
-`max` is the remaining step and is deliberately not taken. What would justify
-stepping back down is `finish_reason: "length"` against the 32k output cap,
-which surfaces as an explicit truncation error rather than a quietly worse page.
+at `low` and was raised to `high` on 2026-08-12 after real concepts followed the
+rules but made weak visual choices. `max` is the remaining step and is
+deliberately not taken. What would justify stepping back down is
+`finish_reason: "length"` against the 32k output cap, which surfaces as an
+explicit truncation error rather than a quietly worse page.
 
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends
