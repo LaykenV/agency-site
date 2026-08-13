@@ -2,8 +2,8 @@
 
 Status: **canonical growth and acquisition source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-10  
-Metrics current through: 2026-08-08
+Last reviewed: 2026-08-13
+Metrics current through: 2026-08-13
 
 This document owns the active channel strategy, operating cadence, decision
 rules, scripts, and written scorecard. Dated campaign captures and prior weekly
@@ -66,7 +66,10 @@ that moves a conversation forward.
 | 2026-08-02 | Meta Messenger | ~$14.00 | 0 | 0 | 0 | 0 | Pilot active |
 | 2026-08-04 | Meta Messenger | $30.72 | 0 | 0 | 0 | 0 | 887 impressions, 380 reach |
 | 2026-08-08 | Meta Messenger | $64.92 | 2 | 1 | 0 | 0 | Both conversations came from the $0-down post |
+| 2026-08-12 | Meta Messenger | $129.00 | 5 | 1 | 0 | 0 | Cumulative campaign result; one additional reply was a custom-app lead, not a website prospect |
 | 2026-08-03 | Facebook group outreach | $0 | 3 replies | 2 | 0 | 0 | Three targeted messages; two previews built |
+| 2026-08-11 | Direct Facebook outreach | $0 | 1 reply | 0 | 0 | 0 | Five businesses contacted from active ads; one declined and four did not reply |
+| 2026-08-13 | Facebook group outreach | $0 | 1 human reply | 0 | 0 | 0 | 18 personalized messages sent; Daniel Green declined after pointing out his existing site; Oh So Pretty sent an automated reply |
 
 Do not calculate paid CAC until a market-rate client closes.
 
@@ -91,7 +94,7 @@ If a person does not answer the opener, send one follow-up the next morning:
 | Gate | Decision |
 |---|---|
 | $50 | Completed. The AI-filtering ad was paused and the Aug. 3 and Aug. 5 existing posts became challengers. |
-| $150 | If there are fewer than three conversations, change creative or targeting. Prioritize a truthful testimonial asset. |
+| $150 | At the gate, the volume test passes with five conversations. Keep the current budget and the $0-down post. If the new-lead-texts challenger still has no conversations, pause it. Do not reactivate the AI-filtering post. |
 | $300 | If conversations exist but calls do not, fix qualification and the Messenger close rather than rebuilding the campaign. |
 | $500 | Stop new spend and allow the final cohort two to three weeks to close before the channel verdict. |
 
@@ -100,10 +103,33 @@ gate.
 
 ### Current paid lead status
 
-- Carpenter's Remodeling: qualified; broken former domain confirmed; offered a
-  free homepage concept and awaiting a response/assets.
-- Travis Tidwell: business unidentified; awaiting the existing website URL
-  before qualification.
+- Carpenter's Remodeling: the only qualified website lead. The broken former
+  domain was confirmed, a free homepage concept was offered, and one follow-up
+  was sent on August 10. No response. Stop unless Joseph reopens the thread.
+- Travis Tidwell: said he has a website but never supplied the URL. One
+  follow-up was sent on August 10 with no response. Stop.
+- Judia Duhon: said she has a website. Awaiting the URL before qualification.
+- Suire Patricia: said she has a website but did not provide a usable link in
+  the thread. Ask once for the URL, then stop if she does not answer.
+- Mike Romero: asked for a Lafayette rideshare app rather than a website. This
+  is a separate Varholdt custom-app opportunity and is not counted as a
+  qualified website lead. He requested pricing and provided a phone number for
+  follow-up.
+
+### Paid creative snapshot
+
+Ads Manager was read on August 13 using the last-30-days window ending August
+12. Total campaign spend was $129.00.
+
+| Creative | State | Spend | Impressions | Reach | Messaging conversations started | Cost per conversation |
+|---|---|---:|---:|---:|---:|---:|
+| $0 Down / $199 Monthly | Active | $74.20 | 2,427 | 1,126 | 5 | $14.84 |
+| New Lead Texts / Straight to Your Phone | Active | $10.62 | 166 | 101 | 0 | — |
+| AI Lead Filtering / Real Leads Less Spam | Off | $44.18 | 1,321 | 478 | 0 | — |
+
+The $0-down post is the control. It has produced every paid conversation. The
+new-lead-texts post has too little spend for a final verdict, but it has not
+earned more budget than the control. Do not reactivate the AI-filtering ad.
 
 Detailed captured research remains in
 `client-research/meta-messenger-leads-2026-08-08.md`. Do not buy a prospect's
@@ -111,21 +137,60 @@ brand domain as leverage. The client should own it.
 
 ## Facebook group outreach
 
-Use recurring local business-promotion threads as a selective research source,
-not a bulk-message list.
+Facebook groups are the primary direct-outreach source. Sponsored posts in the
+general feed are not part of the active routine. Use group activity as a
+selective research source, not a bulk-message list.
 
-Every Monday:
+### Daily routine
 
-1. Read the current thread and the group rules.
-2. Open each promising business page and verify location, activity, reviews,
-   services, website condition, and usable proof.
-3. Exclude businesses already contacted elsewhere.
-4. Select at most 5–10 strong fits.
-5. Write an individual Messenger message referencing the actual business gap.
-6. Respond quickly.
-7. Build a preview only after explicit interest or an active website need.
-8. Send one follow-up after two or three days, then stop.
-9. Reconcile results into the scorecard.
+1. Check the active local groups and read each group's promotion rules.
+2. Look for businesses advertising in posts or comments, owners answering
+   service-recommendation requests, and recurring "share your business" posts.
+3. Open each promising business Page and verify location, recent activity,
+   services, customer proof, and website condition.
+4. Exclude businesses already contacted and businesses with a good current
+   website. Prioritize missing, broken, or clearly weak websites.
+5. Select only the strongest fits and write an individual Messenger message
+   that references the group context and the verified website gap.
+6. Ask whether the owner would like to see a free homepage concept. Do not build
+   or claim to have built the concept before the owner says yes.
+7. When an owner says yes, build the concept in `/admin/marketing`, review every
+   factual claim, publish it, and send the preview link promptly.
+8. Send one individual follow-up after two or three days if the owner does not
+   answer, then stop.
+9. Reconcile new messages, replies, concepts, calls, and closes into the
+   scorecard each week.
+
+The daily check does not create a message quota. Some days may produce no good
+prospects. Quality is the filter.
+
+### Current outreach status
+
+- Shay's Cleaning Services and Charlie Gallusser received their one allowed
+  follow-up on August 11 after the previews were sent. Neither replied. Stop.
+- On August 11, five businesses advertising on Facebook were contacted:
+  Chris's Tree Service, Regan's Supreme Clean LLC, Rodriguez Landscaping,
+  Talon Spray Foam & Insulation Services, and Leger Lawn Care Services.
+  Regan's replied that the need was already covered. The other four have not
+  replied.
+- On August 13, 18 businesses found through recent local-group activity were
+  sent personalized messages: CAP Air Solutions, Carencro Seafood Corner, Oh
+  So Pretty Pet Spa, Sesalee's Solo Cleaning, Second Chance Vintage Antique
+  Market, Glowloveeat, Tree Preservation and Removal by Daniel Green, Steam
+  King Services, Remi's Table & Chair Rentals, Wild Oak Cleaning Service,
+  Abuela's Mexican Kitchen, Chantal's Lebanese Menu, The Floor Doctor, Pi's
+  Photography, Ireland's Landscaping, Lagniappe Home Co., Acadiana Roadside,
+  and Taylor Outdoor Services.
+- Daniel Green declined and pointed out `danielgreenenterprises.com`, which was
+  linked on the Facebook Page. This was a qualification miss. Do not follow up,
+  and verify every Page's full contact-info section before declaring that a
+  business has no website.
+- Oh So Pretty Pet Spa returned an automated business-hours response. Do not
+  count it as a human conversation. The other August 13 prospects remain
+  pending. If there is no human response, send one personalized follow-up on
+  August 15 or 16, then stop.
+- Do not send another broad template to this batch. Any follow-up must reference
+  the actual business and its verified website gap.
 
 A good target has a real local service, recent proof, and a missing, broken, or
 weak site. Do not manufacture a problem for a business with a strong current
@@ -135,11 +200,18 @@ site.
 
 No website:
 
-> Hey [first name], I saw [business] in the Acadiana Business Hub promotion
-> post. You've built some good proof with [specific work or review], but I
-> couldn't find a website where people can see the services and request a
-> quote. I build managed websites for Acadiana service businesses. Would you
-> like me to send a quick homepage idea? No pressure.
+> Hey [first name], I saw [business] in [group or post context]. You've built
+> some good proof with [specific work or review], but I couldn't find a website
+> where people can see the services and request a quote. I build managed
+> websites for Acadiana service businesses. Would you like me to put together a
+> free homepage concept for you?
+
+Broken or weak website:
+
+> Hey [first name], I saw [business] in [group or post context]. I checked out
+> the website and noticed [specific verified problem]. I build managed websites
+> for Acadiana service businesses. Would you like me to put together a free
+> homepage concept showing a different direction?
 
 Active need:
 
