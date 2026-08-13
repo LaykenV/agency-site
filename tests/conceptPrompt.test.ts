@@ -51,6 +51,65 @@ describe("buildConceptSystemPrompt", () => {
     expect(prompt).toContain("Look at them");
   });
 
+  /**
+   * Design guidance says how to choose, never what to choose. These assertions
+   * exist so a later edit cannot quietly turn the direction section back into
+   * an assigned page shape, and so the parts that keep a design plan from
+   * being printed on the page survive.
+   */
+  describe("design direction", () => {
+    test.each([
+      "Colour",
+      "Type",
+      "Layout",
+      "Signature",
+      "The hero is a thesis",
+      "Structure carries information",
+      "Spend your boldness in one place",
+    ])("asks the model to settle %s", (needle) => {
+      expect(prompt).toContain(needle);
+    });
+
+    test("names the generated-design defaults instead of prescribing a look", () => {
+      expect(prompt).toContain("#F4F1EA");
+      expect(prompt).toContain("acid-green or vermilion");
+      expect(prompt).toContain("Do not spend a free decision on one");
+    });
+
+    test("keeps the design plan out of the document", () => {
+      expect(prompt).toContain("it must never appear in the output");
+      const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
+      expect(checklist).toContain("Did any part of your design plan leak");
+    });
+
+    test("does not assign a font, since none can be downloaded", () => {
+      expect(prompt).toContain("No font can be downloaded here");
+      expect(prompt).toContain("Fonts must be system or OS-bundled stacks only");
+    });
+
+    test("checks the direction against another business", () => {
+      const checklist = prompt.slice(prompt.indexOf("## Before you answer"));
+      expect(checklist).toContain("Swap in another business's photographs");
+    });
+  });
+
+  describe("copy", () => {
+    test.each([
+      "Plain verbs, sentence case, active voice",
+      "prefer it to a smoother rewrite",
+      "A dummy CTA still needs a real label",
+    ])("states the %s rule", (needle) => {
+      expect(prompt).toContain(needle);
+    });
+
+    test("keeps copy guidance subordinate to the factual limits", () => {
+      expect(prompt).toContain("Inside the facts the BRIEF allows");
+      expect(prompt.indexOf("## Factual honesty")).toBeLessThan(
+        prompt.indexOf("## How the copy reads"),
+      );
+    });
+  });
+
   test("tells the model to take the src from the label on each attachment", () => {
     expect(prompt).toContain("exact URL to use for it");
     expect(prompt).toContain("Do not guess by position");

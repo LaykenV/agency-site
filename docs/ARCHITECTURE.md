@@ -261,7 +261,7 @@ homepage concept:
 4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from Grok 4.6 (`x-ai/grok-4.6`) at medium
+6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at low
    reasoning. The request includes the approved logo and photographs as vision
    input plus their pixel sizes, each attachment labelled with the exact
    allowlisted URL to use for it. The model invents the visual system; there is
@@ -274,11 +274,20 @@ homepage concept:
 There is no post-generation Luna claim audit. A concept is a sales sketch, and
 the review card is the remaining judgment of whether the page is worth sending.
 
+`buildConceptSystemPrompt` in `lib/concepts/prompt.ts` carries design and copy
+guidance adapted from Anthropic's `frontend-design` skill
+(`github.com/anthropics/skills`, Apache 2.0), rewritten for a scriptless
+single-shot document with no downloadable fonts and no second pass. It says how
+to choose — settle colour, type, layout, and a signature element before writing
+HTML; do not spend a free decision on the palettes generated design defaults to
+— and never what to choose. No page shape, type stack, or colour is assigned,
+and the model is told to keep that plan out of the output.
+
 ### Models and provider routing
 
 | Role                              | Model                 | Incident override         |
 | --------------------------------- | --------------------- | ------------------------- |
-| Generation                        | `x-ai/grok-4.6`       | `OPENROUTER_MODEL`        |
+| Generation                        | `moonshotai/kimi-k3`  | `OPENROUTER_MODEL`        |
 | Evidence and vision               | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
 
 Both are pinned to a version rather than a `latest` alias: a concept is a sales
@@ -294,9 +303,20 @@ on 2026-08-12. A set override is how production ends up quietly disagreeing
 with the code about what drew a page.
 
 Generation moved from `meta/muse-spark-1.2` to `x-ai/grok-4.6` on 2026-08-12
-after a side-by-side on real concepts: visibly better pages at roughly 8c a
-generation against 5c. Every concept row records the `model` that produced it,
-so drafts from either generator can still be told apart after the fact.
+after a side-by-side on real concepts, and from there to `moonshotai/kimi-k3`
+the same day. The second move was made on the model's design record rather than
+a side-by-side — it leads OpenRouter's design-arena website, uicomponent, and
+codecategories boards — and it is the first generator adopted at a materially
+higher price: $3 per million input and $15 per million output, which puts a page
+closer to a quarter than to Grok's 8c. Every concept row records the `model`
+that produced it, so drafts from any of the three can still be told apart after
+the fact.
+
+Kimi K3's effort ladder is `low`, `high`, `max`, with no `medium`, and reasoning
+is enabled by default at `max`. Effort is therefore sent explicitly and set to
+`low`; the prompt asks for a design direction to be settled before any HTML is
+written, so raising it one step is the first thing to try if concepts come back
+thin, watching for `finish_reason: "length"` against the 32k output cap.
 
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends
@@ -308,9 +328,13 @@ rather than honour it. This is not a zero-retention claim: OpenRouter exposes
 it. Muse Spark's Meta endpoint satisfies the `deny` gate, so no training-policy
 tradeoff was taken to adopt it. xAI's `grok-4.6` endpoint was checked the same
 way on 2026-08-12 — a live request carrying both the provider block and an
-image part routed and returned — so the generation override does not relax the
-gate either. A provider that failed it would produce a routing error, not a
-quiet fallback.
+image part routed and returned.
+
+`moonshotai/kimi-k3` could not be pre-checked that way: OpenRouter has stopped
+publishing per-provider training policy through its public API, and the
+generator's key is held only by the deployment. The gate is unchanged and still
+enforced, so a model with no qualifying provider fails routing on the first
+generation rather than falling back quietly — that first run is the check.
 
 Vision requests carry one further provider constraint that is not visible in
 OpenRouter's model metadata: xAI rejects any image smaller than 8×8 with a 400
@@ -321,7 +345,9 @@ harvested spacer or favicon rendition from taking down a generation.
 `require_parameters: true` makes the parameter set part of routing, so an
 unsupported parameter is a failed request rather than a degraded one. Luna's
 endpoints do not advertise `temperature`, which is why pack analysis sends
-none; they do advertise `reasoning`. Reasoning tokens are billed against
+none; they do advertise `reasoning`. Generation does send `temperature`, so the
+gate routes it past Kimi K3's own Moonshot endpoint to the several third-party
+endpoints that advertise the full set. Reasoning tokens are billed against
 `max_tokens`, so effort and output budget are one decision, not two.
 
 ### Google Places is identity, not content

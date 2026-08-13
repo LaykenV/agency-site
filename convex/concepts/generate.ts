@@ -54,19 +54,29 @@ const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  * A concept is a sales artifact; which model drew it belongs in the diff that
  * changed it, next to the prompt it was tuned against.
  *
- * `x-ai/grok-4.6` is pinned to the version, not an alias — `~x-ai/grok-latest`
- * exists and is deliberately not used, because a silent model swap changing
- * how every page looks is not something to discover from a prospect's
- * reaction. It replaced `meta/muse-spark-1.2` on 2026-08-12 after a side-by-side
- * on real concepts: visibly better pages for roughly 8c a generation against
- * 5c.
+ * `moonshotai/kimi-k3` is pinned to the version, not an alias —
+ * `~moonshotai/kimi-latest` exists and is deliberately not used, because a
+ * silent model swap changing how every page looks is not something to discover
+ * from a prospect's reaction. It replaced `x-ai/grok-4.6` on 2026-08-12, which
+ * had itself replaced `meta/muse-spark-1.2` earlier the same day.
  *
- * Its endpoint advertises `max_tokens`, `temperature`, `reasoning`, and
- * `reasoning_effort`, so `require_parameters: true` will not reject the
- * request over any parameter sent below, and it satisfies the
- * `data_collection: "deny"` gate that the photographs in this request require.
+ * This one was adopted on its design record rather than a side-by-side: it
+ * leads OpenRouter's design-arena website, uicomponent, and codecategories
+ * boards. It is also the most expensive generator this feature has run — $3
+ * per million in and $15 out, against Grok's roughly 8c a page — so a
+ * generation costs something closer to a quarter. That is still a rounding
+ * error next to the sale a concept is trying to open, but it is a real
+ * multiple, and it is the number to revisit if generation volume grows.
+ *
+ * Several of its endpoints advertise `max_tokens`, `temperature`, `reasoning`,
+ * and `reasoning_effort`, so `require_parameters: true` narrows routing rather
+ * than failing it — Moonshot's own endpoint does not take `temperature` and is
+ * routed past. OpenRouter no longer publishes per-provider training policy in
+ * its API, so the `data_collection: "deny"` gate below could not be confirmed
+ * from metadata before this change; a failed gate is a routing error on the
+ * first generation, not a quiet fallback.
  */
-const DEFAULT_MODEL = "x-ai/grok-4.6";
+const DEFAULT_MODEL = "moonshotai/kimi-k3";
 
 /** A long homepage with inline CSS runs well past a default cap. */
 const MAX_OUTPUT_TOKENS = 32_000;
@@ -75,10 +85,19 @@ const MAX_OUTPUT_TOKENS = 32_000;
 const TEMPERATURE = 0.7;
 
 /**
- * Medium reasoning: enough to hold a long brief and the photographs together,
- * without paying high-effort latency on what is mostly a writing task.
+ * Kimi K3's effort ladder is `low`, `high`, `max` — there is no `medium`, which
+ * is what this was under Grok. Reasoning is on by default and defaults to
+ * `max`, so this is not a value that can be left unsent: reasoning tokens are
+ * billed against `max_tokens`, and a maximum-effort trace on a long
+ * multimodal brief can spend the whole output budget before the document
+ * starts.
+ *
+ * `low` is the floor deliberately. The prompt now asks for a design plan to be
+ * settled before any HTML is written, and that thinking happens here, so this
+ * is the first knob to try if pages come back thin — one step to `high`, with
+ * an eye on `finish_reason: "length"`.
  */
-const REASONING_EFFORT = "medium" as const;
+const REASONING_EFFORT = "low" as const;
 
 /**
  * A generation that has not returned in four minutes is not going to.
@@ -115,8 +134,9 @@ const GENERATE_MAX_IMAGE_BYTES = 16 * 1024 * 1024;
  * Smallest edge, in pixels, worth sending to a vision model.
  *
  * Providers reject degenerate images rather than ignoring them, and they
- * reject the whole request when they do: xAI answers a sub-8px image with a
- * 400 that fails the entire generation. A spacer, a favicon rendition, or a
+ * reject the whole request when they do: xAI answered a sub-8px image with a
+ * 400 that failed the entire generation, and nothing about routing to another
+ * provider makes that safe to send. A spacer, a favicon rendition, or a
  * tracking pixel that survived harvesting is worth nothing as design material
  * anyway, so it is dropped from the attachments and reported as unseen. Its
  * URL stays allowlisted; only the pixels are withheld.
@@ -229,8 +249,8 @@ async function callOpenRouter(
       temperature: TEMPERATURE,
       max_tokens: MAX_OUTPUT_TOKENS,
       // Reasoning tokens are billed against `max_tokens`, so effort and output
-      // budget are one decision. Medium measured around 600 reasoning tokens on
-      // a full homepage brief, which leaves the document plenty of room.
+      // budget are one decision, and the effort is set explicitly because this
+      // model reasons at `max` when left alone.
       reasoning: { effort: REASONING_EFFORT, exclude: true },
       provider: {
         // The request carries the whole verified brief — a stranger's services,

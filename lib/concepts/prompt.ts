@@ -9,10 +9,17 @@
  * page shape. This file states what the sandbox will reject, what the brief
  * will not allow the page to claim, and that every CTA is a dummy control.
  *
- * That last one is not a style preference. These concepts are opened almost
- * exclusively on an iPhone inside Messenger's in-app browser, so the mobile
- * rules below are requirements rather than taste, and the aesthetic rules that
- * used to sit beside them are gone.
+ * The mobile section is not a style preference. These concepts are opened
+ * almost exclusively on an iPhone inside Messenger's in-app browser, so those
+ * rules are requirements rather than taste.
+ *
+ * The design and copy sections say how to choose, never what to choose: they
+ * name the failure modes of generated design — the default palettes, the
+ * decorative structure, the boldness sprayed everywhere — without assigning a
+ * page shape, a type stack, or a colour. Their substance is adapted from
+ * Anthropic's `frontend-design` skill (github.com/anthropics/skills, Apache
+ * 2.0), rewritten for a scriptless single-shot document with no downloadable
+ * fonts and no second pass.
  *
  * `PROMPT_VERSION` is recorded on every concept row. Bump it whenever the rules
  * below change, so a concept generated last week can be told apart from one
@@ -22,7 +29,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-12.7";
+export const CONCEPT_PROMPT_VERSION = "2026-08-12.8";
 
 function imageOrientation(
   width?: number,
@@ -93,11 +100,45 @@ The BRIEF below is the complete set of facts you may state. It is not a starting
 
 ## How to design
 
-You have full discretion over layout, type, colour, crop, rhythm, and image placement. The photographs attached to this request — and listed under APPROVED IMAGE URLS — are the primary design material. Look at them. Build the page around what they actually show. You decide which image leads, which sit later, how they are cropped, and how type sits with them.
+Work like the design lead at a small studio known for giving every client a visual identity that could not be mistaken for anyone else's. This owner has been sold templated web design before — that is usually why the site they have now looks the way it does. You have full discretion over layout, type, colour, crop, rhythm, and image placement, and the job is to spend it on choices that are specific to THIS business, including one real aesthetic risk you can justify.
+
+Ground every choice in the subject. A roofing crew, a boudin shop, and a dance studio have nothing visually in common, and the page should make clear which one it is before a word is read. The business's own world — its materials, its tools, what it makes, how its owner writes — is where a distinctive page comes from. The photographs attached to this request, and listed under APPROVED IMAGE URLS, are the primary design material. Look at them. Build the page around what they actually show. You decide which image leads, which sit later, how they are cropped, and how type sits with them.
 
 Each attached photograph is preceded by a line naming the exact URL to use for it. When you place a photograph you looked at, write that photograph's own URL in \`src\`. Do not guess by position and do not swap them.
 
 If there are no photographs, carry the page with typography, colour, and space. Do not invent photographs.
+
+### Settle the direction before you write any HTML
+
+Decide these four and then follow them exactly. Keep the plan to yourself — it must never appear in the output, in an HTML comment, or on the page.
+
+- **Colour** — four to six specific values chosen for this business, each with a job.
+- **Type** — two or three roles: a display treatment used with restraint, a body face, and a utility treatment for labels or captions if the page needs one. No font can be downloaded here, so the personality has to come out of the stack you pick plus weight, size, case, tracking, and measure. A system serif set tight and very large is a different page from the same stack at 400.
+- **Layout** — one sentence for the shape of the page at 360px, and what changes when there is more room.
+- **Signature** — the one element this page is remembered by, and how it comes out of this business rather than any other.
+
+Then read those four back. If a part of it is what you would produce for any local business in any trade, change that part before you write code.
+
+### What separates a designed page from a generated one
+
+- The hero is a thesis. Open with the most characteristic thing in this business's world. A centred headline over a dark scrim on the best photo is the template answer; use it only if it is genuinely the strongest one here.
+- Structure carries information. Numbering, eyebrows, dividers, and labels should encode something true about the content instead of decorating it. \`01 / 02 / 03\` belongs on the page only where the content really is a sequence.
+- Spend your boldness in one place. Let the signature be the memorable thing, keep what surrounds it quiet and disciplined, and cut decoration that does nothing for this business.
+- Match execution to ambition. A dense direction needs elaborate follow-through; a spare one needs precision in spacing, type, and detail. Elegance is executing the chosen direction well.
+- Use motion sparingly and on purpose. It is CSS-only here and the page is read on a phone, so hover barely exists: one considered load or scroll moment lands harder than a transition on every card.
+- Generated design currently defaults to three looks: cream near #F4F1EA with a high-contrast serif and a terracotta accent; near-black with a single acid-green or vermilion accent; and a broadsheet of hairline rules, square corners, and dense columns. Each is a legitimate answer for a business it actually suits, and none of them is a choice when it arrives no matter whose business it is. Do not spend a free decision on one.
+- Watch your CSS specificity. A type selector and an element selector fighting over the same padding is how sections end up with rhythm you did not choose.
+- Before you finish, look at the page the way you would look in a mirror on the way out the door, and take one thing off.
+
+## How the copy reads
+
+Words are design material, not filler, and generic copy makes a page feel templated as fast as a generic layout does. Inside the facts the BRIEF allows:
+
+- Write from the customer's side of the screen: what they get, in words they already use, not the trade's internal vocabulary.
+- Plain verbs, sentence case, active voice, no filler. Specific always beats clever.
+- Where the brief supplies the owner's own wording, prefer it to a smoother rewrite of it.
+- A dummy CTA still needs a real label. Say what the control would do — "Get a quote", not "Learn more" — in two or three words.
+- Let each element do exactly one job. A heading heads, a caption captions, and nothing quietly does double duty.
 
 ## Mobile first — this is not a secondary concern
 
@@ -129,6 +170,8 @@ Check your document against this list and fix anything that fails:
 - Does any sentence claim the lists are exhaustive, explain where a fact came from, or infer what the owner emphasizes? Remove that sentence.
 - Is there any phone number other than the verified one? Remove it.
 - Read the page again at 360px wide. Does anything scroll sideways, overflow, sit under 44px, or wrap a button to two lines? Fix it.
+- Swap in another business's photographs and name. Would the page still look like it was designed for them? If so, the direction was not specific enough — fix the parts that are generic.
+- Did any part of your design plan leak into the output as text, an HTML comment, or a heading? Remove it.
 
 Output the HTML document only.`;
 }
