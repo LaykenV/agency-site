@@ -58,9 +58,22 @@ function describeImageNote(note: {
  *
  * Visual system, type, colour, crop, and placement are not specified here.
  * The model invents those from the brief and the attached photographs.
+ *
+ * The brief is an argument because the opening line used to hard-code
+ * "Acadiana, Louisiana". That was true of every early concept and is not a
+ * property of this generator: a Tennessee auto detailer was told its own
+ * market was in south Louisiana, on every generation and every repair. A
+ * region asserted in the system prompt is also the one fact on the page that
+ * the BRIEF cannot contradict and the validator cannot see, which is exactly
+ * how "proudly serving Acadiana" ends up under a Johnson City phone number.
+ * `locality` is the Places-derived city/region line, so when it is missing the
+ * sentence says nothing about where the business is rather than guessing.
  */
-export function buildConceptSystemPrompt(): string {
-  return `You are a senior web designer producing one homepage concept for a real local business in Acadiana, Louisiana. The page will be sent to the owner as a sales artifact. Invent a visual system for THIS business from the photographs and facts in the request. Do not reuse a generic landing-page kit.
+export function buildConceptSystemPrompt(brief: ConceptBrief): string {
+  const locality = brief.locality?.trim();
+  const where = locality ? ` in ${locality}` : "";
+
+  return `You are a senior web designer producing one homepage concept for a real local business${where}. The page will be sent to the owner as a sales artifact. Invent a visual system for THIS business from the photographs and facts in the request. Do not reuse a generic landing-page kit.
 
 Return ONE complete HTML document and nothing else. No markdown fences, no commentary, no explanation before or after.
 

@@ -261,7 +261,7 @@ homepage concept:
 4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at low
+6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at high
    reasoning. The request includes the approved logo and photographs as vision
    input plus their pixel sizes, each attachment labelled with the exact
    allowlisted URL to use for it. The model invents the visual system; there is
@@ -273,6 +273,13 @@ homepage concept:
 
 There is no post-generation Luna claim audit. A concept is a sales sketch, and
 the review card is the remaining judgment of whether the page is worth sending.
+
+The generator states no market of its own. `buildConceptSystemPrompt` takes the
+brief and names the business's region only from `locality`, the Places-derived
+city line; with no locality it says nothing about where the business is. The
+opening sentence used to hard-code Acadiana, which asserted a region the BRIEF
+could not contradict and the validator could not see — the one way a concept
+could claim a location that was never verified.
 
 `buildConceptSystemPrompt` in `lib/concepts/prompt.ts` carries design and copy
 guidance adapted from Anthropic's `frontend-design` skill
@@ -313,10 +320,14 @@ that produced it, so drafts from any of the three can still be told apart after
 the fact.
 
 Kimi K3's effort ladder is `low`, `high`, `max`, with no `medium`, and reasoning
-is enabled by default at `max`. Effort is therefore sent explicitly and set to
-`low`; the prompt asks for a design direction to be settled before any HTML is
-written, so raising it one step is the first thing to try if concepts come back
-thin, watching for `finish_reason: "length"` against the 32k output cap.
+is enabled by default at `max`. Effort is therefore sent explicitly. It shipped
+at `low` and was raised to `high` on 2026-08-12 after reading real concepts: the
+prompt asks for colour, type, layout, and a signature element to be settled
+before any HTML is written, that work happens in the reasoning trace, and
+starving it produced pages that satisfied every rule while deciding nothing.
+`max` is the remaining step and is deliberately not taken. What would justify
+stepping back down is `finish_reason: "length"` against the 32k output cap,
+which surfaces as an explicit truncation error rather than a quietly worse page.
 
 Every OpenRouter request that carries prospect material — pack analysis and
 generation — sends

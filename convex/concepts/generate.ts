@@ -85,17 +85,24 @@ const MAX_OUTPUT_TOKENS = 32_000;
 const TEMPERATURE = 0.7;
 
 /**
- * Kimi K3's effort ladder is `low`, `high`, `max` — there is no `medium`, which
- * is what this was under Grok. Reasoning is on by default and defaults to
- * `max`, so this is not a value that can be left unsent: reasoning tokens are
- * billed against `max_tokens`, and a maximum-effort trace on a long
- * multimodal brief can spend the whole output budget before the document
- * starts.
+ * Kimi K3's effort ladder is `low`, `high`, `max` — there is no `medium`,
+ * which is what this was under Grok. Reasoning is on by default and defaults
+ * to `max`, so this is not a value that can be left unsent: reasoning tokens
+ * are billed against `max_tokens`, and a maximum-effort trace on a long
+ * multimodal brief can spend the output budget before the document starts.
  *
- * `low` is the floor deliberately. The prompt now asks for a design plan to be
- * settled before any HTML is written, and that thinking happens here, so this
- * is the first knob to try if pages come back thin — one step to `high`, with
- * an eye on `finish_reason: "length"`.
+ * `high` on judgment rather than a benchmark. This started at `low` and was
+ * raised on 2026-08-12 after reading real concepts, because the prompt asks
+ * for colour, type, layout, and a signature element to be settled before any
+ * HTML is written and that work happens in the reasoning trace — starving it
+ * produces a page that satisfies every rule and decides nothing. `max` is the
+ * remaining step and is deliberately not taken: the gap between a good page
+ * and a described one closed here, and the risk it trades against is the whole
+ * budget going to the trace.
+ *
+ * What would justify stepping back down is `finish_reason: "length"` showing
+ * up, which surfaces as the truncation error in `callOpenRouter` rather than
+ * as a quietly worse page.
  */
 const REASONING_EFFORT = "high" as const;
 
@@ -680,7 +687,7 @@ export const runGeneration = internalAction({
         // megabytes of base64 would buy nothing.
         html = unwrapHtml(
           await callOpenRouter(
-            buildConceptSystemPrompt(),
+            buildConceptSystemPrompt(brief),
             attempt === 1
               ? buildUserContent(requestPrompt, attached)
               : requestPrompt,

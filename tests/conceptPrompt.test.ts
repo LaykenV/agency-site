@@ -23,7 +23,32 @@ const PHOTOS = [
 ];
 
 describe("buildConceptSystemPrompt", () => {
-  const prompt = buildConceptSystemPrompt();
+  const prompt = buildConceptSystemPrompt(briefFor());
+
+  /**
+   * The generator serves whoever is in the brief. A hard-coded market was a
+   * fact the BRIEF could not contradict and the validator could not see, so
+   * these assertions are about honesty, not tone.
+   */
+  describe("market", () => {
+    test("names the region from the brief", () => {
+      expect(
+        buildConceptSystemPrompt(briefFor({ locality: "Johnson City, TN" })),
+      ).toContain("a real local business in Johnson City, TN.");
+    });
+
+    test("claims no region when the brief has no locality", () => {
+      expect(prompt).toContain("a real local business.");
+    });
+
+    test.each([briefFor(), briefFor({ locality: "Johnson City, TN" })])(
+      "never asserts a home market of its own",
+      (brief) => {
+        expect(buildConceptSystemPrompt(brief)).not.toContain("Acadiana");
+        expect(buildConceptSystemPrompt(brief)).not.toContain("Louisiana");
+      },
+    );
+  });
 
   test.each([
     "<script>",
@@ -301,7 +326,7 @@ describe("buildConceptUserPrompt", () => {
     expect(prompt).not.toContain("Google review count");
     expect(prompt).not.toContain("Business hours:");
     expect(prompt).not.toContain("Street address");
-    expect(buildConceptSystemPrompt()).toContain(
+    expect(buildConceptSystemPrompt(briefFor())).toContain(
       "unless an APPROVED QUOTE carries a rating",
     );
   });
