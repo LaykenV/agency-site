@@ -28,6 +28,12 @@ import { ConceptFacebookPack } from "./ConceptFacebookPack";
 import { ConceptPackSummary } from "./ConceptPackSummary";
 import { ConceptEvidenceReport } from "./ConceptEvidenceReport";
 import {
+  PipelineRail,
+  StatGrid,
+  StatusChip,
+  conceptTone,
+} from "./ConceptChrome";
+import {
   conceptDraftPassedValidation,
   generationBlockedReason,
 } from "@/lib/concepts/lifecycle";
@@ -40,7 +46,6 @@ import { cn } from "@/lib/utils";
 import { preparePackImage } from "@/lib/concepts/preparePackImage";
 import {
   defaultWorkspacePane,
-  workspaceSteps,
   type WorkspacePane,
 } from "@/lib/concepts/workspace";
 
@@ -75,25 +80,12 @@ const GENERATION_FAILURE_LABELS: Record<string, string> = {
   provider_rate_limited: "Rate limited — not your fault",
 };
 
-function statusClass(status: string): string {
-  switch (status) {
-    case "published":
-      return "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300";
-    case "review":
-      return "bg-blue-500/15 text-blue-700 dark:text-blue-300";
-    case "matching":
-    case "content_review":
-      return "bg-amber-500/15 text-amber-700 dark:text-amber-300";
-    case "failed":
-      return "bg-red-500/15 text-red-700 dark:text-red-300";
-    case "enriching":
-    case "harvesting":
-    case "generating":
-      return "bg-violet-500/15 text-violet-700 dark:text-violet-300";
-    default:
-      return "bg-[var(--muted)] text-[var(--muted-foreground)]";
-  }
-}
+/**
+ * One measure for the whole column. Wide enough that a 1280px desktop concept
+ * still previews at 70%, narrow enough that the brief's form fields do not
+ * stretch across a 27-inch monitor.
+ */
+const MEASURE = "mx-auto w-full max-w-4xl";
 
 function formatDate(timestamp?: number): string {
   if (!timestamp) return "—";
@@ -280,14 +272,14 @@ export function ConceptReviewCard({
   if (data === undefined) {
     return (
       <div className="flex flex-1 items-center justify-center p-10">
-        <Loader2 className="h-5 w-5 animate-spin text-[var(--muted-foreground)]" />
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (data === null || !concept) {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-sm text-[var(--muted-foreground)]">
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 p-6 text-sm text-muted-foreground">
         <p>This concept no longer exists.</p>
         {onBack ? (
           <Button size="sm" variant="outline" onClick={onBack}>
@@ -460,7 +452,7 @@ export function ConceptReviewCard({
   };
 
   const hasHtml = Boolean(concept.generatedHtml);
-  const steps = workspaceSteps({
+  const queueFields = {
     status: concept.status,
     placeMatchResolved: concept.placeMatchResolved,
     facebookPackState: concept.facebookPackState,
@@ -469,7 +461,8 @@ export function ConceptReviewCard({
     hasGeneratedHtml: hasHtml,
     sentAt: concept.sentAt,
     viewCount: concept.viewCount,
-  });
+  };
+  const tone = conceptTone(concept.status);
   const panes: Array<{ id: WorkspacePane; label: string; hidden?: boolean }> = [
     { id: "now", label: "Now" },
     { id: "preview", label: "Preview", hidden: !hasHtml },
@@ -479,923 +472,938 @@ export function ConceptReviewCard({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <header className="flex-none border-b border-[var(--border)] bg-[var(--background)] px-3 py-3 sm:px-4">
-        <div className="flex items-start gap-2">
+      <header className="flex-none border-b border-border bg-background">
+        <div
+          className={cn(MEASURE, "flex items-start gap-2 px-3 py-3 sm:px-4")}
+        >
           {onBack ? (
             <button
               type="button"
               onClick={onBack}
-              className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)] lg:hidden"
+              className="mt-0.5 inline-flex h-9 w-9 flex-none items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none lg:hidden"
               aria-label="Back to queue"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
           ) : null}
           <div className="min-w-0 flex-1">
-            <div className="flex items-start justify-between gap-2">
-              <h2 className="truncate text-base font-semibold sm:text-lg">
+            {/* Stacked on a phone: a status like "Needs Google match" set in
+                micro-caps would otherwise truncate the business name away. */}
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-3">
+              <h2 className="max-w-full truncate text-lg font-semibold tracking-tight sm:text-xl">
                 {concept.businessName}
               </h2>
-              <span
-                className={cn(
-                  "inline-flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium",
-                  statusClass(concept.status),
-                )}
-              >
-                {isWorking ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : null}
-                {STATUS_LABELS[concept.status] ?? concept.status}
-              </span>
+              <StatusChip
+                tone={tone}
+                busy={isWorking}
+                label={STATUS_LABELS[concept.status] ?? concept.status}
+              />
             </div>
-            <ol className="mt-2 flex items-center gap-1 text-[11px]">
-              {steps.map((step, index) => (
-                <li key={step.id} className="flex min-w-0 items-center gap-1">
-                  {index > 0 ? (
-                    <span
-                      className="text-[var(--border)]"
-                      aria-hidden
-                    >
-                      /
-                    </span>
-                  ) : null}
-                  <span
-                    className={cn(
-                      step.state === "current" && "font-semibold text-[var(--foreground)]",
-                      step.state === "done" && "text-[var(--muted-foreground)]",
-                      step.state === "todo" && "text-[var(--muted-foreground)]/60",
-                    )}
-                  >
-                    {step.label}
-                  </span>
-                </li>
-              ))}
-            </ol>
+            <PipelineRail
+              concept={queueFields}
+              tone={tone}
+              className="mt-3 max-w-md"
+            />
           </div>
         </div>
       </header>
 
       <nav
-        className="flex flex-none gap-1 overflow-x-auto border-b border-[var(--border)] px-3 [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden"
+        className="flex-none border-b border-border"
         aria-label="Concept sections"
       >
-        {panes
-          .filter((entry) => !entry.hidden)
-          .map((entry) => (
-            <button
-              key={entry.id}
-              type="button"
-              onClick={() => setPane(entry.id)}
-              className={cn(
-                "-mb-px flex-none border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
-                pane === entry.id
-                  ? "border-[var(--foreground)] text-[var(--foreground)]"
-                  : "border-transparent text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
-              )}
-            >
-              {entry.label}
-            </button>
-          ))}
+        <div
+          className={cn(
+            MEASURE,
+            "flex gap-1 overflow-x-auto px-3 [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden",
+          )}
+        >
+          {panes
+            .filter((entry) => !entry.hidden)
+            .map((entry) => (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => setPane(entry.id)}
+                className={cn(
+                  "-mb-px flex-none border-b-2 px-3 py-2.5 text-sm font-medium whitespace-nowrap focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  pane === entry.id
+                    ? "border-primary text-foreground"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {entry.label}
+              </button>
+            ))}
+        </div>
       </nav>
 
-      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-3 py-4 pb-28 sm:px-4">
-      {/* --- Failures --- */}
-      {concept.error ? (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
-          {/* Naming the gate that rejected the draft, because the four
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className={cn(MEASURE, "space-y-4 px-3 py-4 pb-10 sm:px-4")}>
+          {/* --- Failures --- */}
+          {concept.error ? (
+            <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
+              {/* Naming the gate that rejected the draft, because the four
               failures need four different reactions: read the draft, reject
               the claims, retry now, or retry later. */}
-          {concept.generationFailure ? (
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-red-700/70 dark:text-red-300/70">
-              {GENERATION_FAILURE_LABELS[concept.generationFailure]}
-            </p>
+              {concept.generationFailure ? (
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-red-700/70 dark:text-red-300/70">
+                  {GENERATION_FAILURE_LABELS[concept.generationFailure]}
+                </p>
+              ) : null}
+              <p className="flex items-start gap-2 text-sm font-medium text-red-700 dark:text-red-300">
+                <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
+                {concept.error}
+              </p>
+              {concept.validationViolations?.length ? (
+                <ul className="mt-2 list-disc space-y-1 pl-8 text-xs text-red-700/90 dark:text-red-300/90">
+                  {concept.validationViolations.map((violation) => (
+                    <li key={violation}>{violation}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </div>
           ) : null}
-          <p className="flex items-start gap-2 text-sm font-medium text-red-700 dark:text-red-300">
-            <AlertTriangle className="mt-0.5 h-4 w-4 flex-none" />
-            {concept.error}
-          </p>
-          {concept.validationViolations?.length ? (
-            <ul className="mt-2 list-disc space-y-1 pl-8 text-xs text-red-700/90 dark:text-red-300/90">
-              {concept.validationViolations.map((violation) => (
-                <li key={violation}>{violation}</li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-      ) : null}
 
-      {/* --- Google Places match confirmation --- */}
-      {needsMatch && pane === "now" ? (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
-          <h3 className="text-sm font-semibold">Which business is this?</h3>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            Attaching the wrong listing would put another company&apos;s facts
-            on the page, so this needs your confirmation before anything is
-            generated.
-          </p>
+          {/* --- Google Places match confirmation --- */}
+          {needsMatch && pane === "now" ? (
+            <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4">
+              <h3 className="text-sm font-semibold">Which business is this?</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Attaching the wrong listing would put another company&apos;s
+                facts on the page, so this needs your confirmation before
+                anything is generated.
+              </p>
 
-          <div className="mt-3 space-y-2">
-            {candidatesStatus === "loading" ? (
-              <div className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs text-[var(--muted-foreground)]">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Looking these up on Google...
-              </div>
-            ) : null}
+              <div className="mt-3 space-y-2">
+                {candidatesStatus === "loading" ? (
+                  <div className="flex items-center gap-2 rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Looking these up on Google...
+                  </div>
+                ) : null}
 
-            {candidatesStatus === "error" ? (
-              <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-700 dark:text-red-300">
-                {candidatesError ?? "Google lookup failed."} You can still build
-                this concept from your notes with{" "}
-                <strong>No Google listing</strong>.
-              </div>
-            ) : null}
+                {candidatesStatus === "error" ? (
+                  <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3 text-xs text-red-700 dark:text-red-300">
+                    {candidatesError ?? "Google lookup failed."} You can still
+                    build this concept from your notes with{" "}
+                    <strong>No Google listing</strong>.
+                  </div>
+                ) : null}
 
-            {candidatesStatus === "loaded" && candidates.length === 0 ? (
-              <div className="rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 text-xs text-[var(--muted-foreground)]">
-                Google returned nothing for this name and area. Correct the name
-                above and search again, or build from your notes.
-              </div>
-            ) : null}
+                {candidatesStatus === "loaded" && candidates.length === 0 ? (
+                  <div className="rounded-lg border border-border bg-card p-3 text-xs text-muted-foreground">
+                    Google returned nothing for this name and area. Correct the
+                    name above and search again, or build from your notes.
+                  </div>
+                ) : null}
 
-            {candidates.map((candidate) => (
-              <div
-                key={candidate.placeId}
-                className="flex flex-col gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] p-3 sm:flex-row sm:items-center sm:justify-between"
-              >
-                <div className="min-w-0 text-xs">
-                  <p className="font-medium">{candidate.businessName}</p>
-                  <p className="text-[var(--muted-foreground)]">
-                    {candidate.formattedAddress}
-                  </p>
-                  <p className="mt-0.5 text-[var(--muted-foreground)]">
-                    {candidate.phone ?? "No phone"}
-                    {candidate.websiteUrl ? ` · ${candidate.websiteUrl}` : ""}
-                  </p>
-                  {candidate.googleMapsUrl ? (
-                    <a
-                      href={candidate.googleMapsUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-0.5 inline-flex items-center gap-1 text-[var(--muted-foreground)] underline underline-offset-2"
+                {candidates.map((candidate) => (
+                  <div
+                    key={candidate.placeId}
+                    className="flex flex-col gap-2 rounded-lg border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div className="min-w-0 text-xs">
+                      <p className="font-medium">{candidate.businessName}</p>
+                      <p className="text-muted-foreground">
+                        {candidate.formattedAddress}
+                      </p>
+                      <p className="mt-0.5 text-muted-foreground">
+                        {candidate.phone ?? "No phone"}
+                        {candidate.websiteUrl
+                          ? ` · ${candidate.websiteUrl}`
+                          : ""}
+                      </p>
+                      {candidate.googleMapsUrl ? (
+                        <a
+                          href={candidate.googleMapsUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="mt-0.5 inline-flex items-center gap-1 text-muted-foreground underline underline-offset-2"
+                        >
+                          View on Google Maps
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : null}
+                    </div>
+                    <Button
+                      size="sm"
+                      disabled={isBusy}
+                      className="flex-none"
+                      onClick={() =>
+                        runAction(
+                          () =>
+                            confirmPlaceMatch({
+                              conceptId,
+                              placeId: candidate.placeId,
+                            }),
+                          "Match confirmed. Preparing the draft...",
+                        )
+                      }
                     >
-                      View on Google Maps
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ) : null}
-                </div>
+                      <Check className="h-3.5 w-3.5" />
+                      This is them
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Exact text attribution is permitted for this compact mobile panel. */}
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <p>
+                  Live results for identification only. Only the place ID is
+                  kept.
+                </p>
+                <span
+                  translate="no"
+                  aria-label="Google Maps"
+                  className="whitespace-nowrap font-normal tracking-normal text-[#5e5e5e] dark:text-white"
+                >
+                  Google Maps
+                </span>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
                 <Button
                   size="sm"
+                  variant="outline"
                   disabled={isBusy}
-                  className="flex-none"
                   onClick={() =>
                     runAction(
                       () =>
                         confirmPlaceMatch({
                           conceptId,
-                          placeId: candidate.placeId,
+                          placeId: null,
                         }),
-                      "Match confirmed. Preparing the draft...",
+                      "Identity confirmed. Preparing the draft...",
                     )
                   }
                 >
-                  <Check className="h-3.5 w-3.5" />
-                  This is them
+                  No Google listing
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={isBusy}
+                  onClick={() =>
+                    runAction(
+                      () => reEnrich({ conceptId }),
+                      "Searching again...",
+                    )
+                  }
+                >
+                  Search again
                 </Button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : null}
 
-          {/* Exact text attribution is permitted for this compact mobile panel. */}
-          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted-foreground)]">
-            <p>
-              Live results for identification only. Only the place ID is kept.
-            </p>
-            <span
-              translate="no"
-              aria-label="Google Maps"
-              className="whitespace-nowrap font-normal tracking-normal text-[#5e5e5e] dark:text-white"
+          {needsMatch && pane !== "now" ? (
+            <button
+              type="button"
+              onClick={() => setPane("now")}
+              className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-left text-sm"
             >
-              Google Maps
-            </span>
-          </div>
+              <span className="font-medium">
+                Confirm the Google match first.
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">
+                Generation stays locked until you pick the listing.
+              </span>
+            </button>
+          ) : null}
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isBusy}
-              onClick={() =>
+          {pane === "now" && isWorking ? (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <p className="flex items-center gap-2 text-sm font-medium">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {STATUS_LABELS[concept.status] ?? "Working"}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                This page will update when the next step is ready.
+              </p>
+            </div>
+          ) : null}
+
+          {pane === "now" &&
+          !needsMatch &&
+          !isWorking &&
+          concept.status !== "content_review" ? (
+            <NowPane
+              concept={concept}
+              previewUrl={previewUrl}
+              draftPassedValidation={draftPassedValidation}
+              generationBlocked={generationBlocked}
+              packItemCount={packItems.length}
+              isBusy={isBusy}
+              onOpenPack={() => setPane("pack")}
+              onOpenPreview={() => setPane("preview")}
+              onGenerate={() =>
+                runAction(() => generate({ conceptId }), "Generating...")
+              }
+              onPublish={() =>
+                runAction(() => publish({ conceptId }), "Published.")
+              }
+              onUnpublish={() =>
                 runAction(
-                  () =>
-                    confirmPlaceMatch({
-                      conceptId,
-                      placeId: null,
-                    }),
-                  "Identity confirmed. Preparing the draft...",
+                  () => unpublish({ conceptId }),
+                  "Unpublished. The link now returns not found.",
                 )
               }
-            >
-              No Google listing
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={isBusy}
-              onClick={() =>
-                runAction(() => reEnrich({ conceptId }), "Searching again...")
+              onCopyLink={() => copyText(previewUrl, "Link copied.")}
+              onCopyDraft={() =>
+                copyText(
+                  buildMessengerDraft({
+                    businessName: concept.businessName,
+                    token: concept.token,
+                  }),
+                  "Messenger draft copied.",
+                )
               }
-            >
-              Search again
-            </Button>
-          </div>
-        </div>
-      ) : null}
+              onToggleSent={() =>
+                runAction(
+                  () => markSent({ conceptId, sent: !concept.sentAt }),
+                  concept.sentAt ? "Cleared." : "Marked as sent.",
+                )
+              }
+            />
+          ) : null}
 
-      {needsMatch && pane !== "now" ? (
-        <button
-          type="button"
-          onClick={() => setPane("now")}
-          className="w-full rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-left text-sm"
-        >
-          <span className="font-medium">Confirm the Google match first.</span>
-          <span className="mt-0.5 block text-xs text-[var(--muted-foreground)]">
-            Generation stays locked until you pick the listing.
-          </span>
-        </button>
-      ) : null}
-
-      {pane === "now" && isWorking ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <p className="flex items-center gap-2 text-sm font-medium">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {STATUS_LABELS[concept.status] ?? "Working"}
-          </p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            This page will update when the next step is ready.
-          </p>
-        </div>
-      ) : null}
-
-      {pane === "now" &&
-      !needsMatch &&
-      !isWorking &&
-      concept.status !== "content_review" ? (
-        <NowPane
-          concept={concept}
-          previewUrl={previewUrl}
-          draftPassedValidation={draftPassedValidation}
-          generationBlocked={generationBlocked}
-          packItemCount={packItems.length}
-          isBusy={isBusy}
-          onOpenPack={() => setPane("pack")}
-          onOpenPreview={() => setPane("preview")}
-          onGenerate={() =>
-            runAction(
-              () => generate({ conceptId }),
-              "Generating...",
-            )
-          }
-          onPublish={() =>
-            runAction(() => publish({ conceptId }), "Published.")
-          }
-          onUnpublish={() =>
-            runAction(
-              () => unpublish({ conceptId }),
-              "Unpublished. The link now returns not found.",
-            )
-          }
-          onCopyLink={() => copyText(previewUrl, "Link copied.")}
-          onCopyDraft={() =>
-            copyText(
-              buildMessengerDraft({
-                businessName: concept.businessName,
-                token: concept.token,
-              }),
-              "Messenger draft copied.",
-            )
-          }
-          onToggleSent={() =>
-            runAction(
-              () => markSent({ conceptId, sent: !concept.sentAt }),
-              concept.sentAt ? "Cleared." : "Marked as sent.",
-            )
-          }
-        />
-      ) : null}
-
-      {/* --- Facebook Pack: the primary content source --- */}
-      {pane === "pack" ? (
-      <>
-      <ConceptFacebookPack
-        items={packItems}
-        state={concept.facebookPackState}
-        error={concept.facebookPackError}
-        previewUrls={packPreviewUrls}
-        isBusy={isBusy || isUploading}
-        onAddImages={handlePackImages}
-        onAddText={(text) =>
-          runAction(
-            () => addPackText({ conceptId, text }),
-            "Text added to the pack.",
-          )
-        }
-        onRemoveItem={(itemId) =>
-          runAction(
-            () => removePackItem({ conceptId, itemId }),
-            "Item removed from the pack.",
-          )
-        }
-        onAnalyze={() =>
-          runAction(
-            () => analyzeFacebookPack({ conceptId }),
-            "Sorting the pack...",
-          )
-        }
-      />
-
-      {/* --- What the reviewer concluded. A report, not an approval form. --- */}
-      {concept.facebookEvidence ? (
-        <ConceptPackSummary
-          candidates={concept.facebookEvidence.candidates}
-          decisions={concept.facebookEvidence.decisions}
-          conflicts={concept.facebookEvidence.conflicts}
-          assets={concept.facebookEvidence.assets}
-          items={packItems}
-          previewUrls={packPreviewUrls}
-        />
-      ) : null}
-      </>
-      ) : null}
-
-      {/* --- Harvested website content and factual approval --- */}
-      {(harvestSourceUrl || concept.harvestReviewState) &&
-      (harvestPending ? pane === "now" : pane === "more") ? (
-        <div
-          className={cn(
-            "min-w-0 overflow-hidden rounded-xl border p-3 sm:p-4",
-            harvestPending
-              ? "border-amber-500/30 bg-amber-500/5"
-              : "border-[var(--border)] bg-[var(--card)]",
-          )}
-        >
-          <h3 className="text-sm font-semibold">Website gap-fill</h3>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {harvestPending
-              ? "This harvest was collected before automatic review and still has a manual approval below. Approve or skip it once; new scans are reviewed for you."
-              : harvestImagesInFlight
-                ? "Website facts are reviewed. Images are still being copied and sorted before generation unlocks."
-                : concept.harvestReviewState === "skipped"
-                  ? "Nothing usable came back from their website. The page will be built from the Facebook Pack, your notes, and uploaded assets."
-                  : "Found on their website and reviewed against its own source pages. Facebook material wins where the two disagree."}
-          </p>
-
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Pages read</dt>
-              <dd className="font-medium">
-                {concept.harvestedPages?.length ?? 0}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Facts found</dt>
-              <dd className="font-medium">
-                {concept.harvestCandidates?.length ?? 0}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Held-to claims</dt>
-              <dd className="font-medium">{sensitiveCount}</dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Images used</dt>
-              <dd className="font-medium">
-                {concept.importedWebsiteAssets?.length ?? 0} of{" "}
-                {concept.harvestImageCandidates?.length ?? 0}
-              </dd>
-            </div>
-          </dl>
-
-          {/* The reviewed outcome. Legacy pending rows keep the old approval
-              form below instead; they were harvested before this existed. */}
-          {!harvestPending && concept.harvestReview ? (
-            <div className="mt-4 border-t border-[var(--border)] pt-4">
-              <ConceptEvidenceReport
-                candidates={harvestCandidatesToEvidence(
-                  concept.harvestCandidates ?? [],
-                )}
-                decisions={concept.harvestReview.decisions}
-                conflicts={concept.harvestReview.conflicts}
-                emptyMessage="Their website supplied no usable facts."
+          {/* --- Facebook Pack: the primary content source --- */}
+          {pane === "pack" ? (
+            <>
+              <ConceptFacebookPack
+                items={packItems}
+                state={concept.facebookPackState}
+                error={concept.facebookPackError}
+                previewUrls={packPreviewUrls}
+                isBusy={isBusy || isUploading}
+                onAddImages={handlePackImages}
+                onAddText={(text) =>
+                  runAction(
+                    () => addPackText({ conceptId, text }),
+                    "Text added to the pack.",
+                  )
+                }
+                onRemoveItem={(itemId) =>
+                  runAction(
+                    () => removePackItem({ conceptId, itemId }),
+                    "Item removed from the pack.",
+                  )
+                }
+                onAnalyze={() =>
+                  runAction(
+                    () => analyzeFacebookPack({ conceptId }),
+                    "Sorting the pack...",
+                  )
+                }
               />
-            </div>
+
+              {/* --- What the reviewer concluded. A report, not an approval form. --- */}
+              {concept.facebookEvidence ? (
+                <ConceptPackSummary
+                  candidates={concept.facebookEvidence.candidates}
+                  decisions={concept.facebookEvidence.decisions}
+                  conflicts={concept.facebookEvidence.conflicts}
+                  assets={concept.facebookEvidence.assets}
+                  items={packItems}
+                  previewUrls={packPreviewUrls}
+                />
+              ) : null}
+            </>
           ) : null}
-          {concept.harvestedPages?.length ? (
-            <details className="mt-3 min-w-0 text-xs">
-              <summary className="cursor-pointer font-medium text-[var(--muted-foreground)]">
-                {concept.harvestedPages.length} source page
-                {concept.harvestedPages.length === 1 ? "" : "s"}
-              </summary>
-              <ul className="mt-2 min-w-0 space-y-1.5">
-                {concept.harvestedPages.map((page) => (
-                  <li key={page.url} className="min-w-0">
-                    <a
-                      href={page.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block min-w-0 truncate text-[var(--muted-foreground)] underline underline-offset-2"
+
+          {/* --- Harvested website content and factual approval --- */}
+          {(harvestSourceUrl || concept.harvestReviewState) &&
+          (harvestPending ? pane === "now" : pane === "more") ? (
+            <div
+              className={cn(
+                "min-w-0 overflow-hidden rounded-xl border p-3 sm:p-4",
+                harvestPending
+                  ? "border-amber-500/30 bg-amber-500/5"
+                  : "border-border bg-card",
+              )}
+            >
+              <h3 className="text-sm font-semibold">Website gap-fill</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {harvestPending
+                  ? "This harvest was collected before automatic review and still has a manual approval below. Approve or skip it once; new scans are reviewed for you."
+                  : harvestImagesInFlight
+                    ? "Website facts are reviewed. Images are still being copied and sorted before generation unlocks."
+                    : concept.harvestReviewState === "skipped"
+                      ? "Nothing usable came back from their website. The page will be built from the Facebook Pack, your notes, and uploaded assets."
+                      : "Found on their website and reviewed against its own source pages. Facebook material wins where the two disagree."}
+              </p>
+
+              <StatGrid
+                className="mt-4"
+                stats={[
+                  {
+                    label: "Pages read",
+                    value: concept.harvestedPages?.length ?? 0,
+                  },
+                  {
+                    label: "Facts found",
+                    value: concept.harvestCandidates?.length ?? 0,
+                  },
+                  { label: "Held-to claims", value: sensitiveCount },
+                  {
+                    label: "Images used",
+                    value: `${concept.importedWebsiteAssets?.length ?? 0} of ${concept.harvestImageCandidates?.length ?? 0}`,
+                  },
+                ]}
+              />
+
+              {/* The reviewed outcome. Legacy pending rows keep the old approval
+              form below instead; they were harvested before this existed. */}
+              {!harvestPending && concept.harvestReview ? (
+                <div className="mt-4 border-t border-border pt-4">
+                  <ConceptEvidenceReport
+                    candidates={harvestCandidatesToEvidence(
+                      concept.harvestCandidates ?? [],
+                    )}
+                    decisions={concept.harvestReview.decisions}
+                    conflicts={concept.harvestReview.conflicts}
+                    emptyMessage="Their website supplied no usable facts."
+                  />
+                </div>
+              ) : null}
+              {concept.harvestedPages?.length ? (
+                <details className="mt-3 min-w-0 text-xs">
+                  <summary className="cursor-pointer font-medium text-muted-foreground">
+                    {concept.harvestedPages.length} source page
+                    {concept.harvestedPages.length === 1 ? "" : "s"}
+                  </summary>
+                  <ul className="mt-2 min-w-0 space-y-1.5">
+                    {concept.harvestedPages.map((page) => (
+                      <li key={page.url} className="min-w-0">
+                        <a
+                          href={page.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block min-w-0 truncate text-muted-foreground underline underline-offset-2"
+                        >
+                          {page.title ?? page.url}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+
+              {concept.harvestWarnings?.length ? (
+                <ul className="mt-3 min-w-0 list-disc space-y-1 pl-4 text-xs text-muted-foreground">
+                  {concept.harvestWarnings.map((warning) => (
+                    <li
+                      key={warning}
+                      className="break-words [overflow-wrap:anywhere]"
                     >
-                      {page.title ?? page.url}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </details>
-          ) : null}
+                      {warning}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
 
-          {concept.harvestWarnings?.length ? (
-            <ul className="mt-3 min-w-0 list-disc space-y-1 pl-4 text-xs text-[var(--muted-foreground)]">
-              {concept.harvestWarnings.map((warning) => (
-                <li
-                  key={warning}
-                  className="break-words [overflow-wrap:anywhere]"
-                >
-                  {warning}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-
-          {/* Legacy only. A reviewed harvest attaches its own imagery, and a
+              {/* Legacy only. A reviewed harvest attaches its own imagery, and a
               staged file nothing selected is deleted rather than offered. */}
-          {harvestPending ? (
-            <ConceptHarvestImages
-              candidates={concept.harvestImageCandidates ?? []}
-              previewUrls={harvestImagePreviewUrls}
-              isBusy={isBusy || isWorking}
-              canRegenerate={Boolean(concept.researchBrief)}
-              onRetry={(candidateId) =>
-                runAction(
-                  () => stageHarvestImages({ conceptId, candidateId }),
-                  "Retrying that website image...",
-                )
-              }
-              onApprove={(candidateId, kind) =>
-                runAction(
-                  () => approveHarvestImage({ conceptId, candidateId, kind }),
-                  kind === "logo"
-                    ? "Website logo selected."
-                    : "Website photo selected.",
-                )
-              }
-              onReject={(candidateId) =>
-                runAction(
-                  () => rejectHarvestImage({ conceptId, candidateId }),
-                  "Website image rejected.",
-                )
-              }
-              onRegenerate={() =>
-                runAction(
-                  () =>
-                    generate({ conceptId }),
-                  "Generating with the selected images...",
-                )
-              }
-            />
-          ) : null}
+              {harvestPending ? (
+                <ConceptHarvestImages
+                  candidates={concept.harvestImageCandidates ?? []}
+                  previewUrls={harvestImagePreviewUrls}
+                  isBusy={isBusy || isWorking}
+                  canRegenerate={Boolean(concept.researchBrief)}
+                  onRetry={(candidateId) =>
+                    runAction(
+                      () => stageHarvestImages({ conceptId, candidateId }),
+                      "Retrying that website image...",
+                    )
+                  }
+                  onApprove={(candidateId, kind) =>
+                    runAction(
+                      () =>
+                        approveHarvestImage({ conceptId, candidateId, kind }),
+                      kind === "logo"
+                        ? "Website logo selected."
+                        : "Website photo selected.",
+                    )
+                  }
+                  onReject={(candidateId) =>
+                    runAction(
+                      () => rejectHarvestImage({ conceptId, candidateId }),
+                      "Website image rejected.",
+                    )
+                  }
+                  onRegenerate={() =>
+                    runAction(
+                      () => generate({ conceptId }),
+                      "Generating with the selected images...",
+                    )
+                  }
+                />
+              ) : null}
 
-          {harvestPending ? (
-            <ConceptHarvestReview
-              candidates={concept.harvestCandidates ?? []}
-              approvedCandidateIds={concept.approvedHarvestCandidateIds ?? []}
-              reviewState="pending"
-              snapshotKey={concept.harvestedAt ?? 0}
-              isBusy={isBusy || isWorking}
-              placeMatchResolved={concept.placeMatchResolved}
-              hasPhone={Boolean(concept.phone)}
-              hasLogo={Boolean(data.logoUrl)}
-              photoCount={data.photos.length}
-              manualQuoteCount={
-                concept.approvedQuotes.filter(
-                  (quote) => quote.sourceKind !== "website",
-                ).length
-              }
-              onApproveAndGenerate={(candidateIds) =>
-                runAction(async () => {
-                  await approveHarvestReview({
-                    conceptId,
-                    approvedCandidateIds: candidateIds,
-                  });
-                  await generate({ conceptId });
-                }, "Approved content saved. Generating a new concept...")
-              }
-              onSkipAndGenerate={() =>
-                runAction(async () => {
-                  await skipHarvestReview({ conceptId });
-                  await generate({ conceptId });
-                }, "Website content ignored. Generating from the brief...")
-              }
-              onRefresh={() =>
-                runAction(
-                  () => harvestWebsiteContent({ conceptId, refresh: true }),
-                  "Re-scanning their website...",
-                )
-              }
-            />
-          ) : (
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
+              {harvestPending ? (
+                <ConceptHarvestReview
+                  candidates={concept.harvestCandidates ?? []}
+                  approvedCandidateIds={
+                    concept.approvedHarvestCandidateIds ?? []
+                  }
+                  reviewState="pending"
+                  snapshotKey={concept.harvestedAt ?? 0}
+                  isBusy={isBusy || isWorking}
+                  placeMatchResolved={concept.placeMatchResolved}
+                  hasPhone={Boolean(concept.phone)}
+                  hasLogo={Boolean(data.logoUrl)}
+                  photoCount={data.photos.length}
+                  manualQuoteCount={
+                    concept.approvedQuotes.filter(
+                      (quote) => quote.sourceKind !== "website",
+                    ).length
+                  }
+                  onApproveAndGenerate={(candidateIds) =>
+                    runAction(async () => {
+                      await approveHarvestReview({
+                        conceptId,
+                        approvedCandidateIds: candidateIds,
+                      });
+                      await generate({ conceptId });
+                    }, "Approved content saved. Generating a new concept...")
+                  }
+                  onSkipAndGenerate={() =>
+                    runAction(async () => {
+                      await skipHarvestReview({ conceptId });
+                      await generate({ conceptId });
+                    }, "Website content ignored. Generating from the brief...")
+                  }
+                  onRefresh={() =>
+                    runAction(
+                      () => harvestWebsiteContent({ conceptId, refresh: true }),
+                      "Re-scanning their website...",
+                    )
+                  }
+                />
+              ) : (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isBusy || isWorking || harvestImagesInFlight}
+                    onClick={() =>
+                      runAction(
+                        () =>
+                          harvestWebsiteContent({ conceptId, refresh: true }),
+                        "Re-scanning their website...",
+                      )
+                    }
+                  >
+                    Re-scan website
+                  </Button>
+                </div>
+              )}
+            </div>
+          ) : pane === "more" &&
+            (concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl) &&
+            // Website is secondary: after the pack has been analyzed, or when there
+            // is no pack material at all. Collecting/analyzing the pack first keeps
+            // the card order honest and avoids spending Firecrawl while the primary
+            // source is still mid-pass.
+            (packItems.length === 0 ||
+              concept.facebookPackState === "ready" ||
+              concept.facebookPackState === "failed") ? (
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h3 className="text-sm font-semibold">Fill gaps from website</h3>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {harvestInFlight
+                  ? "Reading their website and reviewing what it says..."
+                  : "Optional. Fill missing services, about copy, or photos from their current site. One Firecrawl map plus up to six page reads, then automatic review. Facebook material wins where the two disagree."}
+              </p>
               <Button
                 size="sm"
                 variant="outline"
-                disabled={isBusy || isWorking || harvestImagesInFlight}
+                className="mt-3"
+                disabled={isBusy || isWorking}
                 onClick={() =>
                   runAction(
-                    () => harvestWebsiteContent({ conceptId, refresh: true }),
-                    "Re-scanning their website...",
+                    () => harvestWebsiteContent({ conceptId }),
+                    "Filling gaps from their website...",
                   )
                 }
               >
-                Re-scan website
+                {harvestInFlight ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : null}
+                {harvestInFlight
+                  ? "Reading website..."
+                  : "Fill gaps from website"}
               </Button>
             </div>
-          )}
-        </div>
-      ) : pane === "more" &&
-        (concept.verifiedWebsiteUrl || concept.submittedWebsiteUrl) &&
-        // Website is secondary: after the pack has been analyzed, or when there
-        // is no pack material at all. Collecting/analyzing the pack first keeps
-        // the card order honest and avoids spending Firecrawl while the primary
-        // source is still mid-pass.
-        (packItems.length === 0 ||
-          concept.facebookPackState === "ready" ||
-          concept.facebookPackState === "failed") ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-          <h3 className="text-sm font-semibold">Fill gaps from website</h3>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-            {harvestInFlight
-              ? "Reading their website and reviewing what it says..."
-              : "Optional. Fill missing services, about copy, or photos from their current site. One Firecrawl map plus up to six page reads, then automatic review. Facebook material wins where the two disagree."}
-          </p>
-          <Button
-            size="sm"
-            variant="outline"
-            className="mt-3"
-            disabled={isBusy || isWorking}
-            onClick={() =>
-              runAction(
-                () => harvestWebsiteContent({ conceptId }),
-                "Filling gaps from their website...",
-              )
-            }
-          >
-            {harvestInFlight ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : null}
-            {harvestInFlight ? "Reading website..." : "Fill gaps from website"}
-          </Button>
-        </div>
-      ) : null}
-
-      {/* --- Assets --- */}
-      {pane === "more" ? (
-      <>
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
-        <h3 className="text-sm font-semibold">Manual images</h3>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-          Overrides for the Facebook Pack and website selections. Use when the
-          owner sent better photos, or when the pack has none. Google photos are
-          never used.
-        </p>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <input
-            ref={logoInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) void handleFiles([file], "logo");
-            }}
-          />
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={async (event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              await handleFiles(files, "photo");
-            }}
-          />
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isUploading}
-            onClick={() => logoInputRef.current?.click()}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            {data.logoUrl ? "Replace logo" : "Upload logo"}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isUploading}
-            onClick={() => photoInputRef.current?.click()}
-          >
-            <Upload className="h-3.5 w-3.5" />
-            Add photos
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isUploading}
-            onPaste={(event) => handlePaste(event, "logo")}
-            onClick={() => toast.info("Now press Command-V to paste the logo.")}
-          >
-            <ClipboardPaste className="h-3.5 w-3.5" />
-            Paste logo
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={isUploading}
-            onPaste={(event) => handlePaste(event, "photo")}
-            onClick={() =>
-              toast.info("Now press Command-V to paste one or more photos.")
-            }
-          >
-            <ClipboardPaste className="h-3.5 w-3.5" />
-            Paste photos
-          </Button>
-          {isUploading ? (
-            <span className="inline-flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              Uploading...
-            </span>
           ) : null}
-        </div>
 
-        <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
-          For clipboard images, click the matching Paste button and press ⌘V.
-          Screenshots and copied image files work; a copied image URL does not.
-        </p>
+          {/* --- Assets --- */}
+          {pane === "more" ? (
+            <>
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="text-sm font-semibold">Manual images</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Overrides for the Facebook Pack and website selections. Use
+                  when the owner sent better photos, or when the pack has none.
+                  Google photos are never used.
+                </p>
 
-        {data.logoUrl || data.photos.length > 0 ? (
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
-            {data.logoUrl ? (
-              <AssetThumb
-                url={data.logoUrl}
-                label="Logo"
-                onRemove={() =>
-                  concept.logoStorageId
-                    ? runAction(
-                        () =>
-                          removeAsset({
-                            conceptId,
-                            storageId: concept.logoStorageId!,
-                          }),
-                        "Logo removed.",
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <input
+                    ref={logoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(event) => {
+                      const file = event.target.files?.[0];
+                      event.target.value = "";
+                      if (file) void handleFiles([file], "logo");
+                    }}
+                  />
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async (event) => {
+                      const files = Array.from(event.target.files ?? []);
+                      event.target.value = "";
+                      await handleFiles(files, "photo");
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isUploading}
+                    onClick={() => logoInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    {data.logoUrl ? "Replace logo" : "Upload logo"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isUploading}
+                    onClick={() => photoInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                    Add photos
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isUploading}
+                    onPaste={(event) => handlePaste(event, "logo")}
+                    onClick={() =>
+                      toast.info("Now press Command-V to paste the logo.")
+                    }
+                  >
+                    <ClipboardPaste className="h-3.5 w-3.5" />
+                    Paste logo
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={isUploading}
+                    onPaste={(event) => handlePaste(event, "photo")}
+                    onClick={() =>
+                      toast.info(
+                        "Now press Command-V to paste one or more photos.",
                       )
-                    : undefined
-                }
-              />
-            ) : null}
-            {data.photos.map((photo) => (
-              <AssetThumb
-                key={photo.storageId}
-                url={photo.url}
-                label="Photo"
-                onRemove={() =>
-                  runAction(
-                    () =>
-                      removeAsset({ conceptId, storageId: photo.storageId }),
-                    "Photo removed.",
-                  )
-                }
-              />
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-xs text-[var(--muted-foreground)]">
-            No images yet. The generator will produce a typographic concept
-            instead of inventing photography.
-          </p>
-        )}
-      </div>
+                    }
+                  >
+                    <ClipboardPaste className="h-3.5 w-3.5" />
+                    Paste photos
+                  </Button>
+                  {isUploading ? (
+                    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Uploading...
+                    </span>
+                  ) : null}
+                </div>
 
-      {/* --- Brief editing --- */}
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)]">
-        <h3 className="px-4 py-3 text-sm font-semibold">Edit the brief</h3>
-        <div className="space-y-3 border-t border-[var(--border)] p-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-name">Business name</Label>
-            <Input
-              id="edit-name"
-              value={draft.businessName}
-              onChange={(event) =>
-                setDraft({ ...draft, businessName: event.target.value })
-              }
-            />
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-phone">Phone</Label>
-              <Input
-                id="edit-phone"
-                value={draft.phone}
-                onChange={(event) =>
-                  setDraft({ ...draft, phone: event.target.value })
-                }
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  For clipboard images, click the matching Paste button and
+                  press ⌘V. Screenshots and copied image files work; a copied
+                  image URL does not.
+                </p>
+
+                {data.logoUrl || data.photos.length > 0 ? (
+                  <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                    {data.logoUrl ? (
+                      <AssetThumb
+                        url={data.logoUrl}
+                        label="Logo"
+                        onRemove={() =>
+                          concept.logoStorageId
+                            ? runAction(
+                                () =>
+                                  removeAsset({
+                                    conceptId,
+                                    storageId: concept.logoStorageId!,
+                                  }),
+                                "Logo removed.",
+                              )
+                            : undefined
+                        }
+                      />
+                    ) : null}
+                    {data.photos.map((photo) => (
+                      <AssetThumb
+                        key={photo.storageId}
+                        url={photo.url}
+                        label="Photo"
+                        onRemove={() =>
+                          runAction(
+                            () =>
+                              removeAsset({
+                                conceptId,
+                                storageId: photo.storageId,
+                              }),
+                            "Photo removed.",
+                          )
+                        }
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    No images yet. The generator will produce a typographic
+                    concept instead of inventing photography.
+                  </p>
+                )}
+              </div>
+
+              {/* --- Brief editing --- */}
+              <div className="rounded-xl border border-border bg-card">
+                <h3 className="px-4 py-3 text-sm font-semibold">
+                  Edit the brief
+                </h3>
+                <div className="space-y-3 border-t border-border p-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-name">Business name</Label>
+                    <Input
+                      id="edit-name"
+                      value={draft.businessName}
+                      onChange={(event) =>
+                        setDraft({ ...draft, businessName: event.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-phone">Phone</Label>
+                      <Input
+                        id="edit-phone"
+                        value={draft.phone}
+                        onChange={(event) =>
+                          setDraft({ ...draft, phone: event.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-area">Service area</Label>
+                      <Input
+                        id="edit-area"
+                        value={draft.serviceArea}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            serviceArea: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-facebook">Facebook Page</Label>
+                      <Input
+                        id="edit-facebook"
+                        value={draft.facebookPageUrl}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            facebookPageUrl: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-website">Existing website</Label>
+                      <Input
+                        id="edit-website"
+                        value={draft.submittedWebsiteUrl}
+                        onChange={(event) =>
+                          setDraft({
+                            ...draft,
+                            submittedWebsiteUrl: event.target.value,
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-notes">
+                      Generation note (optional)
+                    </Label>
+                    <Textarea
+                      id="edit-notes"
+                      rows={5}
+                      value={draft.notes}
+                      onChange={(event) =>
+                        setDraft({ ...draft, notes: event.target.value })
+                      }
+                      placeholder="Extra business context or a one-off design direction for this page."
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Added to the Kimi prompt only when filled. Saving a change
+                      clears the current draft so the next generation uses it.
+                    </p>
+                  </div>
+
+                  <QuotesEditor quotes={quotes} onChange={setQuotes} />
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={isBusy}
+                      onClick={() =>
+                        runAction(
+                          () =>
+                            updateConcept({
+                              conceptId,
+                              ...draft,
+                              approvedQuotes: quotes.filter(
+                                (quote) =>
+                                  quote.text.trim() && quote.author.trim(),
+                              ),
+                            }),
+                          "Brief saved.",
+                        )
+                      }
+                    >
+                      Save brief
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={isBusy}
+                      onClick={() =>
+                        runAction(
+                          () => reEnrich({ conceptId }),
+                          "Re-running the Google lookup...",
+                        )
+                      }
+                    >
+                      Re-run enrichment
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : null}
+
+          {/* --- Review and publish --- */}
+          {pane === "preview" && concept.generatedHtml ? (
+            <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-4">
+              <div>
+                <h3 className="text-sm font-semibold">Review</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {draftPassedValidation ? (
+                    <>
+                      This draft passed the safety checks. Your job is the
+                      finished page: does it look right, does it sound like
+                      them, and is it something you would send? Publish is still
+                      your call.
+                    </>
+                  ) : (
+                    <>
+                      This draft did not pass. It is shown so you can see what
+                      the model produced — read the failure above before doing
+                      anything with it. Do not publish it.
+                    </>
+                  )}
+                </p>
+              </div>
+
+              <ConceptPreviewFrame
+                html={concept.generatedHtml}
+                businessName={concept.businessName}
               />
+
+              <div className="flex flex-wrap gap-2 border-t border-border pt-4">
+                <Button size="sm" variant="outline" asChild>
+                  {/* notrack keeps Layken's own checks out of the open count. */}
+                  <a
+                    href={`${previewUrl}?notrack=1`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open full page
+                  </a>
+                </Button>
+                {concept.status === "published" ? (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyText(previewUrl, "Link copied.")}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                    Copy link
+                  </Button>
+                ) : null}
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-area">Service area</Label>
-              <Input
-                id="edit-area"
-                value={draft.serviceArea}
-                onChange={(event) =>
-                  setDraft({ ...draft, serviceArea: event.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-facebook">Facebook Page</Label>
-              <Input
-                id="edit-facebook"
-                value={draft.facebookPageUrl}
-                onChange={(event) =>
-                  setDraft({ ...draft, facebookPageUrl: event.target.value })
-                }
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="edit-website">Existing website</Label>
-              <Input
-                id="edit-website"
-                value={draft.submittedWebsiteUrl}
-                onChange={(event) =>
-                  setDraft({
-                    ...draft,
-                    submittedWebsiteUrl: event.target.value,
-                  })
-                }
-              />
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-notes">Generation note (optional)</Label>
-            <Textarea
-              id="edit-notes"
-              rows={5}
-              value={draft.notes}
-              onChange={(event) =>
-                setDraft({ ...draft, notes: event.target.value })
-              }
-              placeholder="Extra business context or a one-off design direction for this page."
-            />
-            <p className="text-[11px] text-[var(--muted-foreground)]">
-              Added to the Kimi prompt only when filled. Saving a change clears
-              the current draft so the next generation uses it.
-            </p>
-          </div>
+          ) : null}
 
-          <QuotesEditor quotes={quotes} onChange={setQuotes} />
-
-          <div className="flex flex-wrap gap-2">
-            <Button
-              size="sm"
-              disabled={isBusy}
-              onClick={() =>
-                runAction(
-                  () =>
-                    updateConcept({
-                      conceptId,
-                      ...draft,
-                      approvedQuotes: quotes.filter(
-                        (quote) => quote.text.trim() && quote.author.trim(),
-                      ),
-                    }),
-                  "Brief saved.",
-                )
-              }
-            >
-              Save brief
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={isBusy}
-              onClick={() =>
-                runAction(
-                  () => reEnrich({ conceptId }),
-                  "Re-running the Google lookup...",
-                )
-              }
-            >
-              Re-run enrichment
-            </Button>
-          </div>
-        </div>
-      </div>
-      </>
-      ) : null}
-
-      {/* --- Review and publish --- */}
-      {pane === "preview" && concept.generatedHtml ? (
-        <div className="min-w-0 space-y-4 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
-          <div>
-            <h3 className="text-sm font-semibold">Review</h3>
-            <p className="mt-1 text-xs text-[var(--muted-foreground)]">
-              {draftPassedValidation ? (
-                <>
-                  This draft passed the safety checks. Your job is the finished
-                  page: does it look right, does it sound like them, and is it
-                  something you would send? Publish is still your call.
-                </>
-              ) : (
-                <>
-                  This draft did not pass. It is shown so you can see what the
-                  model produced — read the failure above before doing anything
-                  with it. Do not publish it.
-                </>
-              )}
-            </p>
-          </div>
-
-          <ConceptPreviewFrame
-            html={concept.generatedHtml}
-            businessName={concept.businessName}
-          />
-
-          <div className="flex flex-wrap gap-2 border-t border-[var(--border)] pt-4">
-            <Button size="sm" variant="outline" asChild>
-              {/* notrack keeps Layken's own checks out of the open count. */}
-              <a
-                href={`${previewUrl}?notrack=1`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                <ExternalLink className="h-3.5 w-3.5" />
-                Open full page
-              </a>
-            </Button>
-            {concept.status === "published" ? (
+          {/* --- Delete --- */}
+          {pane === "more" ? (
+            <div className="rounded-xl border border-border p-4">
               <Button
                 size="sm"
-                variant="ghost"
-                onClick={() => copyText(previewUrl, "Link copied.")}
+                variant="destructive"
+                disabled={isBusy}
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      `Delete the concept for ${concept.businessName}? This removes the page, its uploaded images, and public access to the link.`,
+                    )
+                  ) {
+                    return;
+                  }
+                  void runAction(async () => {
+                    await removeConcept({ conceptId });
+                    onDeleted();
+                  }, "Concept deleted.");
+                }}
               >
-                <Copy className="h-3.5 w-3.5" />
-                Copy link
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete concept
               </Button>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
+            </div>
+          ) : null}
 
-      {/* --- Delete --- */}
-      {pane === "more" ? (
-      <div className="rounded-xl border border-[var(--border)] p-4">
-        <Button
-          size="sm"
-          variant="destructive"
-          disabled={isBusy}
-          onClick={() => {
-            if (
-              !window.confirm(
-                `Delete the concept for ${concept.businessName}? This removes the page, its uploaded images, and public access to the link.`,
-              )
-            ) {
-              return;
-            }
-            void runAction(async () => {
-              await removeConcept({ conceptId });
-              onDeleted();
-            }, "Concept deleted.");
-          }}
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-          Delete concept
-        </Button>
-      </div>
-      ) : null}
-
-      {pane === "preview" && concept.generatedHtml ? (
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4 text-[11px] text-[var(--muted-foreground)]">
-          {concept.model ? <>Model: {concept.model} · </> : null}
-          {concept.promptVersion ? <>Prompt: {concept.promptVersion}</> : null}
-          <span className="mt-1 block">
-            {concept.viewCount} open{concept.viewCount === 1 ? "" : "s"}
-            {concept.firstViewedAt
-              ? ` · first ${formatDate(concept.firstViewedAt)}`
-              : ""}
-            {concept.sentAt ? ` · sent ${formatDate(concept.sentAt)}` : ""}
-          </span>
+          {/* Provenance, not a panel: a hairline and the mono face are enough. */}
+          {pane === "preview" && concept.generatedHtml ? (
+            <div className="border-t border-border pt-3 font-mono text-[10px] leading-relaxed tracking-[0.06em] text-muted-foreground uppercase">
+              {concept.model ? <>Model {concept.model} · </> : null}
+              {concept.promptVersion ? (
+                <>Prompt {concept.promptVersion}</>
+              ) : null}
+              <span className="mt-1 block">
+                {concept.viewCount} open{concept.viewCount === 1 ? "" : "s"}
+                {concept.firstViewedAt
+                  ? ` · first ${formatDate(concept.firstViewedAt)}`
+                  : ""}
+                {concept.sentAt ? ` · sent ${formatDate(concept.sentAt)}` : ""}
+              </span>
+            </div>
+          ) : null}
         </div>
-      ) : null}
       </div>
 
       <StickyWorkspaceBar
@@ -1410,10 +1418,7 @@ export function ConceptReviewCard({
         }
         isBusy={isBusy || isWorking || isUploading}
         onGenerate={() =>
-          runAction(
-            () => generate({ conceptId }),
-            "Generating...",
-          )
+          runAction(() => generate({ conceptId }), "Generating...")
         }
         onAnalyze={() =>
           runAction(
@@ -1478,27 +1483,28 @@ function NowPane({
   if (concept.status === "published") {
     return (
       <div className="space-y-3">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+        <div className="rounded-xl border border-border bg-card p-4">
           <h3 className="text-sm font-semibold">Send this concept</h3>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          <p className="mt-1 text-xs text-muted-foreground">
             {concept.viewCount === 0
               ? concept.sentAt
                 ? "Marked sent, not opened yet. One follow-up, then stop."
                 : "Published. Copy the Messenger draft and send it by hand."
               : `Opened ${concept.viewCount} time${concept.viewCount === 1 ? "" : "s"}.`}
           </p>
-          <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <dt className="text-[var(--muted-foreground)]">First opened</dt>
-              <dd className="font-medium">
-                {formatDate(concept.firstViewedAt)}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-[var(--muted-foreground)]">Last opened</dt>
-              <dd className="font-medium">{formatDate(concept.lastViewedAt)}</dd>
-            </div>
-          </dl>
+          <StatGrid
+            className="mt-4 sm:grid-cols-2"
+            stats={[
+              {
+                label: "First opened",
+                value: formatDate(concept.firstViewedAt),
+              },
+              {
+                label: "Last opened",
+                value: formatDate(concept.lastViewedAt),
+              },
+            ]}
+          />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button size="sm" className="w-full" onClick={onCopyDraft}>
@@ -1515,7 +1521,11 @@ function NowPane({
             Copy link
           </Button>
           <Button size="sm" variant="outline" className="w-full" asChild>
-            <a href={`${previewUrl}?notrack=1`} target="_blank" rel="noreferrer">
+            <a
+              href={`${previewUrl}?notrack=1`}
+              target="_blank"
+              rel="noreferrer"
+            >
               <ExternalLink className="h-3.5 w-3.5" />
               Open
             </a>
@@ -1553,9 +1563,9 @@ function NowPane({
 
   if (concept.status === "review" && concept.generatedHtml) {
     return (
-      <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+      <div className="rounded-xl border border-border bg-card p-4">
         <h3 className="text-sm font-semibold">Ready to publish</h3>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+        <p className="mt-1 text-xs text-muted-foreground">
           {draftPassedValidation
             ? "Safety checks passed. Open Preview, then publish if you would send it."
             : "This draft did not pass. Read the failure above before publishing."}
@@ -1577,11 +1587,11 @@ function NowPane({
   }
 
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
+    <div className="rounded-xl border border-border bg-card p-4">
       <h3 className="text-sm font-semibold">
         {concept.generatedHtml ? "Generate again" : "Generate the page"}
       </h3>
-      <ul className="mt-2 space-y-1 text-xs text-[var(--muted-foreground)]">
+      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
         <li>Google match confirmed</li>
         <li>
           {packItemCount === 0
@@ -1610,9 +1620,7 @@ function NowPane({
           {concept.generatedHtml ? "Regenerate" : "Generate concept"}
         </Button>
         {generationBlocked ? (
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {generationBlocked}
-          </p>
+          <p className="text-xs text-muted-foreground">{generationBlocked}</p>
         ) : null}
       </div>
     </div>
@@ -1647,15 +1655,20 @@ function StickyWorkspaceBar({
     onClick: () => void;
     disabled?: boolean;
   } | null = null;
+  let hint: string | null = null;
 
   if (status === "published") {
     action = { label: "Copy Messenger draft", onClick: onCopyDraft };
+    hint = "Published. Send the link by hand.";
   } else if (status === "review" && hasHtml) {
     action = {
       label: "Publish",
       onClick: () => void onPublish(),
       disabled: !draftPassedValidation,
     };
+    hint = draftPassedValidation
+      ? "Safety checks passed. Publishing is your call."
+      : "This draft did not pass. Read the failure above.";
   } else if (status === "matching" || status === "content_review") {
     action = null;
   } else if (
@@ -1668,25 +1681,45 @@ function StickyWorkspaceBar({
       label: hasHtml ? "Regenerate" : "Generate concept",
       onClick: () => void onGenerate(),
     };
+    hint = hasHtml ? "Regenerating replaces the current draft." : null;
   } else if (packNeedsAnalyze) {
     action = {
       label: "Analyze Facebook Pack",
       onClick: () => void onAnalyze(),
     };
+    hint = "Sort the pack before generating.";
+  } else {
+    // No move available. Saying why beats an empty bar, because the reason is
+    // always something Layken can go and fix.
+    hint = generationBlocked;
   }
 
-  if (!action) return null;
+  if (!action && !hint) return null;
 
   return (
-    <div className="flex-none border-t border-[var(--border)] bg-[var(--background)] px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-4">
-      <Button
-        className="w-full"
-        disabled={isBusy || action.disabled}
-        onClick={action.onClick}
+    <div className="flex-none border-t border-border bg-background">
+      <div
+        className={cn(
+          MEASURE,
+          "flex flex-col gap-2 px-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4",
+        )}
       >
-        {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {action.label}
-      </Button>
+        {hint ? (
+          <p className="min-w-0 text-xs text-muted-foreground">{hint}</p>
+        ) : (
+          <span className="hidden sm:block" />
+        )}
+        {action ? (
+          <Button
+            className="w-full flex-none sm:w-auto sm:min-w-40"
+            disabled={isBusy || action.disabled}
+            onClick={action.onClick}
+          >
+            {isBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {action.label}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -1701,7 +1734,7 @@ function AssetThumb({
   onRemove?: () => void;
 }) {
   return (
-    <div className="group relative aspect-square overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)]">
+    <div className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
       {/*
         Unoptimized because these are Convex storage URLs on a host that is not
         in `next.config.ts` remotePatterns, and running a sales concept's photos
@@ -1753,7 +1786,7 @@ function QuotesEditor({
   return (
     <div className="space-y-2">
       <Label>Approved quotes</Label>
-      <p className="text-[11px] text-[var(--muted-foreground)]">
+      <p className="text-[11px] text-muted-foreground">
         Only use owner-supplied quotes or testimonials you individually approved
         from their own website. Leave this empty and the page will carry no
         testimonials.
@@ -1762,7 +1795,7 @@ function QuotesEditor({
       {quotes.map((quote, index) => (
         <div
           key={index}
-          className="space-y-2 rounded-lg border border-[var(--border)] p-2"
+          className="space-y-2 rounded-lg border border-border p-2"
         >
           <Textarea
             rows={2}

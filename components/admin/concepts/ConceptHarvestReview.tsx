@@ -71,7 +71,7 @@ function CandidateRow({
         "min-w-0 overflow-hidden rounded-lg border p-3",
         checked
           ? "border-emerald-500/40 bg-emerald-500/5"
-          : "border-[var(--border)] bg-[var(--background)]",
+          : "border-border bg-background",
       )}
     >
       <label
@@ -86,7 +86,7 @@ function CandidateRow({
         />
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-2">
-            <span className="rounded bg-[var(--muted)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted-foreground)]">
+            <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               {KIND_LABELS[candidate.kind]}
             </span>
             {candidate.risk === "sensitive" ? (
@@ -99,7 +99,7 @@ function CandidateRow({
             {candidate.value}
           </span>
           {candidate.detail ? (
-            <span className="mt-1 block break-words text-xs text-[var(--muted-foreground)] [overflow-wrap:anywhere]">
+            <span className="mt-1 block break-words text-xs text-muted-foreground [overflow-wrap:anywhere]">
               {candidate.detail}
             </span>
           ) : null}
@@ -113,7 +113,7 @@ function CandidateRow({
         </span>
       </label>
 
-      <details className="mt-2 min-w-0 pl-7 text-[11px] text-[var(--muted-foreground)]">
+      <details className="mt-2 min-w-0 pl-7 text-[11px] text-muted-foreground">
         <summary className="cursor-pointer select-none">
           Check source evidence
         </summary>
@@ -222,19 +222,19 @@ export function ConceptHarvestReview({
   };
 
   return (
-    <div className="mt-4 min-w-0 space-y-4 border-t border-[var(--border)] pt-4">
+    <div className="mt-4 min-w-0 space-y-4 border-t border-border pt-4">
       <div>
         <h4 className="text-sm font-semibold">
           Choose what the new page may say
         </h4>
-        <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+        <p className="mt-1 text-xs text-muted-foreground">
           “Needs care” is a subset of the facts above. Those claims and
           testimonials are separated below so they can never be approved in
           bulk.
         </p>
       </div>
 
-      <details className="min-w-0 overflow-hidden rounded-lg border border-[var(--border)] p-3">
+      <details className="min-w-0 overflow-hidden rounded-lg border border-border p-3">
         <summary className="cursor-pointer text-sm font-semibold">
           Standard facts ({standard.length})
         </summary>
@@ -278,7 +278,7 @@ export function ConceptHarvestReview({
         <summary className="cursor-pointer text-sm font-semibold text-amber-800 dark:text-amber-200">
           Needs care ({sensitive.length})
         </summary>
-        <p className="mt-2 text-xs text-[var(--muted-foreground)]">
+        <p className="mt-2 text-xs text-muted-foreground">
           Check each credential, guarantee, price, year, statistic, emergency
           claim, or testimonial against the linked page before selecting it.
         </p>
@@ -295,20 +295,20 @@ export function ConceptHarvestReview({
         </ul>
       </details>
 
-      <div className="rounded-lg border border-[var(--border)] p-3">
+      <div className="rounded-lg border border-border p-3">
         <h4 className="text-sm font-semibold">Generation brief</h4>
         <div className="mt-2 grid grid-cols-1 gap-2 min-[430px]:grid-cols-2 sm:grid-cols-3">
           {completeness.map((row) => (
             <div
               key={row.key}
-              className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]"
+              className="flex items-center gap-2 text-xs text-muted-foreground"
             >
               <span
                 className={cn(
                   "flex h-4 w-4 flex-none items-center justify-center rounded-full border",
                   row.met
                     ? "border-emerald-600 bg-emerald-600 text-white"
-                    : "border-[var(--border)]",
+                    : "border-border",
                 )}
               >
                 {row.met ? <Check className="h-3 w-3" /> : null}
@@ -324,7 +324,7 @@ export function ConceptHarvestReview({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 shadow-sm sm:sticky sm:bottom-3 sm:z-10 sm:shadow-lg">
+      <div className="space-y-2 rounded-xl border border-border bg-card p-3 shadow-sm sm:sticky sm:bottom-3 sm:z-10 sm:shadow-lg">
         <Button
           type="button"
           className="w-full"

@@ -63,7 +63,9 @@ export function ConceptIntakeForm({
       onCreated(conceptId);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Could not create the concept.",
+        error instanceof Error
+          ? error.message
+          : "Could not create the concept.",
       );
     } finally {
       setIsSubmitting(false);
@@ -75,7 +77,7 @@ export function ConceptIntakeForm({
       {hideIntro ? null : (
         <div>
           <h2 className="text-base font-semibold">New concept</h2>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+          <p className="mt-1 text-xs text-muted-foreground">
             Only the business name is required. Everything else improves the
             match and the page.
           </p>
@@ -105,7 +107,7 @@ export function ConceptIntakeForm({
           autoComplete="off"
           inputMode="url"
         />
-        <p className="text-[11px] text-[var(--muted-foreground)]">
+        <p className="text-[11px] text-muted-foreground">
           Recorded for provenance only. The Page is never scraped — upload the
           logo and photos below, or ask the owner to send them.
         </p>
@@ -120,7 +122,7 @@ export function ConceptIntakeForm({
           placeholder="Youngsville, LA"
           autoComplete="off"
         />
-        <p className="text-[11px] text-[var(--muted-foreground)]">
+        <p className="text-[11px] text-muted-foreground">
           Used to find the right business on Google. Defaults to Acadiana,
           Louisiana.
         </p>
@@ -148,7 +150,7 @@ export function ConceptIntakeForm({
           autoComplete="off"
           inputMode="tel"
         />
-        <p className="text-[11px] text-[var(--muted-foreground)]">
+        <p className="text-[11px] text-muted-foreground">
           The only number the page may show. Overrides whatever Google lists.
         </p>
       </div>
@@ -162,13 +164,17 @@ export function ConceptIntakeForm({
           placeholder="Extra business context or a one-off design direction for this page."
           rows={5}
         />
-        <p className="text-[11px] text-[var(--muted-foreground)]">
+        <p className="text-[11px] text-muted-foreground">
           Added to the Kimi prompt only when filled. Use it for services, voice,
           CTA, or a specific direction for this concept.
         </p>
       </div>
 
-      <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
+      <Button
+        type="submit"
+        disabled={isSubmitting}
+        className="w-full sm:w-auto"
+      >
         {isSubmitting ? "Creating..." : "Create and enrich"}
       </Button>
     </form>

@@ -64,15 +64,15 @@ export function ConceptEvidenceReport({
     <div className="min-w-0">
       <dl className="grid grid-cols-3 gap-2 text-xs">
         <div>
-          <dt className="text-[var(--muted-foreground)]">Facts kept</dt>
+          <dt className="text-muted-foreground">Facts kept</dt>
           <dd className="font-medium">{summary.approved}</dd>
         </div>
         <div>
-          <dt className="text-[var(--muted-foreground)]">Omitted</dt>
+          <dt className="text-muted-foreground">Omitted</dt>
           <dd className="font-medium">{summary.rejected}</dd>
         </div>
         <div>
-          <dt className="text-[var(--muted-foreground)]">Held-to claims</dt>
+          <dt className="text-muted-foreground">Held-to claims</dt>
           <dd className="font-medium">{summary.sensitiveApproved}</dd>
         </div>
       </dl>
@@ -87,7 +87,7 @@ export function ConceptEvidenceReport({
             {conflicts.map((conflict) => (
               <li
                 key={conflict}
-                className="break-words text-[11px] leading-relaxed text-[var(--muted-foreground)] [overflow-wrap:anywhere]"
+                className="break-words text-[11px] leading-relaxed text-muted-foreground [overflow-wrap:anywhere]"
               >
                 {conflict}
               </li>
@@ -97,9 +97,7 @@ export function ConceptEvidenceReport({
       ) : null}
 
       {candidates.length === 0 ? (
-        <p className="mt-3 text-xs text-[var(--muted-foreground)]">
-          {emptyMessage}
-        </p>
+        <p className="mt-3 text-xs text-muted-foreground">{emptyMessage}</p>
       ) : null}
 
       {accepted.length > 0 ? (
@@ -108,12 +106,12 @@ export function ConceptEvidenceReport({
             <li key={candidate.id} className="flex min-w-0 items-start gap-2">
               <Check className="mt-0.5 h-3.5 w-3.5 flex-none text-blue-600 dark:text-blue-400" />
               <span className="min-w-0 break-words text-xs leading-relaxed [overflow-wrap:anywhere]">
-                <span className="text-[var(--muted-foreground)]">
+                <span className="text-muted-foreground">
                   {KIND_LABELS[candidate.kind]}:{" "}
                 </span>
                 {candidate.value}
                 {candidate.detail ? (
-                  <span className="text-[var(--muted-foreground)]">
+                  <span className="text-muted-foreground">
                     {" "}
                     — {candidate.detail}
                   </span>
@@ -125,20 +123,20 @@ export function ConceptEvidenceReport({
       ) : null}
 
       {omitted.length > 0 ? (
-        <details className="mt-3 rounded-lg border border-[var(--border)] p-2.5">
+        <details className="mt-3 rounded-lg border border-border p-2.5">
           <summary className="cursor-pointer text-xs font-medium">
             {omitted.length} fact{omitted.length === 1 ? "" : "s"} left out
           </summary>
           <ul className="mt-2 space-y-2">
             {omitted.map((candidate) => (
               <li key={candidate.id} className="flex min-w-0 items-start gap-2">
-                <X className="mt-0.5 h-3.5 w-3.5 flex-none text-[var(--muted-foreground)]" />
+                <X className="mt-0.5 h-3.5 w-3.5 flex-none text-muted-foreground" />
                 <span className="min-w-0 break-words text-[11px] leading-relaxed [overflow-wrap:anywhere]">
-                  <span className="text-[var(--muted-foreground)]">
+                  <span className="text-muted-foreground">
                     {KIND_LABELS[candidate.kind]}:{" "}
                   </span>
                   {candidate.value}
-                  <span className="block text-[var(--muted-foreground)]">
+                  <span className="block text-muted-foreground">
                     {candidate.kind === "phone"
                       ? "Phone numbers are set in the brief, not taken from evidence."
                       : candidate.kind === "quote" && !candidate.detail?.trim()

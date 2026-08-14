@@ -2,8 +2,8 @@
 
 Status: **canonical growth and acquisition source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-13
-Metrics current through: 2026-08-13
+Last reviewed: 2026-08-14
+Metrics current through: 2026-08-14
 
 This document owns the active channel strategy, operating cadence, decision
 rules, scripts, and written scorecard. Dated campaign captures and prior weekly
@@ -70,6 +70,7 @@ that moves a conversation forward.
 | 2026-08-03 | Facebook group outreach | $0 | 3 replies | 2 | 0 | 0 | Three targeted messages; two previews built |
 | 2026-08-11 | Direct Facebook outreach | $0 | 1 reply | 0 | 0 | 0 | Five businesses contacted from active ads; one declined and four did not reply |
 | 2026-08-13 | Facebook group outreach | $0 | 1 human reply | 0 | 0 | 0 | 18 personalized messages sent; Daniel Green declined after pointing out his existing site; Oh So Pretty sent an automated reply |
+| 2026-08-14 | Facebook group posts | $0 | 0 | 0 | 0 | 0 | Free-homepage-concept offer published in five approved groups; three total concept spots |
 
 Do not calculate paid CAC until a market-rate client closes.
 
@@ -189,6 +190,17 @@ prospects. Quality is the filter.
   count it as a human conversation. The other August 13 prospects remain
   pending. If there is no human response, send one personalized follow-up on
   August 15 or 16, then stop.
+- On August 14, a free-homepage-concept offer was published and verified in
+  Acadiana Business Hub, Lafayette Entrepreneurs & Small Businesses, Small
+  Businesses of Acadiana, What Up Acadiana!, and Louisiana Business
+  Networking. The five posts use slightly different local openings but share
+  one limit of three total concept spots. No conversations had started at the
+  time of posting.
+- Youngsville Business Networking was skipped by choice. The Youngsville sale
+  group was also skipped because it allows business promotion only in its
+  Monday thread. Ask Lafayette, What's Going On Youngsville, and both San
+  Sebastian neighborhood groups were excluded because their rules do not allow
+  this standalone offer.
 - Do not send another broad template to this batch. Any follow-up must reference
   the actual business and its verified website gap.
 

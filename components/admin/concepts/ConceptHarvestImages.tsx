@@ -48,21 +48,21 @@ export function ConceptHarvestImages({
   if (candidates.length === 0) return null;
 
   return (
-    <section className="min-w-0 border-t border-[var(--border)] pt-4">
+    <section className="min-w-0 border-t border-border pt-4">
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0">
           <h4 className="text-sm font-semibold">Website logo &amp; photos</h4>
-          <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
             Safely copied into this concept for review. Nothing is used until
             you choose Logo or Photo.
           </p>
         </div>
-        <span className="flex-none rounded-full bg-[var(--muted)] px-2 py-1 text-[10px] font-medium text-[var(--muted-foreground)]">
+        <span className="flex-none rounded-full bg-muted px-2 py-1 text-[10px] font-medium text-muted-foreground">
           {visible.length} found
         </span>
       </div>
       {visible.length > 1 ? (
-        <p className="mt-2 text-[11px] text-[var(--muted-foreground)] sm:hidden">
+        <p className="mt-2 text-[11px] text-muted-foreground sm:hidden">
           Swipe sideways to review each image.
         </p>
       ) : null}
@@ -79,13 +79,13 @@ export function ConceptHarvestImages({
             <article
               key={candidate.id}
               className={cn(
-                "w-[85%] min-w-[15rem] flex-none snap-start overflow-hidden rounded-lg border bg-[var(--background)] sm:w-auto sm:min-w-0",
+                "w-[85%] min-w-[15rem] flex-none snap-start overflow-hidden rounded-lg border bg-background sm:w-auto sm:min-w-0",
                 candidate.approvedKind
                   ? "border-emerald-500/50"
-                  : "border-[var(--border)]",
+                  : "border-border",
               )}
             >
-              <div className="relative aspect-[4/3] w-full overflow-hidden bg-[var(--muted)]">
+              <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
                 {ready ? (
                   <Image
                     src={previewUrl}
@@ -100,7 +100,7 @@ export function ConceptHarvestImages({
                     )}
                   />
                 ) : (
-                  <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-xs text-[var(--muted-foreground)]">
+                  <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center text-xs text-muted-foreground">
                     {failed ? (
                       <ImageIcon className="h-5 w-5" />
                     ) : (
@@ -131,7 +131,7 @@ export function ConceptHarvestImages({
                   href={candidate.sourceUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex max-w-full items-center gap-1 text-[11px] text-[var(--muted-foreground)] underline underline-offset-2"
+                  className="inline-flex max-w-full items-center gap-1 text-[11px] text-muted-foreground underline underline-offset-2"
                 >
                   <span className="truncate">View source page</span>
                   <ExternalLink className="h-3 w-3 flex-none" />
@@ -204,14 +204,14 @@ export function ConceptHarvestImages({
       </div>
 
       {rejectedCount > 0 ? (
-        <p className="mt-2 text-[11px] text-[var(--muted-foreground)]">
+        <p className="mt-2 text-[11px] text-muted-foreground">
           {rejectedCount} image{rejectedCount === 1 ? "" : "s"} rejected.
           Re-scan the website to see them again.
         </p>
       ) : null}
 
       {candidates.some((candidate) => candidate.approvedKind) ? (
-        <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40 p-3">
+        <div className="mt-3 rounded-lg border border-border bg-muted/40 p-3">
           <Button
             type="button"
             className="w-full"
@@ -221,7 +221,7 @@ export function ConceptHarvestImages({
             Regenerate with selected images
           </Button>
           {!canRegenerate ? (
-            <p className="mt-2 text-center text-[11px] text-[var(--muted-foreground)]">
+            <p className="mt-2 text-center text-[11px] text-muted-foreground">
               Approve or ignore the harvested facts below first; that action
               will regenerate with these images.
             </p>

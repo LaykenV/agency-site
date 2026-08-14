@@ -46,9 +46,9 @@ export function ConceptPackSummary({
   const gallery = assets.galleryItemIds.filter((id) => itemById.has(id));
 
   return (
-    <div className="min-w-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 sm:p-4">
+    <div className="min-w-0 overflow-hidden rounded-xl border border-border bg-card p-3 sm:p-4">
       <h3 className="text-sm font-semibold">What Luna took from the pack</h3>
-      <p className="mt-1 text-xs leading-relaxed text-[var(--muted-foreground)]">
+      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
         Approved from supplied Facebook evidence — not verified as true, and not
         a finding that the business owns these images. To change any of it,
         remove or add pack material above and re-analyze.
@@ -69,7 +69,7 @@ export function ConceptPackSummary({
           previewUrls={previewUrls}
         />
         <div className="min-w-[6rem]">
-          <p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)]">
+          <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
             Gallery
           </p>
           <p className="mt-1 text-sm font-medium">
@@ -106,11 +106,11 @@ function SelectedImage({
 
   return (
     <div className="min-w-[5rem]">
-      <p className="text-[10px] uppercase tracking-wide text-[var(--muted-foreground)]">
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">
         {label}
       </p>
       {item && url ? (
-        <div className="relative mt-1 h-16 w-16 overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)]">
+        <div className="relative mt-1 h-16 w-16 overflow-hidden rounded-lg border border-border bg-muted">
           {/* Unoptimized for the same reason the pack strip is: Convex storage
               is not a configured remote pattern, and this is a 64px thumbnail. */}
           <Image
@@ -123,7 +123,7 @@ function SelectedImage({
           />
         </div>
       ) : (
-        <p className="mt-1 text-sm text-[var(--muted-foreground)]">None</p>
+        <p className="mt-1 text-sm text-muted-foreground">None</p>
       )}
     </div>
   );

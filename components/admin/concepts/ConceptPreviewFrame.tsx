@@ -72,8 +72,8 @@ export function ConceptPreviewFrame({
             className={cn(
               "min-w-0 rounded-full px-1.5 py-1 text-[11px] font-medium transition-colors sm:px-3 sm:text-xs",
               entry.id === widthId
-                ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                : "bg-[var(--muted)] text-[var(--muted-foreground)] hover:bg-[var(--accent)]",
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-accent",
             )}
           >
             {entry.label}
@@ -82,14 +82,14 @@ export function ConceptPreviewFrame({
             </span>
           </button>
         ))}
-        <span className="col-span-3 text-center text-[11px] text-[var(--muted-foreground)] sm:col-auto sm:text-left sm:text-xs">
+        <span className="col-span-3 text-center text-[11px] text-muted-foreground sm:col-auto sm:text-left sm:text-xs">
           {Math.round(scale * 100)}%
         </span>
       </div>
 
       <div
         ref={containerRef}
-        className="min-w-0 w-full overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--muted)]"
+        className="min-w-0 w-full overflow-hidden rounded-lg border border-border bg-muted"
         // The scaled frame is absolutely sized, so the wrapper needs the
         // post-scale height or the panel below it would overlap.
         style={{ height: device.height * scale }}
