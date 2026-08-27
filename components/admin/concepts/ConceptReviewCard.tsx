@@ -1259,7 +1259,7 @@ export function ConceptReviewCard({
                       placeholder="Extra business context or a one-off design direction for this page."
                     />
                     <p className="text-[11px] text-muted-foreground">
-                      Added to the generation prompt only when filled. Saving a change
+                      Added to the Kimi prompt only when filled. Saving a change
                       clears the current draft so the next generation uses it.
                     </p>
                   </div>

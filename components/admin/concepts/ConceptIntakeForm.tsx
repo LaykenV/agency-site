@@ -165,7 +165,7 @@ export function ConceptIntakeForm({
           rows={5}
         />
         <p className="text-[11px] text-muted-foreground">
-          Added to the generation prompt only when filled. Use it for services, voice,
+          Added to the Kimi prompt only when filled. Use it for services, voice,
           CTA, or a specific direction for this concept.
         </p>
       </div>
