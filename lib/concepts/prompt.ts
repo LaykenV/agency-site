@@ -26,7 +26,7 @@
 import type { ConceptApprovedContent, ConceptBrief } from "./brief";
 import { conceptAssetAllowlist } from "./brief";
 
-export const CONCEPT_PROMPT_VERSION = "2026-08-13.4";
+export const CONCEPT_PROMPT_VERSION = "2026-08-26.1";
 
 function imageOrientation(width?: number, height?: number): string | undefined {
   if (!width || !height) return undefined;

@@ -2,8 +2,8 @@
 
 Status: **canonical growth and acquisition source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-14
-Metrics current through: 2026-08-14
+Last reviewed: 2026-08-24
+Metrics current through: 2026-08-24
 
 This document owns the active channel strategy, operating cadence, decision
 rules, scripts, and written scorecard. Dated campaign captures and prior weekly
@@ -19,8 +19,9 @@ durable record and may differ across browsers. Ads Manager is authoritative for
 paid delivery and spend; Messenger is authoritative for conversations; the Hub
 admin is authoritative for prospects created there.
 
-Update this file at spend gates or weekly, then reconcile qualified Messenger
-leads into the admin prospect workflow.
+Update this file when the owner changes the channel decision or during the
+weekly organic-inbound review. Preserve paid campaign results as historical
+evidence.
 
 ## Objective
 
@@ -28,36 +29,68 @@ Close the first unrelated, market-rate client without adding another tool or
 unproven channel. The bottleneck is the human path from interest to a call and
 signed Order Form.
 
+## August 24 inbound-only and paid-ad pause
+
+Acadiana Web Design is inbound-only by owner decision. Direct messages, cold
+email, cold calls, and group prospecting are no longer active acquisition work.
+All paid advertising is paused. Layken manually paused the Meta Messenger
+campaign after higher views and spend failed to produce a booked call or close.
+The Google Ads account exists for research, but no Google campaign was created.
+
+Do not create, publish, resume, or add budget to a Meta, Google, or other paid
+campaign without a new explicit owner decision. Shipping the quote form does
+not authorize an ad launch. The active quote-form implementation plan is
+`plans/inbound-quote-form-and-google-ads.md`.
+
+Historical outreach sections below preserve what was tried. They do not
+override this decision.
+
+Keyword Planner was unlocked on August 24 after creating the Ads account without
+a campaign. Lafayette's strongest terms show only rounded `10–100` monthly
+search ranges. Low top-of-page bids start around `$5.77–$10.00`, while high
+ranges run roughly `$20–$32`. The September forecast predicts less than one
+click at a `$10` or `$20` CPC cap and about `$38` average CPC on uncapped
+Maximize Clicks. That forecast does not justify a launch. The result is
+preserved for a future decision, not queued campaign work.
+
 ## Channel order
 
 ### Run now
 
-1. Existing-client referrals
-2. Selective local Facebook group outreach
-3. Meta click-to-Messenger pilot
-4. Local partnerships and in-person opportunities
+1. Build and production-test the inbound quote form.
+2. Improve Google Business Profile proof and genuine client reviews.
+3. Maintain the existing Lafayette and service-page search presence.
+4. Measure organic quote requests, calls, qualified opportunities, and closes.
 
-### Add only after current execution is reliable
+### Paused by owner
 
-- Tight, high-intent Google Search Ads
-- Retargeting of qualified audit visitors
-- Direct mail using the existing audit material
-- Local SEO roundup or service-area content
+- Meta Messenger ads
+- Meta Instant Form or quote-form ads
+- Google Search Ads
+- Performance Max, Display, retargeting, boosted posts, and other paid media
+
+Paid advertising remains paused after the quote form ships. Reconsideration
+requires a separate decision based on organic conversion evidence and a bounded
+test with written spend and stop limits.
 
 ### Defer
 
 - Mass cold dialing
 - Cold email of any kind, bulk or sequenced
+- Direct Facebook or Messenger prospecting
+- Facebook group prospecting
+- Meta click-to-Messenger advertising
 - City-and-industry batch prospect searches
 - Generic social-content treadmill
 - Broad national web-design SEO
 - LinkedIn advertising
+- Direct mail
 - Another CRM, sequencer, or outsourced AI prospecting service
 
 Cold outreach email was removed from the application on 2026-08-10 along with
-the batch search pipeline. It produced volume, not conversations. Facebook and
-Messenger are the acquisition channel; the concept generator is the artifact
-that moves a conversation forward.
+the batch search pipeline. It produced volume, not conversations. Historical
+Facebook, Messenger, and concept-generator instructions below are retained as
+experiment records. They are not active acquisition work.
 
 ## Scorecard
 
@@ -74,23 +107,28 @@ that moves a conversation forward.
 
 Do not calculate paid CAC until a market-rate client closes.
 
-## Meta Messenger pilot
+## Archived Meta Messenger pilot
 
-The pilot has a roughly $500 ceiling and is judged at spend gates, not calendar
-dates. The active handoff asks one question:
+Status: **paused by owner on 2026-08-24**. Do not resume any ad, budget, or
+automated handoff from this pilot. The former spend gates below are retired.
+
+The pilot had a roughly $500 ceiling and was judged at spend gates, not calendar
+dates. Its handoff asked one question:
 
 > Hi [first name], do you already have a website?
 
-Quick replies are “Yes, I do” and “No, not yet.” There is no automated sales
-sequence. Layken or Harley takes over manually.
+Quick replies were “Yes, I do” and “No, not yet.” There was no automated sales
+sequence. Layken or Harley took over manually.
 
-If a person does not answer the opener, send one follow-up the next morning:
+The historical follow-up was:
 
 > Morning [name] — didn't want this to get buried. If you tell me the name of
 > your business I'll take a quick look and tell you honestly whether a new site
 > would even help. No pitch if it wouldn't.
 
 ### Spend gates
+
+These gates document the former test. They do not authorize more spend.
 
 | Gate | Decision |
 |---|---|
@@ -102,25 +140,27 @@ If a person does not answer the opener, send one follow-up the next morning:
 Rotate creative if frequency moves past roughly 3.5–4, even before the next
 gate.
 
-### Current paid lead status
+### Final paid lead status
 
 - Carpenter's Remodeling: the only qualified website lead. The broken former
   domain was confirmed, a free homepage concept was offered, and one follow-up
   was sent on August 10. No response. Stop unless Joseph reopens the thread.
 - Travis Tidwell: said he has a website but never supplied the URL. One
   follow-up was sent on August 10 with no response. Stop.
-- Judia Duhon: said she has a website. Awaiting the URL before qualification.
+- Judia Duhon: said she has a website but did not provide the URL. Stop unless
+  she reopens the conversation.
 - Suire Patricia: said she has a website but did not provide a usable link in
-  the thread. Ask once for the URL, then stop if she does not answer.
+  the thread. Stop unless she reopens the conversation.
 - Mike Romero: asked for a Lafayette rideshare app rather than a website. This
   is a separate Varholdt custom-app opportunity and is not counted as a
-  qualified website lead. He requested pricing and provided a phone number for
-  follow-up.
+  qualified website lead. He requested pricing and provided a phone number, but
+  there is no active follow-up under the inbound-only decision.
 
 ### Paid creative snapshot
 
 Ads Manager was read on August 13 using the last-30-days window ending August
-12. Total campaign spend was $129.00.
+12. Total campaign spend was $129.00. The states below are historical snapshot
+values, not current delivery state. The campaign is now paused.
 
 | Creative | State | Spend | Impressions | Reach | Messaging conversations started | Cost per conversation |
 |---|---|---:|---:|---:|---:|---:|
@@ -128,19 +168,17 @@ Ads Manager was read on August 13 using the last-30-days window ending August
 | New Lead Texts / Straight to Your Phone | Active | $10.62 | 166 | 101 | 0 | — |
 | AI Lead Filtering / Real Leads Less Spam | Off | $44.18 | 1,321 | 478 | 0 | — |
 
-The $0-down post is the control. It has produced every paid conversation. The
-new-lead-texts post has too little spend for a final verdict, but it has not
-earned more budget than the control. Do not reactivate the AI-filtering ad.
+The $0-down post produced every paid conversation. The new-lead-texts post had
+too little spend for a final verdict. Do not reactivate any of these ads.
 
 Detailed captured research remains in
 `client-research/meta-messenger-leads-2026-08-08.md`. Do not buy a prospect's
 brand domain as leverage. The client should own it.
 
-## Facebook group outreach
+## Archived Facebook group outreach
 
-Facebook groups are the primary direct-outreach source. Sponsored posts in the
-general feed are not part of the active routine. Use group activity as a
-selective research source, not a bulk-message list.
+Status: **inactive under the inbound-only decision**. The routine below is
+retained as historical operating detail and must not be treated as current work.
 
 ### Daily routine
 

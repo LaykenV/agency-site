@@ -50,29 +50,25 @@ const OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions";
  * A concept is a sales artifact; which model drew it belongs in the diff that
  * changed it, next to the prompt it was tuned against.
  *
- * `moonshotai/kimi-k3` is pinned to the version, not an alias —
- * `~moonshotai/kimi-latest` exists and is deliberately not used, because a
- * silent model swap changing how every page looks is not something to discover
- * from a prospect's reaction. It replaced `x-ai/grok-4.6` on 2026-08-12, which
- * had itself replaced `meta/muse-spark-1.2` earlier the same day.
+ * `z-ai/glm-5.3-flash` is pinned to the version, not an alias —
+ * `~z-ai/glm-latest` exists and is deliberately not used, because a silent
+ * model swap changing how every page looks is not something to discover from
+ * a prospect's reaction. It replaced `moonshotai/kimi-k3` on 2026-08-26,
+ * which had replaced `x-ai/grok-4.6` on 2026-08-12 before that.
  *
- * This one was adopted on its design record rather than a side-by-side: it
- * leads OpenRouter's design-arena website, uicomponent, and codecategories
- * boards. It is also the most expensive generator this feature has run — $3
- * per million in and $15 out, against Grok's roughly 8c a page — so a
- * generation costs something closer to a quarter. That is still a rounding
- * error next to the sale a concept is trying to open, but it is a real
- * multiple, and it is the number to revisit if generation volume grows.
- *
- * Several of its endpoints advertise `max_tokens`, `temperature`, `reasoning`,
- * and `reasoning_effort`, so `require_parameters: true` narrows routing rather
- * than failing it — Moonshot's own endpoint does not take `temperature` and is
- * routed past. OpenRouter no longer publishes per-provider training policy in
- * its API, so the `data_collection: "deny"` gate below could not be confirmed
- * from metadata before this change; a failed gate is a routing error on the
- * first generation, not a quiet fallback.
+ * It is the cheapest generator this feature has run by an order of magnitude
+ * — about 7.5c per million tokens in and 25c out, against Kimi's $3 and $15 —
+ * so even high-effort reasoning puts a generation in penny territory. Its
+ * architecture reads images (`text+image+video` to text), so approved
+ * photographs still ride in the same request as the brief, and its endpoint
+ * advertises `max_tokens`, `temperature`, `reasoning`, and
+ * `reasoning_effort`, so `require_parameters: true` does not route past it.
+ * OpenRouter publishes no per-provider training policy in its API, so the
+ * `data_collection: "deny"` gate below could not be confirmed from metadata
+ * before this change; a failed gate is a routing error on the first
+ * generation, not a quiet fallback.
  */
-const DEFAULT_MODEL = "moonshotai/kimi-k3";
+const DEFAULT_MODEL = "z-ai/glm-5.3-flash";
 
 /** A long homepage with inline CSS runs well past a default cap. */
 const MAX_OUTPUT_TOKENS = 32_000;
@@ -81,19 +77,15 @@ const MAX_OUTPUT_TOKENS = 32_000;
 const TEMPERATURE = 0.7;
 
 /**
- * Kimi K3's effort ladder is `low`, `high`, `max` — there is no `medium`,
- * which is what this was under Grok. Reasoning is on by default and defaults
- * to `max`, so this is not a value that can be left unsent: reasoning tokens
- * are billed against `max_tokens`, and a maximum-effort trace on a long
- * multimodal brief can spend the output budget before the document starts.
- *
- * This is set to `low` for a live quality and latency test. The prompt and
- * validator already carry the requirements, and each concept records its model
- * and prompt version so the resulting pages can be compared with earlier runs.
+ * Reasoning tokens are billed against `max_tokens`, so effort and output
+ * budget are one decision, and the effort is set explicitly rather than left
+ * to whatever the routed endpoint defaults to. Generation runs at `high` — a
+ * dial-up Kimi's live test had pulled down to `low`, now affordable again at
+ * flash pricing.
  */
-const REASONING_EFFORT = "low" as const;
+const REASONING_EFFORT = "high" as const;
 
-/** Nine minutes for the one Kimi response, including its hidden reasoning. */
+/** Nine minutes for the single completion, including its hidden reasoning. */
 const PROVIDER_REQUEST_TIMEOUT_MS = 540_000;
 
 /**

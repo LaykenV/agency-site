@@ -261,8 +261,9 @@ homepage concept:
 4. one Luna (`openai/gpt-5.6-luna`) pass at medium reasoning — classification,
    visual selection, fact extraction, and conflict flagging
 5. optionally, a bounded website harvest used only to fill gaps the pack left
-6. bespoke HTML and inline CSS from Kimi K3 (`moonshotai/kimi-k3`) at low
-   reasoning. The request includes the approved logo and photographs as vision
+6. bespoke HTML and inline CSS from GLM 5.3 Flash (`z-ai/glm-5.3-flash`) at
+   high reasoning. The request includes the approved logo and photographs as
+   vision
    input plus their pixel sizes, each attachment labelled with the exact
    allowlisted URL to use for it. The model invents the visual system; there is
    no assigned page shape and no assigned lead image. Mobile is not part of what
@@ -299,12 +300,13 @@ opening sentence used to hard-code Acadiana, which asserted a region the BRIEF
 could not contradict and the validator could not see — the one way a concept
 could claim a location that was never verified.
 
-`buildConceptSystemPrompt` in `lib/concepts/prompt.ts` gives Kimi the page's job,
-audience, approved design material, factual limits, and runtime constraints. It
-does not prescribe a palette, font list, hero treatment, section order, image
-placement, or internal design exercise. Kimi chooses those from the business and
-its photographs. The final check rejects a direction that would still fit after
-the business name and photographs were swapped.
+`buildConceptSystemPrompt` in `lib/concepts/prompt.ts` gives the generator the
+page's job, audience, approved design material, factual limits, and runtime
+constraints. It does not prescribe a palette, font list, hero treatment,
+section order, image placement, or internal design exercise. The generator
+chooses those from the business and its photographs. The final check rejects a
+direction that would still fit after the business name and photographs were
+swapped.
 
 The admin's optional Generation note is the one per-concept escape hatch. It is
 omitted from the prompt when blank. When filled, it can carry extra approved
@@ -322,7 +324,7 @@ has been verified in Safari and Messenger on a real iPhone.
 
 | Role                | Model                 | Incident override         |
 | ------------------- | --------------------- | ------------------------- |
-| Generation          | `moonshotai/kimi-k3`  | `OPENROUTER_MODEL`        |
+| Generation          | `z-ai/glm-5.3-flash`  | `OPENROUTER_MODEL`        |
 | Evidence and vision | `openai/gpt-5.6-luna` | `OPENROUTER_VISION_MODEL` |
 
 Both are pinned to a version rather than a `latest` alias: a concept is a sales
@@ -338,20 +340,22 @@ on 2026-08-12. A set override is how production ends up quietly disagreeing
 with the code about what drew a page.
 
 Generation moved from `meta/muse-spark-1.2` to `x-ai/grok-4.6` on 2026-08-12
-after a side-by-side on real concepts, and from there to `moonshotai/kimi-k3`
-the same day. The second move was made on the model's design record rather than
-a side-by-side — it leads OpenRouter's design-arena website, uicomponent, and
-codecategories boards — and it is the first generator adopted at a materially
-higher price: $3 per million input and $15 per million output, which puts a page
-closer to a quarter than to Grok's 8c. Every concept row records the `model`
-that produced it, so drafts from any of the three can still be told apart after
-the fact.
+after a side-by-side on real concepts, from there to `moonshotai/kimi-k3` the
+same day on its design record, and on 2026-08-26 to `z-ai/glm-5.3-flash`.
+GLM 5.3 Flash is the cheapest generator this feature has run by an order of
+magnitude — about $0.075 per million input and $0.25 output against Kimi's $3
+and $15 — and nothing gave way in the move: it reads images, so approved
+photographs still ride in the request, and its endpoint advertises every
+parameter the request sends, so the routing gate keeps it. Every concept row
+records the `model` that produced it, so drafts from any of the four can still
+be told apart after the fact.
 
-Kimi K3's effort ladder is `low`, `high`, `max`, with no `medium`, and reasoning
-is enabled by default at `max`. Effort is therefore sent explicitly. Generation
-uses `low` for a live latency, cost, and quality comparison. The prompt version
-was bumped with the setting so these drafts remain distinguishable from earlier
-high-effort runs. A `finish_reason: "length"` against the 32k output cap still
+Reasoning effort is sent explicitly rather than left to endpoint defaults,
+because reasoning tokens bill against the same 32k output cap as the document.
+Generation runs at `high`; Kimi K3 had been running at `low` for its live
+comparison, a setting affordable again at flash pricing. The prompt version is
+bumped with the model and effort so these drafts remain distinguishable from
+earlier runs. A `finish_reason: "length"` against the 32k output cap still
 surfaces as an explicit truncation error rather than a quietly incomplete page.
 
 Generation makes exactly one OpenRouter request, which may run for nine minutes.
@@ -373,8 +377,8 @@ tradeoff was taken to adopt it. xAI's `grok-4.6` endpoint was checked the same
 way on 2026-08-12 — a live request carrying both the provider block and an
 image part routed and returned.
 
-`moonshotai/kimi-k3` could not be pre-checked that way: OpenRouter has stopped
-publishing per-provider training policy through its public API, and the
+`z-ai/glm-5.3-flash` could not be pre-checked that way either: OpenRouter has
+stopped publishing per-provider training policy through its public API, and the
 generator's key is held only by the deployment. The gate is unchanged and still
 enforced, so a model with no qualifying provider fails routing on the first
 generation rather than falling back quietly — that first run is the check.
@@ -388,9 +392,11 @@ harvested spacer or favicon rendition from taking down a generation.
 `require_parameters: true` makes the parameter set part of routing, so an
 unsupported parameter is a failed request rather than a degraded one. Luna's
 endpoints do not advertise `temperature`, which is why pack analysis sends
-none; they do advertise `reasoning`. Generation does send `temperature`, so the
-gate routes it past Kimi K3's own Moonshot endpoint to the several third-party
-endpoints that advertise the full set. Reasoning tokens are billed against
+none; they do advertise `reasoning`. Generation does send `temperature`, and
+OpenRouter publishes only the aggregated slug's parameters, not per-provider
+coverage for Z.ai's own endpoint — if any routed endpoint drops one of the
+sent parameters, the gate turns it into a failed request on the first
+generation rather than silently ignoring it. Reasoning tokens are billed against
 `max_tokens`, so effort and output budget are one decision, not two.
 
 ### Google Places is identity, not content
@@ -561,7 +567,7 @@ supplied logo must appear at least once, and no single approved photo may appear
 more than twice.
 
 There is no second-model claim audit after those checks pass. A concept preview
-is a sales sketch: the prompt still tells Kimi not to invent facts, but an
+is a sales sketch: the prompt still tells the model not to invent facts, but an
 unsupported marketing flourish does not fail the draft. Deterministic
 violations do not trigger a repair request. The original failed draft and its
 violations are stored and shown so the reviewer can see what the model got

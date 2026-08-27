@@ -2,7 +2,7 @@
 
 Status: **canonical active-work and trigger source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-10
+Last reviewed: 2026-08-24
 
 This document contains only work that is active, blocked by an explicit gate, or
 worth reconsidering when a trigger occurs. Completed execution detail is
@@ -11,12 +11,11 @@ preserved under `archive/migrations/`.
 ## Current operating priorities
 
 1. Close the first unrelated market-rate website client.
-2. Reconcile Messenger leads into admin and move qualified interest toward a
-   call and issued Order Form.
-3. Continue the Meta pilot only through the written spend gates in
-   `GROWTH.md`.
-4. Resolve the legal and outreach gates below before relying on the affected
-   path.
+2. Build and production-test the inbound quote form in
+   `plans/inbound-quote-form-and-google-ads.md`.
+3. Keep every paid advertising channel paused. The Google Ads account remains
+   available for research, but no campaign work or spend is active.
+4. Resolve the legal gates below before relying on the affected path.
 
 ## Open business and compliance gates
 

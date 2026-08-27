@@ -32,8 +32,12 @@ describe("generation wiring", () => {
     );
   });
 
-  test("uses low reasoning with one nine-minute provider budget", () => {
-    expect(source).toContain('const REASONING_EFFORT = "low" as const;');
+  test("uses GLM 5.3 Flash at high reasoning with one nine-minute provider budget", () => {
+    expect(source).toContain('const DEFAULT_MODEL = "z-ai/glm-5.3-flash";');
+    expect(source).not.toContain(
+      'const DEFAULT_MODEL = "moonshotai/kimi-k3";',
+    );
+    expect(source).toContain('const REASONING_EFFORT = "high" as const;');
     expect(source).toContain("const PROVIDER_REQUEST_TIMEOUT_MS = 540_000;");
     expect(source).toContain("const GENERATION_RUN_BUDGET_MS = 570_000;");
     expect(source).toContain(

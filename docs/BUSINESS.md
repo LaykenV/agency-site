@@ -2,8 +2,8 @@
 
 Status: **canonical business source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-10  
-Metrics current through: 2026-08-08
+Last reviewed: 2026-08-24
+Metrics current through: 2026-08-24
 
 This document defines what Acadiana Web Design sells, who it serves, the
 commercial model, current traction, and the decisions that should constrain new
@@ -20,8 +20,9 @@ business operated by Varholdt AI LLC.
   be described as accepted until the state issues the registration.
 - Initial Mercury funding and later operating cash came from personal owner
   contributions, not business revenue.
-- Meta advertising uses the Mercury business card, funded by owner
-  contributions. It is not evidence of earned business cash flow.
+- Historical Meta advertising charges used the Mercury business card, funded
+  by owner contributions. All paid advertising is paused as of 2026-08-24.
+  Ad spend is not evidence of earned business cash flow.
 - The filing fee was paid personally and should remain recorded as an
   owner-paid business expense or reimbursement.
 
@@ -118,12 +119,13 @@ retired; `../agency-playground/` is the reference for Hub-facing plumbing.
 ## Current priorities
 
 1. Close the first unrelated market-rate client.
-2. Keep the active Meta test spend-gated and distinguish conversations from
-   calls and closes.
-3. Continue founder-led referrals, local partnerships, and selective Facebook
-   group outreach.
-4. Use existing product proof instead of adding speculative tooling.
-5. Keep legal, billing, and production verification gates explicit.
+2. Build a direct quote form with stored leads plus email and SMS notification.
+3. Improve Google Business Profile proof and genuine client reviews.
+4. Measure organic quote requests, qualified opportunities, and closes.
+5. Keep every paid advertising channel paused until Layken makes a new explicit
+   decision.
+6. Use existing product proof instead of adding speculative tooling.
+7. Keep legal, billing, and production verification gates explicit.
 
 ## Decision rules
 
@@ -131,6 +133,8 @@ retired; `../agency-playground/` is the reference for Hub-facing plumbing.
   when measured CAC exceeds $400 without a credible correction.
 - Scale a channel when market-rate closes establish CAC below $200.
 - Add a channel only after existing weekly execution is reliable.
+- Do not create, publish, resume, or fund an ad campaign without a new explicit
+  owner decision.
 - Revisit mass cold calling only as warm follow-up, not as the default engine.
 - Revisit outsourced marketing only after demand proves top-of-funnel is the
   actual constraint.
