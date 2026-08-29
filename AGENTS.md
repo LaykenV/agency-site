@@ -120,5 +120,7 @@ git diff --check
   resolve false positives, and do not let review feedback expand the PR.
 - A clean review is not merge authority. Ask before merging. State that the
   Vercel production build deploys the Convex backend and the Next.js site.
+- Preview Vercel builds compile against disabled placeholder endpoints; they
+  never deploy or connect to Convex.
 - After an authorized merge, watch the Vercel status for the exact merge commit
   and run `bun run smoke:production` before calling the release ready.

@@ -55,6 +55,9 @@ PR is not converging. Never close a PR or dismiss a human review without asking.
 Ready means Verify, PR-Agent, and Vercel checks are green on the latest commit,
 the branch is mergeable, and no important thread remains.
 
+Preview Vercel builds are frontend compile artifacts only. They use disabled
+placeholder endpoints and never deploy or connect to Convex.
+
 Ask: "All passing. Merging runs the production build, which deploys the Convex
 backend and Vercel site, then I will smoke-test it. Good to merge?"
 

@@ -42,7 +42,9 @@ Vercel production build. `scripts/vercel-build.mjs` deploys Convex first, then
 builds the Next.js site. The babysitter watches the exact merge commit's Vercel
 status and then runs `bun run smoke:production`.
 
-Preview builds never deploy Convex. They build the Next.js site only.
+Preview builds never deploy Convex. They compile the Next.js site against
+disabled placeholder endpoints, so preview deployments cannot read or mutate
+production data. Use local development for interactive backend testing.
 
 Direct pushes to `main` remain available when the owner explicitly asks for a
 small change. The default agent workflow is still a branch and PR.
