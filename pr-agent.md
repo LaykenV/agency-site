@@ -38,9 +38,11 @@ source, fixes real defects, explains false positives, and repeats until the
 latest commit is clean.
 
 Neither skill merges without explicit approval. Merging to `main` triggers the
-Vercel production deployment, but it does not deploy Convex backend functions.
-The babysitter calls that out when a PR changes `convex/`, watches the exact
-merge commit's Vercel status, and then runs `bun run smoke:production`.
+Vercel production build. `scripts/vercel-build.mjs` deploys Convex first, then
+builds the Next.js site. The babysitter watches the exact merge commit's Vercel
+status and then runs `bun run smoke:production`.
+
+Preview builds never deploy Convex. They build the Next.js site only.
 
 Direct pushes to `main` remain available when the owner explicitly asks for a
 small change. The default agent workflow is still a branch and PR.

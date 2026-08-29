@@ -20,13 +20,26 @@ jobs:
       pull-requests: write
     name: Run PR-Agent and respond to user comments
     steps:
+      - name: Require the OpenRouter key
+        env:
+          OPENROUTER__KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: test -n "$OPENROUTER__KEY"
+
       - name: Run PR-Agent
         uses: the-pr-agent/pr-agent@v0.43.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENROUTER__KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          config.model: openrouter/z-ai/glm-5.3-flash
+          config.fallback_models: '["openrouter/z-ai/glm-5.3-flash"]'
+          config.custom_model_max_tokens: "1000000"
+          config.persistent_inline_comments: "true"
+          config.restricted_mode: "true"
           github_action_config.auto_review: "true"
           github_action_config.auto_describe: "true"
           github_action_config.auto_improve: "false"
           github_action_config.pr_actions: '["opened", "reopened", "ready_for_review", "synchronize"]'
           github_action_config.handle_push_trigger: "true"
+          github_action_config.push_commands: '["/review"]'
+          pr_reviewer.require_score_review: "true"
+          pr_reviewer.persistent_comment: "true"

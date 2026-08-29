@@ -55,13 +55,8 @@ PR is not converging. Never close a PR or dismiss a human review without asking.
 Ready means Verify, PR-Agent, and Vercel checks are green on the latest commit,
 the branch is mergeable, and no important thread remains.
 
-Inspect the diff for `convex/` changes before asking:
-
-- Without Convex changes: "All passing. Merging deploys the Vercel production
-  site, then I will smoke-test it. Good to merge?"
-- With Convex changes: explain that Vercel does not deploy the Convex backend,
-  name the required backend release sequence, and ask for approval covering
-  both that deployment and the merge.
+Ask: "All passing. Merging runs the production build, which deploys the Convex
+backend and Vercel site, then I will smoke-test it. Good to merge?"
 
 Anything short of a clear yes means merge nothing. On approval:
 
@@ -76,8 +71,9 @@ it.
 
 ## Exact production release
 
-Record the merge commit. Poll its combined commit status until the `Vercel`
-context succeeds:
+Record the merge commit. The production Vercel build runs
+`scripts/vercel-build.mjs`, which deploys Convex before building the Next.js
+site. Poll the commit's combined status until the `Vercel` context succeeds:
 
 ```sh
 gh api repos/LaykenV/agency-site/commits/<mergeCommit>/status

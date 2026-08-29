@@ -118,10 +118,7 @@ git diff --check
   the operating procedure.
 - Verify every bot finding against the source. Fix real problems, explain and
   resolve false positives, and do not let review feedback expand the PR.
-- A clean review is not merge authority. Ask before merging. State that merging
-  deploys the Vercel production site.
-- Vercel does not deploy the Convex backend. If a PR changes `convex/`, state
-  the separate backend deployment consequence and get explicit approval for
-  the applicable release sequence.
+- A clean review is not merge authority. Ask before merging. State that the
+  Vercel production build deploys the Convex backend and the Next.js site.
 - After an authorized merge, watch the Vercel status for the exact merge commit
   and run `bun run smoke:production` before calling the release ready.
