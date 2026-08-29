@@ -12,9 +12,10 @@ OpenRouter. It does not use Qodo's hosted service.
 - The Actions secret `OPENROUTER_API_KEY` is required. GitHub supplies
   `GITHUB_TOKEN`.
 
-The action is pinned to `the-pr-agent/pr-agent@v0.43.0`. Restricted mode keeps
-repository contents read-only. The one-million-token override is necessary
-because this GLM model is not in PR-Agent's built-in token table.
+The action is pinned to the full commit for `the-pr-agent/pr-agent@v0.43.0`.
+Restricted mode keeps repository contents read-only. The one-million-token
+override is necessary because this GLM model is not in PR-Agent's built-in token
+table.
 
 ## Event flow
 
@@ -25,7 +26,8 @@ because this GLM model is not in PR-Agent's built-in token table.
 | Comment `/review`, `/describe`, or `/ask "..."` | The requested tool        |
 
 The bot-sender guard prevents PR-Agent comments from retriggering the workflow.
-The concurrency group cancels a stale review when another push arrives.
+Only supported slash commands trigger comment jobs, and comment concurrency is
+separate from push concurrency so conversation cannot cancel a current review.
 Persistent summary and inline comments update in place instead of duplicating
 old findings. PR-Agent also reads the root `AGENTS.md`.
 
