@@ -42,3 +42,6 @@ next-env.d.ts
 
 # local tool config (squirrelscan)
 squirrel.toml
+
+# PR evidence screenshots; paste into GitHub, never commit
+.github/pr-assets/

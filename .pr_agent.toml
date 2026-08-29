@@ -1,0 +1,24 @@
+# PR-Agent configuration read from the repository root.
+[config]
+model = "openrouter/z-ai/glm-5.3-flash"
+fallback_models = ["openrouter/z-ai/glm-5.3-flash"]
+custom_model_max_tokens = 1000000
+persistent_inline_comments = true
+restricted_mode = true
+
+[openrouter]
+# provider_only = ["z-ai"]
+
+[github_action_config]
+auto_review = true
+auto_describe = true
+auto_improve = false
+pr_actions = ["opened", "reopened", "ready_for_review", "synchronize"]
+handle_push_trigger = true
+push_commands = [
+  "/review",
+]
+
+[pr_reviewer]
+require_score_review = true
+persistent_comment = true
