@@ -57,7 +57,7 @@ preserved for a future decision, not queued campaign work.
 
 ### Run now
 
-1. Build and production-test the inbound quote form.
+1. Release and production-test the implemented inbound quote form.
 2. Improve Google Business Profile proof and genuine client reviews.
 3. Maintain the existing Lafayette and service-page search presence.
 4. Measure organic quote requests, calls, qualified opportunities, and closes.

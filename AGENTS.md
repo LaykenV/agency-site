@@ -27,8 +27,8 @@ git diff --check
 - This repository is the Hub. Client sites are independent Spokes.
 - `../agency-playground/` is the reference Spoke for contract changes.
 - `../agency-template/` is retired. Do not clone, patch, or restore it.
-- Public `/onboarding` is retired. Sales intake goes through Cal.com, and an
-  admin creates the prospect and project.
+- Public `/onboarding` is retired and redirects to `/quote`. Sales intake uses
+  the on-site quote form; an admin creates qualified prospects and projects.
 - Only `POST /api/v2/leads` and `POST /api/v2/events` ingest Spoke data. Never
   restore a v1 or unauthenticated alias.
 - Outbound cold email, batch city-and-industry prospect search, and hard-coded

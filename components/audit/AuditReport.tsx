@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { ArrowUpRight, Check, Lock, MapPin, Sparkles, Star, X } from "lucide-react";
 
-const CAL_LINK =
-  "https://cal.com/layken-varholdt/agency-prospect?utm_source=audit&utm_medium=report&utm_campaign=marketing";
+const QUOTE_LINK =
+  "/quote";
 
 type AuditReportData = {
   businessName: string;
@@ -612,10 +612,10 @@ export function AuditReport({ data }: { data: AuditReportData }) {
               </p>
 
               <a
-                href={CAL_LINK}
+                href={QUOTE_LINK}
                 className="btn-cta mt-7 inline-flex w-full items-center justify-center gap-2 px-6 py-3.5 text-sm font-bold sm:w-auto sm:px-8"
               >
-                Schedule a free consultation
+                Get a website quote
                 <ArrowUpRight className="size-4" />
               </a>
 

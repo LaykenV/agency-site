@@ -46,7 +46,7 @@ const nextConfig: NextConfig = {
       {
         source: "/onboarding",
         destination:
-          "https://cal.com/layken-varholdt/agency-prospect?utm_source=site&utm_medium=cta&utm_campaign=awdlp&utm_content=retired_onboarding",
+          "/quote?source=retired_onboarding",
         permanent: true,
       },
       // Collapse non-canonical industry URLs onto SEO paths

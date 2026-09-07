@@ -11,7 +11,7 @@ preserved under `archive/migrations/`.
 ## Current operating priorities
 
 1. Close the first unrelated market-rate website client.
-2. Build and production-test the inbound quote form in
+2. Release and production-test the inbound quote form described in
    `plans/inbound-quote-form-and-google-ads.md`.
 3. Keep every paid advertising channel paused. The Google Ads account remains
    available for research, but no campaign work or spend is active.

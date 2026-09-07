@@ -14,6 +14,7 @@ import type * as adminAccess from "../adminAccess.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminGuard from "../adminGuard.js";
 import type * as adminLeads from "../adminLeads.js";
+import type * as agencyIntake from "../agencyIntake.js";
 import type * as agreement from "../agreement.js";
 import type * as agreementActions from "../agreementActions.js";
 import type * as auth from "../auth.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   adminAnalytics: typeof adminAnalytics;
   adminGuard: typeof adminGuard;
   adminLeads: typeof adminLeads;
+  agencyIntake: typeof agencyIntake;
   agreement: typeof agreement;
   agreementActions: typeof agreementActions;
   auth: typeof auth;

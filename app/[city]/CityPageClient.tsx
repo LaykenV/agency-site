@@ -1,8 +1,10 @@
 "use client";
 
+import { QuoteForm } from "@/components/marketing/QuoteForm";
+
 import Link from "next/link";
 import { CheckCircle2, MapPin, ArrowRight, Zap, Shield, Sparkles } from "lucide-react";
-import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { QUOTE_ANCHOR } from "@/lib/config";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import { SectionHeader } from "@/components/SectionHeader";
 import { LazyMotion, domAnimation, MotionConfig, m as motion } from "framer-motion";
@@ -89,12 +91,10 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
                 variants={fadeUp}
               >
                 <ShinyLink
-                  href={ONBOARDING_CAL_LINK}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={QUOTE_ANCHOR}
                   className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-6 sm:px-8 py-3 sm:py-3.5 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
                 >
-                  Schedule 15-Min Call
+                  Get a website quote
                 </ShinyLink>
                 <Link
                   href="#industries"
@@ -371,12 +371,10 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
                   </div>
                   <div className="flex flex-col gap-3 w-full md:w-auto md:min-w-[280px] lg:min-w-[320px]">
                     <Link 
-                      href={ONBOARDING_CAL_LINK} 
-                      target="_blank" 
-                      rel="noreferrer" 
+                      href={QUOTE_ANCHOR}
                       className="btn-cta w-full inline-flex items-center justify-center gap-2 px-6 py-3 sm:py-3.5 text-sm sm:text-base whitespace-nowrap rounded-xl font-semibold"
                     >
-                      Book a Free Call
+                      Get a website quote
                       <ArrowRight className="h-4 w-4" />
                     </Link>
                   </div>
@@ -386,6 +384,8 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
             {/* Bottom gradient fade-out */}
             <div className="absolute inset-x-0 bottom-0 h-32 pointer-events-none page-gradient-fade" aria-hidden="true" />
           </motion.section>
+
+          <QuoteForm />
 
           {/* Footer */}
           <footer className="footer-container pb-6 sm:pb-8">

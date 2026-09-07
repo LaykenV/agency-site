@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Calendar, Clock, ArrowLeft, ArrowRight } from "lucide-react";
 import { BLOG_POSTS, BLOG_CATEGORIES, getBlogPostBySlug, getAllBlogSlugs } from "@/lib/seo/blog";
-import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { QUOTE_PATH } from "@/lib/config";
 import { DEFAULT_OG_IMAGE, getSiteBaseUrl } from "@/lib/seo/site";
 
 const baseUrl = getSiteBaseUrl();
@@ -293,12 +293,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
               </p>
               <div className="mt-5">
                 <Link
-                  href={ONBOARDING_CAL_LINK}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={QUOTE_PATH}
                   className="btn-cta inline-flex items-center justify-center gap-2 px-6 py-3 text-base whitespace-nowrap rounded-xl font-semibold"
                 >
-                  Schedule Free Call
+                  Get a website quote
                 </Link>
               </div>
             </div>

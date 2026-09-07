@@ -55,7 +55,7 @@ The package manifest is authoritative:
 | Admin                 | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/marketing`, `/admin/content` |
 | Better Auth handler   | `/api/auth/[...all]`                                                               |
 
-`/onboarding` permanently redirects to the Cal.com sales call.
+`/onboarding` permanently redirects to `/quote`.
 
 `/audit` and `/audit/request/[token]` are the self-service audit reached by
 direct or QR traffic. They are unrelated to the retired outbound system: the
@@ -611,3 +611,38 @@ The site has one business entity. City pages describe service areas through
 branch-office addresses. FAQs share visible copy and JSON-LD, and native
 `details` work without JavaScript. Sitemap modification dates are emitted only
 when the content source supplies a real update date.
+
+## AWD direct quote intake
+
+`/quote` and the shared `#quote` sections on home, city, industry, and
+city/industry pages submit through `actions/submitAgencyQuote.ts`. Cal.com
+remains available for existing portal, kickoff, and review scheduling.
+
+The server validates bounded fields, a honeypot, a 3-second to 24-hour form age,
+and a UUID request ID. It forwards only to authenticated `POST /api/v2/leads`
+using server-only `AWD_WAAS_API_URL` and `AWD_LEAD_SECRET_KEY`. Vercel requests
+get a daily HMAC visitor hash; outside Vercel, no caller-provided IP is trusted.
+An absent key, a timeout, a rejected payload, or malformed success response
+shows a phone fallback. Lead details are not sent to analytics.
+
+The existing project-scoped storage and paid fan-out ceilings apply to the
+fixed AWD recipient. `client_leads.requestId` is optional for existing Spokes,
+indexed with `projectId`; repeating identical content returns the original ID.
+A reused ID with different content is rejected. Lead insertion and triage
+scheduling commit atomically. A retry cannot schedule another notification.
+
+`agencyIntake.configure` is an admin-authenticated mutation requiring `requireAdmin`.
+It is callable with an admin session, matching the existing credential-issuance
+API; anonymous and non-admin callers are rejected. It creates
+AWD's own recipient project without billing or an Order Form, records explicit
+owner SMS consent, and issues a server secret only when none is active. Reuse
+does not rotate credentials. The recipient remains separate from incoming
+prospects; a quote submission never creates a project or authenticates its email.
+
+Accepted quotes appear in `/admin/leads` with source `agency-quote-form`.
+Existing triage controls Resend and consented Twilio delivery: `allow` can send
+one email and one SMS, `spam` sends neither. Provider errors retain the existing
+fail-open triage policy; exhausted paid fan-out stores an untriaged lead without
+notifications. The UI says received only after storage, never that alerts were
+delivered. GA4 `generate_lead` is queued once per accepted lead ID when GA4 is
+configured; it is a submission event, not a qualified opportunity or sale.

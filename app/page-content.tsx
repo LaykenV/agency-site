@@ -1,8 +1,10 @@
 "use client";
 
+import { QuoteForm } from "@/components/marketing/QuoteForm";
+
 import Link from "next/link";
 import Image from "next/image";
-import { ONBOARDING_CAL_LINK } from "@/lib/config";
+import { QUOTE_ANCHOR } from "@/lib/config";
 import { ShinyLink } from "@/components/ui/shiny-button";
 import { CheckCircle2, XCircle, ArrowRight, MapPin, Quote, Shield, Star, Zap } from "lucide-react";
 import { FloatingCtaTray } from "@/components/FloatingCtaTray";
@@ -76,9 +78,9 @@ const REVIEWS = [
 const PROCESS_STEPS = [
   {
     number: "01",
-    title: "Book your 15-minute call",
+    title: "Tell us what you need",
     description:
-      "We look at your current site, your services, and what is blocking conversions right now.",
+      "Send the short form below. We’ll review your business, your services, and what you want from the site.",
   },
   {
     number: "02",
@@ -90,7 +92,7 @@ const PROCESS_STEPS = [
     number: "03",
     title: "Launch and keep improving",
     description:
-      "Go live in 72 hours. Then send edits any time through your portal and we handle the rest.",
+      "Target launch within 72 hours after scope, content, and assets are ready. Then request edits through your portal.",
   },
 ] as const;
 
@@ -202,12 +204,10 @@ export function PageContent() {
                   transition={{ delay: 0.5 }}
                 >
                   <ShinyLink
-                    href={ONBOARDING_CAL_LINK}
-                    target="_blank"
-                    rel="noreferrer"
+                    href={QUOTE_ANCHOR}
                     className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-7 py-3.5 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow font-[family-name:var(--font-sora)]"
                   >
-                    Schedule 15-Min Call
+                    Get a website quote
                   </ShinyLink>
                 </motion.div>
               </div>
@@ -661,58 +661,7 @@ export function PageContent() {
             </div>
           </motion.section>
 
-          <motion.section
-            id="cta"
-            className="relative"
-            initial={initial}
-            whileInView={reduce ? undefined : "visible"}
-            viewport={{ once: true, amount: 0.12 }}
-            variants={sectionReveal}
-          >
-            <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-              <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                {/* Left: Price lockup */}
-                <motion.div className="text-center lg:text-left" variants={fadeUp}>
-                  <p className="text-lg font-semibold text-[var(--muted-foreground)] line-through decoration-2 sm:text-xl">
-                    $5,000 upfront
-                  </p>
-                  <p className="mt-2 font-[family-name:var(--font-display)]">
-                    <span className="text-2xl font-bold text-[var(--muted-foreground)] sm:text-3xl align-top">from </span>
-                    <span className="text-7xl font-extrabold tracking-tighter text-[var(--foreground)] sm:text-8xl md:text-9xl">$199</span>
-                    <span className="text-2xl font-bold text-[var(--muted-foreground)] sm:text-3xl">/mo</span>
-                  </p>
-                  <p className="mt-3 text-sm text-[var(--muted-foreground)] sm:text-base">
-                    $0 upfront. Stay 12 months, then cancel anytime. Most local sites land at $199 —
-                    bigger builds like booking, e-commerce, or AI chat are quoted on the call.
-                  </p>
-                </motion.div>
-
-                {/* Right: Headline + CTA */}
-                <motion.div className="text-center lg:text-left" variants={fadeUp}>
-                  <h2 className="text-3xl font-extrabold tracking-tight text-[var(--foreground)] sm:text-4xl md:text-5xl font-[family-name:var(--font-display)] leading-[1.08]">
-                    Your next customer is Googling right now.
-                  </h2>
-                  <p className="mt-5 max-w-[50ch] mx-auto lg:mx-0 text-sm leading-relaxed text-[var(--muted-foreground)] sm:text-base">
-                    Every day without a fast, professional site is a day your competitor answers the phone instead. Book the call. We handle the rest.
-                  </p>
-                  <div className="mt-8">
-                    <ShinyLink
-                      href={ONBOARDING_CAL_LINK}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-8 sm:px-10 py-3.5 sm:py-4 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                      Schedule 15-Min Call
-                    </ShinyLink>
-                  </div>
-                  <p className="mt-4 text-[11px] sm:text-xs text-[var(--muted-foreground)]/60">
-                    From $199/mo. 12-month minimum. See{" "}
-                    <Link href="/legal/terms" className="underline hover:text-[var(--foreground)] transition-colors">Terms</Link>.
-                  </p>
-                </motion.div>
-              </div>
-            </div>
-          </motion.section>
+          <QuoteForm />
 
           <footer className="footer-container pb-6 sm:pb-8">
             <div className="footer-content flex-col gap-4 sm:flex-row sm:items-center">

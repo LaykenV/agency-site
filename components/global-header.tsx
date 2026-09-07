@@ -125,6 +125,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
         <nav className="hidden items-center gap-4 md:flex">
           {!isPortal ? (
             <>
+              <Link href="/quote" className="quote-nav-link">Get a quote</Link>
               <AnimatedThemeToggler onLanding={onLanding} />
               {showAdminLink && (
                 <Link
@@ -211,6 +212,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
                 <AnimatedThemeToggler className="btn-icon" onLanding={onLanding} />
               </div>
               <div className="h-px" style={{ background: "hsl(var(--border))" }} />
+              <Link href="/quote" onClick={() => setMenuOpen(false)} className="quote-nav-link">Get a quote</Link>
 
               {showAdminLink && (
                 <Link

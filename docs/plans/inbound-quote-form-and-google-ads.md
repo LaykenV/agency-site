@@ -1,6 +1,6 @@
 # Inbound quote form and paused Google Search Ads
 
-Status: **quote form active; all paid advertising paused**  
+Status: **quote form implemented on a review branch; production verification pending; all paid advertising paused**
 Owner: Layken  
 Created: 2026-08-24
 
@@ -258,3 +258,14 @@ request, whichever comes first. Stop at `$400` without a close. Do not spend
 
 - exact email that should receive AWD quote notifications
 - exact mobile number that should receive SMS notifications and record consent
+
+## September 7 implementation decisions
+
+The current implementation uses optional phone and a reusable form on the four
+marketing templates plus `/quote`. Public quote success no longer promotes a
+scheduling link; portal/kickoff/review scheduling remains available. An optional
+project-scoped request ID extends the lead schema to prevent duplicate leads
+and notification jobs on retries. The owner selected
+`layken@acadianawebdesign.com` and explicitly consented to SMS at the private
+number supplied in the session. See canonical `ARCHITECTURE.md` and
+`OPERATIONS.md` for the implementation and release sequence.
