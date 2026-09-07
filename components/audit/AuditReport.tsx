@@ -328,11 +328,11 @@ export function AuditReport({ data }: { data: AuditReportData }) {
                   "You're invisible on Google."}
               </p>
               <p className="mt-3 max-w-prose text-sm leading-relaxed text-[hsl(var(--muted-foreground))]">
-                53% of mobile visitors leave a site that takes longer than 3 seconds
-                to load. Google ranks fast sites higher in local search — so a slow
-                site loses you customers{" "}
+                A slow mobile site can make visitors leave before they reach your
+                services or contact details. Use these measurements to improve
+                the experience{" "}
                 <em className="font-[family-name:var(--font-instrument-serif)] not-italic text-[hsl(var(--foreground))]">
-                  before they ever see your work
+                  before visitors need to call
                 </em>
                 .
               </p>
@@ -608,7 +608,7 @@ export function AuditReport({ data }: { data: AuditReportData }) {
               </h2>
 
               <p className="mt-3 max-w-md text-sm leading-relaxed text-[hsl(var(--muted-foreground))] sm:text-base">
-                Custom design · Fast hosting · Unlimited edits · 95+ PageSpeed
+                Custom design · Fast hosting · Unlimited edits · Performance testing
               </p>
 
               <a

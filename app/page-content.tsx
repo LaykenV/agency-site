@@ -233,15 +233,17 @@ export function PageContent() {
                 />
 
                 <div className="relative rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl overflow-hidden">
-                  <Image
-                    src="/client-tb-tree.jpg"
+                  {/* Prebuilt sizes avoid cold image-transform latency for the LCP image. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/client-tb-tree-1120.webp"
+                    srcSet="/client-tb-tree-750.webp 750w, /client-tb-tree-1120.webp 1120w"
                     alt="TB Tree Service client website screenshot"
                     width={1400}
                     height={725}
                     sizes="(min-width: 1024px) 560px, 92vw"
-                    quality={75}
-                    priority
                     fetchPriority="high"
+                    decoding="async"
                     className="w-full object-cover object-top"
                   />
 

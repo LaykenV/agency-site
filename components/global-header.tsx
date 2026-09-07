@@ -4,14 +4,17 @@ import Link from "next/link";
 import { AnimatedThemeToggler } from "@/components/animated-theme-toggler";
 import { usePathname } from "next/navigation";
 import { ArrowRight, LogOut, Shield } from "lucide-react";
-import { useConvexAuth, useQuery } from "convex/react";
-import { api } from "@/convex/_generated/api";
+import type { api } from "@/convex/_generated/api";
+import type { FunctionReturnType } from "convex/server";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { authClient } from "@/lib/auth-client";
 import { MobileMenu } from "@/components/mobile-menu";
 import { Logo } from "@/components/logo";
 
-export function GlobalHeader() {
+export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }: {
+  decision?: FunctionReturnType<typeof api.auth.getPortalDecision>;
+  showAdminLink?: boolean;
+  handleSignOut?: () => Promise<void>;
+} = {}) {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
   // The self-service audit report at /audit/request/<token> renders its own
@@ -24,7 +27,6 @@ export function GlobalHeader() {
   // business sitting above one.
   const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
-  const isAdminRoute = pathname.startsWith("/admin");
   // Pages with gradient backgrounds where header needs light text
   // Includes landing page, SEO city pages, industry service pages
   const isGradientPage =
@@ -53,16 +55,6 @@ export function GlobalHeader() {
       !pathname.startsWith("/services")
     );
   const onLanding = isGradientPage;
-  const { isAuthenticated } = useConvexAuth();
-  // Only check auth on portal pages to avoid unnecessary auth calls on public SEO pages
-  const decision = useQuery(api.auth.getPortalDecision, isPortal ? {} : "skip");
-  // Anonymous visitors never run this query. Signed-in users get a small,
-  // non-blocking convenience check; server-side admin guards remain authoritative.
-  const currentUserIsAdmin = useQuery(
-    api.adminAccess.currentUserIsAdmin,
-    isAuthenticated ? {} : "skip",
-  );
-  const showAdminLink = currentUserIsAdmin === true && !isAdminRoute;
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {
@@ -76,17 +68,6 @@ export function GlobalHeader() {
     const last = parts[parts.length - 1]?.[0] ?? "";
     return `${first}${last}`.toUpperCase();
   }, [decision?.user?.name, decision?.user?.email]);
-
-  const handleSignOut = async () => {
-    try {
-      await authClient.signOut();
-    } catch (error) {
-      console.error("[auth] sign out failed", error);
-    } finally {
-      // Use a hard redirect so protected portal routes are torn down immediately.
-      window.location.replace("/portal");
-    }
-  };
 
   useEffect(() => {
     const header = headerRef.current;
@@ -257,7 +238,7 @@ export function GlobalHeader() {
                   </Link>
                   <button
                     onClick={async () => {
-                      await handleSignOut();
+                      await handleSignOut?.();
                       setMenuOpen(false);
                     }}
                     className="btn-danger inline-flex items-center justify-between gap-2 px-4 py-2 text-sm font-semibold"

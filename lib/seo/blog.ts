@@ -68,7 +68,7 @@ If you're running a local service business in Lafayette, your website speed migh
 
 ## The 3-Second Rule
 
-Studies show that 53% of mobile users abandon sites that take longer than 3 seconds to load. For a plumber or landscaper in Lafayette, that means potential customers are clicking the back button and calling your competitor instead.
+A slow mobile page makes it harder for visitors to find your services and contact you. For a plumber or landscaper in Lafayette, speed should be checked on the devices and connections customers use.
 
 ## Google Cares About Speed
 
@@ -76,7 +76,7 @@ Since 2021, Google has used Core Web Vitals as a ranking factor. This means:
 
 - **Slow sites rank lower** in local search results
 - **Fast sites get more visibility** when someone searches "plumber near me"
-- **Mobile speed matters most** because 70%+ of local searches happen on phones
+- **Mobile speed matters** when customers search on the go
 
 ## What "Fast" Actually Means
 
@@ -97,7 +97,7 @@ At Acadiana Web Design, we hand-code every site in Next.js with:
 - Edge hosting on Vercel's global network
 - Mobile-first design from the ground up
 
-The result? Sites that load in under a second and score 95+ on PageSpeed.
+We test each site with PageSpeed Insights and address the measured bottlenecks. Results vary with page content, devices, and network conditions.
 
 ## The Bottom Line
 

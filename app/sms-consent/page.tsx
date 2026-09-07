@@ -3,6 +3,7 @@ import Image from "next/image";
 import { type Metadata } from "next";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/sms-consent" },
   title: "SMS Consent — Acadiana Web Design",
   description:
     "Learn how Acadiana Web Design clients optionally opt in to receive SMS lead notifications through a separate unchecked checkbox in the client portal.",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function SmsConsentPage() {
   return (
-    <div className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]">
+    <main className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]">
       <div className="relative z-10 mx-auto max-w-3xl px-6 py-16 lg:px-8 lg:py-24">
         {/* Header */}
         <div className="mb-16 text-center">
@@ -118,15 +119,12 @@ export default function SmsConsentPage() {
                     { label: "Help", value: "Reply HELP or email support" },
                   ].map((item) => (
                     <div key={item.label} className="surface relative overflow-hidden rounded-xl p-4">
-                      <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/10 via-[var(--card)] to-[var(--accent)]/10 opacity-100" />
-                      <div className="relative z-10">
-                        <dt className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
-                          {item.label}
-                        </dt>
-                        <dd className="mt-2 text-sm font-semibold text-[var(--foreground)]">
-                          {item.value}
-                        </dd>
-                      </div>
+                      <dt className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
+                        {item.label}
+                      </dt>
+                      <dd className="mt-2 text-sm font-semibold text-[var(--foreground)]">
+                        {item.value}
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -203,6 +201,6 @@ export default function SmsConsentPage() {
           </footer>
         </article>
       </div>
-    </div>
+    </main>
   );
 }

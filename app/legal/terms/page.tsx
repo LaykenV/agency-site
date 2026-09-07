@@ -9,6 +9,8 @@ import { type Metadata } from "next";
 import { PrintButton } from "@/components/PrintButton";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/legal/terms" },
+  description: "Read the master services agreement for Acadiana Web Design services.",
   title: "Master Services Agreement",
 };
 
@@ -22,15 +24,10 @@ const SummaryList = () => (
   <dl className="grid gap-4 sm:grid-cols-2">
     {MSA_SUMMARY_POINTS.map((item) => (
       <div key={item.label} className="surface relative overflow-hidden rounded-xl p-4">
-        {/* Stronger gradient wash for better contrast */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[var(--primary)]/10 via-[var(--card)] to-[var(--accent)]/10 opacity-100" />
-        
-        <div className="relative z-10">
-          <dt className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
-            {item.label}
-          </dt>
-          <dd className="mt-2 text-lg font-bold text-[var(--foreground)] tracking-tight">{item.value}</dd>
-        </div>
+        <dt className="text-xs font-bold uppercase tracking-wider text-[var(--primary)]">
+          {item.label}
+        </dt>
+        <dd className="mt-2 text-lg font-bold text-[var(--foreground)] tracking-tight">{item.value}</dd>
       </div>
     ))}
   </dl>
@@ -117,7 +114,7 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
   }
 
   return (
-    <div className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-msa-version={MSA_VERSION}>
+    <main className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-msa-version={MSA_VERSION}>
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
         
         {/* Header Section */}
@@ -206,6 +203,6 @@ export default async function TermsPage({ searchParams }: TermsPageProps) {
         type="application/json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(MSA_CANONICAL_HTML) }}
       />
-    </div>
+    </main>
   );
 }

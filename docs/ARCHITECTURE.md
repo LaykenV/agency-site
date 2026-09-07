@@ -598,9 +598,13 @@ path to be exercised against the intended deployment.
 ## Marketing search and rendering contract
 
 Public marketing routes prerender without a server-side auth-token lookup.
-`SiteShell` supplies the public header and client auth; `/portal` and `/admin`
-layouts own their prefetched auth provider and remain dynamic and noindex.
-There is one provider per route, including during client navigation.
+`SiteShell` supplies a public header without loading authentication on marketing
+pages. Public audit and concept routes load their Convex runtime separately;
+`/portal` and `/admin` own their prefetched auth provider and authenticated
+header, and remain dynamic and noindex. Admin shortcuts and sign-out are
+available in those authenticated layouts. There is one provider per route,
+including during client navigation. The hero uses prebuilt responsive WebP
+assets to avoid a cold image transformation on the critical rendering path.
 
 The site has one business entity. City pages describe service areas through
 `Service` records referencing that entity; city-center coordinates are not

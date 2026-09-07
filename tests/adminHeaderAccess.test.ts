@@ -3,7 +3,8 @@ import { readFileSync } from "node:fs";
 
 describe("admin header access", () => {
   test("checks admin visibility only after authentication", () => {
-    const header = readFileSync("components/global-header.tsx", "utf8");
+    const header = readFileSync("components/global-header.tsx", "utf8") +
+      readFileSync("components/AuthenticatedHeader.tsx", "utf8");
 
     expect(header).toContain("useConvexAuth()");
     expect(header).toContain('isAuthenticated ? {} : "skip"');

@@ -1,4 +1,4 @@
-import { GlobalHeader } from "@/components/global-header";
+import { AuthenticatedHeader as GlobalHeader } from "@/components/AuthenticatedHeader";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import type { Metadata } from "next";
 
