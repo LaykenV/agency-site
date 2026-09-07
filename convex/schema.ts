@@ -190,6 +190,7 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"]),
 
   client_leads: defineTable({
+    requestId: v.optional(v.string()),
     projectId: v.string(), // Human-readable slug, matches waas.projectId in template config
     status: v.union(
       v.literal("new"),
@@ -215,6 +216,7 @@ export default defineSchema({
   })
     .index("by_projectId", ["projectId"])
     .index("by_projectId_and_status", ["projectId", "status"])
+    .index("by_projectId_and_requestId", ["projectId", "requestId"])
     .index("by_projectId_and_triageVerdict", ["projectId", "triageVerdict"])
     .index("by_triageVerdict", ["triageVerdict"])
     .index("by_createdAt", ["createdAt"])

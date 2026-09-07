@@ -9,6 +9,7 @@ const baseUrl = getSiteBaseUrl();
 export default function sitemap(): MetadataRoute.Sitemap {
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
+    { url: `${baseUrl}/quote`, changeFrequency: "monthly", priority: 0.8 },
     {
       url: baseUrl,
       changeFrequency: "weekly",

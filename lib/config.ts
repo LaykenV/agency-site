@@ -1,3 +1,5 @@
+export const QUOTE_PATH = "/quote";
+export const QUOTE_ANCHOR = "#quote";
 export const ONBOARDING_CAL_LINK = "https://cal.com/layken-varholdt/agency-prospect?utm_source=site&utm_medium=cta&utm_campaign=awdlp&utm_content=cal";
 export const CAL_KICKOFF_URL = "https://cal.com/layken-varholdt/website-kickoff-call";
 export const CAL_REVIEW_URL = "https://cal.com/layken-varholdt/website-review-call";

@@ -38,7 +38,7 @@ archive model is planned but not implemented.
 
 ## 1. Qualify the lead
 
-Leads can come from referrals, Messenger, Cal.com, public audits, or admin
+Leads can come from the website quote form, referrals, Messenger, Cal.com, public audits, or admin
 research. Facebook and Messenger are where discovery and outreach happen; the
 application never crawls Facebook or sends a message.
 
@@ -255,3 +255,26 @@ The rollout order is fixed:
 5. Remove the old Hub path only after every configured Spoke passes.
 
 A deploy is not verification. Confirm the actual client path.
+
+## Website quote requests
+
+Review `/admin/leads` filtered to the Acadiana Web Design recipient, including
+untriaged and fan-out-paused requests. The form records business, need, current
+website, optional details, and submitting path in the lead message. Qualify the
+request before manually creating its prospect and project.
+
+The owner selected `layken@acadianawebdesign.com` for quote notifications and
+explicitly consented to quote-alert SMS on 2026-09-07. At activation, the full private phone is
+stored in the recipient's build details, not in repository documentation.
+
+Deployment sequence: deploy the reviewed Convex change; run the admin-only
+`agencyIntake.configure` with the approved recipient and consent; save its
+one-time secret as Vercel Production `AWD_LEAD_SECRET_KEY`; set
+`AWD_WAAS_API_URL` to the production Convex HTTP origin; then deploy the frontend.
+Existing active credentials return no raw key; use the already-configured secret
+or deliberately issue a replacement through the existing credential UI.
+
+Before calling intake live, run an owner-approved labeled canary and verify one
+stored lead, current triage version, allow verdict, Resend email, consented Twilio
+SMS, admin visibility, and one GA4 event. Check spam and backend-error paths.
+Production notification delivery remains unverified until that canary completes.

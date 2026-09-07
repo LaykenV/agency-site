@@ -324,6 +324,11 @@ const ingestLeadV2Handler = httpAction(async (ctx, request) => {
     return jsonResponse({ error: validated.error }, 400);
   }
 
+  const requestId = body.requestId;
+  if (requestId !== undefined && (typeof requestId !== "string" || !/^[a-zA-Z0-9-]{16,80}$/.test(requestId))) {
+    return jsonResponse({ error: "Invalid request ID" }, 400);
+  }
+
   // Optional visitorHash from the client Function (Stage 2 spoke path).
   // Accept it at the top level OR nested under `meta`: both reference spokes send
   // it inside `meta` alongside hp/renderedAt. Reading only the top level made
@@ -425,9 +430,10 @@ const ingestLeadV2Handler = httpAction(async (ctx, request) => {
   });
   const fanoutPaused = !fanout.ok;
 
-  const leadId = await ctx.runMutation(internal.clientLeads.create, {
+  const created = await ctx.runMutation(internal.clientLeads.create, {
     projectId,
     source: validated.source,
+    ...(typeof requestId === "string" ? { requestId } : {}),
     data: validated.data,
     ...(fanoutPaused
       ? {
@@ -436,6 +442,9 @@ const ingestLeadV2Handler = httpAction(async (ctx, request) => {
         }
       : {}),
   });
+
+  const { leadId } = created;
+  if (created.duplicate) return jsonResponse({ success: true, leadId, fanoutPaused: created.fanoutPaused }, 200);
 
   await bumpHubCounter(ctx, projectId, "lead_accepted");
 
@@ -466,10 +475,6 @@ const ingestLeadV2Handler = httpAction(async (ctx, request) => {
       leadId,
       detail:
         "Daily paid fan-out ceiling reached on v2. Lead stored as untriaged; Groq/email/SMS skipped.",
-    });
-  } else {
-    await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
-      leadId,
     });
   }
 

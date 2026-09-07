@@ -66,7 +66,7 @@ export const HOMEPAGE_FAQS = [
   {
     question: "What if I need more than a website?",
     answer:
-      "Online booking, e-commerce, customer portals, custom tools, AI chat — we build those too, quoted on top of the base plan. Bring it to the call and we will scope it honestly.",
+      "Online booking, e-commerce, customer portals, custom tools, AI chat — we build those too, quoted on top of the base plan. Describe it in your quote request and we will scope it honestly.",
   },
   {
     question: "Is local SEO included?",

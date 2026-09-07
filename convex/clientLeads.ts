@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import {
   getProjectBySlugIfOwner,
@@ -31,27 +32,66 @@ export const create = internalMutation({
   args: {
     projectId: v.string(),
     source: v.string(),
+    requestId: v.optional(v.string()),
     data: leadDataValidator,
     fanoutPaused: v.optional(v.boolean()),
     fanoutPausedReason: v.optional(v.string()),
   },
-  returns: v.id("client_leads"),
+  returns: v.object({
+    leadId: v.id("client_leads"),
+    duplicate: v.boolean(),
+    fanoutPaused: v.boolean(),
+  }),
   handler: async (ctx, args) => {
+    if (args.requestId) {
+      if (!/^[a-zA-Z0-9-]{16,80}$/.test(args.requestId))
+        throw new Error("Invalid request ID");
+      const existing = await ctx.db
+        .query("client_leads")
+        .withIndex("by_projectId_and_requestId", (q) =>
+          q.eq("projectId", args.projectId).eq("requestId", args.requestId!),
+        )
+        .unique();
+      if (existing) {
+        if (
+          existing.source !== args.source ||
+          existing.data.name !== args.data.name ||
+          existing.data.email !== args.data.email ||
+          existing.data.phone !== args.data.phone ||
+          existing.data.message !== args.data.message
+        ) {
+          throw new Error("Request ID already used for different content");
+        }
+        return {
+          leadId: existing._id,
+          duplicate: true,
+          fanoutPaused: !!existing.fanoutPaused,
+        };
+      }
+    }
     const leadId = await ctx.db.insert("client_leads", {
       projectId: args.projectId,
       status: "new",
       source: args.source,
+      ...(args.requestId ? { requestId: args.requestId } : {}),
       data: args.data,
       createdAt: Date.now(),
       triageVerdict: "untriaged" as const,
       ...(args.fanoutPaused
         ? {
             fanoutPaused: true,
-            fanoutPausedReason: args.fanoutPausedReason ?? "paid_fanout_ceiling",
+            fanoutPausedReason:
+              args.fanoutPausedReason ?? "paid_fanout_ceiling",
           }
         : {}),
     });
-    return leadId;
+    // Insert and scheduling share a transaction: retries cannot strand a lead
+    // or enqueue another notification job for the same request.
+    if (!args.fanoutPaused)
+      await ctx.scheduler.runAfter(0, internal.leadTriage.triageLead, {
+        leadId,
+      });
+    return { leadId, duplicate: false, fanoutPaused: !!args.fanoutPaused };
   },
 });
 
@@ -65,6 +105,7 @@ export const getLeadById = internalQuery({
       projectId: v.string(),
       status: leadStatusValidator,
       source: v.string(),
+      requestId: v.optional(v.string()),
       data: leadDataValidator,
       createdAt: v.number(),
       triageVerdict: v.optional(triageVerdictValidator),
@@ -158,6 +199,7 @@ export const listByProject = query({
       projectId: v.string(),
       status: leadStatusValidator,
       source: v.string(),
+      requestId: v.optional(v.string()),
       data: leadDataValidator,
       createdAt: v.number(),
       triageVerdict: v.optional(triageVerdictValidator),

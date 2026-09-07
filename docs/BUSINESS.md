@@ -119,7 +119,7 @@ retired; `../agency-playground/` is the reference for Hub-facing plumbing.
 ## Current priorities
 
 1. Close the first unrelated market-rate client.
-2. Build a direct quote form with stored leads plus email and SMS notification.
+2. Release and verify the direct quote form with stored leads plus email and SMS notification.
 3. Improve Google Business Profile proof and genuine client reviews.
 4. Measure organic quote requests, qualified opportunities, and closes.
 5. Keep every paid advertising channel paused until Layken makes a new explicit

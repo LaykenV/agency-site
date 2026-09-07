@@ -1,8 +1,8 @@
 import Image from "next/image";
 import { ArrowUpRight } from "lucide-react";
 
-const CAL_LINK =
-  "https://cal.com/layken-varholdt/agency-prospect?utm_source=audit&utm_medium=banner&utm_campaign=marketing";
+const QUOTE_LINK =
+  "/quote";
 
 /**
  * Sticky bottom CTA on audit pages. Forces the brand light palette inline
@@ -43,11 +43,11 @@ export function AuditBanner() {
           </p>
         </div>
         <a
-          href={CAL_LINK}
+          href={QUOTE_LINK}
           className="btn-cta inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap px-3.5 py-2 text-[12px] font-bold sm:px-5 sm:py-2.5 sm:text-sm"
         >
-          <span className="sm:hidden">Book a call</span>
-          <span className="hidden sm:inline">Schedule a free consultation</span>
+          <span className="sm:hidden">Get a quote</span>
+          <span className="hidden sm:inline">Get a website quote</span>
           <ArrowUpRight className="size-3.5 sm:size-4" />
         </a>
       </div>

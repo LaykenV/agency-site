@@ -32,6 +32,7 @@ const clientLeadValidator = v.object({
   projectId: v.string(),
   status: leadStatusValidator,
   source: v.string(),
+  requestId: v.optional(v.string()),
   data: leadDataValidator,
   createdAt: v.number(),
   triageVerdict: v.optional(triageVerdictValidator),
