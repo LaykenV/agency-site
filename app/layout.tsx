@@ -1,11 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Plus_Jakarta_Sans, Sora, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { SiteShell } from "@/components/SiteShell";
 import { AppThemeProvider } from "@/components/theme-provider";
-import { GlobalHeader } from "@/components/global-header";
 import { Analytics } from "@/components/Analytics";
-import { getToken } from "@/lib/auth-server";
 import {
   DEFAULT_OG_IMAGE,
   getSiteBaseUrl,
@@ -19,11 +17,13 @@ const geistSans = Geist({
 });
 
 const geistMono = Geist_Mono({
+  preload: false,
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 const plusJakarta = Plus_Jakarta_Sans({
+  preload: false,
   variable: "--font-display",
   subsets: ["latin"],
   weight: ["700", "800"],
@@ -103,7 +103,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    title: "Get More Calls in Acadiana with a 5‑Star Website",
+    title: "Web Design in Lafayette, LA | Acadiana Web Design",
     description: "Get more customers in Lafayette & Acadiana with a professional website. $0 down, 72-hour launch, unlimited edits. Perfect for plumbers, landscapers, and local service pros.",
     siteName: "Acadiana Web Design",
     images: [{ ...DEFAULT_OG_IMAGE }],
@@ -149,22 +149,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Pre-fetch auth token server-side to avoid client-side hydration delays
-  // This fixes magic link redirect issues on mobile browsers where session sync could stall
-  // Wrapped in try-catch to prevent root layout crash on cookie/network errors
-  let initialToken: string | null | undefined = null;
-  try {
-    initialToken = await getToken();
-  } catch (error) {
-    console.error("[layout] Failed to get auth token:", error);
-    // Fallback to null - client will do auth validation instead
-  }
-
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -187,10 +176,7 @@ export default async function RootLayout({
           }}
         />
         <AppThemeProvider>
-          <ConvexClientProvider initialToken={initialToken}>
-            <GlobalHeader />
-            {children}
-          </ConvexClientProvider>
+          <SiteShell>{children}</SiteShell>
         </AppThemeProvider>
         <Analytics />
       </body>

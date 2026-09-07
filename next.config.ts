@@ -24,6 +24,7 @@ const INDUSTRY_SLUGS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  images: { formats: ["image/avif", "image/webp"] },
   /**
    * Vercel builds crash inside webpack's WebAssembly xxhash64 implementation:
    *   TypeError: Cannot read properties of undefined (reading 'length')

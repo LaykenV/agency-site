@@ -49,12 +49,6 @@ export async function generateMetadata({ params }: CityPageProps): Promise<Metad
       description,
       url: `${baseUrl}/${city.slug}`,
     }),
-    other: {
-      "geo.region": "US-LA",
-      "geo.placename": city.name,
-      "geo.position": `${city.lat};${city.lng}`,
-      ICBM: `${city.lat}, ${city.lng}`,
-    },
   };
 }
 
@@ -78,31 +72,19 @@ export default async function CityPage({ params }: CityPageProps) {
 
   return (
     <>
-      {/* LocalBusiness JSON-LD with city-specific data */}
+      {/* Service area linked to the single site-wide business entity */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify({
             "@context": "https://schema.org",
-            "@type": "ProfessionalService",
-            name: "Acadiana Web Design",
+            "@type": "Service",
+            name: `Web Design in ${city.name}`,
+            provider: { "@id": `${baseUrl}/#organization` },
             description: `Professional website design services for local businesses in ${city.name}, Louisiana. Fast, mobile-optimized sites with $0 down and pricing from $199/mo.`,
             image: `${baseUrl}/heroimg.jpg`,
             "@id": `${baseUrl}/${city.slug}`,
             url: `${baseUrl}/${city.slug}`,
-            telephone: "+1-337-306-3705",
-            email: "hello@acadianawebdesign.com",
-            address: {
-              "@type": "PostalAddress",
-              addressLocality: city.name,
-              addressRegion: "LA",
-              addressCountry: "US",
-            },
-            geo: {
-              "@type": "GeoCoordinates",
-              latitude: city.lat,
-              longitude: city.lng,
-            },
             areaServed: {
               "@type": "City",
               name: city.name,

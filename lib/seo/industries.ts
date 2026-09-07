@@ -45,7 +45,7 @@ export const TARGET_INDUSTRIES: TargetIndustry[] = [
       {
         question: "Will the website work on phones?",
         answer:
-          "Yes. Over 70% of plumbing searches happen on mobile. Your site will load fast and look great on any device.",
+          "Yes. We build for mobile screens and test the service pages and contact form on phones, tablets, and desktops.",
       },
     ],
   },

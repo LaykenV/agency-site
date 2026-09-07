@@ -128,7 +128,7 @@ const FOOTER_CITIES = [
 
 export function PageContent() {
   const reduce = useReducedMotion();
-  const initial = reduce ? false : "hidden";
+  const initial = false; // Keep server-rendered content visible before hydration.
 
   return (
     <LazyMotion features={domAnimation} strict>
@@ -148,19 +148,19 @@ export function PageContent() {
                   animate={reduce ? undefined : "visible"}
                   transition={{ delay: 0.15 }}
                 >
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title">
-                    One website.
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] hero-title">
+                    Web design.
                   </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title mt-1">
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] hero-title mt-1">
+                    For Acadiana.
+                  </span>
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] mt-1">
                     One flat fee.
-                  </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] mt-1">
-                    Zero headaches.
                   </span>
                 </motion.h1>
 
                 <motion.p
-                  className="mt-6 text-base sm:text-lg text-[hsl(var(--primary-foreground))]/80 leading-relaxed max-w-[42ch] font-[family-name:var(--font-sora)]"
+                  className="mt-6 text-base sm:text-lg text-[hsl(var(--hero-copy))] leading-relaxed max-w-[42ch] font-[family-name:var(--font-sora)]"
                   variants={fadeUp}
                   initial={initial}
                   animate={reduce ? undefined : "visible"}
@@ -168,7 +168,7 @@ export function PageContent() {
                 >
                   Custom web design for Acadiana service businesses in Lafayette and nearby
                   towns. Hosting, SSL, edits, and support — all included, from{" "}
-                  <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] leading-none align-baseline">$199/mo</span>.
+                  <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(var(--hero-copy))] leading-none align-baseline">$199/mo</span>.
                 </motion.p>
 
                 {/* Trust pills */}
@@ -215,7 +215,7 @@ export function PageContent() {
               {/* Right — Dashboard Mockup */}
               <motion.div
                 className="relative"
-                initial={reduce ? false : { opacity: 0, x: 40, scale: 0.96 }}
+                initial={false}
                 animate={reduce ? undefined : { opacity: 1, x: 0, scale: 1 }}
                 transition={{
                   delay: 0.4,
@@ -233,17 +233,6 @@ export function PageContent() {
                 />
 
                 <div className="relative rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] shadow-2xl overflow-hidden">
-                  <div className="flex items-center gap-2 border-b border-[hsl(var(--border))] px-4 py-3">
-                    <div className="flex gap-1.5">
-                      <div className="h-3 w-3 rounded-full bg-red-400/70" />
-                      <div className="h-3 w-3 rounded-full bg-yellow-400/70" />
-                      <div className="h-3 w-3 rounded-full bg-green-400/70" />
-                    </div>
-                    <div className="ml-3 flex-1 rounded-md bg-[hsl(var(--muted))] px-3 py-1 text-xs text-[var(--muted-foreground)] font-[family-name:var(--font-sora)]">
-                      yourbusiness.com
-                    </div>
-                  </div>
-
                   <Image
                     src="/client-tb-tree.jpg"
                     alt="TB Tree Service client website screenshot"
@@ -252,6 +241,7 @@ export function PageContent() {
                     sizes="(min-width: 1024px) 560px, 92vw"
                     quality={75}
                     priority
+                    fetchPriority="high"
                     className="w-full object-cover object-top"
                   />
 
@@ -290,7 +280,7 @@ export function PageContent() {
               <div className="text-center">
                 <div className="inline-flex items-center gap-3">
                   <div className="h-px w-8 bg-[hsl(var(--primary))]" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--primary))] sm:text-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground sm:text-xs">
                     Real Client Results
                   </span>
                   <div className="h-px w-8 bg-[hsl(var(--primary))]" />
@@ -470,7 +460,7 @@ export function PageContent() {
                 <div className="portrait-glow-ring relative h-48 w-48 sm:h-56 sm:w-56 lg:h-64 lg:w-64 rounded-full overflow-hidden border-4 border-[hsl(var(--background))] shadow-soft-lg">
                   <Image
                     src="/portrait.jpeg"
-                    alt="Portrait of the developer"
+                    alt="Layken Varholdt, founder of Acadiana Web Design"
                     fill
                     sizes="256px"
                     className="object-cover object-top"
@@ -533,7 +523,7 @@ export function PageContent() {
               <div className="text-center">
                 <div className="inline-flex items-center gap-3">
                   <div className="h-px w-8 bg-[hsl(var(--primary))]/40" />
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--primary))] sm:text-xs">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground sm:text-xs">
                     The Process
                   </span>
                   <div className="h-px w-8 bg-[hsl(var(--primary))]/40" />
@@ -558,7 +548,7 @@ export function PageContent() {
                       index < PROCESS_STEPS.length - 1 ? "md:border-r md:border-[hsl(var(--border))]" : ""
                     } ${index > 0 ? "border-t border-[hsl(var(--border))] md:border-t-0" : ""}`}
                   >
-                    <div className="text-6xl leading-none font-extrabold tracking-tighter text-[hsl(var(--primary))]/14 sm:text-7xl font-[family-name:var(--font-display)]">
+                    <div className="text-6xl leading-none font-extrabold tracking-tighter text-muted-foreground sm:text-7xl font-[family-name:var(--font-display)]">
                       {step.number}
                     </div>
                     <h3 className="mt-4 text-xl font-bold tracking-tight text-[var(--foreground)] font-[family-name:var(--font-display)]">
@@ -681,7 +671,7 @@ export function PageContent() {
               <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
                 {/* Left: Price lockup */}
                 <motion.div className="text-center lg:text-left" variants={fadeUp}>
-                  <p className="text-lg font-semibold text-[var(--muted-foreground)] line-through decoration-2 opacity-50 sm:text-xl">
+                  <p className="text-lg font-semibold text-[var(--muted-foreground)] line-through decoration-2 sm:text-xl">
                     $5,000 upfront
                   </p>
                   <p className="mt-2 font-[family-name:var(--font-display)]">

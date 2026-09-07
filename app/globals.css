@@ -12,6 +12,7 @@
   --foreground: 225 30% 35%;
   /* Hero heading color tuned to the page gradient */
   --hero-foreground: 222 72% 28%;
+  --hero-copy: 222 72% 18%;
   --card: 225 33% 96%;
   --card-foreground: 225 28% 38%;
   --popover: 225 33% 96%;
@@ -102,6 +103,7 @@
   /* Dark theme: off-gray tinted background and deeper neutrals */
   --background: 220 28% 11%;
   --foreground: 0 0% 100%;
+  --hero-copy: 0 0% 100%;
   /* Hero heading color tuned to the page gradient */
   --hero-foreground: color-mix(in hsl, hsl(var(--foreground)) 94%, hsl(var(--primary)) 6%);
   --card: 220 28% 12%;
@@ -2626,7 +2628,11 @@ body {
 /* Animated hamburger menu */
 .hamburger {
   cursor: pointer;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   position: relative;
 }
 
@@ -2655,11 +2661,11 @@ body {
   stroke-dasharray: 12 63;
 }
 
-.hamburger input:checked + svg {
+.hamburger[aria-expanded="true"] svg {
   transform: rotate(-45deg);
 }
 
-.hamburger input:checked + svg .line-top-bottom {
+.hamburger[aria-expanded="true"] svg .line-top-bottom {
   stroke-dasharray: 20 300;
   stroke-dashoffset: -32.42;
 }
@@ -2917,3 +2923,14 @@ html.dark .mobile-menu-panel {
 .animate-marquee {
   animation: marquee 20s linear infinite;
 }
+
+/* Public navigation: readable contrast, keyboard focus and comfortable targets. */
+.footer-copyright, .footer-badges, .footer-link { color: hsl(var(--foreground)); }
+.footer-badges > span { opacity: 1; }
+.footer-link { display: inline-flex; align-items: center; min-height: 44px; white-space: nowrap; }
+.footer-link:focus-visible, .hamburger:focus-visible { outline: 2px solid hsl(var(--primary)); outline-offset: 4px; }
+details[open] > summary .faq-chevron { transform: rotate(180deg); }
+
+.editorial-row__num { color: hsl(var(--muted-foreground)); opacity: 1; }
+
+.comparison-card__badge--legacy { color: hsl(var(--foreground)); }

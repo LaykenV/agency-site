@@ -56,7 +56,7 @@ export function CityIndustryPageClient({
           {/* Hero Section */}
           <motion.section 
             className="relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             animate="visible"
             variants={sectionReveal}
           >
@@ -144,7 +144,7 @@ export function CityIndustryPageClient({
           {/* Pain Points Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -160,7 +160,7 @@ export function CityIndustryPageClient({
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 md:grid-cols-2"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -186,7 +186,7 @@ export function CityIndustryPageClient({
           <motion.section 
             id="benefits"
             className="anchor-target py-12 sm:py-16 md:py-20 relative"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -207,7 +207,7 @@ export function CityIndustryPageClient({
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 md:grid-cols-2"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -230,7 +230,7 @@ export function CityIndustryPageClient({
           {/* Local Focus Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -243,7 +243,7 @@ export function CityIndustryPageClient({
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 sm:gap-6 md:grid-cols-3"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -304,7 +304,7 @@ export function CityIndustryPageClient({
           {/* FAQs */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -327,7 +327,7 @@ export function CityIndustryPageClient({
           {/* Other Industries in This City */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20 relative"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -345,7 +345,7 @@ export function CityIndustryPageClient({
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -386,7 +386,7 @@ export function CityIndustryPageClient({
           {/* Same Industry in Other Cities */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -399,7 +399,7 @@ export function CityIndustryPageClient({
               <motion.div 
                 className="mt-8 sm:mt-10 flex flex-wrap justify-center gap-2 sm:gap-3"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.3 }}
               >
@@ -431,7 +431,7 @@ export function CityIndustryPageClient({
           {/* CTA Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20 lg:py-24 relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
