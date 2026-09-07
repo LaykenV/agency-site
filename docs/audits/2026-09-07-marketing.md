@@ -1,6 +1,6 @@
 # September 7, 2026 website audit
 
-Status: reviewed implementation; production activation and delivery proof pending.
+Status: SEO changes deployed; quote activation and delivery proof pending.
 SEO/rendering changes are in PR #6. Quote intake is a separate dependent change.
 The owner confirmed the three existing homepage client-result claims are accurate;
 this audit retained them and did not create new client evidence or rating schema.
@@ -19,7 +19,7 @@ this audit retained them and did not create new client evidence or rating schema
 - Bounded server validation, spam controls, authenticated Hub v2 delivery, atomic
   lead storage and scheduling, and request IDs preventing duplicate notification
   jobs. Failed submissions retain all entries; successful ones show confirmation.
-- Admin-only recipient setup records explicit owner SMS consent and keeps the
+- Admin-authenticated recipient setup records explicit owner SMS consent and keeps the
   notification phone and server credential out of public code and repository docs.
 - Next.js 15.5.25 and matching lint config, removing the installed Next.js advisory
   findings before adding the public Server Action.

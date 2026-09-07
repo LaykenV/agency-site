@@ -129,6 +129,17 @@ test("AWD setup requires consent, records an admin action, and is safe to repeat
       }),
     });
     const admin = t.withIdentity({ subject: "admin", sessionId: "session" });
+    let anonymousRejected = false;
+    try {
+      await t.mutation(api.agencyIntake.configure, {
+        email: "quotes@example.com",
+        notificationPhone: "+13375550123",
+        smsConsentAccepted: true,
+      });
+    } catch {
+      anonymousRejected = true;
+    }
+    expect(anonymousRejected).toBe(true);
     const configuration = {
       email: "quotes@example.com",
       notificationPhone: "+13375550123",
@@ -136,7 +147,7 @@ test("AWD setup requires consent, records an admin action, and is safe to repeat
     };
     let rejected = false;
     try {
-      await admin.mutation(internal.agencyIntake.configure, {
+      await admin.mutation(api.agencyIntake.configure, {
         ...configuration,
         smsConsentAccepted: false,
       });
@@ -145,11 +156,11 @@ test("AWD setup requires consent, records an admin action, and is safe to repeat
     }
     expect(rejected).toBe(true);
     const first = await admin.mutation(
-      internal.agencyIntake.configure,
+      api.agencyIntake.configure,
       configuration,
     );
     const again = await admin.mutation(
-      internal.agencyIntake.configure,
+      api.agencyIntake.configure,
       configuration,
     );
     expect(again.projectId).toBe(first.projectId);

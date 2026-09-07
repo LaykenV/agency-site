@@ -1,10 +1,10 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { mutation } from "./_generated/server";
 import { requireAdmin } from "./adminGuard";
 import { generateCredential } from "./credentialCrypto";
 
-/** Operator-only setup for AWD's own inbound lead recipient. Never creates billing. */
-export const configure = internalMutation({
+/** Admin-authenticated setup for AWD's own inbound lead recipient. Never creates billing. */
+export const configure = mutation({
   args: {
     email: v.string(),
     notificationPhone: v.string(),

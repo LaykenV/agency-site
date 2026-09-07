@@ -631,7 +631,9 @@ indexed with `projectId`; repeating identical content returns the original ID.
 A reused ID with different content is rejected. Lead insertion and triage
 scheduling commit atomically. A retry cannot schedule another notification.
 
-`agencyIntake.configure` is internal and requires `requireAdmin`. It creates
+`agencyIntake.configure` is an admin-authenticated mutation requiring `requireAdmin`.
+It is callable with an admin session, matching the existing credential-issuance
+API; anonymous and non-admin callers are rejected. It creates
 AWD's own recipient project without billing or an Order Form, records explicit
 owner SMS consent, and issues a server secret only when none is active. Reuse
 does not rotate credentials. The recipient remains separate from incoming
