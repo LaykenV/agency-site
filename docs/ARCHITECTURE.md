@@ -594,3 +594,20 @@ git diff --check
 
 Production completion additionally requires the changed signed-in or client
 path to be exercised against the intended deployment.
+
+## Marketing search and rendering contract
+
+Public marketing routes prerender without a server-side auth-token lookup.
+`SiteShell` supplies a public header without loading authentication on marketing
+pages. Public audit and concept routes load their Convex runtime separately;
+`/portal` and `/admin` own their prefetched auth provider and authenticated
+header, and remain dynamic and noindex. Admin shortcuts and sign-out are
+available in those authenticated layouts. There is one provider per route,
+including during client navigation. The hero uses prebuilt responsive WebP
+assets to avoid a cold image transformation on the critical rendering path.
+
+The site has one business entity. City pages describe service areas through
+`Service` records referencing that entity; city-center coordinates are not
+branch-office addresses. FAQs share visible copy and JSON-LD, and native
+`details` work without JavaScript. Sitemap modification dates are emitted only
+when the content source supplies a real update date.

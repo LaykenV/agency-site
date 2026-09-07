@@ -50,7 +50,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
           {/* Hero Section */}
           <motion.section 
             className="relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             animate="visible"
             variants={sectionReveal}
           >
@@ -138,7 +138,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
           {/* Why Local Businesses Choose Us */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -151,7 +151,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 sm:gap-6 md:grid-cols-3"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -214,7 +214,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
           <motion.section 
             id="industries"
             className="anchor-target py-12 sm:py-16 md:py-20 relative"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -235,7 +235,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -273,7 +273,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
           {/* Nearby Areas */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -291,7 +291,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
               <motion.div 
                 className="mt-8 flex flex-wrap justify-center gap-2 sm:gap-3"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.3 }}
               >
@@ -310,7 +310,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
               <motion.div 
                 className="mt-10 sm:mt-12"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.3 }}
               >
@@ -337,7 +337,7 @@ export function CityPageClient({ city, industries, otherCities }: CityPageClient
           {/* CTA Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20 lg:py-24 relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}

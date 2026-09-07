@@ -18,7 +18,7 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
 
   // Calculate position based on hamburger button
   const updatePosition = () => {
-    const hamburger = document.querySelector("label.hamburger") as HTMLLabelElement;
+    const hamburger = document.querySelector("button.hamburger") as HTMLButtonElement;
     if (hamburger) {
       const rect = hamburger.getBoundingClientRect();
       setPosition({
@@ -49,7 +49,7 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  // Click outside to close (excluding the hamburger label)
+  // Click outside to close (excluding the hamburger button)
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
@@ -57,7 +57,7 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
       if (
         panelRef.current &&
         !panelRef.current.contains(target) &&
-        !target.closest("label.hamburger")
+        !target.closest("button.hamburger")
       ) {
         onClose();
       }
@@ -82,8 +82,8 @@ export function MobileMenu({ open, onClose, children }: MobileMenuProps) {
         right: `${position.right}px`,
       }}
       ref={panelRef}
-      aria-modal="true"
-      role="dialog"
+      aria-label="Mobile navigation"
+      role="navigation"
     >
       <div
         className={

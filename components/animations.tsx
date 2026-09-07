@@ -133,7 +133,7 @@ export function SplitWords({ text, className }: SplitWordsProps) {
   return (
     <motion.h1
       className={className}
-      initial="hidden"
+      initial={false}
       animate="visible"
       variants={headingRevealVariants}
     >

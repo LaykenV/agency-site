@@ -21,9 +21,9 @@ import { fadeUp, sectionReveal } from "@/components/animations";
 
 /* ─── copy ─── */
 const SECTION_LABEL = "Why Speed Matters";
-const HEADLINE = "Fast pages rank higher and convert better.";
+const HEADLINE = "Make it easy for customers to reach you.";
 const BODY =
-  "Google directly rewards faster sites. Customers do too. If your page stalls for even a few seconds, they bounce and call your competitor instead.";
+  "Fast pages help customers find your services and contact you without waiting. We optimize images, page delivery, and mobile interactions, then test before launch.";
 const BENEFITS = [
   {
     icon: TrendingUp,
@@ -82,7 +82,7 @@ function MobileBrowser({
       className={`flex-1 min-w-0 rounded-2xl border-2 overflow-hidden ${
         fast
           ? "border-[hsl(var(--primary))]/30 shadow-[0_8px_30px_-12px_hsl(var(--primary)/0.2)]"
-          : "border-[hsl(var(--border))] opacity-80"
+          : "border-[hsl(var(--border))]"
       }`}
     >
       {/* Phone chrome */}
@@ -97,7 +97,7 @@ function MobileBrowser({
           className={`rounded-md px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider ${
             fast
               ? "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]"
-              : "bg-[hsl(var(--muted))] text-[var(--muted-foreground)]"
+              : "bg-[hsl(var(--muted))] text-foreground"
           }`}
         >
           {label}
@@ -177,7 +177,7 @@ function MobileBrowser({
                 className={`text-base font-extrabold font-[family-name:var(--font-display)] ${
                   fast
                     ? "text-[var(--foreground)]"
-                    : "text-[var(--muted-foreground)]"
+                    : "text-foreground"
                 }`}
               >
                 {n}%
@@ -190,7 +190,7 @@ function MobileBrowser({
             className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${
               fast
                 ? "bg-[hsl(var(--primary))]/10 text-[hsl(var(--primary))]"
-                : "bg-[hsl(var(--muted))] text-[var(--muted-foreground)]"
+                : "bg-[hsl(var(--muted))] text-foreground"
             }`}
           >
             <Timer className="h-2.5 w-2.5" />
@@ -205,7 +205,7 @@ function MobileBrowser({
 /* ─── Exported section ─── */
 export function SpeedVariant5() {
   const reduce = !!useReducedMotion();
-  const initial = reduce ? false : "hidden";
+  const initial = false;
 
   return (
     <motion.section
@@ -221,7 +221,7 @@ export function SpeedVariant5() {
         <motion.div className="text-center" variants={fadeUp}>
           <div className="inline-flex items-center gap-3">
             <div className="h-px w-8 bg-[hsl(var(--primary))]" />
-            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[hsl(var(--primary))] sm:text-xs">
+            <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-foreground sm:text-xs">
               {SECTION_LABEL}
             </span>
             <div className="h-px w-8 bg-[hsl(var(--primary))]" />
@@ -246,15 +246,15 @@ export function SpeedVariant5() {
 
             {/* Phone pair */}
             <div className="flex gap-3 sm:gap-4 w-full max-w-xs sm:max-w-sm">
-              <MobileBrowser label="Our Build" loadTime="0.9s" fast score={95} reduce={reduce} />
-              <MobileBrowser label="Typical" loadTime="3.9s" fast={false} score={62} reduce={reduce} />
+              <MobileBrowser label="Fast example" loadTime="0.9s" fast score={95} reduce={reduce} />
+              <MobileBrowser label="Slow example" loadTime="3.9s" fast={false} score={62} reduce={reduce} />
             </div>
 
-            {/* 4.3x faster badge */}
+            {/* Illustrative speed comparison badge */}
             <div className="mt-5 flex items-center gap-2">
               <Zap className="h-3.5 w-3.5 text-[hsl(var(--primary))]" />
               <span className="text-sm font-bold text-[hsl(var(--primary))]">
-                4.3x faster
+                Illustrative speed comparison
               </span>
             </div>
 

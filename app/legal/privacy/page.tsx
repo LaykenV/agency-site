@@ -7,6 +7,8 @@ import { type Metadata } from "next";
 import { PrintButton } from "@/components/PrintButton";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/legal/privacy" },
+  description: "How Acadiana Web Design collects and uses website, quote request, and client information.",
   title: "Privacy Policy",
 };
 
@@ -97,7 +99,7 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
   }
 
   return (
-    <div className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-privacy-version={PRIVACY_VERSION}>
+    <main className="min-h-dvh w-full bg-[var(--background)] text-[var(--foreground)]" data-privacy-version={PRIVACY_VERSION}>
       <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 lg:px-8 lg:py-24">
 
         {/* Header Section */}
@@ -155,6 +157,6 @@ export default async function PrivacyPage({ searchParams }: PrivacyPageProps) {
           </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

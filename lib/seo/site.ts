@@ -3,9 +3,8 @@
  */
 
 export function getSiteBaseUrl(): string {
-  return process.env.NEXT_PUBLIC_APP_URL
-    ? `https://${process.env.NEXT_PUBLIC_APP_URL}`
-    : process.env.SITE_URL ?? "http://localhost:3000";
+  const configured = process.env.NEXT_PUBLIC_APP_URL || process.env.SITE_URL || "https://acadianawebdesign.com";
+  return new URL(/^https?:\/\//.test(configured) ? configured : `https://${configured}`).origin;
 }
 
 /** Canonical public path for industry landing pages */
@@ -37,7 +36,7 @@ export const HOMEPAGE_FAQS = [
   {
     question: "How fast can we launch?",
     answer:
-      "After our kickoff call, most sites go live in 72 hours. Send us your logo and photos, and we move fast.",
+      "We target launch within 72 hours after the scope, content, and assets are ready. We confirm your timeline before the build starts.",
   },
   {
     question: "Do I keep my domain?",
@@ -57,12 +56,12 @@ export const HOMEPAGE_FAQS = [
   {
     question: "How much does a website cost for a local Acadiana business?",
     answer:
-      "Plans start at $0 down and $199/mo with a 12-month minimum. That covers a custom Next.js site, hosting, SSL, domain, unlimited edits, and support — no hourly redesign fees. Most local service businesses land right at $199.",
+      "Plans start at $0 down and $199/mo with a 12-month minimum. That covers a custom Next.js site, hosting, SSL, domain, unlimited edits, and support — no hourly redesign fees. Larger sites and custom integrations are scoped separately.",
   },
   {
     question: "What if I only need a few pages?",
     answer:
-      "Same price, less for you to manage. The $199/mo plan covers the site regardless of how many pages it needs — a clean three-page site gets the same hosting, security, edits, and support as a seven-page one. You are not paying extra for pages you do not want.",
+      "Same price, less for you to manage. Plans start at $199/mo. We agree on the pages and features in your Order Form before work starts. Hosting, security, edits, and support are included.",
   },
   {
     question: "What if I need more than a website?",
@@ -109,24 +108,12 @@ export function organizationSchema(baseUrl: string) {
     name: SITE_NAME,
     alternateName: "AWD Web Design",
     description:
-      "Fast, professional websites for local service businesses in Acadiana. $0 down, from $199/mo. Custom Next.js websites with 72-hour launch.",
+      "Fast, professional websites for local service businesses in Acadiana. $0 down, from $199/mo. Custom websites with hosting, edits, and ongoing support.",
     image: `${baseUrl}/heroimg.jpg`,
     logo: `${baseUrl}/logo.png`,
     url: baseUrl,
     telephone: SITE_PHONE,
     email: SITE_EMAIL,
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Lafayette",
-      addressRegion: "LA",
-      postalCode: "70501",
-      addressCountry: "US",
-    },
-    geo: {
-      "@type": "GeoCoordinates",
-      latitude: 30.2241,
-      longitude: -92.0198,
-    },
     areaServed: [
       { "@type": "City", name: "Lafayette" },
       { "@type": "City", name: "New Iberia" },
@@ -139,7 +126,6 @@ export function organizationSchema(baseUrl: string) {
     ],
     priceRange: "$$",
     paymentAccepted: "Credit Card, Debit Card",
-    hasMap: "https://maps.google.com/?q=Lafayette,LA",
     serviceType: [
       "Web Design",
       "Website Development",
@@ -173,8 +159,7 @@ export function organizationSchema(baseUrl: string) {
         name: "Louisiana",
       },
     },
-    // Intentionally no aggregateRating until public, verifiable reviews exist
-    // (Google review-snippet policies + thin 3-review sample risk).
+    // A business cannot earn review snippets from its own self-serving ratings.
   };
 }
 

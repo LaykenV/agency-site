@@ -49,7 +49,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* Hero Section */}
           <motion.section 
             className="relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             animate="visible"
             variants={sectionReveal}
           >
@@ -137,7 +137,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* Pain Points Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -153,7 +153,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 md:grid-cols-2"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -179,7 +179,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           <motion.section 
             id="benefits"
             className="anchor-target py-12 sm:py-16 md:py-20 relative"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -200,7 +200,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-4 md:grid-cols-2"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -223,7 +223,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* How It Works */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -237,7 +237,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-6 md:grid-cols-3"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -289,7 +289,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* FAQs */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -312,7 +312,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* Service Areas */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20 relative"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -333,7 +333,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -367,7 +367,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* Other Industries */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}
@@ -380,7 +380,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
               <motion.div 
                 className="mt-8 sm:mt-10 grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4"
                 variants={staggerContainer}
-                initial="hidden"
+                initial={false}
                 whileInView="visible"
                 viewport={{ once: true, amount: 0.2 }}
               >
@@ -408,7 +408,7 @@ export function IndustryPageClient({ industry, cities, otherIndustries }: Indust
           {/* CTA Section */}
           <motion.section 
             className="py-12 sm:py-16 md:py-20 lg:py-24 relative overflow-hidden"
-            initial="hidden"
+            initial={false}
             whileInView="visible"
             viewport={{ once: true, amount: 0.2 }}
             variants={sectionReveal}

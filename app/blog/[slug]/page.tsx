@@ -69,16 +69,18 @@ function formatDate(dateString: string): string {
 // Simple markdown-to-HTML converter for blog content
 function renderMarkdown(content: string): string {
   return content
+    // The page header already renders the article title.
+    .replace(/^\s*# [^\n]*\n/, "")
     // Headers
     .replace(/^### (.*$)/gm, '<h3 class="text-lg font-semibold mt-6 mb-3 text-[var(--foreground)]">$1</h3>')
     .replace(/^## (.*$)/gm, '<h2 class="text-xl font-semibold mt-8 mb-4 text-[var(--foreground)]">$1</h2>')
-    .replace(/^# (.*$)/gm, '<h1 class="text-2xl font-bold mt-8 mb-4 text-[var(--foreground)]">$1</h1>')
+    .replace(/^# (.*$)/gm, '<h2 class="text-2xl font-bold mt-8 mb-4 text-[var(--foreground)]">$1</h2>')
     // Bold
     .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-[var(--foreground)]">$1</strong>')
     // Italic
     .replace(/\*(.*?)\*/g, "<em>$1</em>")
     // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-[hsl(var(--primary))] hover:underline">$1</a>')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-foreground underline underline-offset-4">$1</a>')
     // Unordered lists
     .replace(/^- (.*$)/gm, '<li class="ml-4 list-disc">$1</li>')
     // Ordered lists (basic)
@@ -108,13 +110,12 @@ function renderMarkdown(content: string): string {
       if (
         block.startsWith("<h") ||
         block.startsWith("<blockquote") ||
-        block.startsWith("<li") ||
         block.startsWith("<hr") ||
-        block.startsWith("<tr") ||
         block.trim() === ""
       ) {
         return block;
       }
+      if (block.startsWith("<tr")) return `<div class="overflow-x-auto"><table><tbody>${block}</tbody></table></div>`;
       // Wrap list items in ul
       if (block.includes('<li class="ml-4 list-disc">')) {
         return `<ul class="my-4 space-y-1">${block}</ul>`;

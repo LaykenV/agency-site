@@ -11,25 +11,21 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
-      lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
       url: `${baseUrl}/legal/terms`,
-      lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${baseUrl}/legal/privacy`,
-      lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
       url: `${baseUrl}/sms-consent`,
-      lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.2,
     },
@@ -40,7 +36,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // City landing pages (programmatic SEO)
   const cityPages: MetadataRoute.Sitemap = ACADIANA_CITIES.map((city) => ({
     url: `${baseUrl}/${city.slug}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.8,
   }));
@@ -48,7 +43,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Industry landing pages (programmatic SEO)
   const industryPages: MetadataRoute.Sitemap = TARGET_INDUSTRIES.map((industry) => ({
     url: `${baseUrl}${industryPath(industry.slug)}`,
-    lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.8,
   }));
@@ -59,7 +53,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const industry of TARGET_INDUSTRIES) {
       cityIndustryPages.push({
         url: `${baseUrl}/${city.slug}/${industry.slug}`,
-        lastModified: new Date(),
         changeFrequency: "monthly" as const,
         priority: 0.7,
       });
@@ -70,7 +63,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const blogIndexPage: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/blog`,
-      lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,
     },

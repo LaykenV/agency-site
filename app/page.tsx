@@ -9,9 +9,9 @@ import {
 
 const baseUrl = getSiteBaseUrl();
 
-const title = "Get More Calls in Acadiana with a 5‑Star Website";
+const title = "Web Design in Lafayette, LA | Acadiana Web Design";
 const description =
-  "Done-for-you website for local service pros in Lafayette. $0 down, $199/mo, 72-hour launch. Custom Next.js sites with unlimited edits.";
+  "Custom web design for service businesses in Lafayette and Acadiana. $0 down, from $199/month. Hosting, edits, and support included. 12-month minimum.";
 
 export const metadata: Metadata = {
   // absolute avoids double-branding from the root title template
