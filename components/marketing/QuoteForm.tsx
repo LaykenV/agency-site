@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { LazyMotion, domAnimation, useReducedMotion } from "framer-motion";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { submitAgencyQuote } from "@/actions/submitAgencyQuote";
@@ -47,6 +49,7 @@ const fields = [
 
 export function QuoteForm() {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const [state, action, pending] = useActionState(
     submitAgencyQuote,
     initialQuoteState,
@@ -103,22 +106,14 @@ export function QuoteForm() {
     >
       <div className="quote-layout">
         <div className="quote-intro">
-          <p className="quote-eyebrow">Let’s talk about your business</p>
-          <h2 id="quote-heading">Tell me about your website.</h2>
-          <p>
-            Share a few details about your business and what you need. I’ll
-            review the request and contact you directly.
+          <h2 id="quote-heading">Your next customer is Googling right now.</h2>
+          <p className="quote-price">
+            <span className="quote-price-prefix">from</span>
+            <span className="quote-price-amount">$199</span>
+            <span className="quote-price-period">/mo</span>
           </p>
-          <p className="quote-price">$0 down. From $199/month.</p>
-          <p className="quote-small">
-            Custom design, hosting, edits, and support. A 12-month minimum;
-            scope and pricing agreed before work begins.
-          </p>
-          <a className="quote-phone" href={`tel:${SITE_PHONE}`}>
-            Prefer to call? (337) 306-3705
-          </a>
-          <p className="quote-small">
-            Layken Varholdt · Local developer · Veteran owned
+          <p className="quote-small quote-terms">
+            $0 upfront · 12-month minimum. <Link href="/legal/terms">Terms</Link>.
           </p>
         </div>
         <div className="quote-panel" data-clarity-mask="true">
@@ -236,27 +231,25 @@ export function QuoteForm() {
                       updateValue("details", event.target.value)
                     }
                     aria-invalid={!!error("details")}
-                    aria-describedby="quote-details-help"
+                    aria-describedby={error("details") ? "quote-details-error" : undefined}
                   />
-                  <p id="quote-details-help" className="quote-small">
-                    Services, goals, or what isn’t working today. Up to 2,000
-                    characters.
-                  </p>
                   {error("details") && (
-                    <p className="quote-field-error">{error("details")}</p>
+                    <p id="quote-details-error" className="quote-field-error">{error("details")}</p>
                   )}
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={pending || !request.id}
-                className="quote-submit"
-              >
-                {pending ? "Sending request…" : "Send my quote request"}
-              </button>
+              <LazyMotion features={domAnimation} strict>
+                <ShinyButton
+                  type="submit"
+                  disabled={pending || !request.id}
+                  initial={false}
+                  {...(reduceMotion ? { animate: { scale: 1 }, transition: { duration: 0 } } : {})}
+                  className="quote-submit schedule-call-btn inline-flex items-center justify-center px-5 py-3.5 text-sm sm:text-base font-bold rounded-xl font-[family-name:var(--font-sora)]"
+                >
+                  {pending ? "Sending request…" : "Send my quote request"}
+                </ShinyButton>
+              </LazyMotion>
               <p className="quote-small">
-                We’ll use these details to respond to your request. No payment
-                or account needed.{" "}
                 <Link href="/legal/privacy">Privacy policy</Link>.
               </p>
               <noscript>

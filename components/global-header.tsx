@@ -113,7 +113,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
           <span
             className={`whitespace-nowrap text-base md:text-lg font-extrabold tracking-tight leading-none transition-colors ${
               onLanding
-                ? "text-[hsl(var(--hero-copy))]"
+                ? "text-white dark:text-[hsl(var(--hero-foreground))]"
                 : "text-[hsl(var(--hero-foreground))]"
             }`}
           >
@@ -125,7 +125,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
         <nav className="hidden items-center gap-4 md:flex">
           {!isPortal ? (
             <>
-              <Link href="/quote" className="quote-nav-link">Get a quote</Link>
+              <Link href="/quote" className={`quote-nav-link${onLanding ? " quote-nav-link--on-gradient" : ""}`}>Get a quote</Link>
               <AnimatedThemeToggler onLanding={onLanding} />
               {showAdminLink && (
                 <Link
@@ -194,7 +194,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
             aria-controls="mobile-menu"
             className={`hamburger transition-colors ${
               onLanding
-                ? "text-[hsl(var(--hero-copy))]"
+                ? "text-white dark:text-[hsl(var(--hero-foreground))]"
                 : "text-[hsl(var(--hero-foreground))]"
             }`}
             aria-label={menuOpen ? "Close menu" : "Open menu"}

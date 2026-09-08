@@ -150,19 +150,19 @@ export function PageContent() {
                   animate={reduce ? undefined : "visible"}
                   transition={{ delay: 0.15 }}
                 >
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] hero-title">
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title">
                     Web design.
                   </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] hero-title mt-1">
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title mt-1">
                     For Acadiana.
                   </span>
-                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(var(--hero-copy))] mt-1">
+                  <span className="block text-4xl sm:text-5xl md:text-6xl lg:text-[3.5rem] xl:text-[4rem] font-[family-name:var(--font-instrument-serif)] italic font-normal tracking-tight leading-[1.08] text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] mt-1">
                     One flat fee.
                   </span>
                 </motion.h1>
 
                 <motion.p
-                  className="mt-6 text-base sm:text-lg text-[hsl(var(--hero-copy))] leading-relaxed max-w-[42ch] font-[family-name:var(--font-sora)]"
+                  className="mt-6 text-base sm:text-lg text-[hsl(var(--primary-foreground))]/80 leading-relaxed max-w-[42ch] font-[family-name:var(--font-sora)]"
                   variants={fadeUp}
                   initial={initial}
                   animate={reduce ? undefined : "visible"}
@@ -170,7 +170,7 @@ export function PageContent() {
                 >
                   Custom web design for Acadiana service businesses in Lafayette and nearby
                   towns. Hosting, SSL, edits, and support — all included, from{" "}
-                  <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(var(--hero-copy))] leading-none align-baseline">$199/mo</span>.
+                  <span className="font-[family-name:var(--font-instrument-serif)] italic text-2xl sm:text-3xl text-[hsl(215,88%,56%)] dark:text-[hsl(215,80%,65%)] leading-none align-baseline">$199/mo</span>.
                 </motion.p>
 
                 {/* Trust pills */}
