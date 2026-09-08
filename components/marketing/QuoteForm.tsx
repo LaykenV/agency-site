@@ -106,35 +106,17 @@ export function QuoteForm() {
     >
       <div className="quote-layout">
         <div className="quote-intro">
-          <p className="quote-eyebrow">$0 upfront. One local partner.</p>
           <h2 id="quote-heading">Your next customer is Googling right now.</h2>
           <p className="quote-price">
             <span className="quote-price-prefix">from</span>
             <span className="quote-price-amount">$199</span>
             <span className="quote-price-period">/mo</span>
           </p>
-          <p className="quote-description">
-            Custom design, hosting, edits, and support. Tell me about your
-            business and I’ll get back to you with a plan.
-          </p>
           <p className="quote-small quote-terms">
-            12-month minimum, then month-to-month. Larger builds are quoted
-            to fit your scope. <Link href="/legal/terms">Terms</Link>.
+            $0 upfront · 12-month minimum. <Link href="/legal/terms">Terms</Link>.
           </p>
-          <div className="quote-contact">
-            <a className="quote-phone" href={`tel:${SITE_PHONE}`}>
-              Prefer to call? (337) 306-3705
-            </a>
-            <p className="quote-small">
-              Layken Varholdt · Local developer · Veteran owned
-            </p>
-          </div>
         </div>
         <div className="quote-panel" data-clarity-mask="true">
-          <div className="quote-panel-heading">
-            <h3>Tell me about your business.</h3>
-            <p>No payment or account needed.</p>
-          </div>
           <div
             ref={resultRef}
             tabIndex={-1}
@@ -249,14 +231,10 @@ export function QuoteForm() {
                       updateValue("details", event.target.value)
                     }
                     aria-invalid={!!error("details")}
-                    aria-describedby="quote-details-help"
+                    aria-describedby={error("details") ? "quote-details-error" : undefined}
                   />
-                  <p id="quote-details-help" className="quote-small">
-                    Services, goals, or what isn’t working today. Up to 2,000
-                    characters.
-                  </p>
                   {error("details") && (
-                    <p className="quote-field-error">{error("details")}</p>
+                    <p id="quote-details-error" className="quote-field-error">{error("details")}</p>
                   )}
                 </div>
               </div>
@@ -272,7 +250,6 @@ export function QuoteForm() {
                 </ShinyButton>
               </LazyMotion>
               <p className="quote-small">
-                We’ll use these details to respond to your request.{" "}
                 <Link href="/legal/privacy">Privacy policy</Link>.
               </p>
               <noscript>
