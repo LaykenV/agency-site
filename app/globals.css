@@ -2936,20 +2936,28 @@ details[open] > summary .faq-chevron { transform: rotate(180deg); }
 .comparison-card__badge--legacy { color: hsl(var(--foreground)); }
 
 /* Direct quote intake inherits the AWD palette and type system. */
-.quote-section { padding: clamp(3rem, 6vw, 6rem) 1.25rem; background: hsl(var(--background)); color: hsl(var(--foreground)); }
-.quote-layout { max-width: 72rem; margin-inline: auto; display: grid; gap: 2.5rem; align-items: start; }
+.quote-section { --quote-muted: color-mix(in srgb, hsl(var(--muted-foreground)) 80%, hsl(var(--foreground))); padding: clamp(3rem, 7vw, 7rem) 1.25rem; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.quote-layout { max-width: 72rem; margin-inline: auto; display: grid; gap: 2rem; align-items: start; }
 .quote-intro { min-width: 0; }
-.quote-intro h2 { font-family: var(--font-sora); font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.12; letter-spacing: -.04em; font-weight: 800; margin: 1rem 0 1.5rem; overflow-wrap: anywhere; }
-.quote-intro > p { max-width: 43ch; line-height: 1.7; margin-bottom: 1rem; }
-.quote-eyebrow { font-weight: 600; }
-.quote-price { font-weight: 700; font-size: 1.2rem; }
+.quote-intro h2 { max-width: 15ch; font-family: var(--font-display); font-size: clamp(2rem, 3.6vw, 3.25rem); line-height: 1.08; letter-spacing: -.045em; font-weight: 800; margin: .75rem 0 1.25rem; text-wrap: balance; }
+.quote-eyebrow { font-size: .875rem; font-weight: 650; }
+.quote-price { display: flex; align-items: baseline; gap: .35rem; font-family: var(--font-display); margin-block: 1.25rem; white-space: nowrap; }
+.quote-price-prefix, .quote-price-period { font-size: clamp(1.25rem, 2vw, 1.75rem); font-weight: 650; color: var(--quote-muted); }
+.quote-price-amount { font-size: clamp(4.5rem, 8vw, 7rem); line-height: 1; font-weight: 800; letter-spacing: -.065em; }
+.quote-description { max-width: 38ch; font-size: 1rem; line-height: 1.7; }
 .quote-small { font-size: .875rem; line-height: 1.6; margin-top: .75rem; }
-.quote-phone { display: inline-block; padding-block: .75rem; text-decoration: underline; font-weight: 600; }
-.quote-panel { min-width: 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card)); border-radius: var(--radius); }
+.quote-terms { max-width: 43ch; color: var(--quote-muted); }
+.quote-contact { margin-top: 1.25rem; }
+.quote-contact .quote-small { margin-top: 0; font-size: .75rem; }
+.quote-phone { display: inline-block; padding-block: .75rem; text-decoration: underline; text-underline-offset: .2em; font-weight: 600; }
+.quote-panel { min-width: 0; padding: clamp(1rem, 3vw, 2rem); border: 1px solid hsl(var(--border)); background: hsl(var(--card)); border-radius: 1rem; box-shadow: 0 24px 64px -40px hsl(var(--primary) / .25); }
+.quote-panel-heading { margin-bottom: 1.5rem; }
+.quote-panel-heading h3 { font-family: var(--font-display); font-size: 1.25rem; font-weight: 750; line-height: 1.25; letter-spacing: -.025em; }
+.quote-panel-heading p { margin-top: .4rem; font-size: .875rem; line-height: 1.5; }
 .quote-fields { display: grid; gap: 1.1rem; }
 .quote-fields > div { min-width: 0; }
 .quote-fields label { display: block; font-size: .875rem; font-weight: 650; margin-bottom: .4rem; }
-.quote-fields input, .quote-fields select, .quote-fields textarea { width: 100%; min-width: 0; font: inherit; font-size: 1rem; padding: .75rem; border: 1px solid hsl(var(--border)); border-radius: .3rem; background: hsl(var(--background)); color: hsl(var(--foreground)); }
+.quote-fields input, .quote-fields select, .quote-fields textarea { width: 100%; min-width: 0; font: inherit; font-size: 1rem; padding: .75rem; border: 1px solid hsl(var(--border)); border-radius: .5rem; background: hsl(var(--background)); color: hsl(var(--foreground)); }
 .quote-fields textarea { resize: vertical; }
 .quote-fields :focus-visible, .quote-submit:focus-visible, .quote-result:focus-visible, .quote-nav-link:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 3px; }
 .quote-fields [aria-invalid=true] { border-color: hsl(var(--destructive)); }
@@ -2962,4 +2970,5 @@ details[open] > summary .faq-chevron { transform: rotate(180deg); }
 .quote-nav-link { color: hsl(var(--hero-copy)); font-weight: 650; padding-block: .75rem; white-space: nowrap; }
 .quote-nav-link--on-gradient { color: hsl(var(--primary-foreground)); }
 @media (min-width: 640px) { .quote-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .quote-wide { grid-column: 1 / -1; } }
-@media (min-width: 1024px) { .quote-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 4rem; } }
+@media (min-width: 640px) { .quote-section { padding-inline: 2rem; } }
+@media (min-width: 1024px) { .quote-layout { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(3rem, 6vw, 5rem); } .quote-intro { padding-top: 1.5rem; } .quote-price { margin-block: 2rem; } .quote-contact { margin-top: 2rem; } }

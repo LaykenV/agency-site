@@ -106,25 +106,35 @@ export function QuoteForm() {
     >
       <div className="quote-layout">
         <div className="quote-intro">
-          <p className="quote-eyebrow">Let’s talk about your business</p>
-          <h2 id="quote-heading">Tell me about your website.</h2>
-          <p>
-            Share a few details about your business and what you need. I’ll
-            review the request and contact you directly.
+          <p className="quote-eyebrow">$0 upfront. One local partner.</p>
+          <h2 id="quote-heading">Your next customer is Googling right now.</h2>
+          <p className="quote-price">
+            <span className="quote-price-prefix">from</span>
+            <span className="quote-price-amount">$199</span>
+            <span className="quote-price-period">/mo</span>
           </p>
-          <p className="quote-price">$0 down. From $199/month.</p>
-          <p className="quote-small">
-            Custom design, hosting, edits, and support. A 12-month minimum;
-            scope and pricing agreed before work begins.
+          <p className="quote-description">
+            Custom design, hosting, edits, and support. Tell me about your
+            business and I’ll get back to you with a plan.
           </p>
-          <a className="quote-phone" href={`tel:${SITE_PHONE}`}>
-            Prefer to call? (337) 306-3705
-          </a>
-          <p className="quote-small">
-            Layken Varholdt · Local developer · Veteran owned
+          <p className="quote-small quote-terms">
+            12-month minimum, then month-to-month. Larger builds are quoted
+            to fit your scope. <Link href="/legal/terms">Terms</Link>.
           </p>
+          <div className="quote-contact">
+            <a className="quote-phone" href={`tel:${SITE_PHONE}`}>
+              Prefer to call? (337) 306-3705
+            </a>
+            <p className="quote-small">
+              Layken Varholdt · Local developer · Veteran owned
+            </p>
+          </div>
         </div>
         <div className="quote-panel" data-clarity-mask="true">
+          <div className="quote-panel-heading">
+            <h3>Tell me about your business.</h3>
+            <p>No payment or account needed.</p>
+          </div>
           <div
             ref={resultRef}
             tabIndex={-1}
@@ -262,8 +272,7 @@ export function QuoteForm() {
                 </ShinyButton>
               </LazyMotion>
               <p className="quote-small">
-                We’ll use these details to respond to your request. No payment
-                or account needed.{" "}
+                We’ll use these details to respond to your request.{" "}
                 <Link href="/legal/privacy">Privacy policy</Link>.
               </p>
               <noscript>

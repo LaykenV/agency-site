@@ -661,58 +661,6 @@ export function PageContent() {
             </div>
           </motion.section>
 
-          <motion.section
-            id="cta"
-            data-floating-cta-anchor
-            className="relative"
-            initial={initial}
-            whileInView={reduce ? undefined : "visible"}
-            viewport={{ once: true, amount: 0.12 }}
-            variants={sectionReveal}
-          >
-            <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-28">
-              <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
-                {/* Left: Price lockup */}
-                <motion.div className="text-center lg:text-left" variants={fadeUp}>
-                  <p className="text-lg font-semibold text-muted-foreground sm:text-xl">
-                    $0 upfront
-                  </p>
-                  <p className="mt-2 font-[family-name:var(--font-display)]">
-                    <span className="text-2xl font-bold text-muted-foreground sm:text-3xl align-top">from </span>
-                    <span className="text-7xl font-extrabold tracking-tighter text-foreground sm:text-8xl md:text-9xl">$199</span>
-                    <span className="text-2xl font-bold text-muted-foreground sm:text-3xl">/mo</span>
-                  </p>
-                  <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-                    Stay 12 months, then cancel anytime. Custom design, hosting, edits, and support included.
-                    Booking, e-commerce, and larger builds are quoted to fit your scope.
-                  </p>
-                </motion.div>
-
-                {/* Right: Headline + CTA */}
-                <motion.div className="text-center lg:text-left" variants={fadeUp}>
-                  <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl md:text-5xl font-[family-name:var(--font-display)] leading-[1.08]">
-                    Your next customer is Googling right now.
-                  </h2>
-                  <p className="mt-5 max-w-[50ch] mx-auto lg:mx-0 text-sm leading-relaxed text-muted-foreground sm:text-base">
-                    Every day without a fast, professional site is a day your competitor answers the phone instead. Tell us what you need. We handle the rest.
-                  </p>
-                  <div className="mt-8">
-                    <ShinyLink
-                      href={QUOTE_ANCHOR}
-                      className="schedule-call-btn inline-flex items-center justify-center gap-2.5 px-8 sm:px-10 py-3.5 sm:py-4 text-sm sm:text-base font-bold whitespace-nowrap rounded-xl shadow-lg hover:shadow-xl transition-shadow"
-                    >
-                      Get a website quote
-                    </ShinyLink>
-                  </div>
-                  <p className="mt-4 text-[11px] sm:text-xs text-muted-foreground">
-                    From $199/mo. 12-month minimum. See{" "}
-                    <Link href="/legal/terms" className="underline hover:text-foreground transition-colors">Terms</Link>.
-                  </p>
-                </motion.div>
-              </div>
-            </div>
-          </motion.section>
-
           <QuoteForm />
 
           <footer className="footer-container pb-6 sm:pb-8">
