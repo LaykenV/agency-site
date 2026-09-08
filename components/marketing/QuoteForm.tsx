@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { LazyMotion, domAnimation, useReducedMotion } from "framer-motion";
+import { ShinyButton } from "@/components/ui/shiny-button";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { submitAgencyQuote } from "@/actions/submitAgencyQuote";
@@ -47,6 +49,7 @@ const fields = [
 
 export function QuoteForm() {
   const pathname = usePathname();
+  const reduceMotion = useReducedMotion();
   const [state, action, pending] = useActionState(
     submitAgencyQuote,
     initialQuoteState,
@@ -247,13 +250,17 @@ export function QuoteForm() {
                   )}
                 </div>
               </div>
-              <button
-                type="submit"
-                disabled={pending || !request.id}
-                className="quote-submit"
-              >
-                {pending ? "Sending request…" : "Send my quote request"}
-              </button>
+              <LazyMotion features={domAnimation} strict>
+                <ShinyButton
+                  type="submit"
+                  disabled={pending || !request.id}
+                  initial={false}
+                  {...(reduceMotion ? { animate: { scale: 1 }, transition: { duration: 0 } } : {})}
+                  className="quote-submit schedule-call-btn inline-flex items-center justify-center px-5 py-3.5 text-sm sm:text-base font-bold rounded-xl font-[family-name:var(--font-sora)]"
+                >
+                  {pending ? "Sending request…" : "Send my quote request"}
+                </ShinyButton>
+              </LazyMotion>
               <p className="quote-small">
                 We’ll use these details to respond to your request. No payment
                 or account needed.{" "}

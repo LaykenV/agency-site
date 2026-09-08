@@ -2954,11 +2954,12 @@ details[open] > summary .faq-chevron { transform: rotate(180deg); }
 .quote-fields :focus-visible, .quote-submit:focus-visible, .quote-result:focus-visible, .quote-nav-link:focus-visible { outline: 2px solid hsl(var(--foreground)); outline-offset: 3px; }
 .quote-fields [aria-invalid=true] { border-color: hsl(var(--destructive)); }
 .quote-field-error { color: hsl(var(--foreground)); font-weight: 600; font-size: .875rem; margin-top: .4rem; }
-.quote-submit { width: 100%; margin-top: 1.5rem; padding: 1rem .5rem; border-radius: .3rem; background: hsl(var(--hero-copy)); color: hsl(var(--background)); font-weight: 700; cursor: pointer; white-space: nowrap; }
+.quote-submit { width: 100%; margin-top: 1.5rem; white-space: normal; }
 .quote-submit:disabled { opacity: .65; cursor: wait; }
 .quote-result { margin-bottom: 1.25rem; font-weight: 600; line-height: 1.6; }
 .quote-result a, .quote-small a { text-decoration: underline; text-underline-offset: .2em; }
 .quote-trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
 .quote-nav-link { color: hsl(var(--hero-copy)); font-weight: 650; padding-block: .75rem; white-space: nowrap; }
+.quote-nav-link--on-gradient { color: hsl(var(--primary-foreground)); }
 @media (min-width: 640px) { .quote-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } .quote-wide { grid-column: 1 / -1; } }
 @media (min-width: 1024px) { .quote-layout { grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 4rem; } }
