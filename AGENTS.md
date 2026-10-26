@@ -108,8 +108,9 @@ git diff --check
   never drafts. Conventional prefix plus the user-facing why. Problem first in
   the body.
 - Run `bun run verify` and read the full diff before filing.
-- PR-Agent runs `/describe` and `/review` when a PR opens and `/review` after
-  each push. See `pr-agent.md`.
+- Two PR-Agent reviewers run on every push through the shared
+  `LaykenV/pr-review` workflow. `/describe` runs only when someone comments
+  it. See `pr-agent.md`.
 - Check every bot finding against the code. Fix real ones, explain and resolve
   false positives, and don't let review grow the PR.
 - A clean review isn't permission to merge. When asking, say that merging
@@ -118,3 +119,20 @@ git diff --check
   never deploy or connect to Convex.
 - After an authorized merge, watch the Vercel status for the exact merge commit
   and run `bun run smoke:production` before calling the release ready.
+
+## Review guidelines
+
+Every reviewer reads this section: PR-Agent, Codex, sol-loop, and council.
+
+- Flag generated concept HTML rendered outside the shared iframe sandbox, any
+  added sandbox permission, and any publish path that skips
+  `validateConceptHtml`.
+- Flag edits to an issued Order Form or `lib/legal/terms.ts`, and clocks,
+  locale formatting, or randomness in hashed agreement builders.
+- Flag Convex functions without argument and return validators, admin
+  functions without `requireAdmin`, and unauthenticated mutations that can
+  spend money without a global ceiling.
+- Flag `resumeToken` or `sk_live_` values reaching the browser.
+- Flag payment failures or Cal.com bookings that change fulfillment status.
+- Style, extra tests, rare edge cases, and small perf costs are nits. Don't
+  suggest growing the PR past its goal.
