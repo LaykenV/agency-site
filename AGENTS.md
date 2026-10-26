@@ -1,7 +1,6 @@
-# Repository guidance
+# Acadiana Web Design Hub
 
-These are the standing rules for the Acadiana Web Design Hub. Read the relevant
-canonical document before non-trivial work:
+Read the matching doc before non-trivial work:
 
 - `docs/BUSINESS.md` for the offer, customers, pricing, traction, and priorities
 - `docs/GROWTH.md` for acquisition channels and the current scorecard
@@ -9,9 +8,8 @@ canonical document before non-trivial work:
 - `docs/ARCHITECTURE.md` for implemented system and security boundaries
 - `docs/ROADMAP.md` for trigger-gated future work
 
-Documents under `docs/archive/` are historical evidence. Documents under
-`docs/plans/` describe unimplemented or partially implemented target states.
-Neither overrides the code or a canonical document.
+`docs/archive/` is history. `docs/plans/` describes work that isn't built yet.
+Neither overrides the code or the docs above.
 
 ## Commands
 
@@ -95,31 +93,27 @@ git diff --check
 - Referrer classes are collected but deliberately hidden from clients until
   attribution can say something specific and true.
 
-## Change discipline
+## Changes
 
-- Preserve unrelated working-tree changes.
-- Treat a build as local evidence, not production verification.
-- For migrations, use expand, backfill, verify, then contract.
-- Back up production data before an irreversible schema or billing migration.
-- Update the canonical document in the same change as its implemented contract.
+- A local build is not production verification.
+- Migrations go expand, backfill, verify, contract. Back up production data
+  before an irreversible schema or billing migration.
+- Update the matching doc in the same change as the code it describes.
 
 ## Pull requests
 
-- Default to a branch and pull request for code and meaningful documentation.
-  Direct pushes to `main` remain available for small owner-directed changes.
-  Never choose a direct push unless the user explicitly asks for one.
-- One concern per PR. If the description needs "also", split the work.
-- Open real PRs, never drafts. Use a conventional prefix and describe the
-  user-facing reason in the title. Put the problem first in the body.
-- Run `bun run verify`, inspect the complete diff, and remove unrelated changes
-  before filing.
+- Use a branch and PR for code and real doc changes. Push straight to `main`
+  only when I ask for it.
+- One concern per PR. If the description needs "also", split it. Real PRs,
+  never drafts. Conventional prefix plus the user-facing why. Problem first in
+  the body.
+- Run `bun run verify` and read the full diff before filing.
 - PR-Agent runs `/describe` and `/review` when a PR opens and `/review` after
-  each push. See `pr-agent.md`. The `file-pr` and `babysit-pr` skills contain
-  the operating procedure.
-- Verify every bot finding against the source. Fix real problems, explain and
-  resolve false positives, and do not let review feedback expand the PR.
-- A clean review is not merge authority. Ask before merging. State that the
-  Vercel production build deploys the Convex backend and the Next.js site.
+  each push. See `pr-agent.md`.
+- Check every bot finding against the code. Fix real ones, explain and resolve
+  false positives, and don't let review grow the PR.
+- A clean review isn't permission to merge. When asking, say that merging
+  deploys the Convex backend and the Next.js site to production.
 - Preview Vercel builds compile against disabled placeholder endpoints; they
   never deploy or connect to Convex.
 - After an authorized merge, watch the Vercel status for the exact merge commit
