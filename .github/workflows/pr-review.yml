@@ -1,0 +1,27 @@
+# Copy to .github/workflows/pr-review.yml. Needs an OPENROUTER_API_KEY secret.
+name: PR review
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+  issue_comment:
+    types: [created]
+
+concurrency:
+  # A new push cancels the old review. Ordinary comments don't.
+  group: pr-review-${{ github.event.pull_request.number || github.event.issue.number }}-${{ github.event_name == 'issue_comment' && github.event.comment.body != '/review' && github.event.comment.id || 'review' }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    uses: LaykenV/pr-review/.github/workflows/review.yml@main
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    secrets:
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+    # To override the default reviewers for this repo:
+    # with:
+    #   reviewers: >-
+    #     [{"id": "deepseek", "label": "DeepSeek V4.1 Flash", "model": "openrouter/deepseek/deepseek-v4.1-flash-1017"}]
