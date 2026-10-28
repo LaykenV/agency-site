@@ -3,8 +3,8 @@
 
 # Business
 
-Status: **canonical business source of truth**  
-Owner: Layken  
+Status: **canonical business source of truth**
+Owner: Layken
 Last reviewed: 2026-08-24
 Metrics current through: 2026-08-24
 

@@ -19,8 +19,8 @@ visitors that new projects go through Varholdt at https://www.varholdt.com/ and
 sends existing clients to the portal. Old sales routes redirect there.
 
 The reason: the strongest current opportunities are software engagements under
-Varholdt, and the website offer has no documented unrelated market-rate close. Layken made the
-call. The Varholdt plan records it as decision D5.
+Varholdt, and the website offer has no documented unrelated market-rate close.
+Layken made the call. The Varholdt plan records it as decision D5.
 
 Acadiana Web Design now exists to support its current clients. It runs no
 acquisition work and no paid advertising, and nothing builds it up on its own.
@@ -49,14 +49,10 @@ preserved in `archive/legacy/business-plan-pre-consolidation-2026-08-08.md`.
 
 ## Current clients
 
-Owner-reported estimates, 2026-10-28, not reconciled against Stripe:
-
-- two family clients pay $49 a month each
-- the extra cost and support time to keep serving them is negligible
-
-Both stay on their current plans. There is no price change and no billing
-migration. Keep their sites, hosting, edits, portal access, and billing working
-as they do today.
+Existing clients stay on their agreed plans. There is no price change and no
+billing migration. Keep their sites, hosting, edits, portal access, and billing
+working as they do today. Current client billing and financial estimates belong
+in private operating records, not this public repository.
 
 The 2026-08-08 traction snapshot (three free family or personal clients, zero
 paying) is superseded and kept in the archived business document.
