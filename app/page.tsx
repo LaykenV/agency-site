@@ -34,19 +34,14 @@ export const metadata: Metadata = {
 export default function Home() {
   return (
     <main className="relative w-full">
-      <div
-        aria-hidden
-        className="absolute inset-x-0 -top-16 md:-top-20 -z-10 page-gradient h-[90vh] pointer-events-none"
-      />
-
       <section className="mx-auto max-w-3xl px-5 sm:px-8 pt-10 pb-12 sm:pt-20 sm:pb-16">
-        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[var(--foreground)]/75 font-[family-name:var(--font-sora)]">
+        <p className="text-sm font-semibold uppercase tracking-[0.14em] text-[hsl(var(--foreground))] font-[family-name:var(--font-sora)]">
           An update from Acadiana Web Design
         </p>
-        <h1 className="mt-4 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-[hsl(var(--primary-foreground))] hero-title font-[family-name:var(--font-sora)]">
+        <h1 className="mt-4 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-[hsl(var(--foreground))] font-[family-name:var(--font-sora)]">
           New projects now go through Varholdt.
         </h1>
-        <p className="mt-6 max-w-[52ch] text-base sm:text-lg leading-relaxed text-[var(--foreground)]/90 font-[family-name:var(--font-sora)]">
+        <p className="mt-6 max-w-[52ch] text-base sm:text-lg leading-relaxed text-[hsl(var(--foreground))] font-[family-name:var(--font-sora)]">
           Acadiana Web Design is no longer taking new website projects. Layken
           now takes on custom software and AI projects as Varholdt.
         </p>
@@ -68,11 +63,11 @@ export default function Home() {
         <div className="surface rounded-2xl p-6 sm:p-8 shadow-sm">
           <h2
             id="existing-clients"
-            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[var(--foreground)] font-[family-name:var(--font-display)]"
+            className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[hsl(var(--foreground))] font-[family-name:var(--font-display)]"
           >
             Already a client?
           </h2>
-          <p className="mt-3 text-base leading-relaxed text-[var(--muted-foreground)]">
+          <p className="mt-3 text-base leading-relaxed text-[hsl(var(--foreground))]">
             Nothing changes for you. Your site, hosting, edits, and billing
             continue as they are. Sign in to the client portal to request an
             edit, see your leads, or manage billing.
@@ -85,7 +80,7 @@ export default function Home() {
               Client Portal
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
-            <p className="text-sm text-[var(--muted-foreground)]">
+            <p className="text-sm text-[hsl(var(--foreground))]">
               Questions? Email{" "}
               <a className="underline underline-offset-2" href={`mailto:${SITE_EMAIL}`}>
                 {SITE_EMAIL}

@@ -18,8 +18,8 @@ public site no longer pitches the $0-down, $199-a-month plan. Its homepage tells
 visitors that new projects go through Varholdt at https://www.varholdt.com/ and
 sends existing clients to the portal. Old sales routes redirect there.
 
-The reason: the paying work is real software engagements under Varholdt, and
-the website offer never closed an unrelated market-rate client. Layken made the
+The reason: the strongest current opportunities are software engagements under
+Varholdt, and the website offer has no documented unrelated market-rate close. Layken made the
 call. The Varholdt plan records it as decision D5.
 
 Acadiana Web Design now exists to support its current clients. It runs no
