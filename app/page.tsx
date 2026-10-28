@@ -11,7 +11,7 @@ import {
   VARHOLDT_URL,
 } from "@/lib/seo/site";
 
-const title = "Acadiana Web Design | New projects now go through Varholdt";
+const title = "Acadiana Web Design | New projects now go through Varholdt Labs";
 
 export const metadata: Metadata = {
   // absolute avoids double-branding from the root title template
@@ -39,11 +39,11 @@ export default function Home() {
           An update from Acadiana Web Design
         </p>
         <h1 className="mt-4 text-4xl sm:text-5xl md:text-6xl font-black tracking-tight leading-[1.08] text-[hsl(var(--foreground))] font-[family-name:var(--font-sora)]">
-          New projects now go through Varholdt.
+          New projects now go through Varholdt Labs.
         </h1>
         <p className="mt-6 max-w-[52ch] text-base sm:text-lg leading-relaxed text-[hsl(var(--foreground))] font-[family-name:var(--font-sora)]">
           Acadiana Web Design is no longer taking new website projects. Layken
-          now takes on custom software and AI projects as Varholdt.
+          now takes on custom software and AI projects as Varholdt Labs.
         </p>
         <div className="mt-8">
           <a

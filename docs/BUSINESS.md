@@ -15,8 +15,8 @@ priorities from before the retirement are preserved in
 
 On 2026-10-28 Layken stopped selling Acadiana Web Design website packages. The
 public site no longer pitches the $0-down, $199-a-month plan. Its homepage tells
-visitors that new projects go through Varholdt at https://www.varholdt.com/ and
-sends existing clients to the portal. Old sales routes redirect there.
+visitors that new projects go through Varholdt Labs at https://www.varholdt.com/
+and sends existing clients to the portal. Old sales routes redirect there.
 
 The reason: the strongest current opportunities are software engagements under
 Varholdt, and the website offer has no documented unrelated market-rate close.
@@ -29,9 +29,10 @@ acquisition work and no paid advertising, and nothing builds it up on its own.
 
 Acadiana Web Design is the customer-facing trade name for the local website
 business operated by Varholdt AI LLC. Varholdt AI LLC is also the legal entity
-behind the Varholdt brand. Public pages may keep the Acadiana Web Design name so
-existing clients recognize their login and support. The support email and
-domain stay the same.
+behind Varholdt Labs, the public name for Layken's custom software and AI work.
+The LLC keeps its name on agreements, invoices and legal pages. Public pages may
+keep the Acadiana Web Design name so existing clients recognize their login and
+support. The support email and domain stay the same.
 
 - The geauxBIZ trade-name filing, reference 12276617, was paid and submitted on
   2026-08-06. It was still in process at the last verified check and should not
@@ -75,7 +76,7 @@ retired; `../agency-playground/` is the reference for Hub-facing plumbing.
 
 ## Commercial guardrails
 
-- Do not sell or quote new website packages. Send new work to Varholdt.
+- Do not sell or quote new website packages. Send new work to Varholdt Labs.
 - Do not promise ownership or scope outside an issued Order Form.
 - Never edit an issued Order Form. A change for an existing client means a new
   Order Form version.

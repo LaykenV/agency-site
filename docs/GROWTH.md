@@ -28,7 +28,7 @@ evidence.
 Acadiana Web Design stopped selling website packages on 2026-10-28 (see
 `BUSINESS.md`). There is no acquisition work: no quote form, no outreach, no
 ads, no content cadence, and no referral asks. The public homepage sends new
-work to Varholdt. Everything below this section is the record of what was
+work to Varholdt Labs. Everything below this section is the record of what was
 tried. None of it is active, and none of it should be restarted without a new,
 dated owner decision.
 

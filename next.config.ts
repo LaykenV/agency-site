@@ -5,7 +5,7 @@ import { WebpackSha256 } from "./lib/webpackSha256";
  * Website packages are no longer sold. These were the public sales routes:
  * the quote form, city and industry landing pages, the blog, the self-serve
  * audit, and the Facebook cover generator. Old links land on the homepage,
- * which explains the move to Varholdt and links existing clients to the portal.
+ * which explains the move to Varholdt Labs and links existing clients to the portal.
  */
 const CITY_SLUGS =
   "lafayette|new-iberia|opelousas|crowley|breaux-bridge|abbeville|youngsville|scott";
