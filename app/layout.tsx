@@ -61,7 +61,7 @@ export const metadata: Metadata = {
   
   // Title & Description
   title: {
-    default: "Acadiana Web Design | New projects now go through Varholdt",
+    default: "Acadiana Web Design | New projects now go through Varholdt Labs",
     template: "%s | Acadiana Web Design",
   },
   description: SITE_DESCRIPTION,
@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    title: "Acadiana Web Design | New projects now go through Varholdt",
+    title: "Acadiana Web Design | New projects now go through Varholdt Labs",
     description: SITE_DESCRIPTION,
     siteName: "Acadiana Web Design",
     images: [{ ...DEFAULT_OG_IMAGE }],
@@ -84,7 +84,7 @@ export const metadata: Metadata = {
   // Twitter Card (How links look on X)
   twitter: {
     card: "summary_large_image",
-    title: "Acadiana Web Design | New projects now go through Varholdt",
+    title: "Acadiana Web Design | New projects now go through Varholdt Labs",
     description: SITE_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE.url],
     site: "@LLVarholdt",

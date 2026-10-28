@@ -11,14 +11,14 @@ export const DEFAULT_OG_IMAGE = {
   url: "/opengraph-image.png",
   width: 1200,
   height: 630,
-  alt: "Acadiana Web Design. New projects now go through Varholdt.",
+  alt: "Acadiana Web Design. New projects now go through Varholdt Labs.",
 } as const;
 
 export const SITE_PHONE = "+1-337-306-3705";
 export const SITE_EMAIL = "hello@acadianawebdesign.com";
 export const SITE_NAME = "Acadiana Web Design";
 export const SITE_DESCRIPTION =
-  "Acadiana Web Design no longer takes new website projects. Existing clients keep their site, support, and client portal. New custom software and AI projects go through Varholdt.";
+  "Acadiana Web Design no longer takes new website projects. Existing clients keep their site, support, and client portal. New custom software and AI projects go through Varholdt Labs.";
 
 export const VARHOLDT_URL = "https://www.varholdt.com/";
 export const LEGAL_ENTITY = "Varholdt AI LLC";
@@ -56,7 +56,7 @@ export function organizationSchema(baseUrl: string) {
     name: SITE_NAME,
     legalName: LEGAL_ENTITY,
     description:
-      "Support and client portal for existing Acadiana Web Design clients. New custom software and AI projects go through Varholdt.",
+      "Support and client portal for existing Acadiana Web Design clients. New custom software and AI projects go through Varholdt Labs.",
     logo: `${baseUrl}/logo.png`,
     url: baseUrl,
     telephone: SITE_PHONE,

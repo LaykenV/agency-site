@@ -266,7 +266,7 @@ A deploy is not verification. Confirm the actual client path.
 No public page renders the quote form since 2026-10-28, and `/quote` redirects
 home. The recipient project and credentials stay configured. A new lead with
 source `agency-quote-form` would come from a stale tab or a direct POST; treat
-it as a referral to Varholdt, not a website sale.
+it as a referral to Varholdt Labs, not a website sale.
 
 The notes below describe the intake as it was built.
 

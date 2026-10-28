@@ -57,7 +57,7 @@ The package manifest is authoritative:
 Website packages stopped selling on 2026-10-28. The former sales routes
 (`/onboarding`, `/quote`, city and industry pages, `/websites-for-*`,
 `/services/*`, `/blog`, `/audit`, `/audit/request/[token]`, and `/fb-cover`)
-permanently redirect to `/`, which sends new work to Varholdt and existing
+permanently redirect to `/`, which sends new work to Varholdt Labs and existing
 clients to the portal. `RETIRED_SALES_ROUTES` in `next.config.ts` is the list;
 `tests/retiredSalesRoutes.test.ts` checks that portal, admin, legal, API, and
 preview routes stay outside it. The audit backend in Convex is unchanged but no
