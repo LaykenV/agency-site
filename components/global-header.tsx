@@ -17,43 +17,12 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
 } = {}) {
   const headerRef = useRef<HTMLElement | null>(null);
   const pathname = usePathname();
-  // The self-service audit report at /audit/request/<token> renders its own
-  // chrome (AuditBanner pinned bottom + dark theme), so we suppress the global
-  // header there. The public intake page at /audit is a marketing page and
-  // keeps the header.
-  const isAuditReport =
-    pathname.startsWith("/audit/") && pathname !== "/audit/request";
   // Concept previews are pages about someone else's business; our nav has no
   // business sitting above one.
   const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
-  // Pages with gradient backgrounds where header needs light text
-  // Includes landing page, SEO city pages, industry service pages
-  const isGradientPage =
-    pathname === "/" ||
-    pathname === "/3" ||
-    pathname === "/audit" ||
-    pathname.startsWith("/websites-for-") ||
-    // Match /services/[industry] pages like /services/plumbers
-    /^\/services\/[a-z-]+$/.test(pathname) ||
-    // Match city pages like /lafayette, /new-iberia (but not /portal, /admin, etc.)
-    (
-      /^\/[a-z-]+$/.test(pathname) &&
-      !pathname.startsWith("/portal") &&
-      !pathname.startsWith("/admin") &&
-      !pathname.startsWith("/blog") &&
-      !pathname.startsWith("/legal") &&
-      !pathname.startsWith("/services")
-    ) ||
-    // Match city+industry pages like /lafayette/plumbers (but not protected routes)
-    (
-      /^\/[a-z-]+\/[a-z-]+$/.test(pathname) &&
-      !pathname.startsWith("/portal") &&
-      !pathname.startsWith("/admin") &&
-      !pathname.startsWith("/blog") &&
-      !pathname.startsWith("/legal") &&
-      !pathname.startsWith("/services")
-    );
+  // The homepage sits on the blue page gradient, so the header needs light text.
+  const isGradientPage = pathname === "/";
   const onLanding = isGradientPage;
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -93,8 +62,7 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
     };
   }, []);
 
-  // Hide header on tokenized audit report pages - they have their own chrome
-  if (isAuditReport || isLeadPreview) return null;
+  if (isLeadPreview) return null;
 
   return (
     <header
@@ -125,7 +93,6 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
         <nav className="hidden items-center gap-4 md:flex">
           {!isPortal ? (
             <>
-              <Link href="/quote" className={`quote-nav-link${onLanding ? " quote-nav-link--on-gradient" : ""}`}>Get a quote</Link>
               <AnimatedThemeToggler onLanding={onLanding} />
               {showAdminLink && (
                 <Link
@@ -212,7 +179,6 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
                 <AnimatedThemeToggler className="btn-icon" onLanding={onLanding} />
               </div>
               <div className="h-px" style={{ background: "hsl(var(--border))" }} />
-              <Link href="/quote" onClick={() => setMenuOpen(false)} className="quote-nav-link">Get a quote</Link>
 
               {showAdminLink && (
                 <Link

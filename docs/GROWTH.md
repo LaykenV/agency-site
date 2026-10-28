@@ -2,7 +2,7 @@
 
 Status: **canonical growth and acquisition source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-24
+Last reviewed: 2026-10-28
 Metrics current through: 2026-08-24
 
 This document owns the active channel strategy, operating cadence, decision
@@ -23,7 +23,16 @@ Update this file when the owner changes the channel decision or during the
 weekly organic-inbound review. Preserve paid campaign results as historical
 evidence.
 
-## Objective
+## October 28 retirement
+
+Acadiana Web Design stopped selling website packages on 2026-10-28 (see
+`BUSINESS.md`). There is no acquisition work: no quote form, no outreach, no
+ads, no content cadence, and no referral asks. The public homepage sends new
+work to Varholdt. Everything below this section is the record of what was
+tried. None of it is active, and none of it should be restarted without a new,
+dated owner decision.
+
+## Former objective
 
 Close the first unrelated, market-rate client without adding another tool or
 unproven channel. The bottleneck is the human path from interest to a call and
@@ -56,6 +65,11 @@ preserved for a future decision, not queued campaign work.
 ## Channel order
 
 ### Run now
+
+Nothing. Website sales are retired (2026-10-28). The quote form, city and
+industry pages, and blog redirect to the transition homepage.
+
+### Former run-now list (before 2026-10-28)
 
 1. Release and production-test the implemented inbound quote form.
 2. Improve Google Business Profile proof and genuine client reviews.

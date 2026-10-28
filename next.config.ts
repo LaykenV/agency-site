@@ -2,25 +2,24 @@ import type { NextConfig } from "next";
 import { WebpackSha256 } from "./lib/webpackSha256";
 
 /**
- * Industry slugs for URL rewrites / redirects
- * Keep in sync with lib/seo/industries.ts
+ * Website packages are no longer sold. These were the public sales routes:
+ * the quote form, city and industry landing pages, the blog, the self-serve
+ * audit, and the Facebook cover generator. Old links land on the homepage,
+ * which explains the move to Varholdt and links existing clients to the portal.
  */
-const INDUSTRY_SLUGS = [
-  "plumbers",
-  "landscapers", 
-  "painters",
-  "contractors",
-  "electricians",
-  "hvac",
-  "roofers",
-  "pressure-washing",
-  "cleaning-services",
-  "pest-control",
-  "tree-services",
-  "fencing",
-  "garage-doors",
-  "concrete",
-  "pool-services",
+const CITY_SLUGS =
+  "lafayette|new-iberia|opelousas|crowley|breaux-bridge|abbeville|youngsville|scott";
+
+// `/:path*` also matches the bare prefix, so "/blog/:path*" covers "/blog".
+export const RETIRED_SALES_ROUTES = [
+  "/onboarding",
+  "/quote",
+  "/fb-cover",
+  "/services/:path*",
+  "/:page(websites-for-.+)",
+  `/:city(${CITY_SLUGS})/:path*`,
+  "/blog/:path*",
+  "/audit/:path*",
 ] as const;
 
 const nextConfig: NextConfig = {
@@ -42,32 +41,10 @@ const nextConfig: NextConfig = {
     return config;
   },
   async redirects() {
-    return [
-      {
-        source: "/onboarding",
-        destination:
-          "/quote?source=retired_onboarding",
-        permanent: true,
-      },
-      // Collapse non-canonical industry URLs onto SEO paths
-      ...INDUSTRY_SLUGS.map((slug) => ({
-        source: `/services/${slug}`,
-        destination: `/websites-for-${slug}`,
-        permanent: true,
-      })),
-      {
-        source: "/services",
-        destination: "/",
-        permanent: true,
-      },
-    ];
-  },
-  // Rewrite SEO-friendly URLs to the App Router segment under /services/[industry]
-  // Public URL stays /websites-for-plumbers; internal route is /services/plumbers
-  async rewrites() {
-    return INDUSTRY_SLUGS.map((slug) => ({
-      source: `/websites-for-${slug}`,
-      destination: `/services/${slug}`,
+    return RETIRED_SALES_ROUTES.map((source) => ({
+      source,
+      destination: "/",
+      permanent: true,
     }));
   },
 };
