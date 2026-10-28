@@ -16,7 +16,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
   ) {
     return children;
   }
-  if (pathname === "/audit" || pathname.startsWith("/audit/") || pathname.startsWith("/preview/")) {
+  if (pathname.startsWith("/preview/")) {
     return <PublicRuntimeShell>{children}</PublicRuntimeShell>;
   }
   return (

@@ -2,10 +2,15 @@
 
 Status: **canonical client-delivery source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-12
+Last reviewed: 2026-10-28
 
 This is the current lead-to-live operating flow. It describes implemented
 behavior, not the future portal or billing model in `plans/`.
+
+Website sales are retired as of 2026-10-28 (see `BUSINESS.md`). Sections 1 and
+2 and the concept workflow apply only if a new owner decision reopens sales.
+The rest covers existing clients: agreements already signed, billing, edits,
+leads, analytics, Hub credentials, and launches or changes to their sites.
 
 ## Lifecycle
 
@@ -257,6 +262,13 @@ The rollout order is fixed:
 A deploy is not verification. Confirm the actual client path.
 
 ## Website quote requests
+
+No public page renders the quote form since 2026-10-28, and `/quote` redirects
+home. The recipient project and credentials stay configured. A new lead with
+source `agency-quote-form` would come from a stale tab or a direct POST; treat
+it as a referral to Varholdt, not a website sale.
+
+The notes below describe the intake as it was built.
 
 Review `/admin/leads` filtered to the Acadiana Web Design recipient, including
 untriaged and fan-out-paused requests. The form records business, need, current

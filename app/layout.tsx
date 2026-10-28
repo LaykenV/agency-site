@@ -7,6 +7,7 @@ import { Analytics } from "@/components/Analytics";
 import {
   DEFAULT_OG_IMAGE,
   getSiteBaseUrl,
+  SITE_DESCRIPTION,
   organizationSchema,
   websiteSchema,
 } from "@/lib/seo/site";
@@ -60,39 +61,10 @@ export const metadata: Metadata = {
   
   // Title & Description
   title: {
-    default: "Websites for Local Service Companies in Acadiana | $0 Down, $199/mo",
+    default: "Acadiana Web Design | New projects now go through Varholdt",
     template: "%s | Acadiana Web Design",
   },
-  description: "Get more customers in Lafayette & Acadiana with a professional website. $0 down, 72-hour launch, unlimited edits. Perfect for plumbers, landscapers, and local service pros.",
-  
-  // Keywords for Local Search
-  keywords: [
-    // Location + Service (Primary)
-    "web design Lafayette LA",
-    "website design Acadiana",
-    "Lafayette web developer",
-    "New Iberia web design",
-    "Opelousas website design",
-    
-    // Industry-specific (Your ICP)
-    "website for plumbers Lafayette",
-    "landscaper website Louisiana",
-    "contractor website design Acadiana",
-    "home services website",
-    
-    // Business model keywords
-    "Website as a Service Louisiana",
-    "monthly website subscription",
-    "no upfront cost website",
-    "affordable web design Lafayette",
-    
-    // Feature keywords
-    "fast website Louisiana",
-    "local SEO Lafayette",
-    "mobile-first web design",
-    "95 PageSpeed website",
-    "unlimited website edits"
-  ],
+  description: SITE_DESCRIPTION,
 
   // Authors / Creator
   authors: [{ name: "Acadiana Web Design" }],
@@ -103,8 +75,8 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    title: "Web Design in Lafayette, LA | Acadiana Web Design",
-    description: "Get more customers in Lafayette & Acadiana with a professional website. $0 down, 72-hour launch, unlimited edits. Perfect for plumbers, landscapers, and local service pros.",
+    title: "Acadiana Web Design | New projects now go through Varholdt",
+    description: SITE_DESCRIPTION,
     siteName: "Acadiana Web Design",
     images: [{ ...DEFAULT_OG_IMAGE }],
   },
@@ -112,8 +84,8 @@ export const metadata: Metadata = {
   // Twitter Card (How links look on X)
   twitter: {
     card: "summary_large_image",
-    title: "Websites for Local Service Companies in Acadiana",
-    description: "Professional websites for local service businesses in Lafayette & Acadiana. $0 down, $199/mo, 72-hour launch. Hand-coded Next.js for speed.",
+    title: "Acadiana Web Design | New projects now go through Varholdt",
+    description: SITE_DESCRIPTION,
     images: [DEFAULT_OG_IMAGE.url],
     site: "@LLVarholdt",
     creator: "@LLVarholdt",
@@ -139,13 +111,6 @@ export const metadata: Metadata = {
 
   icons: {
     icon: "/icon.svg",
-  },
-  
-  other: {
-    "geo.region": "US-LA",
-    "geo.placename": "Lafayette",
-    "geo.position": "30.2241;-92.0198",
-    "ICBM": "30.2241, -92.0198",
   },
 };
 

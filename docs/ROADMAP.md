@@ -2,7 +2,7 @@
 
 Status: **canonical active-work and trigger source of truth**  
 Owner: Layken  
-Last reviewed: 2026-08-24
+Last reviewed: 2026-10-28
 
 This document contains only work that is active, blocked by an explicit gate, or
 worth reconsidering when a trigger occurs. Completed execution detail is
@@ -10,12 +10,16 @@ preserved under `archive/migrations/`.
 
 ## Current operating priorities
 
-1. Close the first unrelated market-rate website client.
-2. Release and production-test the inbound quote form described in
-   `plans/inbound-quote-form-and-google-ads.md`.
-3. Keep every paid advertising channel paused. The Google Ads account remains
-   available for research, but no campaign work or spend is active.
+Website sales are retired as of 2026-10-28 (see `BUSINESS.md`).
+
+1. Keep existing client sites, portal access, and billing working.
+2. Keep the Hub healthy for client sites and varholdt.com's form and visit
+   counts.
+3. Keep every paid advertising channel off.
 4. Resolve the legal gates below before relying on the affected path.
+
+The quote-form release in `plans/inbound-quote-form-and-google-ads.md` is no
+longer active. The form is unmounted and `/quote` redirects home.
 
 ## Open business and compliance gates
 

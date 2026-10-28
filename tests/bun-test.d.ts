@@ -39,3 +39,13 @@ declare module "bun:test" {
 
   export function expect<T>(actual: T): Matchers<T>;
 }
+
+// Next bundles path-to-regexp without types. Tests use it to match redirects
+// the same way Next does.
+declare module "next/dist/compiled/path-to-regexp" {
+  export function pathToRegexp(
+    path: string,
+    keys?: unknown[],
+    options?: { strict?: boolean; sensitive?: boolean; delimiter?: string },
+  ): RegExp;
+}

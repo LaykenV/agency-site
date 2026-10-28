@@ -45,8 +45,7 @@ The package manifest is authoritative:
 
 | Surface               | Route                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------- |
-| Marketing             | `/`, city/industry SEO routes, `/blog`                                             |
-| Public audits         | `/audit`, `/audit/request/[token]`                                                 |
+| Transition page       | `/`                                                                                |
 | Concept previews      | `/preview/[token]`                                                                 |
 | Legal                 | `/legal/terms`, `/legal/privacy`, `/sms-consent`                                   |
 | Client entry          | `/portal`, `/portal/verify`, `/portal/autherror`                                   |
@@ -55,12 +54,14 @@ The package manifest is authoritative:
 | Admin                 | `/admin`, `/admin/leads`, `/admin/analytics`, `/admin/marketing`, `/admin/content` |
 | Better Auth handler   | `/api/auth/[...all]`                                                               |
 
-`/onboarding` permanently redirects to `/quote`.
-
-`/audit` and `/audit/request/[token]` are the self-service audit reached by
-direct or QR traffic. They are unrelated to the retired outbound system: the
-outbound `/audit/[token]` report, its print view, and the `/demo/[token]`
-redirect were removed with it.
+Website packages stopped selling on 2026-10-28. The former sales routes
+(`/onboarding`, `/quote`, city and industry pages, `/websites-for-*`,
+`/services/*`, `/blog`, `/audit`, `/audit/request/[token]`, and `/fb-cover`)
+permanently redirect to `/`, which sends new work to Varholdt and existing
+clients to the portal. `RETIRED_SALES_ROUTES` in `next.config.ts` is the list;
+`tests/retiredSalesRoutes.test.ts` checks that portal, admin, legal, API, and
+preview routes stay outside it. The audit backend in Convex is unchanged but no
+public page calls it.
 
 ## Convex layout
 
@@ -597,26 +598,25 @@ path to be exercised against the intended deployment.
 
 ## Marketing search and rendering contract
 
-Public marketing routes prerender without a server-side auth-token lookup.
-`SiteShell` supplies a public header without loading authentication on marketing
-pages. Public audit and concept routes load their Convex runtime separately;
+Public routes prerender without a server-side auth-token lookup.
+`SiteShell` supplies a public header without loading authentication on public
+pages. Concept preview routes load their Convex runtime separately;
 `/portal` and `/admin` own their prefetched auth provider and authenticated
 header, and remain dynamic and noindex. Admin shortcuts and sign-out are
 available in those authenticated layouts. There is one provider per route,
-including during client navigation. The hero uses prebuilt responsive WebP
-assets to avoid a cold image transformation on the critical rendering path.
+including during client navigation.
 
-The site has one business entity. City pages describe service areas through
-`Service` records referencing that entity; city-center coordinates are not
-branch-office addresses. FAQs share visible copy and JSON-LD, and native
-`details` work without JavaScript. Sitemap modification dates are emitted only
-when the content source supplies a real update date.
+The site has one business entity: Acadiana Web Design, with `legalName`
+Varholdt AI LLC in the Organization JSON-LD. The sitemap lists only the
+homepage, legal pages, and `/sms-consent`.
 
 ## AWD direct quote intake
 
-`/quote` and the shared `#quote` sections on home, city, industry, and
-city/industry pages submit through `actions/submitAgencyQuote.ts`. Cal.com
-remains available for existing portal, kickoff, and review scheduling.
+No public page renders the quote form since 2026-10-28, and `/quote` redirects
+to `/`. `components/marketing/QuoteForm.tsx`, `actions/submitAgencyQuote.ts`,
+and the Hub-side intake below are unchanged so the path stays auditable and
+can be remounted. Cal.com remains available for existing portal, kickoff, and
+review scheduling.
 
 The server validates bounded fields, a honeypot, a 3-second to 24-hour form age,
 and a UUID request ID. It forwards only to authenticated `POST /api/v2/leads`

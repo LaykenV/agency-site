@@ -1,9 +1,13 @@
 # Acadiana Web Design Hub
 
 The private operations application for Acadiana Web Design. It includes the
-marketing site, outbound research pipeline, admin workspace, client portal,
-agreements, Stripe billing, scheduling, and authenticated APIs used by bespoke
-client sites.
+public transition page, admin workspace, client portal, agreements, Stripe
+billing, scheduling, and authenticated APIs used by bespoke client sites and
+by varholdt.com's form and visit counts.
+
+Acadiana Web Design stopped selling website packages on 2026-10-28. The
+homepage sends new work to https://www.varholdt.com/ and existing clients to
+the portal. See [`docs/BUSINESS.md`](./docs/BUSINESS.md).
 
 Client sites are built as independent projects. `../agency-playground/` is the
 reference implementation for the Hub contract. The former `agency-template`

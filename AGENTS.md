@@ -25,8 +25,11 @@ git diff --check
 - This repository is the Hub. Client sites are independent Spokes.
 - `../agency-playground/` is the reference Spoke for contract changes.
 - `../agency-template/` is retired. Do not clone, patch, or restore it.
-- Public `/onboarding` is retired and redirects to `/quote`. Sales intake uses
-  the on-site quote form; an admin creates qualified prospects and projects.
+- Website packages are no longer sold (2026-10-28). The homepage is a
+  transition page. `/onboarding`, `/quote`, city, industry, blog, audit, and
+  `/fb-cover` routes redirect to it; `RETIRED_SALES_ROUTES` in `next.config.ts`
+  is the list. Don't restore them or add sales pages. An admin creates any
+  project by hand.
 - Only `POST /api/v2/leads` and `POST /api/v2/events` ingest Spoke data. Never
   restore a v1 or unauthenticated alias.
 - Outbound cold email, batch city-and-industry prospect search, and hard-coded

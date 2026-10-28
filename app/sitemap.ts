@@ -1,18 +1,16 @@
 import { MetadataRoute } from "next";
-import { ACADIANA_CITIES } from "@/lib/seo/cities";
-import { TARGET_INDUSTRIES } from "@/lib/seo/industries";
-import { BLOG_POSTS } from "@/lib/seo/blog";
-import { getSiteBaseUrl, industryPath } from "@/lib/seo/site";
+import { getSiteBaseUrl } from "@/lib/seo/site";
 
 const baseUrl = getSiteBaseUrl();
 
+// Website packages are retired, so the city, industry, blog, and quote pages
+// redirect home and are no longer listed.
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Static pages
-  const staticPages: MetadataRoute.Sitemap = [
-    { url: `${baseUrl}/quote`, changeFrequency: "monthly", priority: 0.8 },
+  return [
     {
       url: baseUrl,
-      changeFrequency: "weekly",
+      lastModified: new Date("2026-10-28"),
+      changeFrequency: "monthly",
       priority: 1.0,
     },
     {
@@ -32,56 +30,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     // NOTE: /sms-consent/screenshot is intentionally absent — it stays live for
     // Twilio A2P reviewers but is noindex'd, so submitting it here would conflict.
-  ];
-
-  // City landing pages (programmatic SEO)
-  const cityPages: MetadataRoute.Sitemap = ACADIANA_CITIES.map((city) => ({
-    url: `${baseUrl}/${city.slug}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  // Industry landing pages (programmatic SEO)
-  const industryPages: MetadataRoute.Sitemap = TARGET_INDUSTRIES.map((industry) => ({
-    url: `${baseUrl}${industryPath(industry.slug)}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.8,
-  }));
-
-  // City + Industry combination pages (programmatic SEO - highest intent)
-  const cityIndustryPages: MetadataRoute.Sitemap = [];
-  for (const city of ACADIANA_CITIES) {
-    for (const industry of TARGET_INDUSTRIES) {
-      cityIndustryPages.push({
-        url: `${baseUrl}/${city.slug}/${industry.slug}`,
-        changeFrequency: "monthly" as const,
-        priority: 0.7,
-      });
-    }
-  }
-
-  // Blog pages
-  const blogIndexPage: MetadataRoute.Sitemap = [
-    {
-      url: `${baseUrl}/blog`,
-      changeFrequency: "weekly" as const,
-      priority: 0.7,
-    },
-  ];
-
-  const blogPostPages: MetadataRoute.Sitemap = BLOG_POSTS.map((post) => ({
-    url: `${baseUrl}/blog/${post.slug}`,
-    lastModified: new Date(post.updatedAt || post.publishedAt),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
-
-  return [
-    ...staticPages, 
-    ...cityPages, 
-    ...industryPages, 
-    ...cityIndustryPages,
-    ...blogIndexPage, 
-    ...blogPostPages
   ];
 }
