@@ -75,7 +75,7 @@ describe("retired website sales", () => {
     const home = readFileSync("app/page.tsx", "utf8");
     expect(home).toContain("VARHOLDT_URL");
     expect(home).toContain('href="/portal"');
-    expect(home).not.toMatch(/\$199|\$0 down|\/quote/i);
+    expect(home).not.toMatch(/\$199|\$0 down|\/quote|new calls|leads a month/i);
   });
 });
 
