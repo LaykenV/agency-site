@@ -17,9 +17,10 @@ On 2026-10-28 Layken stopped selling Acadiana Web Design website packages. The
 public site no longer pitches the $0-down, $199-a-month plan.
 
 On 2026-10-30 Layken chose to keep the homepage design and website portfolio.
-A notice and project links send new inquiries through Varholdt Labs at
-https://www.varholdt.com/; existing clients still use the portal. The old
-packages, quote form, sales comparisons, and sales claims stay off the page.
+The hero button sends new inquiries through Varholdt Labs at
+https://www.varholdt.com/; existing clients still use the portal. Two client
+quotes with no numbers or prices stay on the work cards. The old packages,
+quote form, sales comparisons, and sales claims stay off the page.
 Old sales routes redirect there.
 
 The reason: the strongest current opportunities are software engagements under

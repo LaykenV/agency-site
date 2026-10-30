@@ -21,8 +21,8 @@ export function GlobalHeader({ decision, showAdminLink = false, handleSignOut }:
   // business sitting above one.
   const isLeadPreview = pathname.startsWith("/preview/");
   const isPortal = pathname.startsWith("/portal");
-  // Public pages now use the plain theme background.
-  const onLanding = false;
+  // The homepage hero sits on the blue page gradient, so the header needs light text.
+  const onLanding = pathname === "/";
   const [menuOpen, setMenuOpen] = useState(false);
 
   const initials = useMemo(() => {
