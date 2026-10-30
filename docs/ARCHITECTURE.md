@@ -45,7 +45,7 @@ The package manifest is authoritative:
 
 | Surface               | Route                                                                              |
 | --------------------- | ---------------------------------------------------------------------------------- |
-| Transition page       | `/`                                                                                |
+| Website portfolio     | `/`                                                                                |
 | Concept previews      | `/preview/[token]`                                                                 |
 | Legal                 | `/legal/terms`, `/legal/privacy`, `/sms-consent`                                   |
 | Client entry          | `/portal`, `/portal/verify`, `/portal/autherror`                                   |

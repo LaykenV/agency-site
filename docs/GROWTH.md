@@ -67,7 +67,7 @@ preserved for a future decision, not queued campaign work.
 ### Run now
 
 Nothing. Website sales are retired (2026-10-28). The quote form, city and
-industry pages, and blog redirect to the transition homepage.
+industry pages, and blog redirect to the portfolio homepage.
 
 ### Former run-now list (before 2026-10-28)
 

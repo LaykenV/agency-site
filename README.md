@@ -1,7 +1,7 @@
 # Acadiana Web Design Hub
 
 The private operations application for Acadiana Web Design. It includes the
-public transition page, admin workspace, client portal, agreements, Stripe
+public portfolio homepage, admin workspace, client portal, agreements, Stripe
 billing, scheduling, and authenticated APIs used by bespoke client sites and
 by varholdt.com's form and visit counts.
 
