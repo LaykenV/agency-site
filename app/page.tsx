@@ -169,12 +169,12 @@ export default function Home() {
                       <blockquote className="mt-3 text-xl font-extrabold leading-[1.25] tracking-tight sm:text-2xl font-[family-name:var(--font-display)]">
                         &ldquo;{site.quote}&rdquo;
                       </blockquote>
-                      <p className="mt-5 text-sm">
+                      <h3 className="mt-5 text-sm font-normal">
                         <span className="font-semibold">{site.name}</span>{" "}
                         <span className="text-[hsl(var(--muted-foreground))]">
                           / {site.type}
                         </span>
-                      </p>
+                      </h3>
                     </>
                   ) : (
                     <>
