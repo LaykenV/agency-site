@@ -18,7 +18,7 @@ export const SITE_PHONE = "+1-337-306-3705";
 export const SITE_EMAIL = "hello@acadianawebdesign.com";
 export const SITE_NAME = "Acadiana Web Design";
 export const SITE_DESCRIPTION =
-  "Acadiana Web Design no longer takes new website projects. Existing clients keep their site, support, and client portal. New custom software and AI projects go through Varholdt Labs.";
+  "Website work by Layken Varholdt for Louisiana service businesses. Acadiana Web Design is now part of Varholdt Labs. Explore the work or access your client portal.";
 
 export const VARHOLDT_URL = "https://www.varholdt.com/";
 export const LEGAL_ENTITY = "Varholdt AI LLC";

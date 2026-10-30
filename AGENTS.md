@@ -25,8 +25,9 @@ git diff --check
 - This repository is the Hub. Client sites are independent Spokes.
 - `../agency-playground/` is the reference Spoke for contract changes.
 - `../agency-template/` is retired. Do not clone, patch, or restore it.
-- Website packages are no longer sold (2026-10-28). The homepage is a
-  transition page. `/onboarding`, `/quote`, city, industry, blog, audit, and
+- Website packages are no longer sold (2026-10-28). The homepage keeps the website
+  portfolio, with a Varholdt Labs notice and links for new inquiries.
+  `/onboarding`, `/quote`, city, industry, blog, audit, and
   `/fb-cover` routes redirect to it; `RETIRED_SALES_ROUTES` in `next.config.ts`
   is the list. Don't restore them or add sales pages. An admin creates any
   project by hand.

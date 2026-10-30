@@ -2,7 +2,7 @@
 
 Status: **canonical business source of truth**  
 Owner: Layken  
-Last reviewed: 2026-10-28
+Last reviewed: 2026-10-30
 Metrics current through: 2026-10-28
 
 This document defines what Acadiana Web Design still does, who it serves, and
@@ -14,9 +14,13 @@ priorities from before the retirement are preserved in
 ## Where it stands
 
 On 2026-10-28 Layken stopped selling Acadiana Web Design website packages. The
-public site no longer pitches the $0-down, $199-a-month plan. Its homepage tells
-visitors that new projects go through Varholdt Labs at https://www.varholdt.com/
-and sends existing clients to the portal. Old sales routes redirect there.
+public site no longer pitches the $0-down, $199-a-month plan.
+
+On 2026-10-30 Layken chose to keep the homepage design and website portfolio.
+A notice and project links send new inquiries through Varholdt Labs at
+https://www.varholdt.com/; existing clients still use the portal. The old
+packages, quote form, sales comparisons, and sales claims stay off the page.
+Old sales routes redirect there.
 
 The reason: the strongest current opportunities are software engagements under
 Varholdt, and the website offer has no documented unrelated market-rate close.
@@ -60,7 +64,7 @@ paying) is superseded and kept in the archived business document.
 
 ## What exists
 
-- A transition homepage, legal pages, and SMS consent page
+- A portfolio homepage, legal pages, and SMS consent page
 - Admin-managed prospects and projects
 - Better Auth magic-link client access
 - Versioned MSA plus immutable per-project Order Forms
